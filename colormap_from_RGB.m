@@ -51,7 +51,7 @@ function [map1_out,map2_out] = colormap_from_RGB(RGB_in1, RGB_in2)
     end
 
     %% Map Type 1
-    %  each channel is a linearly spaced vector from RGB_in1 to RGB_in1
+    %  each channel is a linearly spaced vector from RGB_in1 to RGB_in2
     
     r3 = linspace(r1,r2,256)';
     g3 = linspace(g1,g2,256)';
@@ -64,7 +64,7 @@ function [map1_out,map2_out] = colormap_from_RGB(RGB_in1, RGB_in2)
     map1_out = [r3,g3,b3];
     
     %% Map Type Two
-    %  Each channel is represents the normalized average between RGB_in1
+    %  Each channel represents the normalized average between RGB_in1
     %  and RGB_in2
     r1_array = linspace(r1,0,256)';
     g1_array = linspace(g1,0,256)';

@@ -12,6 +12,8 @@ function [] = UpdateImages(source)
     % get current replicate index within group
     cImageIndex = PODSData.Group(cGroupIndex).CurrentImageIndex;
     
+    trueImageIndex = cImageIndex;
+    
     if length(cImageIndex) > 1
         cImageIndex = cImageIndex(1);
     end
@@ -25,9 +27,8 @@ function [] = UpdateImages(source)
     % computed for (cGroup,cImage)
     EmptyImage = zeros(1024,1024);
     
-
 %% Update CData of gui image objects to reflect user-specified group/image change 
-    %% Flat-Field Images
+%% Flat-Field Images
     try
         Handles.FFCImage0.CData = FFCData.cal_norm(:,:,1);
         Handles.FFCImage45.CData = FFCData.cal_norm(:,:,2);
@@ -41,7 +42,7 @@ function [] = UpdateImages(source)
         Handles.FFCImage135.CData = EmptyImage;
     end
     
-    %% FPM (experimental) Images
+%% FPM (experimental) Images
     try
         Handles.RawImage0.CData = Replicate.pol_rawdata_normalizedbystack(:,:,1);
         Handles.RawImage45.CData = Replicate.pol_rawdata_normalizedbystack(:,:,2);
@@ -54,7 +55,7 @@ function [] = UpdateImages(source)
         Handles.RawImage135.CData = EmptyImage;
     end
 
-    %% Flat-Field Corrected Images
+%% Flat-Field Corrected Images
     try
         Handles.PolFFCImage0.CData = Replicate.pol_ffc_normalizedbystack(:,:,1);
         Handles.PolFFCImage45.CData = Replicate.pol_ffc_normalizedbystack(:,:,2);
@@ -67,7 +68,7 @@ function [] = UpdateImages(source)
         Handles.PolFFCImage135.CData = EmptyImage;        
     end
     
-    %% Masking Steps
+%% Masking Steps
     try
         Handles.MStepsIntensityImage.CData = Replicate.I;
         Handles.MStepsBackgroundImage.CData = Replicate.BGImg;
@@ -77,6 +78,9 @@ function [] = UpdateImages(source)
         
         Handles.MStepsMedianFilteredImage.CData = Replicate.MedianFilteredImg;
         Handles.MStepsMedianFiltered.CLim = [min(min(Replicate.MedianFilteredImg)) max(max(Replicate.MedianFilteredImg))];
+        
+        Handles.SESizeBox.Value = Replicate.SESize;
+        Handles.SELinesBox.Value = Replicate.SELines;
     catch
         Handles.MStepsIntensityImage.CData = EmptyImage;
         Handles.MStepsBackgroundImage.CData = EmptyImage;
@@ -84,26 +88,58 @@ function [] = UpdateImages(source)
         Handles.MStepsMedianFilteredImage.CData = EmptyImage;        
     end    
     
-    %% Mask
+%% Mask Properties
+
+    if length(trueImageIndex) > 1
+        Handles.SESizeBox.Value = '';
+        Handles.SELinesBox.Value = '';
+    else
+        try
+            Handles.SESizeBox.Value = Replicate.SESize;
+            Handles.SELinesBox.Value = Replicate.SELines;        
+        catch
+            Handles.SESizeBox.Value = 5;
+            Handles.SELinesBox.Value = 4;
+        end
+    end
+    
+%% Mask
     try
         Handles.MaskImage.CData = Replicate.bw;
     catch
         Handles.MaskImage.CData = EmptyImage;
     end
     
-    %% Average Intensity
+%% Thresh Slider
+    try
+        Handles.ThreshSlider.Value = Replicate.level;
+    catch
+        Handles.ThreshSlider.Value = 0.5;
+    end    
+    
+%% Intensity Distribution Plot
+    try
+        Handles.ThreshBar.XData = Replicate.IntensityBinCenters;
+        Handles.ThreshBar.YData = Replicate.IntensityHistPlot;
+    catch
+        UpdateLog3(source,'WARNING: NO INTENSITY DISTRIBUTION INFORMATION FOUND','append');
+    end
+    
+%% Average Intensity
     try
         Handles.AverageIntensityImage.CData = Replicate.I;
     catch
         Handles.AverageIntensityImage.CData = EmptyImage;
     end    
     
-    %% Order Factor
+%% Order Factor
     try
         Handles.OrderFactorImage.CData = Replicate.masked_OF_image;
     catch
         Handles.OrderFactorImage.CData = EmptyImage;
     end  
+    
+
     
     % update local PODSData structure with updated Handles
     PODSData.Handles = Handles;
