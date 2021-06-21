@@ -1,47 +1,60 @@
 function data = pb_FFC(source,event)
     PODSData = guidata(source);
     cGroupIndex = PODSData.CurrentGroupIndex;
+    
     cImageIndex = PODSData.Group(cGroupIndex).CurrentImageIndex;
-    Handles = PODSData.Handles;
+    cReplicate = PODSData.Group(cGroupIndex).Replicate;
+    
+    % get FFCData and Handles structures
     FFCData = PODSData.Group(cGroupIndex).FFCData;
-
-    nReplicates = PODSData.Group(cGroupIndex).nReplicates;
+    Handles = PODSData.Handles;
     
-    Replicate = PODSData.Group(cGroupIndex).Replicate;
+    % number of input files to process
+    n2Process = length(cImageIndex);
     
-    for i=1:nReplicates
+    if n2Process > 1
+        first = cImageIndex(1);
+        last = cImageIndex(end);
+    else
+        first = cImageIndex;
+        last = cImageIndex;
+    end
+    
+    for i=first:last
         
         % divide raw data images by flat-field image
-        for j=1:4
-            Replicate(i).pol_ffc(:,:,j) = Replicate(i).pol_rawdata(:,:,j)./FFCData.cal_norm(:,:,j);
+        for ii=1:4
+            cReplicate(i).pol_ffc(:,:,ii) = cReplicate(i).pol_rawdata(:,:,ii)./FFCData.cal_norm(:,:,ii);
         end
         % normalize to the max value in the stack
-        Replicate(i).pol_ffc_normalizedbystack = Replicate(i).pol_ffc./(max(max(max(Replicate(i).pol_ffc))));
+        cReplicate(i).pol_ffc_normalizedbystack = cReplicate(i).pol_ffc./(max(max(max(cReplicate(i).pol_ffc))));
         
     end
     
-    PODSData.Group(cGroupIndex).Replicate = Replicate;
+    PODSData.Group(cGroupIndex).Replicate = cReplicate;
     
-    Replicate = PODSData.Group(cGroupIndex).Replicate(cImageIndex);
+    fReplicate = PODSData.Group(cGroupIndex).Replicate(cImageIndex(1));
     
     
     % Update flat-field corrected intensity image objects with new data
-    Handles.PolFFCImage0.CData = Replicate.pol_ffc_normalizedbystack(:,:,1);
-    Handles.PolFFCImage45.CData = Replicate.pol_ffc_normalizedbystack(:,:,2);
-    Handles.PolFFCImage90.CData = Replicate.pol_ffc_normalizedbystack(:,:,3);
-    Handles.PolFFCImage135.CData = Replicate.pol_ffc_normalizedbystack(:,:,4);
+    Handles.PolFFCImage0.CData = fReplicate.pol_ffc_normalizedbystack(:,:,1);
+    Handles.PolFFCImage45.CData = fReplicate.pol_ffc_normalizedbystack(:,:,2);
+    Handles.PolFFCImage90.CData = fReplicate.pol_ffc_normalizedbystack(:,:,3);
+    Handles.PolFFCImage135.CData = fReplicate.pol_ffc_normalizedbystack(:,:,4);
     
     
-    % Change tab to FFC tab
-    ChangePODSTab(source,'FFC');
+
+
     
     % return updated handles to local PODSData
     PODSData.Handles = Handles;
-    
     % pass updated PODSData to the gui
     guidata(source,PODSData);
     
-    % update the log
-    UpdateLog3(source,['Flat-Field Correction Performed for ',num2str(nReplicates),' replicates'],'append');
+    % Change tab to FFC tab   
+    ChangePODSTab(source,'FFC');    
+    
+    % update the log and tables
+    UpdateLog3(source,['Flat-Field Correction Performed for ',num2str(n2Process),' replicates'],'append');
     UpdateTables(source);    
 end

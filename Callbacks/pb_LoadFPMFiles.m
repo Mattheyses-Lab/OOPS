@@ -19,7 +19,9 @@ function [] = pb_LoadFPMFiles(source,event)
             uiwait(msgbox('Please select polarization stack .nd2 files'));
 
             [Pol_files, PolPath, ~] = uigetfile('*.nd2','Select Polarization sequences','MultiSelect','on');
-
+            
+            figure(PODSData.Handles.fH);
+            
             if(iscell(Pol_files) == 0)
                 if(Pol_files==0)
                     msg = 'No files selected. Exiting...';
@@ -38,8 +40,12 @@ function [] = pb_LoadFPMFiles(source,event)
             UpdateLog3(source,['Opening ' num2str(n_Pol) ' FPM images...'],'append');
 
             % for each stack (set of 4 polarization images)
-            for i=1:n_Pol 
-
+            for i=1:n_Pol
+                
+                if i > 1
+                    data(i+n) = MakeNewReplicate();
+                end
+                
                 if iscell(Pol_files)
                     filename = Pol_files{1,i};
                 else
@@ -52,12 +58,12 @@ function [] = pb_LoadFPMFiles(source,event)
                 temp = bfopen(char(data(i+n).pol_fullname));
                 temp2 = temp{1,1};
 
-                % on first loop run
-                if i==1
-                    data(i+n).h = size(temp2{1,1},1);
-                    data(i+n).w = size(temp2{1,1},2);
-                    UpdateLog3(source,['Dimensions of ' char(data(i+n).pol_shortname) ' are ' num2str(data(i+n).w) ' by ' num2str(data(i+n).h)],'append');
-                end
+                
+
+                data(i+n).Height = size(temp2{1,1},1);
+                data(i+n).Width = size(temp2{1,1},2);
+                UpdateLog3(source,['Dimensions of ' char(data(i+n).pol_shortname) ' are ' num2str(data(i+n).Width) ' by ' num2str(data(i+n).Height)],'append');
+
 
                 % add each pol slice to 3D image matrix
                 for j=1:4
@@ -100,9 +106,9 @@ function [] = pb_LoadFPMFiles(source,event)
 
                 if i == 1
                     info = imfinfo(char(data(i+n).pol_fullname));
-                    data(i+n).h = info.Height;
-                    data(i+n).w = info.Width;
-                    UpdateLog3(source,['Dimensions of ' char(data(i+n).pol_shortname) ' are ' num2str(data(i+n).w) ' by ' num2str(data(i+n).h)],'append');
+                    data(i+n).Height = info.Height;
+                    data(i+n).Width = info.Width;
+                    UpdateLog3(source,['Dimensions of ' char(data(i+n).pol_shortname) ' are ' num2str(data(i+n).Width) ' by ' num2str(data(i+n).Height)],'append');
                 end
                 for j=1:4
                     data(i+n).pol_rawdata(:,:,j) = im2double(imread(char(data(i+n).pol_fullname),j))*65535;

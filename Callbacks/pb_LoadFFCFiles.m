@@ -18,12 +18,16 @@ function [] = pb_LoadFFCFiles(source,event)
 
             [cal_files, calPath, ~] = uigetfile('*.nd2','Select cal files','MultiSelect','on');
 
-            if(iscell(cal_files)==0)
-                if(cal_files==0)
+            figure(PODSData.Handles.fH);
+            
+            if ~iscell(cal_files)
+                if cal_files == 0
                     warning('No background normalization files selected. Proceeding anyway');
                 end
             end
-
+            
+            
+            
             UpdateLog3(source,'Opening FFC images...','append');
 
             % determine how many FFC stacks were loaded
@@ -117,16 +121,26 @@ function [] = pb_LoadFFCFiles(source,event)
     data.n_cal = size(data.all_cal,4);
     data.cal_average = sum(data(1).all_cal,4)./data.n_cal;
     data.cal_norm = data.cal_average/max(max(max(data.cal_average)));
+    data.Height = h;
+    data.Width = w;
 
     % update main data structure with new data
     PODSData.Group(GroupIndex).FFCData = data;
 
     % update image objects with loaded data
     PODSData.Handles.FFCImage0.CData = data.cal_norm(:,:,1);
+    PODSData.Handles.FFCAxH(1).XLim = [1,w];
+    PODSData.Handles.FFCAxH(1).YLim = [1,h];
     PODSData.Handles.FFCImage45.CData = data.cal_norm(:,:,2);
+    PODSData.Handles.FFCAxH(1).XLim = [1,w];
+    PODSData.Handles.FFCAxH(1).YLim = [1,h];    
     PODSData.Handles.FFCImage90.CData = data.cal_norm(:,:,3);
+    PODSData.Handles.FFCAxH(1).XLim = [1,w];
+    PODSData.Handles.FFCAxH(1).YLim = [1,h];    
     PODSData.Handles.FFCImage135.CData = data.cal_norm(:,:,4);
-
+    PODSData.Handles.FFCAxH(1).XLim = [1,w];
+    PODSData.Handles.FFCAxH(1).YLim = [1,h];    
+    
     % update main data structure
     guidata(source,PODSData);
     UpdateTables(source);    
