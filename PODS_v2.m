@@ -49,11 +49,13 @@ function [] = PODS_v2()
     hProcessMask = uimenu(hProcessMenu,'Text','Generate Mask','MenuSelectedFcn',@CreateMask3);
     hProcessOF = uimenu(hProcessMenu,'Text','Find Order Factor','MenuSelectedFcn',@FindOrderFactor3);
     hProcessLocalSB = uimenu(hProcessMenu,'Text','Find Local Signal:Background','MenuSelectedFcn',@pb_FindLocalSB);
+    
     %% Plot Menu Button
     hPlotMenu = uimenu(fH,'Text','Plot');
     % Plot choices
     hPlotViolins = uimenu(hPlotMenu,'Text','Violin','MenuSelectedFcn',@PlotViolins);
     hPlotOFvsSB = uimenu(hPlotMenu,'Text','OF vs SB','MenuSelectedFcn',@PlotObjects);
+    
     %% Summary Menu Button
     hSummaryMenu = uimenu(fH,'Text','Summary');
     % Summary choices
@@ -76,27 +78,33 @@ function [] = PODS_v2()
     swidth_norm = swidth/pos(3);
     sheight_norm = sheight/pos(4);
     
+    
 %% APP INFO PANEL
     AppInfoPanel = uipanel('Parent',fH,...
                            'Position',[1 round(0.100*pos(4)) round(0.200*pos(3))+2 round(0.900*pos(4))+1],...
                            'BackgroundColor','black',...
                            'BorderType','line');
+                       
 %% LOG PANEL                       
     LogPanel = uipanel('Parent',fH,...
                        'Position',[1 1 pos(3) round(0.100*pos(4))],...
                        'BackgroundColor','black',...
                        'BorderType','line');
+                   
 %% IMAGE INFO PANEL                   
     ImgInfoPanel = uipanel('Parent',fH,...
                            'Position',[round(0.200*pos(3))+2 round(0.100*pos(4)+height)-1 round(width) round(0.900*pos(4)-height)+2],...
                            'BackgroundColor','black',...
                            'BorderType','line');
+                       
 %% IMAGE OPERATIONS PANEL                   
     ImgOperationsPanel = uipanel('Parent',fH,...
                            'Position',[round(0.200*pos(3))+width+1 round(0.100*pos(4)+height)-1 round(width) round(0.900*pos(4)-height)+2],...
                            'BackgroundColor','black',...
                            'BorderType','line');                                
-%% Mask threshold adjuster                       
+                       
+                       
+%% Mask threshold adjuster
     ThreshSlider = uislider('Parent',ImgOperationsPanel,...
                              'Position',[20 35 round(width)-40 3],...
                              'ValueChangingFcn',@SliderMoving,...
@@ -126,7 +134,8 @@ function [] = PODS_v2()
                     'FaceColor','Yellow',...
                     'EdgeColor','None',...
                     'Visible','Off');
-%% MASKING PARAMETERS ADJUSTMENT             
+                
+%% MASKING PARAMETERS ADJUSTMENT
     temp = ImgOperationsPanel.InnerPosition;
     FilterSelectorTitle = uilabel('Parent',ImgOperationsPanel,...
                                   'Position', [20 round(temp(4)-30) 140 20],...
@@ -162,8 +171,8 @@ function [] = PODS_v2()
                              'Value',num2str(4),...
                              'ValueChangedFcn',@SELinesChanged,...
                              'Visible','Off');
-                    
-                             
+               
+                         
 %% LARGE IMAGE PANELS
     ImgPanel1 = uipanel('Parent',fH,...
                         'Position',[round(0.200*pos(3))+2 round(0.100*pos(4)) width height],...
@@ -217,6 +226,7 @@ function [] = PODS_v2()
     drawnow
     pause(0.1)
 
+    
 %% Log Window For User Updates
     LogWindow = uitextarea('parent',LogPanel,...
                            'Position', [0 0 LogPanel.Position(3) LogPanel.Position(4)],...
@@ -228,6 +238,7 @@ function [] = PODS_v2()
                            'FontName','Courier',...
                            'Value',{'Log Window';'Drawing Containers and Tables...'}); 
 
+                       
 %% Group Selection Box
     pos = ImgInfoPanel.InnerPosition;
     
@@ -249,7 +260,7 @@ function [] = PODS_v2()
                                  'HorizontalAlignment','center',...
                                  'Interpreter','html');
                              
-%% Image Selection Box                   
+%% Image Selection Box
     ImageSelector = uilistbox('parent',ImgInfoPanel,...
                               'Position', [lst_pos(3)+20 10 large_width lst_pos(4)],...
                               'enable','on',...
@@ -265,8 +276,8 @@ function [] = PODS_v2()
                                  'Text','<b>Select Image</b>',...                                 
                                  'HorizontalAlignment','center',...
                                  'Interpreter','html');
-                             
-%% Object Selection Box                          
+
+%% Object Selection Box
     ObjectSelector = uilistbox('parent',ImgInfoPanel,...
                                'Position', [lst_pos(3)+lst_pos2(3)+30 10 small_width lst_pos(4)],...
                                'enable','on',...
@@ -308,7 +319,9 @@ function [] = PODS_v2()
     new{length(old)+1} = 'Drawing Axes';
     LogWindow.Value = new;
     clear old new
-%% AXES AND IMAGE PLACEHOLDERS    
+
+    
+%% AXES AND IMAGE PLACEHOLDERS
 	
     % empty placeholder image
 	emptyimage = sparse(zeros(1024,1024));
@@ -323,7 +336,8 @@ function [] = PODS_v2()
     
     LargePanelWidth = ImgPanel1.InnerPosition(3);
     LargePanelHeight = ImgPanel1.InnerPosition(4);
-
+    
+    
     %% FLAT-FIELD IMAGES
     for i = 1:4
         FFCAxH(i) = uiaxes('Parent',SmallPanels(1,i),...
@@ -764,8 +778,65 @@ function [] = PODS_v2()
     linkaxes(RawIntensityAxH,'xy');
 
     %test_fcn(fH);
-
+    
+    
     %% NESTED FUNCTIONS
+
+    
+    function [axH] = restore_axis_defaults(axH,OriginalPlotBoxAspectRatio,OriginalTag)
+        % restore axis defaults that were changed by imshow()
+        axH.YDir = 'normal';
+        axH.PlotBoxAspectRatioMode = 'manual';
+        %axH.DataAspectRatioMode = 'auto';
+        axH.PlotBoxAspectRatio = OriginalPlotBoxAspectRatio;
+        axH.XTick = [];
+        axH.YTick = [];
+        axH.Tag = OriginalTag;
+        
+        % range of axes (for ZoomToCursor)
+        axH.addprop('XRange');
+        axH.XRange = diff(axH.XLim);
+        axH.addprop('YRange');
+        axH.YRange = diff(axH.YLim);
+        axH.addprop('ZRange');        
+        axH.ZRange = diff(axH.ZLim);
+        
+        % size of zoom box (for ZoomToCursor)
+        axH.addprop('XDist');
+        axH.XDist = 0.5*axH.XRange;
+        axH.addprop('YDist');
+        axH.YDist = 0.5*axH.YRange;
+        axH.addprop('ZDist');        
+        axH.ZDist = 0.5*axH.ZRange;
+        
+        axH.addprop('OldXLim');
+        axH.OldXLim = axH.XLim;
+        axH.addprop('OldYLim');
+        axH.OldYLim = axH.YLim;
+        axH.addprop('OldZLim');
+        axH.OldZLim = axH.ZLim;
+        
+        % Adding custom toolbar to allow ZoomToCursor
+        tb = axtoolbar(axH,{});
+    
+        btn = axtoolbarbtn(tb,'state');
+        btn.Icon = 'MagnifyingGlassBlackAndYellow.png';
+        btn.Tooltip = 'Zoom to Cursor';
+        btn.ValueChangedFcn = @ZoomToCursor;        
+
+    end 
+
+    function [axH] = SetAxisTitle(axH,title)
+        % Set image (actually axis) title to top center of axis
+        axH.Title.String = title;
+        axH.Title.Units = 'Normalized';
+        axH.Title.HorizontalAlignment = 'Center';
+        axH.Title.VerticalAlignment = 'Top';
+        axH.Title.Color = 'Yellow';
+        axH.Title.Position = [0.5,1.0,0];
+    end    
+    %% CALLBACKS
+    
     function [] = TabSelection(source,event)
 
         NewTab = source.Text;
@@ -1100,61 +1171,8 @@ function [] = PODS_v2()
                 end
         end
         guidata(source,data);
-    end
-    
-    function [axH] = restore_axis_defaults(axH,OriginalPlotBoxAspectRatio,OriginalTag)
-        % restore axis defaults that were changed by imshow()
-        axH.YDir = 'normal';
-        axH.PlotBoxAspectRatioMode = 'manual';
-        %axH.DataAspectRatioMode = 'auto';
-        axH.PlotBoxAspectRatio = OriginalPlotBoxAspectRatio;
-        axH.XTick = [];
-        axH.YTick = [];
-        axH.Tag = OriginalTag;
-        
-        % range of axes (for ZoomToCursor)
-        axH.addprop('XRange');
-        axH.XRange = diff(axH.XLim);
-        axH.addprop('YRange');
-        axH.YRange = diff(axH.YLim);
-        axH.addprop('ZRange');        
-        axH.ZRange = diff(axH.ZLim);
-        
-        % size of zoom box (for ZoomToCursor)
-        axH.addprop('XDist');
-        axH.XDist = 0.5*axH.XRange;
-        axH.addprop('YDist');
-        axH.YDist = 0.5*axH.YRange;
-        axH.addprop('ZDist');        
-        axH.ZDist = 0.5*axH.ZRange;
-        
-        axH.addprop('OldXLim');
-        axH.OldXLim = axH.XLim;
-        axH.addprop('OldYLim');
-        axH.OldYLim = axH.YLim;
-        axH.addprop('OldZLim');
-        axH.OldZLim = axH.ZLim;
-        
-        % Adding custom toolbar to allow ZoomToCursor
-        tb = axtoolbar(axH,{});
-    
-        btn = axtoolbarbtn(tb,'state');
-        btn.Icon = 'MagnifyingGlassBlackAndYellow.png';
-        btn.Tooltip = 'Zoom to Cursor';
-        btn.ValueChangedFcn = @ZoomToCursor;        
+        end
 
-    end 
-
-    function [axH] = SetAxisTitle(axH,title)
-        % Set image (actually axis) title to top center of axis
-        axH.Title.String = title;
-        axH.Title.Units = 'Normalized';
-        axH.Title.HorizontalAlignment = 'Center';
-        axH.Title.VerticalAlignment = 'Top';
-        axH.Title.Color = 'Yellow';
-        axH.Title.Position = [0.5,1.0,0];
-    end    
-    
     function [] = ChangeInputFileType(source,event)
         OldInputFileType = PODSData.Settings.InputFileType;
         NewInputFileType = source.Text
@@ -1169,9 +1187,8 @@ function [] = PODS_v2()
                 hFileInputType_nd2.Checked = 'Off';
                 hFileInputType_tif.Checked = 'On';                
         end
-    end    
+    end        
     
-    %% CALLBACKS
     function [] = ChangeActiveObject(source,event)
         % do nothing for now
     end
