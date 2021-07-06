@@ -11,6 +11,8 @@ function [] = UpdateImages(source)
     cGroupIndex = PODSData.CurrentGroupIndex;
     % get current replicate index within group
     cImageIndex = PODSData.Group(cGroupIndex).CurrentImageIndex;
+    % get previous image index
+    pImageIndex = PODSData.Group(cGroupIndex).PreviousImageIndex;
     
     trueImageIndex = cImageIndex;
     
@@ -20,13 +22,17 @@ function [] = UpdateImages(source)
     
     % get current replicate data structure
     Replicate = PODSData.Group(cGroupIndex).Replicate(cImageIndex);
+    % get previous replicate
+    OldReplicate = PODSData.Group(cGroupIndex).Replicate(pImageIndex);
     % get FFCData for current group
     FFCData = PODSData.Group(cGroupIndex).FFCData
     
     % empty image to serve as a placeholder when image has not been
     % computed for (cGroup,cImage)
-    EmptyImage = zeros(1024,1024);
+    EmptyImage = sparse(zeros(Replicate.Width,Replicate.Height));
     
+    CurrentTab = PODSData.Settings.CurrentTab;
+
 %% Update CData of gui image objects to reflect user-specified group/image change 
 %% Flat-Field Images
     try
@@ -44,10 +50,11 @@ function [] = UpdateImages(source)
     
 %% FPM (experimental) Images
     try
-        Handles.RawImage0.CData = Replicate.pol_rawdata_normalizedbystack(:,:,1);
-        Handles.RawImage45.CData = Replicate.pol_rawdata_normalizedbystack(:,:,2);
-        Handles.RawImage90.CData = Replicate.pol_rawdata_normalizedbystack(:,:,3);
-        Handles.RawImage135.CData = Replicate.pol_rawdata_normalizedbystack(:,:,4);        
+        images = Replicate.pol_rawdata_normalizedbystack;
+        Handles.RawImage0.CData = images(:,:,1);
+        Handles.RawImage45.CData = images(:,:,2);
+        Handles.RawImage90.CData = images(:,:,3);
+        Handles.RawImage135.CData = images(:,:,4);
     catch
         Handles.RawImage0.CData = EmptyImage;
         Handles.RawImage45.CData = EmptyImage;
@@ -55,18 +62,22 @@ function [] = UpdateImages(source)
         Handles.RawImage135.CData = EmptyImage;
     end
 
+    clear images
 %% Flat-Field Corrected Images
     try
-        Handles.PolFFCImage0.CData = Replicate.pol_ffc_normalizedbystack(:,:,1);
-        Handles.PolFFCImage45.CData = Replicate.pol_ffc_normalizedbystack(:,:,2);
-        Handles.PolFFCImage90.CData = Replicate.pol_ffc_normalizedbystack(:,:,3);
-        Handles.PolFFCImage135.CData = Replicate.pol_ffc_normalizedbystack(:,:,4);        
+        images = Replicate.pol_ffc_normalizedbystack;
+        Handles.PolFFCImage0.CData = images(:,:,1);
+        Handles.PolFFCImage45.CData = images(:,:,2);
+        Handles.PolFFCImage90.CData = images(:,:,3);
+        Handles.PolFFCImage135.CData = images(:,:,4);        
     catch
         Handles.PolFFCImage0.CData = EmptyImage;
         Handles.PolFFCImage45.CData = EmptyImage;
         Handles.PolFFCImage90.CData = EmptyImage;
         Handles.PolFFCImage135.CData = EmptyImage;        
     end
+    
+    clear images
     
 %% Masking Steps
     try
@@ -98,8 +109,8 @@ function [] = UpdateImages(source)
             Handles.SESizeBox.Value = Replicate.SESize;
             Handles.SELinesBox.Value = Replicate.SELines;        
         catch
-            Handles.SESizeBox.Value = 5;
-            Handles.SELinesBox.Value = 4;
+            Handles.SESizeBox.Value = '5';
+            Handles.SELinesBox.Value = '4';
         end
     end
     
@@ -140,6 +151,9 @@ function [] = UpdateImages(source)
     end  
     
 
+    
+    
+    
     
     % update local PODSData structure with updated Handles
     PODSData.Handles = Handles;
