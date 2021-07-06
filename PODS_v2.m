@@ -1,121 +1,14 @@
 function [] = PODS_v2()
-    
-%% Need to go through and add all handle arrays to PODSData.Handles
-     GraphicsRootObject = groot;
 
-     im = zeros(1024,1024);
-     
-     for i = 1:1024
-         im(i,1:1024) = linspace(0,1,1024);
-     end
+    PODSData = PODSProject;
 
-% get monitor positions to determine figure size
-    MonitorPosition = get(0, 'MonitorPositions');
-    
-    % get size of main monitor
-    MP1 = MonitorPosition(1,1:4);
-    
-    Zoom = struct('XRange',0,...
-                  'YRange',0,...
-                  'ZRange',0,...
-                  'XDist',0,...
-                  'YDist',0,...
-                  'ZDist',0,...
-                  'OldXLim',[0 1],...
-                  'OldYLim',[0 1],...
-                  'OldZLim',[0 1],...
-                  'pct',0.5,...
-                  'ZoomLevels',[1/10 1/5 1/3 1/2 1/1.5 1/1.25 1],...
-                  'ZoomLevelIdx',4);
-
-    % struct to hold gui settings
-    UserSettings = struct('InputFileType','.nd2',...
-                          'MaskType','MakeNew',...
-                          'CurrentTab','Files',...
-                          'PreviousTab','Files',...
-                          'ScreenSize',MP1,...
-                          'Zoom',Zoom);
-                      
-    Object = struct('Area',0,...
-                    'BoundingBox',[],...
-                    'Centroid',[],...
-                    'Circularity',0,...
-                    'ConvexArea',0,...
-                    'ConvexHull',[],...
-                    'ConvexImage',[],...
-                    'Eccentricity',0,...
-                    'Extrema',[],...
-                    'FilledArea',0,...
-                    'Image',[],...
-                    'MajorAxisLength',0,...
-                    'MinorAxisLength',0,...
-                    'Orientation',0,...
-                    'Perimeter',0,...
-                    'PixelIdxList',[],...
-                    'PixelList',[],...
-                    'MaxFFCAvgIntensity',0,...
-                    'MeanFFCAvgIntensity',0,...
-                    'MinFFCAvgIntensity',0,...
-                    'BGPixelIdxList',[],...
-                    'MeanBGIntensity',0,...
-                    'LocalSBRatio',0,...
-                    'RawPixelValues',[],...
-                    'OFPixelValues',[],...
-                    'AzimuthPixelValues',[],...
-                    'AnisotropyPixelValues',[],...
-                    'OFAvg',0,...
-                    'OFMin',0,...
-                    'OFMax',0,...
-                    'Name','',...
-                    'OriginalIdx',0);
-
-    % data structure for individual replicates
-    Replicate = struct('OFAvg',0,...
-                       'OFMax',0,...
-                       'OFMin',0,...        
-                       'FilteredOFAvg',0,...
-                       'pol_shortname','',...
-                       'nObjects',0,...
-                       'level',0,...
-                       'Width',0,...
-                       'Height',0,...
-                       'ThresholdAdjusted',logical(0),...
-                       'MaskDone',logical(0),...
-                       'OFDone',logical(0),...
-                       'SE','disk',...
-                       'SESize',num2str(5),...
-                       'SELines',num2str(4),...
-                       'FilterType','Median',...
-                       'Object',Object,...
-                       'ObjectNames',{['No Objects Found']},...
-                       'CurrentObjectIdx',1);
-                   
-                  
-
-    % data structure holding all groups within one experiment
-    Group = struct('Replicate',Replicate,...
-                   'CurrentImageIndex',1,...
-                   'BatchImageIndex',[],...
-                   'nReplicates',0,...
-                   'FFCData',struct(),...
-                   'GroupName','Untitled Group 1',...
-                   'ImageNames',{'No Image Found'},...
-                   'OFAvg',0,...
-                   'TotalObjects',0);
-    
-    % data structure to hold all GUI settings and data
-    PODSData = struct('Settings',UserSettings,...
-                      'Handles',struct(),...
-                      'Group',Group,...
-                      'nGroups',1,...
-                      'ProjectName','Untitled Project',...
-                      'CurrentGroupIndex',1,...
-                      'GroupNames',{'Untitled Group 1'});
+    PODSData.Group(1) = PODSGroup;
+    PODSData.Group(1).GroupName = 'Untitled Group 1';
 
     fH = uifigure('Name','PODS GUI',...
                  'numbertitle','off',...
                  'units','pixels',...
-                 'Position',MP1,...
+                 'Position',PODSData.Settings.ScreenSize,...
                  'Visible','On',...
                  'Color','yellow',...
                  'HandleVisibility','on');
@@ -138,7 +31,7 @@ function [] = PODS_v2()
     hFileInputType_tif = uimenu(hFileInputType,'Text','.tif','Checked','off','Callback',@ChangeInputFileType);
 
     %% View Menu Button - changes view of GUI to different 'tabs'
-    hTabMenu = uimenu(fH,'Text','Change Tab');
+    hTabMenu = uimenu(fH,'Text','View');
     % Tabs for 'View'
     hTabFiles = uimenu(hTabMenu,'Text','Files','MenuSelectedFcn',@TabSelection);
     hTabFFC = uimenu(hTabMenu,'Text','FFC','MenuSelectedFcn',@TabSelection);
@@ -155,11 +48,17 @@ function [] = PODS_v2()
     hProcessFFC = uimenu(hProcessMenu,'Text','Perform Flat-Field Correction','MenuSelectedFcn',@pb_FFC);
     hProcessMask = uimenu(hProcessMenu,'Text','Generate Mask','MenuSelectedFcn',@CreateMask3);
     hProcessOF = uimenu(hProcessMenu,'Text','Find Order Factor','MenuSelectedFcn',@FindOrderFactor3);
-
+    hProcessLocalSB = uimenu(hProcessMenu,'Text','Find Local Signal:Background','MenuSelectedFcn',@pb_FindLocalSB);
+    %% Plot Menu Button
     hPlotMenu = uimenu(fH,'Text','Plot');
     % Plot choices
     hPlotViolins = uimenu(hPlotMenu,'Text','Violin','MenuSelectedFcn',@PlotViolins);
-
+    hPlotOFvsSB = uimenu(hPlotMenu,'Text','OF vs SB','MenuSelectedFcn',@PlotObjects);
+    %% Summary Menu Button
+    hSummaryMenu = uimenu(fH,'Text','Summary');
+    % Summary choices
+    hSumaryAll = uimenu(hSummaryMenu,'Text','All Data','MenuSelectedFcn',@ShowSummaryTable);
+    
     drawnow
     pause(0.1)
     
@@ -186,7 +85,7 @@ function [] = PODS_v2()
     LogPanel = uipanel('Parent',fH,...
                        'Position',[1 1 pos(3) round(0.100*pos(4))],...
                        'BackgroundColor','black',...
-                       'BorderType','line');  
+                       'BorderType','line');
 %% IMAGE INFO PANEL                   
     ImgInfoPanel = uipanel('Parent',fH,...
                            'Position',[round(0.200*pos(3))+2 round(0.100*pos(4)+height)-1 round(width) round(0.900*pos(4)-height)+2],...
@@ -220,7 +119,8 @@ function [] = PODS_v2()
     corn_gray = corn_gray./max(max(corn_gray));
     corn_gray = corn_gray(1:100,1:100);
 
-    [IntensityBinCenters,IntensityHistPlot] = BuildHistogram(corn_gray);             
+    [IntensityBinCenters,IntensityHistPlot] = BuildHistogram(corn_gray);
+    clear corn_gray
                    
     ThreshBar = bar(ThreshAxH,IntensityBinCenters,IntensityHistPlot,...
                     'FaceColor','Yellow',...
@@ -334,8 +234,6 @@ function [] = PODS_v2()
     small_width = (0.5*pos(3)-25)*0.5;
     large_width = small_width*2+10;
     
-    
-    
     GroupSelector = uilistbox('parent',ImgInfoPanel,...
                               'Position', [10 10 small_width pos(4)-30],...
                               'enable','on',...
@@ -368,7 +266,7 @@ function [] = PODS_v2()
                                  'HorizontalAlignment','center',...
                                  'Interpreter','html');
                              
-    %% Object Selection Box                          
+%% Object Selection Box                          
     ObjectSelector = uilistbox('parent',ImgInfoPanel,...
                                'Position', [lst_pos(3)+lst_pos2(3)+30 10 small_width lst_pos(4)],...
                                'enable','on',...
@@ -389,7 +287,7 @@ function [] = PODS_v2()
     pos = AppInfoPanel.Position;
 
     ProjectDataTable = uilabel('Parent',AppInfoPanel,...
-                               'Position',[20 0.5*pos(4) pos(3)-40 0.5*pos(4)-20],...
+                               'Position',[20 0.2*pos(4) pos(3)-40 0.8*pos(4)-20],...
                                'tag','ProjectDataTable',...
                                'Text','Loading...',...
                                'FontColor','Yellow',...
@@ -403,21 +301,22 @@ function [] = PODS_v2()
                              ['Number of Groups:      ', num2str(PODSData.nGroups)];...
                              ['InputFileType:         ', PODSData.Settings.InputFileType];...
                              ['Current Tab:           ', PODSData.Settings.CurrentTab]};     
-    drawnow
+    %drawnow
     
     old = LogWindow.Value;
     new = old;
     new{length(old)+1} = 'Drawing Axes';
     LogWindow.Value = new;
-    
+    clear old new
 %% AXES AND IMAGE PLACEHOLDERS    
 	
     % empty placeholder image
-	emptyimage = zeros(1024,1024);
+	emptyimage = sparse(zeros(1024,1024));
     % black to green colormap for fluorescence images
     graymap = gray;
     greenmap = zeros(256,3);
-    greenmap(:,2) = graymap(:,2);    
+    greenmap(:,2) = graymap(:,2); 
+    clear graymap
 
     SmallPanelWidth = SmallPanels(1,1).InnerPosition(3);
     SmallPanelHeight = SmallPanels(1,1).InnerPosition(4);
@@ -437,15 +336,15 @@ function [] = PODS_v2()
         pbarOriginal = FFCAxH(i).PlotBoxAspectRatio;
         tagOriginal = FFCAxH(i).Tag;        
         % place placeholder image on axis
-        FFCImgH(i) = imshow(im,'Parent',FFCAxH(i));
+        FFCImgH(i) = imshow(full(emptyimage),'Parent',FFCAxH(i));
         % set a tag so our callback functions can find the image
         set(FFCImgH(i),'Tag',['FFCImage' num2str((i-1)*45)]);
 
         % restore original values after imshow() call
         FFCAxH(i) = restore_axis_defaults(FFCAxH(i),pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
 
         FFCAxH(i) = SetAxisTitle(FFCAxH(i),['Flat-Field Image (' num2str((i-1)*45) '^{\circ} Excitation)']);
-        
         FFCAxH(i).Colormap = greenmap;
     end
     %linkaxes(FFCAxH);
@@ -461,16 +360,15 @@ function [] = PODS_v2()
         pbarOriginal = RawIntensityAxH(i).PlotBoxAspectRatio;
         tagOriginal = RawIntensityAxH(i).Tag;        
         % place placeholder image on axis
-        RawIntensityImgH(i) = imshow(emptyimage,'Parent',RawIntensityAxH(i));
+        RawIntensityImgH(i) = imshow(full(emptyimage),'Parent',RawIntensityAxH(i));
         % set a tag so our callback functions can find the image
         set(RawIntensityImgH(i),'Tag',['RawImage' num2str((i-1)*45)]);
         
-
         % restore original values after imshow() call
         RawIntensityAxH(i) = restore_axis_defaults(RawIntensityAxH(i),pbarOriginal,tagOriginal);
-
-        RawIntensityAxH(i) = SetAxisTitle(RawIntensityAxH(i),['Raw Intensity (' num2str((i-1)*45) '^{\circ} Excitation)']);
+        clear pbarOriginal tagOriginal
         
+        RawIntensityAxH(i) = SetAxisTitle(RawIntensityAxH(i),['Raw Intensity (' num2str((i-1)*45) '^{\circ} Excitation)']);
         RawIntensityAxH(i).Colormap = greenmap;
         
     end
@@ -486,12 +384,14 @@ function [] = PODS_v2()
         pbarOriginal = PolFFCAxH(i).PlotBoxAspectRatio;
         tagOriginal = PolFFCAxH(i).Tag;
         % place placeholder image on axis
-        PolFFCImgH(i) = imshow(emptyimage,'Parent',PolFFCAxH(i));
+        PolFFCImgH(i) = imshow(full(emptyimage),'Parent',PolFFCAxH(i));
         % set a tag so our callback functions can find the image
         set(PolFFCImgH(i),'Tag',['PolFFCImage' num2str((i-1)*45)]);
 
         % restore original values after imshow() call
         PolFFCAxH(i) = restore_axis_defaults(PolFFCAxH(i),pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
+        
         % set axis title
         PolFFCAxH(i) = SetAxisTitle(PolFFCAxH(i),['Flat-Field Corrected Intensity (' num2str((i-1)*45) '^{\circ} Excitation)']);
         
@@ -547,12 +447,14 @@ function [] = PODS_v2()
         pbarOriginal = MStepsAxH(i).PlotBoxAspectRatio;
         tagOriginal = MStepsAxH(i).Tag;        
         % place placeholder image on axis
-        MStepsImgH(i) = imshow(emptyimage,'Parent',MStepsAxH(i));
+        MStepsImgH(i) = imshow(full(emptyimage),'Parent',MStepsAxH(i));
         % set a tag so our callback functions can find the image
         set(MStepsImgH(i),'Tag',image_tag);
 
         % restore original values after imshow() call
         MStepsAxH(i) = restore_axis_defaults(MStepsAxH(i),pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
+        
         % set axis title
         MStepsAxH(i) = SetAxisTitle(MStepsAxH(i),image_title);
         
@@ -576,12 +478,14 @@ function [] = PODS_v2()
         pbarOriginal = AverageIntensityAxH.PlotBoxAspectRatio;
         tagOriginal = AverageIntensityAxH.Tag;
         % place placeholder image on axis
-        AverageIntensityImgH = imshow(emptyimage,'Parent',AverageIntensityAxH);
+        AverageIntensityImgH = imshow(full(emptyimage),'Parent',AverageIntensityAxH);
         % set a tag so our callback functions can find the image
         set(AverageIntensityImgH,'Tag','AverageIntensityImage');
 
         % restore original values after imshow() call
         AverageIntensityAxH = restore_axis_defaults(AverageIntensityAxH,pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
+        
         % set axis title
         AverageIntensityAxH = SetAxisTitle(AverageIntensityAxH,'Average Intensity (Flat-Field Corrected)');
         % set celormap
@@ -603,11 +507,13 @@ function [] = PODS_v2()
         pbarOriginal = OrderFactorAxH.PlotBoxAspectRatio;
         tagOriginal = OrderFactorAxH.Tag;
         % place placeholder image on axis
-        OrderFactorImgH = imshow(emptyimage,'Parent',OrderFactorAxH);
+        OrderFactorImgH = imshow(full(emptyimage),'Parent',OrderFactorAxH);
         % set a tag so our callback functions can find the image
         set(OrderFactorImgH,'Tag','OrderFactorImage');
         % restore original values after imshow() call
         OrderFactorAxH = restore_axis_defaults(OrderFactorAxH,pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
+        
         % set axis title
         OrderFactorAxH = SetAxisTitle(OrderFactorAxH,'Pixel-by-pixel Order Factor');
         % change active axis so we can make custom colorbar/colormap
@@ -635,12 +541,13 @@ function [] = PODS_v2()
         pbarOriginal = AzimuthAxH.PlotBoxAspectRatio;
         tagOriginal = AzimuthAxH.Tag;
         % place placeholder image on axis
-        AzimuthImgH = imshow(emptyimage,'Parent',AzimuthAxH);
+        AzimuthImgH = imshow(full(emptyimage),'Parent',AzimuthAxH);
         % set a tag so our callback functions can find the image
         set(AzimuthImgH,'Tag','ColoredAzimuthImage');
 
         % restore original values after imshow() call
         AzimuthAxH = restore_axis_defaults(AzimuthAxH,pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
         % set axis title
         AzimuthAxH = SetAxisTitle(AzimuthAxH,'Colored Azimuth Image');
         
@@ -660,12 +567,13 @@ function [] = PODS_v2()
         pbarOriginal = AnisotropyAxH.PlotBoxAspectRatio;
         tagOriginal = AnisotropyAxH.Tag;
         % place placeholder image on axis
-        AnisotropyImgH = imshow(emptyimage,'Parent',AnisotropyAxH);
+        AnisotropyImgH = imshow(full(emptyimage),'Parent',AnisotropyAxH);
         % set a tag so our callback functions can find the image
         set(AnisotropyImgH,'Tag','AnisotropyImage');
 
         % restore original values after imshow() call
         AnisotropyAxH = restore_axis_defaults(AnisotropyAxH,pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
         % set axis title
         AnisotropyAxH = SetAxisTitle(AnisotropyAxH,'Anisotropy Image');
         
@@ -687,12 +595,14 @@ function [] = PODS_v2()
         pbarOriginal = SBAverageIntensityAxH.PlotBoxAspectRatio;
         tagOriginal = SBAverageIntensityAxH.Tag;
         % place placeholder image on axis
-        SBAverageIntensityImgH = imshow(emptyimage,'Parent',SBAverageIntensityAxH);
+        SBAverageIntensityImgH = imshow(full(emptyimage),'Parent',SBAverageIntensityAxH);
         % set a tag so our callback functions can find the image
         set(SBAverageIntensityImgH,'Tag','SBAverageIntensityImage');
 
         % restore original values after imshow() call
         SBAverageIntensityAxH = restore_axis_defaults(SBAverageIntensityAxH,pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
+        
         % set axis title
         SBAverageIntensityAxH = SetAxisTitle(SBAverageIntensityAxH,'Average Intensity (S:B Overlay)');
 
@@ -714,12 +624,14 @@ function [] = PODS_v2()
         pbarOriginal = MaskAxH.PlotBoxAspectRatio;
         tagOriginal = MaskAxH.Tag;
         % place placeholder image on axis
-        MaskImgH = imshow(emptyimage,'Parent',MaskAxH);
+        MaskImgH = imshow(full(emptyimage),'Parent',MaskAxH);
         % set a tag so our callback functions can find the image
         set(MaskImgH,'Tag','MaskImage');
                     
         % restore original values after imshow() call
         MaskAxH = restore_axis_defaults(MaskAxH,pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
+        
         % set axis title
         MaskAxH = SetAxisTitle(MaskAxH,'Binary Mask');
         
@@ -740,12 +652,14 @@ function [] = PODS_v2()
         pbarOriginal = SBMaskAxH.PlotBoxAspectRatio;
         tagOriginal = SBMaskAxH.Tag;
         % place placeholder image on axis
-        SBMaskImgH = imshow(emptyimage,'Parent',SBMaskAxH);
+        SBMaskImgH = imshow(full(emptyimage),'Parent',SBMaskAxH);
         % set a tag so our callback functions can find the image
         set(SBMaskImgH,'Tag','SBMaskImage');
 
         % restore original values after imshow() call
         SBMaskAxH = restore_axis_defaults(SBMaskAxH,pbarOriginal,tagOriginal);
+        clear pbarOriginal tagOriginal
+        
         % set axis title
         SBMaskAxH = SetAxisTitle(SBMaskAxH,'SB-Filtered Binary Mask');
         
@@ -765,17 +679,20 @@ function [] = PODS_v2()
     % add guihandles to PODSData struct
     PODSData.Handles = guihandles;
     
-    PODSData.Handles.GraphicsRootObject = GraphicsRootObject;
+    %PODSData.Handles.GraphicsRootObject = GraphicsRootObject;
     
     % Main Figure
     PODSData.Handles.fH = fH;    
     
     % Handles for flat-field images/axes
     PODSData.Handles.FFCAxH = FFCAxH;
-    PODSData.Handles.FFCImgH = FFCImgH;
+    %PODSData.Handles.FFCImgH = FFCImgH;
     
     % ...to the small image panels
     PODSData.Handles.SmallPanels = SmallPanels;
+    
+    PODSData.Handles.ImgInfoPanel = ImgInfoPanel;
+    PODSData.Handles.ImgOperationsPanel = ImgOperationsPanel;
     
     % ...masking steps images/axes
     PODSData.Handles.MStepsAxH = MStepsAxH;
@@ -836,7 +753,7 @@ function [] = PODS_v2()
     PODSData.Handles.SELinesBox = SELinesBox;
     PODSData.Handles.SELinesBoxTitle = SELinesBoxTitle;
 
-    
+    % ...Object selection
     PODSData.Handles.ObjectSelector = ObjectSelector;
     
     
@@ -852,7 +769,7 @@ function [] = PODS_v2()
     function [] = TabSelection(source,event)
 
         NewTab = source.Text;
-        data = guidata(source)
+        data = guidata(source);
         OldTab = data.Settings.CurrentTab;
         UpdateLog3(source,[NewTab, ' Tab Selected'],'append');
         data.Settings.CurrentTab = NewTab;
@@ -941,6 +858,12 @@ function [] = PODS_v2()
                     % do nothing
                 end
                 
+                try
+                    
+                catch
+                    
+                end
+
                 AverageIntensityImgH.Visible = 'Off';
                 AverageIntensityAxH.Title.Visible = 'Off';
                 AverageIntensityAxH.Toolbar.Visible = 'Off';
@@ -959,8 +882,6 @@ function [] = PODS_v2()
                 MaskImgH.Visible = 'Off';
                 MaskAxH.Title.Visible = 'Off';
                 MaskAxH.Toolbar.Visible = 'Off';
-                
-                
 
             case 'Order Factor'       
                 OrderFactorImgH.Visible = 'Off';
@@ -1107,7 +1028,7 @@ function [] = PODS_v2()
                     SmallPanels(2,i).Visible = 'Off';                
                 end
                 linkaxes([AverageIntensityAxH,MaskAxH],'xy');
-                
+
             case 'Order Factor'
                 OrderFactorImgH.Visible = 'On';
                 OrderFactorAxH.Title.Visible = 'On';
@@ -1258,12 +1179,16 @@ function [] = PODS_v2()
     function [] = ChangeActiveGroup(source,event)
         data = guidata(source);
         OldGroupIndex = data.CurrentGroupIndex;
+        OldImageIndex = data.Group(OldGroupIndex).CurrentImageIndex;
+        OldReplicate = data.Group(OldGroupIndex).Replicate(OldImageIndex);   
+        
+        
         NewGroupIndex = source.Value;
+        group = data.Group(NewGroupIndex);
         data.CurrentGroupIndex = NewGroupIndex;
         UpdateLog3(source,['Changed current group from ',data.Group(OldGroupIndex).GroupName,' to ',data.Group(NewGroupIndex).GroupName],'append');
         
-        group = data.Group(NewGroupIndex);
-        ImageIndex = group.CurrentImageIndex;
+
         FFCData = group.FFCData;
 
         % update ImageListBox Items to reflect current user-specified group
@@ -1286,10 +1211,7 @@ function [] = PODS_v2()
         catch
             data.Handles.ObjectSelector.Items = {'No objects identified for this group...'};
         end        
-        
-        
-        
-        
+
         guidata(source,data);        
         % update gui image objects with user-specified group
         UpdateImages(source);
@@ -1297,20 +1219,23 @@ function [] = PODS_v2()
     end
 
     function [] = ChangeActiveImage(source,event)
-        disp('user changed image');
         % get PODSData
         data = guidata(source);
+        % get handles struct
+        Handles = data.Handles;
         % get current group index
         CurrentGroupIndex = data.CurrentGroupIndex;
         % get old image index (before user click)
         OldImageIndex = data.Group(CurrentGroupIndex).CurrentImageIndex;
+        % update PreviousImageIndex
+        data.Group(CurrentGroupIndex).PreviousImageIndex = OldImageIndex;
         % new image index, according to user click
         NewImageIndex = source.Value;
         % Update data with new image index
-        data.Group(CurrentGroupIndex).CurrentImageIndex = NewImageIndex;
+        data.Group(CurrentGroupIndex).CurrentImageIndex = source.Value;
         
         if length(NewImageIndex) > 1
-            UpdateLog3(source,[num2str(length(NewImageIndex)),'images selected for analysis'],'append');
+            UpdateLog3(source,[num2str(length(data.Group(CurrentGroupIndex).CurrentImageIndex)),'images selected for analysis'],'append');
         else
             NewImage = data.Group(CurrentGroupIndex).Replicate(NewImageIndex).pol_shortname;
             UpdateLog3(source,['Selected ',NewImage,' for analysis'],'append');
@@ -1321,14 +1246,17 @@ function [] = PODS_v2()
         % update ObjectListBox Items to reflect current user-specified
         % group/replicate
         try
-            data.Handles.ObjectSelector.Items = replicate.ObjectNames;
-            data.Handles.ObjectSelector.ItemsData = [1:length(replicate.ObjectNames)];
-            data.Handles.ObjectSelector.Value = replicate.CurrentObjectIdx;
+            Handles.ObjectSelector.Items = replicate.ObjectNames;
+            Handles.ObjectSelector.ItemsData = [1:length(replicate.ObjectNames)];
+            Handles.ObjectSelector.Value = replicate.CurrentObjectIdx;
         catch
-            data.Handles.ObjectListBox.Items = {'No objects identified for this group...'};
-        end        
-
-        guidata(source,data);        
+            Handles.ObjectListBox.Items = {'No objects found...'};
+        end
+        
+        data.Handles = Handles;
+        
+        guidata(source,data);
+  
         UpdateImages(source);
         UpdateTables(source);        
     end
@@ -1371,6 +1299,21 @@ function [] = PODS_v2()
         end         
         guidata(source,data);
         UpdateTables(source);
+    end
+
+    function [] = pb_FindLocalSB(source,event)
+        
+        data = guidata(source);
+        cGroupIndex = data.CurrentGroupIndex;
+        cImageIndex = data.Group(cGroupIndex).CurrentImageIndex;
+        cReplicate = data.Group(cGroupIndex).Replicate(cImageIndex(i));
+        
+        for i = 1:length(cImageIndex)
+            data.Group(cGroupIndex).Replicate(cImageIndex(i)) = FindLocalSB(data.Group(cGroupIndex).Replicate(cImageIndex(i)),source);
+            data.Group(cGroupIndex).Replicate(cImageIndex(i)).LocalSBDone = true;
+        end        
+
+        guidata(source,data);
     end
 
 %     waitfor(fH)
