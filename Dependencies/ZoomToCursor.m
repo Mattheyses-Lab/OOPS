@@ -8,6 +8,17 @@ function [] = ZoomToCursor(source,event)
 %           zoom levels until max zoom is reached
 %           double-click will return to default zoom value
 %           shift-click will decrease zoom
+%-------------------------------------------------------------------------%
+% Author: Will Dean
+% Organization: University of Alabama at Birmingham
+% Group: Mattheyses Lab
+% Date: 20210701
+%
+%
+%
+% This function uses the same general strategy of zoom2cursor
+% (Written by Brett Shoelson, Ph.D. (shoelson@helix.nih.gov,
+% shoelson@hotmail.com))
 
     PODSData = guidata(source);
     Handles = PODSData.Handles;
@@ -60,10 +71,12 @@ function [] = ZoomToCursor(source,event)
              
             % get original axes values
             pbarOriginal = Zoom.StaticAxes.PlotBoxAspectRatio;
-            tagOriginal = Zoom.StaticAxes.Tag; 
+            tagOriginal = Zoom.StaticAxes.Tag;
             
+            
+            Zoom.DynamicImage = findobj(Zoom.DynamicAxes,'Type','image');
             % placeholder image in the reference (static) axes
-            Zoom.StaticImage = imshow(zeros(1024,1024),'Parent',Zoom.StaticAxes);
+            Zoom.StaticImage = imshow(Zoom.DynamicImage.CData,'Parent',Zoom.StaticAxes);
 
             % restore axis defaults for consistent display
             Zoom.StaticAxes = restore_axis_defaults(Zoom.StaticAxes,pbarOriginal,tagOriginal);
@@ -84,7 +97,7 @@ function [] = ZoomToCursor(source,event)
             Handles.fH.Pointer = 'crosshair';
             Handles.fH.WindowButtonMotionFcn = @CursorMoving;
             
-            Zoom.DynamicImage = findobj(Zoom.DynamicAxes,'Type','image');
+            
             
             Zoom.DynamicImage.ButtonDownFcn = @ChangeZoomLevel;
             %Zoom.StaticAxes.ButtonDownFcn = @ChangeZoomLevel;
@@ -134,10 +147,12 @@ function [] = CursorMoving(source,event)
     DynamicAxes = PODSData.Settings.Zoom.DynamicAxes;
     
     
-    ax = Zoom.StaticAxes;
+%     ax = Zoom.StaticAxes;
+%     
+%     posn = ax.CurrentPoint;
+%     posn = posn(1,:);
     
-    posn = ax.CurrentPoint;
-    posn = posn(1,:);
+    posn = Zoom.StaticAxes.CurrentPoint(1,:);
 
     x = posn(1,1);
     y = posn(1,2);
@@ -151,12 +166,20 @@ function [] = CursorMoving(source,event)
     y2 = y1 + DynamicAxes.YDist;
     z2 = z1 + DynamicAxes.ZDist;
     
+    % if cursor is still within axes limits
     if x >= DynamicAxes.OldXLim(1) & x <= DynamicAxes.OldXLim(2) & ...
             y >= DynamicAxes.OldYLim(1) & y <= DynamicAxes.OldYLim(2) & ...
         z >= DynamicAxes.OldZLim(1) & z <= DynamicAxes.OldZLim(2)
 
         ZoomPct = round((DynamicAxes.XRange/DynamicAxes.XDist)*100);
-        DynamicAxes.CursorPositionLabel.Text = [' x = ',num2str(x),'; y = ',num2str(y),'; Zoom: ',num2str(ZoomPct),'%'];
+        posn2 = Zoom.DynamicAxes.CurrentPoint(1,:);
+        realx = posn2(1,1);
+        realy = posn2(1,2);
+
+        DynamicAxes.CursorPositionLabel.Text = [' (X,Y) = (',num2str(round(realx)),...
+                                                ',',num2str(round(realy)),') | Zoom: ',...
+                                                num2str(ZoomPct),'%',...
+                                                ' | Value: ',num2str(Zoom.StaticImage.CData(round(realy),round(realx)))];
         DynamicAxes.XLim = [x1 x2];
         DynamicAxes.YLim = [y1 y2];
         
