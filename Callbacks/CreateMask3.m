@@ -13,17 +13,15 @@ function [] = CreateMask3(source,event)
         first = cImageIndex;
         last = cImageIndex;
     end
-
+    
     chartab = '    ';
     UpdateLog3(source,'Building mask(s)...','append');
     
+    % for each selected image
     for i = 1:length(cImageIndex)
         ii = cImageIndex(i);
         
         UpdateLog3(source,[chartab,'Image ',num2str(i),' of ',num2str(length(cImageIndex)),'...'],'append');
-        
-        DiskSize = str2num(cReplicate(ii).SESize);
-        DiskLines = str2num(cReplicate(ii).SELines);
         
         UpdateLog3(source,[chartab,chartab,'Averaging Intensity Images...'],'append');
         cReplicate(ii).Pol_ImAvg = mean(cReplicate(ii).pol_ffc,3);
@@ -33,7 +31,7 @@ function [] = CreateMask3(source,event)
 
         % use disk-shaped structuring element to calculate BG
         UpdateLog3(source,[chartab,chartab,'Identifying Punctate Structures...'],'append');
-        cReplicate(ii).BGImg = imopen(cReplicate(ii).I,strel('disk',DiskSize,DiskLines));
+        cReplicate(ii).BGImg = imopen(cReplicate(ii).I,strel('disk',str2num(cReplicate(ii).SESize),str2num(cReplicate(ii).SELines)));
 
         % subtract BG
         UpdateLog3(source,[chartab,chartab,'Subtracting Background...'],'append');
@@ -52,55 +50,65 @@ function [] = CreateMask3(source,event)
         [cReplicate(ii).IntensityBinCenters,...
          cReplicate(ii).IntensityHistPlot] = BuildHistogram(cReplicate(ii).MedianFilteredImg);
 %%        
-        % get threshold level with graythresh()
+        % initial threshold guess using graythresh()
         UpdateLog3(source,[chartab,chartab,'Finding Threshold...'],'append');
+        
         [cReplicate(ii).level,~] = graythresh(cReplicate(ii).MedianFilteredImg);
 
-        % binarize median-filtered image at level determined above
-        UpdateLog3(source,[chartab,chartab,'Binarizing Image...'],'append');
-        cReplicate(ii).bw = imbinarize(cReplicate(ii).MedianFilteredImg,cReplicate(ii).level);
-
-        % remove small objects
-        UpdateLog3(source,[chartab,chartab,'Removing Objects with Area < 10 px...'],'append');
-        cReplicate(ii).bw = bwareaopen(cReplicate(ii).bw, 10);
         
-        % image size
-        cReplicate(ii).dimensions = size(cReplicate(ii).bw);
-        cReplicate(ii).cols = cReplicate(ii).dimensions(1,2);
-        cReplicate(ii).rows = cReplicate(ii).dimensions(1,1);
+%% Set the max nObjects to 500 by increasing the threshold until nObjects <= 500        
+        nObjects = 500;
+        notfirst = logical(0);
+        
+        while nObjects >= 500
+            
+            if notfirst
+                cReplicate(ii).level = cReplicate(ii).level*2;
+                UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
+            end
+            notfirst = logical(1);
 
-        % set 10 border px on all sides to 0, this is to speed up local BG
-        % detection later on
-        cReplicate(ii).bw(1:10,1:end) = 0;
-        cReplicate(ii).bw(1:end,1:10) = 0;
-        cReplicate(ii).bw(cReplicate(ii).rows-9:end,1:end) = 0;
-        cReplicate(ii).bw(1:end,cReplicate(ii).cols-9:end) = 0;
+            % binarize median-filtered image at level determined above
+            UpdateLog3(source,[chartab,chartab,'Binarizing Image...'],'append');
+            cReplicate(ii).bw = sparse(imbinarize(cReplicate(ii).MedianFilteredImg,cReplicate(ii).level));
 
-    %     CC = bwconncomp(data.bw,4)
-    %     S = regionprops(CC, 'Area')
-    %     L = labelmatrix(CC);
-    %     data.bw = ismember(L, find([S.Area] >= 10));
+            % set 10 border px on all sides to 0, this is to speed up local BG
+            % detection later on
+            cReplicate(ii).bw(1:10,1:end) = 0;
+            cReplicate(ii).bw(1:end,1:10) = 0;
+            cReplicate(ii).bw(cReplicate(ii).Height-9:end,1:end) = 0;
+            cReplicate(ii).bw(1:end,cReplicate(ii).Width-9:end) = 0;        
 
-        % detect objects
-        [cReplicate(ii).L,...
-         cReplicate(ii).BoundaryPixels4,...
-         cReplicate(ii).bwObjectProperties,...
-         cReplicate(ii).nObjects] = ObjectDetection3(cReplicate(ii).bw);
-     
-     
-%         % generate the new objects
-%         for j = 1:cReplicate(ii).nObjects
-%             cReplicate(ii).Object(j) = PODSObject(bwObjectProperties(j,:));
-%             cReplicate(ii).Object(j).Name = ['Object ',num2str(j)];
-%             cReplicate(ii).Object(j).OriginalIdx = j;
-%             cReplicate(ii).Object(j).GroupName = PODSData.Group(cGroupIndex).GroupName;
-%         end
+            % remove small objects
+            UpdateLog3(source,[chartab,chartab,'Removing Objects with Area < 10 px...'],'append');
+            %cReplicate(ii).bw = bwareaopen(full(cReplicate(ii).bw), 10);
+            CC = bwconncomp(cReplicate(ii).bw,4)
+            S = regionprops(CC, 'Area')
+            L = labelmatrix(CC);
+            cReplicate(ii).bw = ismember(L, find([S.Area] >= 10));
 
+            % generate new label matrix
+            cReplicate(ii).L = sparse(bwlabel(cReplicate(ii).bw,4));
+
+            % get nObjects from label matrix
+            nObjects = max(max(cReplicate(ii).L));
+        
+        end
+
+        %cReplicate(ii).Object = DetectObjects(cReplicate(ii));
+        
+        % test
+        cReplicate(ii).Object = DetectObjects(cReplicate(ii));
+        cReplicate(ii).ObjectDetectionDone = true;
+        
+        cReplicate(ii).CurrentObjectIdx = 1;
         
         UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cReplicate(ii).level)], 'append');
         UpdateLog3(source,[chartab,chartab,'Generated mask representing ' num2str(cReplicate(ii).nObjects) ' objects.'],'append');
 
-        cReplicate(ii).autothresh = 1;
+        cReplicate(ii).ThresholdAdjusted = 0;
+        
+        cReplicate(ii).MaskDone = 1;
 
     end
     
@@ -138,18 +146,13 @@ function [] = CreateMask3(source,event)
     
     % Update thresh slider
     Handles.ThreshSlider.Value = PODSData.Group(cGroupIndex).Replicate(first).level;
-    
-    
+
+    % add replicates back to PODSData
+    PODSData.Group(cGroupIndex).Replicate = cReplicate;   
+
     PODSData.Handles = Handles;
     guidata(source,PODSData);
-    ChangePODSTab(source,'Generate Mask');
-    UpdateLog3(source,'Calculating object properties...','append');
-    
-    
-    
-    
-    ObjectExtraction(source,'Mask');
-    
-    
-    
+    ChangePODSTab(source,'View/Adjust Mask');
+    UpdateLog3(source,'Done.','append');
+
 end

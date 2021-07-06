@@ -26,8 +26,8 @@ function data = pb_FFC(source,event)
         for ii=1:4
             cReplicate(i).pol_ffc(:,:,ii) = cReplicate(i).pol_rawdata(:,:,ii)./FFCData.cal_norm(:,:,ii);
         end
-        % normalize to the max value in the stack
-        cReplicate(i).pol_ffc_normalizedbystack = cReplicate(i).pol_ffc./(max(max(max(cReplicate(i).pol_ffc))));
+
+        cReplicate(i).FFCDone = 1;
         
     end
     

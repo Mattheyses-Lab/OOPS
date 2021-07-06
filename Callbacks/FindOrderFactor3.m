@@ -40,6 +40,7 @@ function [] = FindOrderFactor3(source,event)
             min_update = next < minimum;
             maximum(max_update) = next(max_update);
             minimum(min_update) = next(min_update);
+            clear next max_update min_update
         end
 
         % This should always be true for all pixels
@@ -52,6 +53,7 @@ function [] = FindOrderFactor3(source,event)
 
             normcurrent(cReplicate(ii).r1) = current(cReplicate(ii).r1)./maximum(cReplicate(ii).r1);
             cReplicate(ii).norm(:,:,j) = normcurrent;
+            clear current normcurrent
         end
 
         %% Find pixel-by-pixel order factor for whole image
@@ -66,24 +68,43 @@ function [] = FindOrderFactor3(source,event)
         %apply mask to order factor image
         temp = zeros(size(cReplicate(ii).OF_image));  
         temp(cReplicate(ii).bw) = cReplicate(ii).OF_image(cReplicate(ii).bw);
-        cReplicate(ii).masked_OF_image = temp;
+        cReplicate(ii).masked_OF_image = sparse(temp);
+        clear temp
 
         % compute OF_avg and OF_list
         cReplicate(ii).OFAvg = sum(sum(cReplicate(ii).masked_OF_image))/nnz(cReplicate(ii).masked_OF_image);
         cReplicate(ii).OFList = cReplicate(ii).masked_OF_image(cReplicate(ii).bw);
-        cReplicate(ii).OFProperties = regionprops(logical(cReplicate(ii).L), cReplicate(ii).masked_OF_image, 'all');
         cReplicate(ii).OFMax = max(cReplicate(ii).OFList(:));
         cReplicate(ii).OFMin = min(cReplicate(ii).OFList(:));
+        
+        
+        OFProperties = regionprops(full(cReplicate(ii).L),...
+                                   full(cReplicate(ii).masked_OF_image),...
+                                   'MeanIntensity',...
+                                   'MinIntensity',...
+                                   'MaxIntensity',...
+                                   'PixelValues');
+        
+        for j = 1:length(OFProperties)
+            cReplicate(ii).Object(j).OFAvg = OFProperties(j).MeanIntensity;
+            cReplicate(ii).Object(j).OFMin = OFProperties(j).MinIntensity;
+            cReplicate(ii).Object(j).OFMax = OFProperties(j).MaxIntensity;
+            cReplicate(ii).Object(j).OFPixelValues = OFProperties(j).PixelValues;
+            
+            if cReplicate(ii).Object(j).OFAvg == 0
+                UpdateLog3(source,['WARNING: G',numsstr(cGroupIndex),'R',num2str(ii),'O',num2str(j),' Avg OF = 0!'],'append');
+            end
+        end
 
+        clear OFProperties
+        
         logmsg = [chartab,chartab,'Image-Average Order Factor: ', num2str(cReplicate(ii).OFAvg),... 
                   chartab,chartab,chartab,'Max: ', num2str(cReplicate(ii).OFMax),...
                   chartab,chartab,chartab,'Min: ', num2str(cReplicate(ii).OFMin)];
-        UpdateLog3(source,logmsg,'append');
+              
+        cReplicate(ii).OFDone = 1;
         
-        
-        
-        
-        
+
     end
 
     % update PODSData with new replicate data
@@ -105,15 +126,13 @@ function [] = FindOrderFactor3(source,event)
     % update gui with new PODSData
     guidata(source,PODSData);
     
+    clear cReplicate
+    
     % Change tab to Order Factor tab   
     ChangePODSTab(source,'Order Factor');
     
     % Update data tables
     UpdateTables(source);
     UpdateLog3(source,'Done calculating Order Factor.','append');
-    try
-        ObjectExtraction(source,'Order Factor');
-    catch
-        UpdateLog3(source,'No Order Factor Data Found...','append');
-    end
+
 end

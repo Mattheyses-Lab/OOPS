@@ -7,8 +7,7 @@ function [] = pb_LoadFFCFiles(source,event)
     ImageIndex = PODSData.Group(GroupIndex).CurrentImageIndex;
     InputFileType = Settings.InputFileType;
 
-    % get structure for current image (selected by user)
-    data = PODSData.Group(GroupIndex).FFCData;
+    FFCData = struct();
 
     %% This switch block should be its own function
     switch InputFileType
@@ -25,9 +24,7 @@ function [] = pb_LoadFFCFiles(source,event)
                     warning('No background normalization files selected. Proceeding anyway');
                 end
             end
-            
-            
-            
+
             UpdateLog3(source,'Opening FFC images...','append');
 
             % determine how many FFC stacks were loaded
@@ -46,13 +43,13 @@ function [] = pb_LoadFFCFiles(source,event)
                 end
 
                 temp = strsplit(filename,'.');
-                data.cal_shortname{i,1} = temp{1};
-                data.cal_fullname{i,1} = [calPath filename];
+                FFCData.cal_shortname{i,1} = temp{1};
+                FFCData.cal_fullname{i,1} = [calPath filename];
 
                 if iscell(cal_files)
-                    temp = bfopen(char(data(1).cal_fullname{i,1}));
+                    temp = bfopen(char(FFCData(1).cal_fullname{i,1}));
                 else
-                    temp = bfopen(char(data(1).cal_fullname));
+                    temp = bfopen(char(FFCData(1).cal_fullname));
                 end
                 temp2 = temp{1,1};
                 if i==1
@@ -61,7 +58,7 @@ function [] = pb_LoadFFCFiles(source,event)
                     UpdateLog3(source,['Calibration file dimensions are ' num2str(w) ' by ' num2str(h)],'append');
                 end
                 for j=1:4
-                    data.all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
+                    FFCData.all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
                     % indexing example:
                     % data(1).all_cal(row,col,pol,stack)
                 end
@@ -91,13 +88,13 @@ function [] = pb_LoadFFCFiles(source,event)
                     filename = cal_files;
                 end
                 temp = strsplit(filename,'.');
-                data.cal_shortname{i,1} = temp{1};
-                data.cal_fullname{i,1} = [calPath filename];
+                FFCData.cal_shortname{i,1} = temp{1};
+                FFCData.cal_fullname{i,1} = [calPath filename];
                 if i == 1
                     if iscell(cal_files)
-                        info = imfinfo(char(data(i).cal_fullname{i,1}));
+                        info = imfinfo(char(FFCData(i).cal_fullname{i,1}));
                     else
-                        info = imfinfo(char(data(i).cal_fullname));
+                        info = imfinfo(char(FFCData(i).cal_fullname));
                     end
                     h = info.Height;
                     w = info.Width;
@@ -105,7 +102,7 @@ function [] = pb_LoadFFCFiles(source,event)
                 end
                 for j=1:4
                     try
-                        data.all_cal(:,:,j,i) = im2double(imread(char(data(1).cal_fullname{i,1}),j))*65535; %convert to 32 bit
+                        FFCData.all_cal(:,:,j,i) = im2double(imread(char(FFCData(1).cal_fullname{i,1}),j))*65535; %convert to 32 bit
                     catch
                         error('Correction files may not all be the same size')
                     end
@@ -118,30 +115,36 @@ function [] = pb_LoadFFCFiles(source,event)
     %excitation polarization
     %normalize resulting average stack by dividing by max value within
     %stack (across all images)
-    data.n_cal = size(data.all_cal,4);
-    data.cal_average = sum(data(1).all_cal,4)./data.n_cal;
-    data.cal_norm = data.cal_average/max(max(max(data.cal_average)));
-    data.Height = h;
-    data.Width = w;
+    FFCData.n_cal = size(FFCData.all_cal,4);
+    FFCData.cal_average = sum(FFCData(1).all_cal,4)./FFCData.n_cal;
+    FFCData.cal_norm = FFCData.cal_average/max(max(max(FFCData.cal_average)));
+    FFCData.Height = h;
+    FFCData.Width = w;
 
     % update main data structure with new data
-    PODSData.Group(GroupIndex).FFCData = data;
+    PODSData.Group(GroupIndex).FFCData = FFCData;
 
     % update image objects with loaded data
-    PODSData.Handles.FFCImage0.CData = data.cal_norm(:,:,1);
+    PODSData.Handles.FFCImage0.CData = FFCData.cal_norm(:,:,1);
     PODSData.Handles.FFCAxH(1).XLim = [1,w];
     PODSData.Handles.FFCAxH(1).YLim = [1,h];
-    PODSData.Handles.FFCImage45.CData = data.cal_norm(:,:,2);
-    PODSData.Handles.FFCAxH(1).XLim = [1,w];
-    PODSData.Handles.FFCAxH(1).YLim = [1,h];    
-    PODSData.Handles.FFCImage90.CData = data.cal_norm(:,:,3);
-    PODSData.Handles.FFCAxH(1).XLim = [1,w];
-    PODSData.Handles.FFCAxH(1).YLim = [1,h];    
-    PODSData.Handles.FFCImage135.CData = data.cal_norm(:,:,4);
-    PODSData.Handles.FFCAxH(1).XLim = [1,w];
-    PODSData.Handles.FFCAxH(1).YLim = [1,h];    
+    PODSData.Handles.FFCImage45.CData = FFCData.cal_norm(:,:,2);
+    PODSData.Handles.FFCAxH(2).XLim = [1,w];
+    PODSData.Handles.FFCAxH(2).YLim = [1,h];    
+    PODSData.Handles.FFCImage90.CData = FFCData.cal_norm(:,:,3);
+    PODSData.Handles.FFCAxH(3).XLim = [1,w];
+    PODSData.Handles.FFCAxH(3).YLim = [1,h];    
+    PODSData.Handles.FFCImage135.CData = FFCData.cal_norm(:,:,4);
+    PODSData.Handles.FFCAxH(4).XLim = [1,w];
+    PODSData.Handles.FFCAxH(4).YLim = [1,h]; 
     
+
     % update main data structure
     guidata(source,PODSData);
+    
+    if ~strcmp(PODSData.Settings.CurrentTab,'Files')
+        ChangePODSTab(source,'Files');
+    end    
+    
     UpdateTables(source);    
 end

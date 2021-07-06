@@ -20,7 +20,8 @@ function [] = SliderMoving(source,event)
     PODSData.Handles.MaskImgH.CData = bw;
     
     PODSData.Group(cGroupIdx).Replicate(cImageIdx).bw = bw;
-    PODSData.Group(cGroupIdx).Replicate(cImageIdx).level = new_level;    
+    PODSData.Group(cGroupIdx).Replicate(cImageIdx).level = new_level;
+    PODSData.Group(cGroupIdx).Replicate(cImageIdx).ObjectDetectionDone = false;
 
     guidata(source,PODSData);
     UpdateTables(source);

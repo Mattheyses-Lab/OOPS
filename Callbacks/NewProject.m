@@ -44,16 +44,16 @@
                                    'Position',[25 80 450 300],...
                                    'Scrollable','on');
                               
-        for i = 1:nGroups
-            GroupNamesBox(i) = uieditfield('Parent',hGroupNamesPanel,...
-                'Position',[175 300-40*i 250 20],...
-                'Value',GroupNames{i},...
-                'ValueChangedFcn',@SetGroupNames,...
-                'Tag',num2str(i));
-            GroupNamesBoxTitle(i) = uilabel('Parent',hGroupNamesPanel,...
-                'Position',[25 300-40*i 100 20],...
-                'Text',['Group ',num2str(i),' Name:']);
-        end
+        
+        GroupNamesBox(1) = uieditfield('Parent',hGroupNamesPanel,...
+                                       'Position',[175 300-40*1 250 20],...
+                                       'Value',GroupNames{1},...
+                                       'ValueChangedFcn',@SetGroupNames,...
+                                       'Tag',num2str(1));
+        GroupNamesBoxTitle(1) = uilabel('Parent',hGroupNamesPanel,...
+                                        'Position',[25 300-40*1 100 20],...
+                                        'Text',['Group ',num2str(1),' Name:']);
+
         
         
         % wait until figure is deleted                       
@@ -61,7 +61,8 @@
         % update main GUI with data
         PODSData.Handles.GroupListBox.Items = GroupNames;
         PODSData.Handles.GroupListBox.ItemsData = [1:PODSData.nGroups];
-        PODSData.GroupNames = GroupNames;        
+        PODSData.GroupNames = GroupNames;
+        PODSData.CurrentGroupIndex = 1;
         guidata(source,PODSData);
         UpdateLog3(source,['Started new project, "', PODSData.ProjectName,'", with ',num2str(PODSData.nGroups),' groups'],'append')
         UpdateTables(source);
@@ -77,16 +78,7 @@
         function [] = SetNumGroups(source,event)
             OldNumGroups = PODSData.nGroups;
             NewNumGroups = str2num(source.Value);
-            PODSData.nGroups = NewNumGroups;
-            
-            if OldNumGroups > NewNumGroups
-                for i = NewNumGroups+1:OldNumGroups
-                    delete(GroupNamesBox(i))
-                    delete(GroupNamesBoxTitle(i))
-                    delete(GroupNames(i))
-                end
-                return
-            end
+            %PODSData.nGroups = NewNumGroups;
 
             delete(GroupNamesBox(:))
             delete(GroupNamesBoxTitle(:))
@@ -94,12 +86,12 @@
             GroupNames = {};
             [GroupNames{1:OldNumGroups,1}] = deal(PODSData.Group.GroupName);            
             
-            for i = (OldNumGroups+1):NewNumGroups
+            for i = 1:NewNumGroups
                 GroupNames{i,1} = ['Untitled Group ',num2str(i)];
             end
             
-            for i = 1:PODSData.nGroups
-                PODSData.Group(i) = PODSData.Group(1);
+            for i = 1:NewNumGroups
+                PODSData.Group(i) = PODSGroup();
         
                 GroupNamesBox(i) = uieditfield('Parent',hGroupNamesPanel,...
                     'Position',[175 300-40*i 250 20],...
