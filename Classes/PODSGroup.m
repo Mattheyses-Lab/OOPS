@@ -6,34 +6,83 @@ classdef PODSGroup
 
         % replicates within group
         Replicate PODSImage
-        
-        nImages uint16
-        
+
         % indexing group members
-        CurrentImageIdx uint16
-        
-        % Object info
-        TotalObjects uint16
+        CurrentImageIndex double
+        PreviousImageIndex double
         
         % FFC info for group
         FFCData struct
         
         % output values
-        OFGroupAvg double
-        OFGroupMax double
-        OFGroupMin double
-        FiltOFGroupAvg double
+        OFAvg double
+        OFMax double
+        OFMin double
+        FiltOFAvg double
         
         % status parameters
         MaskAllDone logical
         OFAllDone logical
+        
+    end
+    
+    properties (Dependent = true)
+        
+        nReplicates
+        
+        TotalObjects
+        
+        ImageNames
+        
+        CurrentImage PODSImage
+                
     end
     
     methods
-         % assign default values
-         function obj = PODSGroup(GroupName)
-             obj.GroupName = GroupName;
+        
+         function nReplicates = get.nReplicates(obj)
+             nReplicates = length(obj.Replicate);
          end
+         
+         function TotalObjects = get.TotalObjects(obj)
+             try
+                TotalObjects = length(obj.Replicate.Object);
+             catch
+                TotalObjects = 0;
+             end
+         end
+         
+         function ImageNames = get.ImageNames(obj)
+            % new cell array of image names
+            ImageNames = {};
+            [ImageNames{1:obj.nReplicates,1}] = obj.Replicate.pol_shortname;             
+         end
+         
+         
+         function CurrentImage = get.CurrentImage(obj)
+             CurrentImage = obj.Replicate(obj.CurrentImageIndex);
+         end
+         
+         
+         % get x,y data for all objects in group, from first to last replicate
+         function ObjectData = CombineObjectData(obj,XVar,YVar)
+             
+             count = 0;
+             last = 1;
+             
+             for i = 1:obj.nReplicates
+                 
+                 count = count + obj.Replicate(i).nObjects;
+
+                 % column 1 holds x data
+                 ObjectData(last:count,1) = [obj.Replicate(i).Object.(XVar)];
+                 % column 2 holds y data
+                 ObjectData(last:count,2) = [obj.Replicate(i).Object.(YVar)];
+                 
+                 last = count+1;
+             
+             end
+         end % end of CombinedObjectData
 
     end
 

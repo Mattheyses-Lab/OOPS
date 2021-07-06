@@ -1,6 +1,11 @@
 classdef PODSObject
     % Object parameters class
     properties
+        
+        % parent object
+        Parent PODSImage
+        
+        
         Area = 0;
         BoundingBox = [];
         Centroid = [];
@@ -31,12 +36,6 @@ classdef PODSObject
         % linear indices for local BG region
         BGPixelIdxList = [];
         
-        % average BG intensity
-        MeanBGIntensity = 0;
-        
-        % local signal-to-background ratio
-        LocalSBRatio = 0;
-        
         % object px values for various outputs
         RawPixelValues = [];
         OFPixelValues = [];
@@ -56,30 +55,53 @@ classdef PODSObject
         
         % name of parent group
         GroupName = '';
+        
+        % perimeters
+        Perimeter8Conn
+        XAdjust
+        YAdjust
+        LineGroup
+        
+        % S:B properrties
+        BGIdxList
+        BufferIdxList
+        SignalAverage
+        BGAverage
+        SBRatio
+
     end % end properties
     
     methods
         
         function obj = PODSObject(ObjectProps)
             
-                obj.Area = ObjectProps.Area;
-                obj.BoundingBox = ObjectProps.BoundingBox;
-                obj.Centroid = ObjectProps.Centroid;
-                obj.Circularity = ObjectProps.Circularity;
-                obj.ConvexArea = ObjectProps.ConvexArea;
-                obj.ConvexHull = ObjectProps.ConvexHull;
-                obj.ConvexImage = ObjectProps.ConvexImage;
-                obj.Eccentricity = ObjectProps.Eccentricity;
-                obj.Extrema = ObjectProps.Extrema;
-                obj.FilledArea = ObjectProps.FilledArea;
-                obj.Image = ObjectProps.Image;
-                obj.MajorAxisLength = ObjectProps.MajorAxisLength;
-                obj.MinorAxisLength = ObjectProps.MinorAxisLength;
-                obj.Orientation = ObjectProps.Orientation;
-                obj.Perimeter = ObjectProps.Perimeter;
-                obj.PixelIdxList = ObjectProps.PixelIdxList;
-                obj.PixelList = ObjectProps.PixelList;
+            if length(ObjectProps) == 0
+                return
+            end
+            obj.Area = ObjectProps.Area;
+            obj.BoundingBox = ObjectProps.BoundingBox;
+            obj.Centroid = ObjectProps.Centroid;
+            obj.Circularity = ObjectProps.Circularity;
+            obj.ConvexArea = ObjectProps.ConvexArea;
+            obj.ConvexHull = ObjectProps.ConvexHull;
+            obj.ConvexImage = ObjectProps.ConvexImage;
+            obj.Eccentricity = ObjectProps.Eccentricity;
+            obj.Extrema = ObjectProps.Extrema;
+            obj.FilledArea = ObjectProps.FilledArea;
+            obj.Image = ObjectProps.Image;
+            obj.MajorAxisLength = ObjectProps.MajorAxisLength;
+            obj.MinorAxisLength = ObjectProps.MinorAxisLength;
+            obj.Orientation = ObjectProps.Orientation;
+            obj.Perimeter = ObjectProps.Perimeter;
+            obj.PixelIdxList = ObjectProps.PixelIdxList;
+            obj.PixelList = ObjectProps.PixelList;
             
+            obj.XAdjust = floor(obj.BoundingBox(1));
+            obj.YAdjust = floor(obj.BoundingBox(2));
+            temp = bwboundaries(obj.Image,8);
+            obj.Perimeter8Conn = temp{1};
+            clear temp
+            obj.LineGroup = hggroup;
         end % end constructor method
 
     end % end methods

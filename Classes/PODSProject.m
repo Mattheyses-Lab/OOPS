@@ -8,23 +8,41 @@ classdef PODSProject
         Group PODSGroup
         
         % number of groups in project
-        nGroups uint16
+        %nGroups uint16
         
         % indexing group members
-        CurrentGroupIdx uint16
+        CurrentGroupIndex double
         
         % handles to all gui objects
         Handles struct       
         
         Settings = PODSSettings;
-       
+        
+        GroupNames
     end
     
-%     methods
-%         % assign default values
-%         function obj = PODSProject(ProjectName)
-%             
-% 
-%         end
-%     end
+    
+    properties (Dependent = true)  
+        nGroups double
+        CurrentGroup PODSGroup
+        CurrentImage PODSImage
+    end
+
+     methods
+         function nGroups = get.nGroups(obj)
+             nGroups = length(obj.Group);
+         end
+         
+         % can use PODSProject.CurrentGroup.CurrentImage to get current image of current group in project
+         function CurrentGroup = get.CurrentGroup(obj)
+             CurrentGroup = obj.Group(obj.CurrentGroupIndex);
+         end  
+         
+         function CurrentImage = get.CurrentImage(obj)
+             cGroup = obj.CurrentGroup;
+             CurrentImage = cGroup.CurrentImage;
+         end
+
+     end
+     
 end

@@ -25,9 +25,6 @@ classdef PODSSettings
         PreviousTab = 'Files';
         
         ScreenSize
-        
-        
-
     end
     
     methods
@@ -38,10 +35,8 @@ classdef PODSSettings
             % size of main monitor
             obj.ScreenSize = MonitorPosition(1,1:4);
             
+            clear MonitorPosition
         end
-        
-        
     end
-    
 end
 
