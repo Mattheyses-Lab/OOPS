@@ -1,4 +1,4 @@
-classdef PODSObject
+classdef PODSObject < handle
     % Object parameters class
     properties
         

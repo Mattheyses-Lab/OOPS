@@ -1,4 +1,4 @@
-classdef PODSGroup
+classdef PODSGroup < handle
     % experimental groups class
     properties
         % group info
@@ -7,7 +7,7 @@ classdef PODSGroup
         % replicates within group
         Replicate PODSImage
 
-        % indexing group members
+        % indexing group members (Replicate objects)
         CurrentImageIndex double
         PreviousImageIndex double
         

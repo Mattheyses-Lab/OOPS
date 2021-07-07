@@ -1,4 +1,4 @@
-classdef PODSProject
+classdef PODSProject < handle
     % experimental groups class
     properties
         % group info

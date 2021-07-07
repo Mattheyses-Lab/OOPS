@@ -70,7 +70,7 @@ function [] = CreateMask3(source,event)
 
             % binarize median-filtered image at level determined above
             UpdateLog3(source,[chartab,chartab,'Binarizing Image...'],'append');
-            cReplicate(ii).bw = sparse(imbinarize(cReplicate(ii).MedianFilteredImg,cReplicate(ii).level));
+            cReplicate(ii).bw = imbinarize(cReplicate(ii).MedianFilteredImg,cReplicate(ii).level);
 
             % set 10 border px on all sides to 0, this is to speed up local BG
             % detection later on
@@ -85,10 +85,10 @@ function [] = CreateMask3(source,event)
             CC = bwconncomp(cReplicate(ii).bw,4)
             S = regionprops(CC, 'Area')
             L = labelmatrix(CC);
-            cReplicate(ii).bw = ismember(L, find([S.Area] >= 10));
+            cReplicate(ii).bw = sparse(ismember(L, find([S.Area] >= 10)));
 
             % generate new label matrix
-            cReplicate(ii).L = sparse(bwlabel(cReplicate(ii).bw,4));
+            cReplicate(ii).L = sparse(bwlabel(full(cReplicate(ii).bw),4));
 
             % get nObjects from label matrix
             nObjects = max(max(cReplicate(ii).L));

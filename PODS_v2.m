@@ -1323,7 +1323,7 @@ function [] = PODS_v2()
         data = guidata(source);
         cGroupIndex = data.CurrentGroupIndex;
         cImageIndex = data.Group(cGroupIndex).CurrentImageIndex;
-        cReplicate = data.Group(cGroupIndex).Replicate(cImageIndex(i));
+        %cReplicate = data.Group(cGroupIndex).Replicate(cImageIndex(i));
         
         for i = 1:length(cImageIndex)
             data.Group(cGroupIndex).Replicate(cImageIndex(i)) = FindLocalSB(data.Group(cGroupIndex).Replicate(cImageIndex(i)),source);

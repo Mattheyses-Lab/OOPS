@@ -1,4 +1,4 @@
-classdef PODSImage
+classdef PODSImage < handle
     
     % normal properties
     properties
