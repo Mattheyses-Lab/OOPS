@@ -16,44 +16,25 @@ function [] = UpdateLog3(source,msg,operation)
 % appends msg to the end of it, before reprinting the new message in the 
 % window
 
-
+    % restrict log window to only hold the last ~200 messages
+    
     PODSData = guidata(source);
-
-    hLogWindow = PODSData.Handles.LogWindow;
-    
-    old_string = hLogWindow.Value
-    
-    % number of lines in log text
-    sz = length(old_string);
-    
-    % variable to hold new value
-    new_string = old_string;
-    
-    
     if strcmp(operation,'append')
-        new_string{sz+1} = msg;
+        if length(PODSData.Handles.LogWindow.Value) > 199
+            PODSData.Handles.LogWindow.Value = {PODSData.Handles.LogWindow.Value{end-199:end},msg};
+        else
+            PODSData.Handles.LogWindow.Value{end+1} = msg;
+        end
     else
-        new_string{sz} = msg;
-    end
+        PODSData.Handles.LogWindow.Value{end} = msg;
+    end    
     
-    hLogWindow.Value = new_string;
-    drawnow
-    scroll(hLogWindow,'bottom')
-    
-    % get a handle to the underlying java object so that we can set the
-    % caret position to bottom upon adding a new line of text
-    
+    %disp(['n lines in log window: ',num2str(length(PODSData.Handles.LogWindow.Value))]);
 
-%     JHLogWindow = findjobj(hLogWindow);
-%     JLogWindow = JhLogWindow.getComponent(0).getComponent(0);
-%     JLogWindow.setCaretPosition(JLogWindow.getDocument.getLength);
+    drawnow
+    
+    scroll(PODSData.Handles.LogWindow,'bottom');
         
     guidata(source,PODSData);
-
-    
-%     
-%     data = guidata(source)
-%     data.JLogWindow
-    
     
 end
