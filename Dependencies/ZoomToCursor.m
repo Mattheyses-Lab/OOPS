@@ -48,8 +48,8 @@ function [] = ZoomToCursor(source,event)
                 'InnerPosition',pos,...
                 'XTick',[],...
                 'YTick',[],...
-                'XLim',Zoom.DynamicAxes.OldXLim,...
-                'YLim',Zoom.DynamicAxes.OldXLim,...
+                'XLim',Zoom.DynamicAxes.XLim,...
+                'YLim',Zoom.DynamicAxes.YLim,...
                 'Tag','StaticReferenceAxes');
             Zoom.StaticAxes.Toolbar.Visible = 'Off';
             %Zoom.DynamicAxesParent.Children = flip(Zoom.DynamicAxesParent.Children);
@@ -85,20 +85,18 @@ function [] = ZoomToCursor(source,event)
 
             axes(Zoom.StaticAxes);
             
-%             Zoom.XRange = Zoom.DynamicAxes.XRange;
-%             Zoom.YRange = Zoom.DynamicAxes.YRange;
-%             Zoom.ZRange = Zoom.DynamicAxes.ZRange;
-%             Zoom.XDist = Zoom.DynamicAxes.XDist;
-%             Zoom.YDist = Zoom.DynamicAxes.YDist;
-%             Zoom.ZDist = Zoom.DynamicAxes.ZDist;
-%             Zoom.OldXLim = Zoom.DynamicAxes.OldXLim;
-%             Zoom.OldYLim = Zoom.DynamicAxes.OldYLim;
-%             Zoom.OldZLim = Zoom.DynamicAxes.OldZLim;
+            Zoom.XRange = diff(Zoom.DynamicAxes.XLim);
+            Zoom.YRange = diff(Zoom.DynamicAxes.YLim);
+            Zoom.ZRange = diff(Zoom.DynamicAxes.ZLim);
+            Zoom.XDist = 0.5*Zoom.XRange;
+            Zoom.YDist = 0.5*Zoom.YRange;
+            Zoom.ZDist = 0.5*Zoom.ZRange;
+            Zoom.OldXLim = Zoom.DynamicAxes.XLim;
+            Zoom.OldYLim = Zoom.DynamicAxes.YLim;
+            Zoom.OldZLim = Zoom.DynamicAxes.ZLim;
+
             Handles.fH.Pointer = 'crosshair';
             Handles.fH.WindowButtonMotionFcn = @CursorMoving;
-            
-            
-            
             Zoom.DynamicImage.ButtonDownFcn = @ChangeZoomLevel;
             %Zoom.StaticAxes.ButtonDownFcn = @ChangeZoomLevel;
             %Zoom.DynamicAxes.Hittest = 'Off';
@@ -117,14 +115,14 @@ function [] = ZoomToCursor(source,event)
                 delete(Zoom.StaticImage)
             end            
 
-            Zoom.DynamicAxes.XLim = Zoom.DynamicAxes.OldXLim;
-            Zoom.DynamicAxes.YLim = Zoom.DynamicAxes.OldYLim;
+            Zoom.DynamicAxes.XLim = Zoom.OldXLim;
+            Zoom.DynamicAxes.YLim = Zoom.OldYLim;
 
-%             Zoom.DynamicAxes.XDist = Zoom.pct*Zoom.DynamicAxes.XRange;
-%             Zoom.DynamicAxes.YDist = Zoom.pct*Zoom.DynamicAxes.YRange;
-%             Zoom.DynamicAxes.ZDist = Zoom.pct*Zoom.DynamicAxes.ZRange;
-%             Zoom.ZoomLevelIdx = 4;
-%             Zoom.pct = 0.5;            
+             Zoom.XDist = 0.5*Zoom.XRange;
+             Zoom.YDist = 0.5*Zoom.YRange;
+             Zoom.ZDist = 0.5*Zoom.ZRange;
+             Zoom.ZoomLevelIdx = 4;
+             Zoom.pct = 0.5;            
             
 
     end  
@@ -141,16 +139,9 @@ function [] = CursorMoving(source,event)
 
     PODSData = guidata(source);
     fH = PODSData.Handles.fH;
-    
-    %Handles = PODSData.Handles;
+
     Zoom = PODSData.Settings.Zoom;
     DynamicAxes = PODSData.Settings.Zoom.DynamicAxes;
-    
-    
-%     ax = Zoom.StaticAxes;
-%     
-%     posn = ax.CurrentPoint;
-%     posn = posn(1,:);
     
     posn = Zoom.StaticAxes.CurrentPoint(1,:);
 
@@ -159,19 +150,19 @@ function [] = CursorMoving(source,event)
     z = posn(1,3);
     
     % x and y are already in expressed in proper pixel coordinates
-    x1 = min(max(1,x-0.5*DynamicAxes.XDist),DynamicAxes.XRange-DynamicAxes.XDist) + 0.5;
-    y1 = min(max(1,y-0.5*DynamicAxes.YDist),DynamicAxes.YRange-DynamicAxes.YDist) + 0.5;
-    z1 = min(max(1,z-0.5*DynamicAxes.ZDist),DynamicAxes.ZRange-DynamicAxes.ZDist) + 0.5;
-    x2 = x1 + DynamicAxes.XDist;
-    y2 = y1 + DynamicAxes.YDist;
-    z2 = z1 + DynamicAxes.ZDist;
+    x1 = min(max(1,x-0.5*Zoom.XDist),Zoom.XRange-Zoom.XDist) + 0.5;
+    y1 = min(max(1,y-0.5*Zoom.YDist),Zoom.YRange-Zoom.YDist) + 0.5;
+    z1 = min(max(1,z-0.5*Zoom.ZDist),Zoom.ZRange-Zoom.ZDist) + 0.5;
+    x2 = x1 + Zoom.XDist;
+    y2 = y1 + Zoom.YDist;
+    z2 = z1 + Zoom.ZDist;
     
     % if cursor is still within axes limits
-    if x >= DynamicAxes.OldXLim(1) & x <= DynamicAxes.OldXLim(2) & ...
-            y >= DynamicAxes.OldYLim(1) & y <= DynamicAxes.OldYLim(2) & ...
-        z >= DynamicAxes.OldZLim(1) & z <= DynamicAxes.OldZLim(2)
+    if x >= Zoom.OldXLim(1) & x <= Zoom.OldXLim(2) & ...
+            y >= Zoom.OldYLim(1) & y <= Zoom.OldYLim(2) & ...
+        z >= Zoom.OldZLim(1) & z <= Zoom.OldZLim(2)
 
-        ZoomPct = round((DynamicAxes.XRange/DynamicAxes.XDist)*100);
+        ZoomPct = round((Zoom.XRange/Zoom.XDist)*100);
         posn2 = Zoom.DynamicAxes.CurrentPoint(1,:);
         realx = posn2(1,1);
         realy = posn2(1,2);
@@ -188,8 +179,8 @@ function [] = CursorMoving(source,event)
     else
 
         DynamicAxes.CursorPositionLabel.Text = sprintf('x = %3.0f;  y = %3.0f',0,0);
-        DynamicAxes.XLim = DynamicAxes.OldXLim;
-        DynamicAxes.YLim = DynamicAxes.OldYLim;
+        DynamicAxes.XLim = Zoom.OldXLim;
+        DynamicAxes.YLim = Zoom.OldYLim;
         
         PODSData.Handles.fH.Pointer = 'arrow';
 
@@ -227,16 +218,16 @@ function [] = ChangeZoomLevel(source,event)
             Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
 
         case 'extend'
-            Zoom.DynamicAxes.XLim = Zoom.DynamicAxes.OldXLim;
-            Zoom.DynamicAxes.YLim = Zoom.DynamicAxes.OldXLim;
-            Zoom.DynamicAxes.ZLim = Zoom.DynamicAxes.OldZLim;
+            Zoom.DynamicAxes.XLim = Zoom.OldXLim;
+            Zoom.DynamicAxes.YLim = Zoom.OldXLim;
+            Zoom.DynamicAxes.ZLim = Zoom.OldZLim;
         case 'open'
             Zoom.pct = 1;
     end
     
-    Zoom.DynamicAxes.XDist = Zoom.pct*Zoom.DynamicAxes.XRange;
-    Zoom.DynamicAxes.YDist = Zoom.pct*Zoom.DynamicAxes.YRange;
-    Zoom.DynamicAxes.ZDist = Zoom.pct*Zoom.DynamicAxes.ZRange;
+    Zoom.XDist = Zoom.pct*Zoom.XRange;
+    Zoom.YDist = Zoom.pct*Zoom.YRange;
+    Zoom.ZDist = Zoom.pct*Zoom.ZRange;
 
     PODSData.Settings.Zoom = Zoom;
     guidata(source,PODSData);    
@@ -248,7 +239,7 @@ end
 
 function [axH] = restore_axis_defaults(axH,OriginalPlotBoxAspectRatio,OriginalTag)
         % restore axis defaults that were changed by imshow()
-        axH.YDir = 'Normal';
+        axH.YDir = 'Reverse';
         axH.PlotBoxAspectRatioMode = 'manual';
         %axH.DataAspectRatioMode = 'auto';
         axH.PlotBoxAspectRatio = OriginalPlotBoxAspectRatio;
