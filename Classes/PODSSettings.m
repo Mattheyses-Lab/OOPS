@@ -25,17 +25,43 @@ classdef PODSSettings
         PreviousTab = 'Files';
         
         ScreenSize
+        
+        % sturcturing element for masking
+        SEShape = 'disk';
+        SESize = 3;
+        SELines = 0;
+        
+        % for now, either 'One-Color' or 'Two-Color'
+        ExperimentType = 'One-Color';
+        % for now, from 1-2
+        nChannels = 1;
+        
+        % struct of all colormaps
+        AllColormaps struct
+        % currently selected colormaps for each image type
+        IntensityColormaps cell
+        OrderFactorColormap double
+        
     end
     
     methods
         function obj = PODSSettings()
             % get monitor positions
             MonitorPosition = get(0,'MonitorPositions');
-            
             % size of main monitor
             obj.ScreenSize = MonitorPosition(1,1:4);
-            
             clear MonitorPosition
+            
+            try
+                colormaps_mat_file = load('Colormaps.mat');
+                obj.AllColormaps = colormaps_mat_file.Colormaps;
+                obj.IntensityColormaps{1} = obj.AllColormaps.Green;
+                obj.IntensityColormaps{2} = obj.AllColormaps.Red;
+                obj.OrderFactorColormap = obj.AllColormaps.OFMap;
+            catch
+                warning('Unable to find file: Colormaps.mat, proceeding with default colors');
+            end
+
         end
     end
 end

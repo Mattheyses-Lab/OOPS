@@ -5,56 +5,57 @@ classdef PODSObject < handle
         % parent object
         Parent PODSImage
         
-        
-        Area = 0;
-        BoundingBox = [];
-        Centroid = [];
-        Circularity = 0;
-        ConvexArea = 0;
-        ConvexHull = [];
-        ConvexImage = [];
-        Eccentricity = 0;
-        Extrema = [];
-        FilledArea = 0;
-        Image = [];
-        MajorAxisLength = 0;
-        MinorAxisLength = 0;
-        Orientation = 0;
-        Perimeter = 0;
+        Area
+        BoundingBox
+        Centroid
+        Circularity
+        ConvexArea
+        ConvexHull
+        ConvexImage
+        Eccentricity
+        Extrema
+        FilledArea
+        Image
+        MajorAxisLength
+        MinorAxisLength
+        Orientation
+        Perimeter
         
         % linear pixel indices
-        PixelIdxList = [];
+        PixelIdxList
         
         % pixel indices
-        PixelList = [];
+        PixelList
         
+        % index to the subimage such that L(idx{:}) extracts the elements
+        SubarrayIdx
         
-        MaxFFCAvgIntensity = 0;
-        MeanFFCAvgIntensity = 0;
-        MinFFCAvgIntensity = 0;
+        MaxFFCAvgIntensity
+        MeanFFCAvgIntensity
+        MinFFCAvgIntensity
         
         % linear indices for local BG region
-        BGPixelIdxList = [];
+        BGPixelIdxList
         
         % object px values for various outputs
-        RawPixelValues = [];
-        OFPixelValues = [];
-        AzimuthPixelValues = [];
-        AnisotropyPixelValues = [];
+        RawPixelValues
+        OFPixelValues
+        AzimuthPixelValues
+        AnisotropyPixelValues
         
         % object OF values
-        OFAvg = 0;
-        OFMin = 0;
-        OFMax = 0;
+        OFAvg
+        OFMin
+        OFMax
         
         % Object 1, Object 2, etc...
-        Name = '';
+        Name
         
         % Idx at time of generation
-        OriginalIdx = 0;
+        OriginalIdx
         
         % name of parent group
-        GroupName = '';
+        GroupName
         
         % perimeters
         Perimeter8Conn
@@ -71,13 +72,28 @@ classdef PODSObject < handle
 
     end % end properties
     
+    properties(Dependent = true)
+        OFSubImage 
+        PaddedOFSubImage
+        MaskedOFSubImage
+        
+        PaddedFFCIntensitySubImage
+        
+        PaddedMaskSubImage
+        
+        CentroidX
+        CentroidY
+    end
+
     methods
         
-        function obj = PODSObject(ObjectProps)
+        function obj = PODSObject(ObjectProps,hPODSImage)
             
             if length(ObjectProps) == 0
                 return
             end
+            
+            % properties from ObjectProps struct
             obj.Area = ObjectProps.Area;
             obj.BoundingBox = ObjectProps.BoundingBox;
             obj.Centroid = ObjectProps.Centroid;
@@ -95,14 +111,64 @@ classdef PODSObject < handle
             obj.Perimeter = ObjectProps.Perimeter;
             obj.PixelIdxList = ObjectProps.PixelIdxList;
             obj.PixelList = ObjectProps.PixelList;
+            obj.SubarrayIdx = ObjectProps.SubarrayIdx;
             
-            obj.XAdjust = floor(obj.BoundingBox(1));
-            obj.YAdjust = floor(obj.BoundingBox(2));
-            temp = bwboundaries(obj.Image,8);
-            obj.Perimeter8Conn = temp{1};
-            clear temp
-            obj.LineGroup = hggroup;
+            % Parent of PODSObject obj is the PODSImage obj that detected it
+            obj.Parent = hPODSImage;
+            
         end % end constructor method
+        
+
+        function OFSubImage = get.OFSubImage(obj)
+            OFImage = obj.Parent.OF_image;
+            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            dim = length(PaddedSubarrayIdx{1,1});
+            OFSubImage = zeros(dim);
+            OFSubImage(:) = OFImage(PaddedSubarrayIdx{:});
+        end
+        
+        function PaddedOFSubImage = get.PaddedOFSubImage(obj)
+            OFImage = obj.Parent.OF_image;
+            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            dim = length(PaddedSubarrayIdx{1,1});
+            OFSubImage = zeros(dim);
+            OFSubImage(:) = OFImage(PaddedSubarrayIdx{:});
+        end        
+
+        function MaskedOFSubImage = get.MaskedOFSubImage(obj)
+            OFImage = obj.Parent.OF_image;
+            MaskedOFSubImage = zeros(size(obj.Image));
+            % masked
+            MaskedOFSubImage(obj.Image) = OFImage(obj.PixelIdxList);
+        end
+        
+        function PaddedFFCIntensitySubImage = get.PaddedFFCIntensitySubImage(obj)
+            % get FFCIntensity image
+            FFCIntensityImage = obj.Parent.I;
+            % pad subarray and make square
+            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            % get length of X Idxs
+            dim = length(PaddedSubarrayIdx{1,1});
+            % initialize new subimage
+            PaddedFFCIntensitySubImage = zeros(dim);
+            % extract elements from main image into subimage
+            PaddedFFCIntensitySubImage(:) = FFCIntensityImage(PaddedSubarrayIdx{:});
+        end
+        
+        function PaddedMaskSubImage = get.PaddedMaskSubImage(obj)
+            % get FFCIntensity image
+            MaskImg = obj.Parent.bw;
+            % pad subarray and make square
+            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            % get length of X Idxs (same as Ys)
+            dim = length(PaddedSubarrayIdx{1,1});
+            % initialize new subimage
+            PaddedMaskSubImage = zeros(dim);
+            % extract elements from main image into subimage
+            PaddedMaskSubImage(:) = MaskImg(PaddedSubarrayIdx{:});
+        end        
+        
+        
 
     end % end methods
     

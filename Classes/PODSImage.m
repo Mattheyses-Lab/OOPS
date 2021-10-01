@@ -3,31 +3,38 @@ classdef PODSImage < handle
     % normal properties
     properties
 %% Parent/Child
+
         Parent PODSGroup
         Object PODSObject
         
-%% Input Image Properties        
+%% Input Image Properties
         % image info
         filename char
         pol_shortname char
         pol_fullname char
-        Dimensions double
+        
+        % size of image
         Width double
-        Height double        
+        Height double
+        SelfChannelIdx uint8
+        ChannelName char
         
-        % polarization data
+%% Experimental Data
+        % raw image stack - pol_rawdata(y/row,x/col,PolIdx)
+        %   PolIdx: 1 = 0 deg | 2 = 45 deg | 3 = 90 deg | 4 = 135 deg
         pol_rawdata
-        
+        RawPolAvg
+        % flat-field corrected image stack - same indexing as raw
         pol_ffc
-        
+        % average image stack - Pol_ImAvg(y/row,x/col)
         Pol_ImAvg
-        
+        % normalized image stack - same indexing as raw
         norm
         
         r1
         
 %% Status Tracking        
-        % status parameters
+        % status parameters - false by default as we haven't started yet
         FilesLoaded = false
         FFCDone = false
         MaskDone = false
@@ -38,39 +45,38 @@ classdef PODSImage < handle
 %% Masking            
         % masks
         bw logical
+        bwFiltered logical
         
         % label matrices
         L
 
-        % masking parameters
-        SE char
-        SESize
-        SELines
-        FilterType char
+        % threshhold
         ThresholdAdjusted logical
         level double
         
         % masking steps
-        I
-        BGImg
-        BGSubtractedImg
-        MedianFilteredImg
+        I double
+        BGImg double
+        BGSubtractedImg double
+        MedianFilteredImg double
         
-        % mask threshold adjustment
+        % mask threshold adjustment (for display purposes)
         IntensityBinCenters
         IntensityHistPlot
         
 %% Object Data        
         % objects
-        CurrentObjectIdx
+        CurrentObjectIdx uint16 % i.e. no more than 65535 objects per group (seems reasonable, right?)
         
         ObjectContours
         
 %% Output Images
-        OF_image
-        masked_OF_image
-        a
-        b
+
+        AzimuthImage double
+        OF_image double
+        masked_OF_image double
+        a double
+        b double
         
 %% Output Values        
         
@@ -80,44 +86,87 @@ classdef PODSImage < handle
         OFMin double
         OFList double
         
-        FiltOFAvg double
-        
         SBAvg double
+        
+%% Filtering
+
+        SBCutoff = 3
+        OFFiltered double
+
     end
     
     % dependent properties
-    properties (Dependent = true) 
+    properties (Dependent = true)
+        
+        % no need to keep this in memory, calculating is pretty fast and it will change frequently
         ObjectProperties struct
-        ObjectNames
+        
+        % only the individual PODSObject objects themselves will store their names in memory
+        ObjectNames cell
+        
+        % image stacks normalized to the stack-max. again, quick to calculate, expensive to store
         pol_ffc_normalizedbystack
         pol_rawdata_normalizedbystack
-        nObjects
+        
+        % depends on the size of PODSObject
+        nObjects uint16
+        
+        % depends on user-selected index
+        CurrentObject PODSObject
+        
+        % image dimensions, returned as char array for display purposes: 'dim1xdim2'
+        Dimensions
+        
+        % depends on bwFiltered
+        FiltOFAvg
     end
     
     methods
         
-        % default values for image object
-        function obj = PODSImage
+        % class constructor
+        function obj = PODSImage(Group)
+            obj.Parent = Group;
+            
+            % handle multiple channels
+            obj.ChannelName = Group.ChannelName;
+            obj.SelfChannelIdx = Group.SelfChannelIdx;
+            
+            % default values for scalar outputs
             obj.OFAvg = 0;
             obj.OFMax = 0;
-            obj.OFMin = 0;       
-            obj.FiltOFAvg = 0;
+            obj.OFMin = 0;
+            
+            % image name (minus path and file extension)
             obj.pol_shortname = '';
+            
+            % default threshold level (used to set binary mask)
             obj.level = 0;
+            
+            % default image dimensions
             obj.Width = 0;
             obj.Height = 0;
+            
+            % status tracking (false by default)
             obj.ThresholdAdjusted = logical(0);
             obj.MaskDone = logical(0);
             obj.OFDone = logical(0);
-            obj.SE = 'disk';
-            obj.SESize = num2str(5);
-            obj.SELines = num2str(4);
-            obj.FilterType = 'Median';
-            obj.ObjectNames = {['No Objects Found']};
+            
+            % default object names, updated once we detect some objects
+            %obj.ObjectNames = {['No Objects Found']};
+
             obj.CurrentObjectIdx = 0;
         end
+        
+        % performs flat field correction for 1 PODSImage
+        function FlatFieldCorrection(obj)
+            for i = 1:4
+                obj.pol_ffc(:,:,i) = obj.pol_rawdata(:,:,i)./obj.Parent.FFCData.cal_norm(:,:,i);
+            end
+            obj.FFCDone = true;
+        end
 
-        function Object = DetectObjects(obj)
+        % detects objects in one PODSImage
+        function DetectObjects(obj)
             
             % call get method
             props = obj.ObjectProperties;
@@ -127,24 +176,28 @@ classdef PODSImage < handle
                 return
             else
                 for i = 1:length(props) % for each detected object
-                   Object(i) = PODSObject(props(i,1)) % create an instance of PODSObject
-                   Object(i).Name = ['Object ',num2str(i)];
+                   Object(i) = PODSObject(props(i,1),obj); % create an instance of PODSObject
+                   Object(i).Name = ['Object ',num2str(i),' (Channel:',obj.ChannelName,')'];
                    Object(i).OriginalIdx = i;
                    Object(i).Parent = obj;
                 end
             end
-        end % end of DetectObjects
-        
+            
+            obj.Object = Object;
+            
+        end % end of DetectObjects        
+
         % detect local signal to BG ratio
         function obj = FindLocalSB(obj,source)
             
+            % can't detect local S/B until we detect the objects!
             if obj.ObjectDetectionDone
                 
                 % square structuring element for object dilation
                 se = ones(3,3);
-                all_object_pixels = obj.bw;
-                all_buffer_pixels = zeros(size(all_object_pixels));
-                all_BG_pixels = zeros(size(all_object_pixels));
+                all_object_pixels = sparse(obj.bw);
+                all_buffer_pixels = sparse(false(size(all_object_pixels)));
+                all_BG_pixels = sparse(false(size(all_object_pixels)));
                 
                 N = obj.nObjects;
                 logmsg = ['Detecting object buffer zone and local BG pixels for ', num2str(N), ' objects...'];
@@ -157,18 +210,18 @@ classdef PODSImage < handle
                 %       SBObjectProperties struct
                 for i = 1:N
                     % empty logical matrix
-                    object_bw = zeros(size(obj.bw));
+                    object_bw = sparse(false(size(obj.bw)));
                     % get object pixels for current object
-                    object_pixels = obj.Object(i).PixelIdxList;
+                    %object_pixels = obj.Object(i).PixelIdxList;
                     % set object pixels to 1
-                    object_bw(object_pixels) = 1;
+                    object_bw(obj.Object(i).PixelIdxList) = 1;
 
                     % new logical matrix to hold buffer pixels
                     buffer_bw = object_bw;
 
                     % dilate the object matrix to create the object buffer
                     for j = 1:3
-                        buffer_bw = imdilate(buffer_bw,se);
+                        buffer_bw = sparse(imdilate(full(buffer_bw),se));
                     end
 
                     % new logical matrix to hold BG pixels
@@ -176,7 +229,7 @@ classdef PODSImage < handle
 
                     % dilate the buffer matrix to locate local BG pixels
                     for j = 1:2
-                        BG_bw = imdilate(BG_bw,se);
+                        BG_bw = sparse(imdilate(full(BG_bw),se));
                     end
 
                     % remove buffer and object pixels from BG matrix
@@ -205,7 +258,7 @@ classdef PODSImage < handle
                     buffer_count = 0;
                     BG_count = 0;
 
-                    % check each buffer pixel for overlap with objects
+                    % check each buffer pixel for overlap with objects (i = 1 object, j = 1 buffer px)
                     for j = 1:length(obj.Object(i).BufferIdxList)
                         if ~(all_object_pixels(obj.Object(i).BufferIdxList(j)) == 1)
                             buffer_count = buffer_count+1;
@@ -221,13 +274,16 @@ classdef PODSImage < handle
                         end            
                     end
 
+                    %% BUG IDENTIFIED HERE: If there are too many objects within a small region, code may fail to identify 
+                        % any BG or buffer pixels. In that case new_buffer and/or new_BG will be empty. Still need to 
+                        % implement a fix for this... (maybe delete the object then re-index if no BG pxs found?)
                     % update buffer and BG pixel lists
                     obj.Object(i).BufferIdxList = new_buffer;
                     obj.Object(i).BGIdxList = new_BG;
 
                     % calculate signal and BG levels
-                    obj.Object(i).SignalAverage = mean(obj.Pol_ImAvg(obj.Object(i).PixelIdxList));
-                    obj.Object(i).BGAverage = mean(obj.Pol_ImAvg(obj.Object(i).BGIdxList));
+                    obj.Object(i).SignalAverage = mean(obj.RawPolAvg(obj.Object(i).PixelIdxList));
+                    obj.Object(i).BGAverage = mean(obj.RawPolAvg(obj.Object(i).BGIdxList));
                     obj.Object(i).SBRatio = obj.Object(i).SignalAverage / obj.Object(i).BGAverage;
 
                     clear new_buffer new_BG
@@ -240,9 +296,24 @@ classdef PODSImage < handle
             
         end
         
+        function Dimensions = get.Dimensions(obj)
+            
+            Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
+            
+        end 
         
-  
-%% Object Methods
+        function FiltOFAvg = get.FiltOFAvg(obj)
+            
+            FiltOFAvg = sum(sum(obj.OFFiltered))/nnz(obj.OFFiltered);
+            
+        end
+
+%% PODSObject Methods
+
+        % get current Object (PODSObject)
+        function CurrentObject = get.CurrentObject(obj)
+            CurrentObject = obj.Object(obj.CurrentObjectIdx);
+        end
 
         % get ObjectProperties
         function ObjectProperties = get.ObjectProperties(obj)
@@ -255,11 +326,6 @@ classdef PODSImage < handle
         function ObjectNames = get.ObjectNames(obj)
             ObjectNames = {};
             [ObjectNames{1:obj.nObjects,1}] = deal(obj.Object.Name);
-        end
-        
-        % set ObjectNames
-        function obj = set.ObjectNames(obj,names)
-            ObjectNames = names;
         end
         
         % get nObjects
