@@ -1,15 +1,18 @@
 function [clr, clr_noblack] = MakeRGB
     disordered_thresh = 0.2;
-    disordered_region = ceil(disordered_thresh/(1/256));
+    disordered_region = ceil(disordered_thresh*256);
 
     thing = jet(256);
     
     clr = zeros(256,3);
-    clr(1,:) = [0,0,0];
 
-    for i=2:disordered_region
-        clr(i,:) = thing(95,:);
-    end
+%     for i=2:disordered_region
+%         clr(i,:) = thing(95,:);
+%     end
+    
+    
+    clr(2:disordered_region,:) = repmat(thing(95,:),disordered_region-1,1);
+    
     length = 490;
     thing2 = jet(length);
     
