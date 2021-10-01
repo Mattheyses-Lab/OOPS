@@ -12,10 +12,16 @@ function TableOut = SavePODSData(source,event)
                          'Area',0,...
                          'Perimeter',0);
     
-    MasterIdx = 1;         
+    MasterIdx = 1;
+    AllOFPerGroup = {};
                
     for i = 1:PODSData.nGroups
+        
+        allgroupdata = [];
+        
         for j = 1:PODSData.Group(i).nReplicates
+            
+            
             for k = 1:PODSData.Group(i).Replicate(j).nObjects
                 PODSDataOut(MasterIdx).GroupIdx = i;
                 PODSDataOut(MasterIdx).GroupName = PODSData.Group(i).GroupName;
@@ -28,9 +34,18 @@ function TableOut = SavePODSData(source,event)
                 PODSDataOut(MasterIdx).Perimeter =  PODSData.Group(i).Replicate(j).Object(k).Perimeter;
                 
                 MasterIdx = MasterIdx+1;
+                
+                allgroupdata(1,end+1) = PODSData.Group(i).Replicate(j).Object(k).OFAvg;
+                
             end % end objects
         end % end images
+        
+        AllOFPerGroup{i} = allgroupdata;
+        clear allgroupdata
+        
     end % end groups
+    
+    save('AllOFPerGroup.mat','AllOFPerGroup');
     
     TableOut = struct2table(PODSDataOut);
     clear PODSDataOut
