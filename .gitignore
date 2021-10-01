@@ -1,17 +1,12 @@
-
+*Output.mat
+*.asv
+*.tif
+*.nd2
+*Test\ Data\ Set*
 Dependencies/UpdateTables.asv
 Test Data Set/.DS_Store
 Test Data Set/Azimuth-Colored-test.png
-Test Data Set/Azimuth-Colored-test.tif
-Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_005.nd2
-Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_010.nd2
-Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_015.nd2
-Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_020.nd2
-Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_025.nd2
-Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_030.nd2
-Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_035.nd2
 Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_040-Average_Intensity.png
-Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_040-Average_Intensity.tif
 Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_040-OF_Filtered.png
 Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_040-OF_masked.png
 Test Data Set/Dsg2-GFP-IA_Go-Treated_20210215_040-OF_masked.tif
