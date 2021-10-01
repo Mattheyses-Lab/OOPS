@@ -1,12 +1,15 @@
 function [] = ChangePODSTab(source,NewTab)
 
     PODSData = guidata(source);
+    % previous tab will become tab that was current before tab change
     PODSData.Settings.PreviousTab = PODSData.Settings.CurrentTab;
-    UpdateLog3(source,[NewTab, ' Tab Selected'],'append');
+    % update current tab
     PODSData.Settings.CurrentTab = NewTab;
     
+    UpdateLog3(source,[NewTab, ' Tab Selected'],'append');
 
     switch PODSData.Settings.PreviousTab
+        
         case 'Files'
             try
                 linkaxes(PODSData.Handles.FFCAxH,'off');
@@ -28,7 +31,6 @@ function [] = ChangePODSTab(source,NewTab)
             end
 
         case 'FFC'
-
 
             for i = 1:4
                 PODSData.Handles.RawIntensityAxH(i).Parent = PODSData.Handles.SmallPanels(2,i);
@@ -56,7 +58,7 @@ function [] = ChangePODSTab(source,NewTab)
             if ~strcmp(NewTab,'View/Adjust Mask')
                 PODSData.Handles.ThreshSlider.Visible = 'Off';
                 %ThreshAxH.Visible = 'Off';
-                PODSData.Handles.FilterSelectorDropdown.Visible = 'Off';
+                PODSData.Handles.FilterSelectorDropDown.Visible = 'Off';
                 PODSData.Handles.FilterSelectorTitle.Visible = 'Off';
                 PODSData.Handles.SESizeBox.Visible = 'Off';
                 PODSData.Handles.SESizeBoxTitle.Visible = 'Off';
@@ -79,8 +81,6 @@ function [] = ChangePODSTab(source,NewTab)
                 PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
             end
 
-
-
         case 'View/Adjust Mask'
             % link large AvgIntensityAxH and MaskAxH
             try
@@ -89,23 +89,13 @@ function [] = ChangePODSTab(source,NewTab)
                 % do nothing
             end
 
-            try
-
-            catch
-
-            end
-
-
-
-
-
             PODSData.Handles.AverageIntensityImgH.Visible = 'Off';
             PODSData.Handles.AverageIntensityAxH.Title.Visible = 'Off';
             PODSData.Handles.AverageIntensityAxH.Toolbar.Visible = 'Off';
 
             if ~strcmp(NewTab,'Generate Mask')
                 PODSData.Handles.ThreshSlider.Visible = 'Off';
-                PODSData.Handles.FilterSelectorDropdown.Visible = 'Off';
+                PODSData.Handles.FilterSelectorDropDown.Visible = 'Off';
                 PODSData.Handles.FilterSelectorTitle.Visible = 'Off';
                 PODSData.Handles.SESizeBox.Visible = 'Off';
                 PODSData.Handles.SESizeBoxTitle.Visible = 'Off';
@@ -117,11 +107,6 @@ function [] = ChangePODSTab(source,NewTab)
             PODSData.Handles.MaskImgH.Visible = 'Off';
             PODSData.Handles.MaskAxH.Title.Visible = 'Off';
             PODSData.Handles.MaskAxH.Toolbar.Visible = 'Off';
-
-
-
-
-
 
         case 'Order Factor'
             PODSData.Handles.OrderFactorImgH.Visible = 'Off';
@@ -152,17 +137,20 @@ function [] = ChangePODSTab(source,NewTab)
             PODSData.Handles.AverageIntensityAxH.Title.Visible = 'Off';
             PODSData.Handles.AverageIntensityAxH.Toolbar.Visible = 'Off';
 
-        case 'SB-Filtering'
+        case 'Filtered Order Factor'
             PODSData.Handles.SBAverageIntensityImgH.Visible = 'Off';
             PODSData.Handles.SBAverageIntensityAxH.Title.Visible = 'Off';
             PODSData.Handles.SBAverageIntensityAxH.Toolbar.Visible = 'Off';
 
-            PODSData.Handles.SBMaskImgH.Visible = 'Off';
-            PODSData.Handles.SBMaskAxH.Title.Visible = 'Off';
-            PODSData.Handles.SBMaskAxH.Toolbar.Visible = 'Off';
+            PODSData.Handles.FilteredOFImgH.Visible = 'Off';
+            PODSData.Handles.FilteredOFAxH.Title.Visible = 'Off';
+            PODSData.Handles.FilteredOFAxH.Toolbar.Visible = 'Off';
+            
+            PODSData.Handles.OFCbar2.Visible = 'Off';
+              
     end
 
-    switch NewTab
+    switch PODSData.Settings.CurrentTab
         case 'Files'
             for i = 1:4
                 PODSData.Handles.RawIntensityAxH(i).Parent = PODSData.Handles.SmallPanels(2,i);
@@ -211,7 +199,7 @@ function [] = ChangePODSTab(source,NewTab)
                 PODSData.Handles.ThreshSlider.Visible = 'On';
                 %ThreshAxH.Visible = 'On';
                 PODSData.Handles.ThreshBar.Visible = 'On';
-                PODSData.Handles.FilterSelectorDropdown.Visible = 'On';
+                PODSData.Handles.FilterSelectorDropDown.Visible = 'On';
                 PODSData.Handles.FilterSelectorTitle.Visible = 'On';
                 PODSData.Handles.SESizeBox.Visible = 'On';
                 PODSData.Handles.SESizeBoxTitle.Visible = 'On';
@@ -254,7 +242,7 @@ function [] = ChangePODSTab(source,NewTab)
                 PODSData.Handles.ThreshSlider.Visible = 'On';
                 %ThreshAxH.Visible = 'On';
                 PODSData.Handles.ThreshBar.Visible = 'On';
-                PODSData.Handles.FilterSelectorDropdown.Visible = 'On';
+                PODSData.Handles.FilterSelectorDropDown.Visible = 'On';
                 PODSData.Handles.FilterSelectorTitle.Visible = 'On';
                 PODSData.Handles.SESizeBox.Visible = 'On';
                 PODSData.Handles.SESizeBoxTitle.Visible = 'On';
@@ -322,14 +310,16 @@ function [] = ChangePODSTab(source,NewTab)
                 PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
             end
 
-        case 'SB-Filtering'
+        case 'Filtered Order Factor'
             PODSData.Handles.SBAverageIntensityImgH.Visible = 'On';
             PODSData.Handles.SBAverageIntensityAxH.Title.Visible = 'On';
             PODSData.Handles.SBAverageIntensityAxH.Toolbar.Visible = 'On';
 
-            PODSData.Handles.SBMaskImgH.Visible = 'On';
-            PODSData.Handles.SBMaskAxH.Title.Visible = 'On';
-            PODSData.Handles.SBMaskAxH.Toolbar.Visible = 'On';
+            PODSData.Handles.FilteredOFImgH.Visible = 'On';
+            PODSData.Handles.FilteredOFAxH.Title.Visible = 'On';
+            PODSData.Handles.FilteredOFAxH.Toolbar.Visible = 'On';
+            
+            PODSData.Handles.OFCbar2.Visible = 'On';
 
             PODSData.Handles.ImgPanel1.Visible = 'On';
             PODSData.Handles.ImgPanel2.Visible = 'On';
@@ -339,6 +329,7 @@ function [] = ChangePODSTab(source,NewTab)
                 PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
             end
     end
-    guidata(source,PODSData);
+    
+    UpdateTables(source);
 
 end
