@@ -1,4 +1,7 @@
 function [] = SliderMoved(source,event)
+% Once the threshold slider is moved to final position, this function will
+% calculate the new mask of the currently selected image, update the display,
+% then detect the new objects defined by the mask
 
     PODSData = guidata(source);
     cGroupIdx = PODSData.CurrentGroupIndex;
@@ -9,18 +12,17 @@ function [] = SliderMoved(source,event)
         cImageIdx = cImageIdx(1);
     end    
     
-    % get current replicate
-    cReplicate = PODSData.Group(cGroupIdx).Replicate(cImageIdx);
-    rows = cReplicate.Height;
-    cols = cReplicate.Width;
+    % get main channel (currently selected) of current replicate
+    MainReplicate = PODSData.CurrentImage(1);
+    
+    rows = MainReplicate.Height;
+    cols = MainReplicate.Width;
 
-    IM = cReplicate.MedianFilteredImg;
+    IM = MainReplicate.MedianFilteredImg;
     IM = IM./max(max(IM));
     new_level = event.Value;
     bw = IM > new_level;
-    
-    
-    
+
     % clear 10 px around image borders
     bw(1:10,1:end) = 0;
     bw(1:end,1:10) = 0;
@@ -31,47 +33,49 @@ function [] = SliderMoved(source,event)
     CC = bwconncomp(bw,4);
     S = regionprops(CC, 'Area');
     L = labelmatrix(CC);
-    bw = sparse(ismember(L, find([S.Area] >= 10)));
+    bw = ismember(L, find([S.Area] >= 10));
 
-    cReplicate.bw = bw;
-    cReplicate.L = bwlabel(full(bw),4);
+    MainReplicate.bw = bw;
+    MainReplicate.L = bwlabel(bw,4);
+    MainReplicate.level = new_level;
     
-    UpdateLog3(source,'Refining objects...','append');
-    cReplicate.Object = DetectObjects(cReplicate);
-    cReplicate.ObjectDetectionDone = true;
+    UpdateLog3(source,'Updating Object Data...','append');
+    delete(MainReplicate.Object);
+    MainReplicate.DetectObjects;
+    MainReplicate.ObjectDetectionDone = true;
+    
+    MainReplicate.ThresholdAdjusted = 1;
+    % update mask display
+    Handles.MaskImgH.CData = bw;
+
+    % build mask and detect object for other channels, if applicable
+    for i = 1:PODSData.nChannels
+        if i ~= MainReplicate.SelfChannelIdx
+            cReplicate = PODSData.Group(cGroupIdx,i).Replicate(cImageIdx);
+            cReplicate.bw = MainReplicate.bw;
+            cReplicate.L = MainReplicate.L;
+            UpdateLog3(source,['Building objects for Channel:',cReplicate.ChannelName,' from objects in Channel:',MainReplicate.ChannelName,'...'],'append');
+            delete(cReplicate.Object);
+            cReplicate.DetectObjects;
+            cReplicate.ObjectDetectionDone = true;
+            cReplicate.ThresholdAdjusted = 1;
+        end
+    end
+    
     UpdateLog3(source,'Done.','append');
     
-    cReplicate.ThresholdAdjusted = 1;
-    
     % update object selection listbox
-    if cReplicate.nObjects >= 1
-        names = cReplicate.ObjectNames();
+    if MainReplicate.nObjects >= 1
+        names = MainReplicate.ObjectNames();
         Handles.ObjectSelector.Items = names;
         Handles.ObjectSelector.ItemsData = [1:length(names)];
-        Handles.ObjectSelector.Value = cReplicate.CurrentObjectIdx;
+        Handles.ObjectSelector.Value = MainReplicate.CurrentObjectIdx;
     else
         Handles.ObjectSelector.Items = {'No objects found...'};
-    end
-
-%% current
-%     for i = 1:cReplicate(first).nObjects
-%         obj = cReplicate(first).Object(i);
-%         plot(obj.Perimeter8Conn(:,2)+obj.XAdjust,...
-%                  obj.Perimeter8Conn(:,1)+obj.YAdjust,...
-%                  'g','LineWidth',1,...
-%                  'Parent',obj.LineGroup);        
-% 
-%         obj.LineGroup.Parent = Handles.AverageIntensityAxH;
-%     end
-    
-    % update PODSData w/new mask and threshold
-    Handles.MaskImgH.CData = bw;
-    cReplicate.level = new_level;
-    
-    PODSData.Handles = Handles;
-    PODSData.Group(cGroupIdx).Replicate(cImageIdx) = cReplicate;
+    end    
 
     guidata(source,PODSData);
+    UpdateImages(source);
     UpdateTables(source);
 
 end

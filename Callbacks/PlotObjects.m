@@ -74,8 +74,6 @@ function PlotObjects(source,event)
     for i = 1:nGroups
         
         try
-            
-            
             ObjectData = CombineObjectData(PODSData.Group(i),XVar,YVar);
             scatter(ax,ObjectData(:,1),ObjectData(:,2),...
                 'MarkerFaceColor','flat',...

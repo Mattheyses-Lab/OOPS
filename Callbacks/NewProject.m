@@ -1,118 +1,130 @@
     function [] = NewProject(source,event)
         
         PODSData = guidata(source);
+        
+        nGroups = 1;
+        nChannels = 1;
+        
         % get screensize to set gui position
         ss = PODSData.Settings.ScreenSize;
         % center point (x,y) of screen
         center = [ss(3)/2,ss(4)/2];
-        % get number of current groups
-        nGroups = PODSData.nGroups;
-        % get current group names
-        GroupNames = {};
-        [GroupNames{1:nGroups,1}] = deal(PODSData.Group.GroupName);
-        
 
-        sz = [center(1)-250 center(2)-250 500 500];
+        % position of the first window
+        sz = [center(1)-250 center(2)-100 500 200];
 
+        % draw figure window
         newproject = uifigure('Name','New Project',...
                               'Menubar','none',...
                               'Position',sz);
 
+        % editbox to set project name                  
         ProjectNameBox = uieditfield('Parent',newproject,...
-                                     'Position',[200 450 250 20],...
-                                     'Value',PODSData.ProjectName,...
-                                     'ValueChangedFcn',@SetProjectName);
+                                     'Position',[200 150 250 20],...
+                                     'Value',PODSData.ProjectName);
         ProjectNameBoxTitle = uilabel('Parent',newproject,...
-                                      'Position',[50 450 100 20],...
+                                      'Position',[50 150 100 20],...
                                       'Text','Project Name');                        
-                                                     
+
+        % editfield to set n groups                          
         NumGroupsBox = uieditfield('Parent',newproject,...
-                                   'Position',[200 410 250 20],...
-                                   'Value',num2str(nGroups),...
-                                   'ValueChangedFcn',@SetNumGroups);                        
+                                   'Position',[200 110 250 20],...
+                                   'Value','1');
         NumGroupsBoxTitle = uilabel('Parent',newproject,...
-                                    'Position',[50 410 100 20],...
+                                    'Position',[50 110 100 20],...
                                     'Text','Number of Groups');
+
+        % editfield to set n channels(1-2 for now)                        
+        NumChannelsBox = uieditfield('Parent',newproject,...
+                                   'Position',[200 70 250 20],...
+                                   'Value','1');
+        NumChannelsBoxTitle = uilabel('Parent',newproject,...
+                                    'Position',[50 70 100 20],...
+                                    'Text','Number of Channels (1-2)');                                
+                                
+        % pushbutton - deletes the current window and moves to setting group names                        
+        pbCont2NameGroups = uibutton(newproject,...
+                                    'Push',...
+                                    'Text','Continue',...
+                                    'Position',[200 30 100 20],...
+                                    'ButtonPushedFcn',@Cont2NameGroups);
+                                
+        drawnow
+        
+        % wait until figure is deleted                       
+        waitfor(newproject)                                
+         
+        % height of next window will be based on user-selected number of groups (same width)
+        fig_height = 50+40*(nGroups-1)+40*nChannels+40+30; % 30=bottom margin,50=top margin plus title bar,40=space between rows,
+        sz = [center(1)-250 center(2)-fig_height/2 500 fig_height];
+        
+        % draw figure window for user to set group names
+        fHSetGroupNames = uifigure('Name','Set Group Names',...
+                                   'Menubar','none',...
+                                   'Position',sz);        
+
+        for i = 1:nGroups
+            GroupNamesBox(i) = uieditfield(fHSetGroupNames,...
+                'Position',[200 fig_height-50-40*(i-1) 250 20],...
+                'Value',['Untitled Group ' num2str(i)],...
+                'Tag',num2str(i));
+            GroupNamesBoxTitle(i) = uilabel(fHSetGroupNames,...
+                'Position',[50 fig_height-50-40*(i-1) 100 20],...
+                'Text',['Group ',num2str(i),' Name:']);
+        end
                         
-        pbReturnToPODS = uibutton(newproject,...
+        j = 1;
+        for i = (nGroups+1):(nChannels+nGroups)
+            ChannelNamesBox(j) = uieditfield(fHSetGroupNames,...
+                'Position',[200 fig_height-50-40*(i-1) 250 20],...
+                'Value',['Channel ' num2str(j)],...
+                'Tag',num2str(j));
+            ChannelNamesBoxTitle(j) = uilabel(fHSetGroupNames,...
+                'Position',[50 fig_height-50-40*(i-1) 100 20],...
+                'Text',['Channel ',num2str(j),' Name:']);
+            j = j+1;
+        end        
+
+        pbReturnToPODS = uibutton(fHSetGroupNames,...
                                   'Push',...
                                   'Text','Return to PODS',...
                                   'Position',[200 30 100 20],...
                                   'ButtonPushedFcn',@ReturnToPODS);
-                            
-        hGroupNamesPanel = uipanel('Parent',newproject,...
-                                   'Position',[25 80 450 300],...
-                                   'Scrollable','on');
                               
-        
-        GroupNamesBox(1) = uieditfield('Parent',hGroupNamesPanel,...
-                                       'Position',[175 300-40*1 250 20],...
-                                       'Value',GroupNames{1},...
-                                       'ValueChangedFcn',@SetGroupNames,...
-                                       'Tag',num2str(1));
-        GroupNamesBoxTitle(1) = uilabel('Parent',hGroupNamesPanel,...
-                                        'Position',[25 300-40*1 100 20],...
-                                        'Text',['Group ',num2str(1),' Name:']);
+        waitfor(fHSetGroupNames)                      
 
-        
-        
-        % wait until figure is deleted                       
-        waitfor(newproject)
         % update main GUI with data
-        PODSData.Handles.GroupListBox.Items = GroupNames;
+        PODSData.Handles.GroupListBox.Items = PODSData.GroupNames;
         PODSData.Handles.GroupListBox.ItemsData = [1:PODSData.nGroups];
-        PODSData.GroupNames = GroupNames;
+        %PODSData.GroupNames = GroupNames;
         PODSData.CurrentGroupIndex = 1;
         guidata(source,PODSData);
         UpdateLog3(source,['Started new project, "', PODSData.ProjectName,'", with ',num2str(PODSData.nGroups),' groups'],'append')
         UpdateTables(source);
-        
+        UpdateListBoxes(source);
         
 %% Nested callbacks for NewProject
-        %% Set Project Name
-        function [] = SetProjectName(source,event)
-            new_project_name = source.Value;
-            PODSData.ProjectName = new_project_name;
-        end
-        %% Set Number of Groups                       
-        function [] = SetNumGroups(source,event)
-            OldNumGroups = PODSData.nGroups;
-            NewNumGroups = str2num(source.Value);
-            %PODSData.nGroups = NewNumGroups;
 
-            delete(GroupNamesBox(:))
-            delete(GroupNamesBoxTitle(:))
-            
-            GroupNames = {};
-            [GroupNames{1:OldNumGroups,1}] = deal(PODSData.Group.GroupName);            
-            
-            for i = 1:NewNumGroups
-                GroupNames{i,1} = ['Untitled Group ',num2str(i)];
-            end
-            
-            for i = 1:NewNumGroups
-                PODSData.Group(i) = PODSGroup();
-        
-                GroupNamesBox(i) = uieditfield('Parent',hGroupNamesPanel,...
-                    'Position',[175 300-40*i 250 20],...
-                    'Value',GroupNames{i},...
-                    'ValueChangedFcn',@SetGroupNames,...
-                    'Tag',num2str(i));
-                GroupNamesBoxTitle(i) = uilabel('Parent',hGroupNamesPanel,...
-                    'Position',[25 300-40*i 100 20],...
-                    'Text',['Group ',num2str(i),' Name:']);
-            end
-        end                                                   
-        %% Set Group Names
-        function [] = SetGroupNames(source,event)
-            GroupIndex = str2num(source.Tag);
-            NewGroupName = source.Value;
-            GroupNames{GroupIndex} = NewGroupName;
-            PODSData.Group(GroupIndex).GroupName = NewGroupName;
-        end
-        %% Return to Main Window
-        function [] = ReturnToPODS(source,event)
+        function [] = Cont2NameGroups(source,event)
+            PODSData.ProjectName = ProjectNameBox.Value;
+            nGroups = str2num(NumGroupsBox.Value);
+            nChannels = str2num(NumChannelsBox.Value);
             delete(newproject)
         end
+
+        %% Set names and return to Main Window
+        function [] = ReturnToPODS(source,event)
+        
+            for J = 1:nChannels
+                for I = 1:nGroups
+                    PODSData.Group(I,J) = PODSGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,J);
+                end
+            end
+            delete(fHSetGroupNames)
+        end   
+    
+    
+    
+    
 
     end
