@@ -2,7 +2,7 @@
 *.asv
 *.tif
 *.nd2
-*Test\ Data\ Set*
+*'Test Data Set'*
 Dependencies/UpdateTables.asv
 Test Data Set/.DS_Store
 Test Data Set/Azimuth-Colored-test.png
