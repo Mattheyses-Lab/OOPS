@@ -172,7 +172,7 @@ classdef PODSImage < handle
             props = obj.ObjectProperties;
             
             if length(props)==0 % if no objects
-                Object = PODSObject(props);
+                obj.Object = [];
                 return
             else
                 for i = 1:length(props) % for each detected object
@@ -325,12 +325,21 @@ classdef PODSImage < handle
         % get ObjectNames
         function ObjectNames = get.ObjectNames(obj)
             ObjectNames = {};
-            [ObjectNames{1:obj.nObjects,1}] = deal(obj.Object.Name);
+            try
+                [ObjectNames{1:obj.nObjects,1}] = deal(obj.Object.Name);
+            catch
+                [ObjectNames{1:1}] = 'No Objects Found...';
+            end
+            
         end
         
         % get nObjects
         function nObjects = get.nObjects(obj)
-            nObjects = length(obj.Object);
+            if isvalid(obj.Object)
+                nObjects = length(obj.Object);
+            else
+                nObjects = 0;
+            end
         end      
         
 %% Normalize Image Stacks

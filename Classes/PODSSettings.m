@@ -41,7 +41,6 @@ classdef PODSSettings
         % currently selected colormaps for each image type
         IntensityColormaps cell
         OrderFactorColormap double
-        
     end
     
     methods

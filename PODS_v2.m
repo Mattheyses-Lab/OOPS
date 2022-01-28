@@ -132,7 +132,7 @@ function [] = PODS_v2()
     pause(0.1)
     
 %% Mask threshold adjuster
-    ThreshSlider = uislider('Parent',ImgOperationsTab(2),...
+    ThreshSlider = uislider('Parent',ImgOperationsTab(1),...
                              'Position',[20 35 round(width)-40 3],...
                              'ValueChangingFcn',@SliderMoving,...
                              'ValueChangedFcn',@SliderMoved,...
@@ -141,9 +141,9 @@ function [] = PODS_v2()
                              'FontColor','yellow',...
                              'MajorTicks',[0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1]);
                          
-    ThreshAxHeight = ImgOperationsTab(2).InnerPosition(4)-65;                     
+    ThreshAxHeight = ImgOperationsTab(1).InnerPosition(4)-65;                     
               
-    ThreshAxH = uiaxes('Parent',ImgOperationsTab(2),...
+    ThreshAxH = uiaxes('Parent',ImgOperationsTab(1),...
                        'InnerPosition',[20 45 round(width)-40 ThreshAxHeight],...
                        'XTick',[],...
                        'YTick',[],...
@@ -677,8 +677,6 @@ function [] = PODS_v2()
 
         FilteredOFImgH.Visible = 'Off';
         FilteredOFAxH.Title.Visible = 'Off';
-
-        
         %% Azimuth
         % create an axis, child of a panel, to fill the container
         QuiverAxH = uiaxes(ImgPanel2,...
@@ -691,36 +689,11 @@ function [] = PODS_v2()
         % set axis title
         QuiverAxH = SetAxisTitle(QuiverAxH,'Azimuth Quiver Plot');
         
-        load('wind','x','y','u','v')
-        
-        QuiverPlot = quiver(QuiverAxH,x,y,u,v);
-        
         QuiverAxH.Toolbar.Visible = 'Off';
         QuiverAxH.YDir = 'Reverse';
         QuiverAxH.Visible = 'Off';
         QuiverAxH.Title.Visible = 'Off';
         QuiverAxH.Title.Color = 'White';
-        QuiverPlot.Visible = 'Off';
-%% Object 3D Plot Axes - Large Panel
-
-        Object3DAxH = uiaxes(ImgPanel2,...
-            'Units','Normalized',...
-            'OuterPosition',[0 0 1 1],...
-            'Tag','Object3D',...
-            'Color','Black',...
-            'XColor','White',...
-            'YColor','White',...
-            'ZColor','White',...
-            'CLim',[0 1]);
-
-        SetAxisTitle(Object3DAxH,'Object Contour Plot');
-        colormap(gca,OrderFactorMap);
-
-        Object3DAxH.Visible = 'Off';
-        Object3DAxH.Toolbar.Visible = 'Off';
-        Object3DAxH.YDir = 'Reverse';
-        Object3DAxH.Title.Visible = 'Off';
-        Object3DAxH.Title.Color = 'White';
 
 %% Object FFCIntensity Image
 
@@ -863,7 +836,6 @@ function [] = PODS_v2()
     PODSData.Handles.FilteredOFImgH = FilteredOFImgH;
     
     PODSData.Handles.QuiverAxH = QuiverAxH;
-    PODSData.Handles.QuiverPlot = QuiverPlot;
     
     % ...large image panels
     PODSData.Handles.ImgPanel1 = ImgPanel1;
@@ -882,8 +854,6 @@ function [] = PODS_v2()
     PODSData.Handles.ImageSelector = ImageSelector;
     PODSData.Handles.ObjectSelector = ObjectSelector;
     
-    % ...to 3D object plot axis
-    PODSData.Handles.Object3DAxH = Object3DAxH;
     % ...to 2D object images
     PODSData.Handles.ObjectPolFFCAxH = ObjectPolFFCAxH;
     PODSData.Handles.ObjectPolFFCImgH = ObjectPolFFCImgH;
@@ -934,9 +904,8 @@ function [] = PODS_v2()
             case 'MStepsMedianFiltered'
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
-            case 'Anisotropy'
-                
-            case 'ColoredAzimuth'
+            case 'QuiverAzimuth'
+                addZoomToCursorToolbarBtn;
                 
         end
         
@@ -1072,7 +1041,8 @@ function [] = PODS_v2()
                 MaskAxH.Title.Visible = 'Off';
                 MaskAxH.Toolbar.Visible = 'Off';
 
-            case 'Order Factor'       
+            case 'Order Factor'
+                
                 OrderFactorImgH.Visible = 'Off';
                 OrderFactorAxH.Title.Visible = 'Off';
                 OrderFactorAxH.Toolbar.Visible = 'Off';
@@ -1083,11 +1053,12 @@ function [] = PODS_v2()
                 
                 OFCbar.Visible = 'Off';
                 
-            case 'Azimuth' 
+            case 'Azimuth'
+                
                 try
-                    delete(data.Handles.QuiverPlot);
+                    delete(data.Handles.AzimuthLines);
                 catch
-                    warning('Failed to delete Quiver Plot');
+                    warning('Failed to delete Azimuth Lines');
                 end
 
                 QuiverAxH.Visible = 'Off';
@@ -1098,7 +1069,8 @@ function [] = PODS_v2()
                 AverageIntensityAxH.Title.Visible = 'Off';
                 AverageIntensityAxH.Toolbar.Visible = 'Off';
                 
-            case 'Anisotropy'       
+            case 'Anisotropy'
+                
                 AnisotropyImgH.Visible = 'Off';
                 AnisotropyAxH.Title.Visible = 'Off';
                 AnisotropyAxH.Toolbar.Visible = 'Off';
@@ -1108,6 +1080,7 @@ function [] = PODS_v2()
                 AverageIntensityAxH.Toolbar.Visible = 'Off';
                 
             case 'Filtered Order Factor'
+                
                 SBAverageIntensityImgH.Visible = 'Off';
                 SBAverageIntensityAxH.Title.Visible = 'Off';
                 SBAverageIntensityAxH.Toolbar.Visible = 'Off';
@@ -1119,28 +1092,12 @@ function [] = PODS_v2()
                 OFCbar2.Visible = 'Off';
                 
             case 'View Objects'
-                
-                try
-                    delete(PODSData.Handles.hSurfc);
-                catch
-                    warning('No 3D Object Plot to delete');
-                end
-                
-                try
-                    delete(PODSData.Handles.Object3DAxHColorbar);
-                catch
-                    warning('No colorbar found for surf plot');
-                end
-                
+
                 try
                     delete(PODSData.Handles.hObjectOFContour);
                 catch
                     warning('No 2D contour to delete');
                 end                
-
-                % object 3D plot
-                Object3DAxH.Visible = 'Off';
-                Object3DAxH.Title.Visible = 'Off';
                 
                 % object intensity image
                 ObjectPolFFCAxH.Title.Visible = 'Off';
@@ -1255,7 +1212,7 @@ function [] = PODS_v2()
                 OrderFactorImgH.Visible = 'On';
                 OrderFactorAxH.Title.Visible = 'On';
                 OrderFactorAxH.Toolbar.Visible = 'On';
-                OrderFactorAxH.XLim = [1 length(OrderFactorImgH.CData)];
+                OrderFactorAxH.XLim = [1 1024];
                 OrderFactorAxH.YLim = OrderFactorAxH.XLim;
                 
                 AverageIntensityImgH.Visible = 'On';
@@ -1488,11 +1445,13 @@ function [] = PODS_v2()
             cImage.bwFiltered = zeros(size(cImage.bw));
             cImage.OFFiltered = zeros(size(cImage.OF_image));
             
-            for ii = 1:length(cImage.Object)
-                if cImage.Object(ii).SBRatio >= cImage.SBCutoff
-                    cImage.bwFiltered(cImage.Object(ii).PixelIdxList) = 1;
+            if cImage.nObjects > 0
+                for ii = 1:length(cImage.Object)
+                    if cImage.Object(ii).SBRatio >= cImage.SBCutoff
+                        cImage.bwFiltered(cImage.Object(ii).PixelIdxList) = 1;
+                    end
+                    cImage.OFFiltered(cImage.bwFiltered) = cImage.OF_image(cImage.bwFiltered);
                 end
-                cImage.OFFiltered(cImage.bwFiltered) = cImage.OF_image(cImage.bwFiltered);
             end
         end        
 
@@ -1723,8 +1682,6 @@ function [] = PODS_v2()
 
     function [] = tbRemoveObjects(source,event)
 
-        MainReplicate = PODSData.CurrentImage(1);
-        
         ctb = source.Parent;
         cax = ctb.Parent;
         
@@ -1743,17 +1700,14 @@ function [] = PODS_v2()
 
         c4 = int16(vertices(4,1));
         %r4 = int16(vertices(4,2));
+        
+        MainReplicate = PODSData.CurrentImage(1);
+        
+        MainReplicate.bw(r1:r2,c1:c4) = 0
 
-        % iterate through ROI
-        for yy = c1:c4
-            for xx = r1:r2
-                MainReplicate.bw(xx,yy) = 0;  % set all ROI px to 0
-            end
-        end
         % update mask display
         PODSData.Handles.MaskImgH.CData = MainReplicate.bw; 
-        
-        
+
         delete(roi_remove);
         
         MainReplicate.L = bwlabel(full(MainReplicate.bw),4);
@@ -1762,10 +1716,7 @@ function [] = PODS_v2()
         delete(MainReplicate.Object);
         MainReplicate.DetectObjects;
         MainReplicate.ObjectDetectionDone = true;
-
-
         UpdateLog3(source,'Done.','append');
-        
     end
 
 end

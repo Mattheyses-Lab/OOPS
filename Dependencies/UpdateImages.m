@@ -78,6 +78,8 @@ function [] = UpdateImages(source)
                     Handles.PolFFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{cChannelIdx};
                 end                      
             end
+            
+            clear images
 
             %% Experimental Intensity Images
             try
@@ -92,7 +94,9 @@ function [] = UpdateImages(source)
                     Handles.RawIntensityImgH(i).CData = EmptyImage;
                     Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{cChannelIdx};                    
                 end
-            end            
+            end
+            
+            clear images
             
         case 'Generate Mask'
             %% Masking Steps
@@ -130,6 +134,15 @@ function [] = UpdateImages(source)
             catch
                 Handles.ThreshSlider.Value = 0.5;
             end
+            
+            try
+                Handles.CurrentThresholdLine.Value = Replicate.level;
+                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
+            catch
+                disp('Error moving thresh line...')
+                Handles.CurrentThresholdLine.Value = 0.5;
+                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
+            end            
 
         case 'View/Adjust Mask'
             
@@ -156,6 +169,16 @@ function [] = UpdateImages(source)
             catch
                 warning('Failed to update threshold slider with currently selected image data...');
             end
+            
+            try
+                Handles.CurrentThresholdLine.Value = Replicate.level;
+                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
+            catch
+                disp('Error moving thresh line...')
+                Handles.CurrentThresholdLine.Value = 0.5;
+                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
+            end            
+            
 
             %% Average Intensity
             try
@@ -199,102 +222,123 @@ function [] = UpdateImages(source)
                 Handles.AverageIntensityImage.CData = EmptyImage;
             end
             
-            
             try
-                delete(Handles.QuiverPlot)
+                delete(Handles.AzimuthLines);
             catch
-                warning('Failed to delete quiver plot.')
-            end            
+                warning('Could not delete Azimuth lines');
+            end
 
-            try 
+            Handles.QuiverAxH.XLim = [1 Replicate.Width];
+            Handles.QuiverAxH.YLim = [1 Replicate.Height];
+            axis square
+            
+            
+            
+            [y,x] = find(Replicate.bw==1);
+            theta = Replicate.AzimuthImage(Replicate.bw);
+            rho = Replicate.OF_image(Replicate.bw);
+            [u,v] = pol2cart(theta,rho);
 
-                angles = zeros(size(Replicate.AzimuthImage));
-                angles(Replicate.bw) = Replicate.AzimuthImage(Replicate.bw);
-                
-                % convert angle data into cartesian coordinates
-                theta = angles;
-                rho = Replicate.masked_OF_image;
-                [m,n] = size(theta);                
-                x = 1:n;                            % x-coordinates for width (x = [1,...,n])
-                y = 1:m;                            % y-coordinates for height
-                [x,y] = meshgrid(x,y);              % expand x and y arrays into matrices for quiver plot indexing
-                [u,v] = pol2cart(theta,rho);        % convert polar to cartesian
-                
-                
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            x = x';
+            y = y';
+            u = u';
+            v = v';
 
-%                 % q = quiver(x(1:2:end),y(1:2:end),u(1:2:end),v(1:2:end),3);
-%                 % 1:4:end shows 1/16th of the arrows
-%                 % 1:2:end shows 1/4th of the arrows, etc.
-%                 % quiver(x,y,u,v) would show ALL arrows (quite slow for large images)
-%                 % '3' is a scale factor
+            xnew = zeros(2,numel(x));
+            ynew = zeros(2,numel(y));
+            % we want lines to pass through each px of interest, so each line will actually be two half lines
+            % coordinates for 1/2 of dipole, 
+%             xnew(1,:) = x; % x-coord of origin
+%             ynew(1,:) = y; % y-coord of origin
+%             xnew(2,:) = x+25*u; % x-coord of endpoint
+%             ynew(2,:) = y-25*v; % y-coord of endpoint
 % 
-%                 % make QuiverAxH active
-%                 axes(Handles.QuiverAxH);
+%             % for 2nd half of dipole
+%             xnew2 = xnew; % x-coord of origin, same as other half-line
+%             xnew2(2,:) = x-25*u; % x-coord of endpoint of other half-line
+%             ynew2 = ynew; % same story
+%             ynew2(2,:) = y+25*v; % same story
 % 
-%                 % v is negative because our 1/2 waveplate rotates clockwise (i.e. E-field of light rotates clockwise)
-%                  Handles.QuiverPlot = quiver(Handles.QuiverAxH,x(1:10:end),y(1:10:end),u(1:10:end),-v(1:10:end),5);
-%                  disableDefaultInteractivity(Handles.QuiverAxH);
-%                 % lower line width from default 0.5 and remove arrowheads
-%                  Handles.QuiverPlot.LineWidth = 0.1;
-%                  Handles.QuiverPlot.ShowArrowHead = 'Off';
-% 
-%                 % set bg color to black
-%                 Handles.QuiverAxH.Color = [0 0 0];
-% 
-%                 % no axis tick marks
-%                 Handles.QuiverAxH.XTick = [];
-%                 Handles.QuiverAxH.YTick = [];
+%             % combine the half lines so that we have one full line per px of interest
+%             xnew3 = xnew2;
+%             xnew3(1,:) = xnew(2,:);
+%             ynew3 = ynew2;
+%             ynew3(1,:) = ynew(2,:);
+%             xnew3 = zeros(2,numel(x));
+%             ynew3 = zeros(2,numel(y));
+
+            xnew3 = [x+25*u;x-25*u];
+            ynew3 = [y-25*v;y+25*v];
+
+            cmap = PODSData.Settings.AllColormaps.OFMap;
+
+            nColors = length(cmap);
+
+            Handles.AzimuthLines = line(Handles.QuiverAxH,xnew3,ynew3,'LineWidth',0.2);
+
+            LineColors = cell(length(Handles.AzimuthLines),1);
+
+            for i = 1:length(Handles.AzimuthLines)
+                ColorIdx = round(nColors*rho(i));
+                if ColorIdx==0;ColorIdx=1;end
+                %if ColorIdx>153;ColorIdx=153;end
+                Clr = cmap(ColorIdx,:);
+                LineColors{i} = Clr;
+            end
+
+            set(Handles.AzimuthLines,{'Color'},LineColors);            
+
+% ONE VECTOR PER OBJECT (Azimuth by quiver) - retired for now
+%             try
+%                 angles = zeros(size(Replicate.AzimuthImage));
+%                 angles(Replicate.bw) = Replicate.AzimuthImage(Replicate.bw);
 %                 
-%                 % axis square - not necessary if underlying image data are square
-%                 % add custom toolbar to allow zooming in/out on quiver plot
-%                 %[tb1,btns1] = axtoolbar(data.sbpltBR,{'zoomin','zoomout','restoreview'});
+%                 % convert angle data into cartesian coordinates
+%                 theta = angles;
+%                 rho = Replicate.masked_OF_image;
+%                 [m,n] = size(theta);                
+%                 x = 1:n;                            % x-coordinates for width (x = [1,...,n])
+%                 y = 1:m;                            % y-coordinates for height
+%                 [x,y] = meshgrid(x,y);              % expand x and y arrays into matrices for quiver plot indexing
+%                 [u,v] = pol2cart(theta,rho);
+%                 arraylength = Replicate.nObjects;
+%                 qrows = zeros(arraylength,1);
+%                 qcols = zeros(arraylength,1);
+%                 qu = zeros(arraylength,1);
+%                 qv = zeros(arraylength,1);
 %                 
-%                 % set axis range to match size of image
-%                 axis([0 n 0 m]);
-                
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                
-% ONE VECTOR PER OBJECT
-
-                arraylength = Replicate.nObjects;
-                
-                qrows = zeros(arraylength,1);
-                qcols = zeros(arraylength,1);
-                qu = zeros(arraylength,1);
-                qv = zeros(arraylength,1);
-                
-                for ObjIdx = 1:Replicate.nObjects
-
-                    centroid = Replicate.Object(ObjIdx).Centroid;
-                    qx = round(centroid(1));
-                    qy = round(centroid(2));
-                    
-                    qrows(ObjIdx,1) = qy;
-                    qcols(ObjIdx,1) = qx;
-                    
-                    qtheta = theta(qy,qx);
-                    qrho = rho(qy,qx);
-
-                    [qu(ObjIdx,1),qv(ObjIdx,1)] = pol2cart(qtheta,qrho);
-                    
-                end
-                
-                % plot quiver, scaling arrow lengths by 50X (otherwise extremely small)
-                Handles.QuiverPlot = quiver(Handles.QuiverAxH,qcols,qrows,50*qu,-50*qv,0);
-                
-                % disable default interactivity (datatips on hover is very slow with many arrows)
-                %disableDefaultInteractivity(Handles.QuiverAxH);
-                
-                % make axes limits match image data
-                Handles.QuiverAxH.XLim = [0 m];
-                Handles.QuiverAxH.YLim = [0 n];
-                
-                disp('Done displaying quiver plot.');
-           
-            catch
-                error('Error plotting vectors...');
-            end            
+%                 for ObjIdx = 1:Replicate.nObjects
+% 
+%                     centroid = Replicate.Object(ObjIdx).Centroid;
+%                     qx = round(centroid(1));
+%                     qy = round(centroid(2));
+%                     
+%                     qrows(ObjIdx,1) = qy;
+%                     qcols(ObjIdx,1) = qx;
+%                     
+%                     qtheta = theta(qy,qx);
+%                     qrho = rho(qy,qx);
+% 
+%                     [qu(ObjIdx,1),qv(ObjIdx,1)] = pol2cart(qtheta,qrho);
+%                     
+%                 end
+%                 
+%                 % plot quiver, scaling arrow lengths by 50X (otherwise extremely small)
+%                 Handles.QuiverPlot = quiver(Handles.QuiverAxH,qcols,qrows,50*qu,-50*qv,0);
+%                 
+%                 % disable default interactivity (datatips on hover is very slow with many arrows)
+%                 % disableDefaultInteractivity(Handles.QuiverAxH);
+%                 
+%                 % make axes limits match image data
+%                 Handles.QuiverAxH.XLim = [0 m];
+%                 Handles.QuiverAxH.YLim = [0 n];
+%                 
+%                 disp('Done displaying quiver plot.');
+%            
+%             catch
+%                 error('Error plotting vectors...');
+%             end
+%% End of Azimuth by quiver - retired for now
 
         case 'Anisotropy'
             
@@ -309,25 +353,14 @@ function [] = UpdateImages(source)
         case 'View Objects'
 
             %% Object Viewer
-            try;delete(Handles.hSurfc);catch;warning('Failed to delete surf plot');end
-            try;delete(Handles.Object3DAxHColorbar);catch;warning('Failed to delete surf colorbar');end
             try;delete(Handles.hObjectOFContour);catch;warning('Failed to delete contour plot');end
-
-            try
-                cObject = Replicate.CurrentObject;
-                axes(Handles.Object3DAxH)
-                Handles.Object3DAxHColorbar = colorbar('location','eastoutside','color','white');
-                Handles.hSurfc = surfc(Handles.Object3DAxH,cObject.OFSubImage);
-                Handles.hSurfc(1).EdgeColor = 'interp';
-                Handles.hSurfc(1).FaceColor = 'interp';
-                colormap(Handles.Object3DAxH,PODSData.Settings.OrderFactorColormap);     
-            catch
-                error('Error plotting object 3D contours...');
-            end
-
+            
+            cObject = Replicate.CurrentObject;
+%%
             % display the (padded) intensity image of the object
             try
                 Handles.ObjectPolFFCImgH.CData = cObject.PaddedFFCIntensitySubImage;
+                %Handles.ObjectPolFFCAxH.CLim = [0 1];
             catch
                 error('Error displaying object intensity image');
                 Handles.ObjectPolFFCImgH.CData = EmptyImage;
@@ -341,13 +374,14 @@ function [] = UpdateImages(source)
                 Handles.ObjectMaskImgH.CData = EmptyImage;
             end
 
-            % display object OF contour
+%% display object OF contour - retired for now
             try
                 [~,Handles.hObjectOFContour] = contourf(Handles.ObjectOFContourAxH,cObject.OFSubImage,'ShowText','On');
                 colormap(Handles.ObjectOFContourAxH,PODSData.Settings.OrderFactorColormap);
             catch
                 error('Error displaying 2D Object Order Factor contours');
             end
+%%
             drawnow            
             
     end

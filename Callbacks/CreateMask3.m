@@ -111,43 +111,44 @@ for ChIdx = 1:PODSData.nChannels
 
 end % end iteration through channels
 
+if PODSData.nChannels > 1
+    %% Build objects from masks
+    for ChIdx = 1:PODSData.nChannels
 
-%% Build objects from masks
-for ChIdx = 1:PODSData.nChannels
-    
-    % all replicate(s) for each channel
-    cReplicate = PODSData.Group(cGroupIndex,ChIdx).Replicate;
-    
-    cImageIndex = PODSData.Group(cGroupIndex,ChIdx).CurrentImageIndex;
-    
-    for i = 1:length(cImageIndex)
-        
-        ii = cImageIndex(i);
+        % all replicate(s) for each channel
+        cReplicate = PODSData.Group(cGroupIndex,ChIdx).Replicate;
 
-        UpdateLog3(source,[chartab,'Image ',num2str(i),' of ',num2str(length(cImageIndex)),'...'],'append');
-        
-        if ChIdx ~= MainReplicate(ii).SelfChannelIdx
-            UpdateLog3(source,[chartab,chartab,'Building objects for Channel:',cReplicate(ii).ChannelName,' from objects in Channel:',MainReplicate(ii).ChannelName,'...'],'append');
-            cReplicate(ii).bw = MainReplicate(ii).bw;
-            cReplicate(ii).L = MainReplicate(ii).L;
-            % delete old objects for current replicate...
-            delete(cReplicate(ii).Object);
-            % ...so we can detect the new ones (requires bw and L to be computed previously)
-            cReplicate(ii).DetectObjects;
-            % done with object detection for now
-            cReplicate(ii).ObjectDetectionDone = true;
-            % current object will be the first object by default
-            cReplicate(ii).CurrentObjectIdx = 1;
-            % indicates mask was generated automatically
-            cReplicate(ii).ThresholdAdjusted = 0;
-            % a mask exists for this replicate
-            cReplicate(ii).MaskDone = 1;
-            % update log
-            UpdateLog3(source,[chartab,chartab,num2str(cReplicate(ii).nObjects),'objects copied to Channel:',cReplicate(ii).ChannelName,'...'],'append');
-        else
-            UpdateLog3(source,[chartab,chartab,num2str(cReplicate(ii).nObjects) ' objects already detected for Channel:',cReplicate(ii).ChannelName],'append'); 
+        cImageIndex = PODSData.Group(cGroupIndex,ChIdx).CurrentImageIndex;
+
+        for i = 1:length(cImageIndex)
+
+            ii = cImageIndex(i);
+
+            UpdateLog3(source,[chartab,'Image ',num2str(i),' of ',num2str(length(cImageIndex)),'...'],'append');
+
+            if ChIdx ~= MainReplicate(ii).SelfChannelIdx
+                UpdateLog3(source,[chartab,chartab,'Building objects for Channel:',cReplicate(ii).ChannelName,' from objects in Channel:',MainReplicate(ii).ChannelName,'...'],'append');
+                cReplicate(ii).bw = MainReplicate(ii).bw;
+                cReplicate(ii).L = MainReplicate(ii).L;
+                % delete old objects for current replicate...
+                delete(cReplicate(ii).Object);
+                % ...so we can detect the new ones (requires bw and L to be computed previously)
+                cReplicate(ii).DetectObjects;
+                % done with object detection for now
+                cReplicate(ii).ObjectDetectionDone = true;
+                % current object will be the first object by default
+                cReplicate(ii).CurrentObjectIdx = 1;
+                % indicates mask was generated automatically
+                cReplicate(ii).ThresholdAdjusted = 0;
+                % a mask exists for this replicate
+                cReplicate(ii).MaskDone = 1;
+                % update log
+                UpdateLog3(source,[chartab,chartab,num2str(cReplicate(ii).nObjects),'objects copied to Channel:',cReplicate(ii).ChannelName,'...'],'append');
+            else
+                UpdateLog3(source,[chartab,chartab,num2str(cReplicate(ii).nObjects) ' objects already detected for Channel:',cReplicate(ii).ChannelName],'append'); 
+            end
         end
-    end    
+    end
 end
     
     % invoke callback to change tab
