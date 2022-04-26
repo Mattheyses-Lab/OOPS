@@ -119,18 +119,13 @@ function [] = pb_LoadFPMFiles(source,event)
                     end
                 end
         end
-        
-        % update structure with new image data
-        PODSData.Group(GroupIndex,ChIdx) = cGroup;
-        % set the current image in group to 1
-        PODSData.Group(GroupIndex,ChIdx).CurrentImageIndex = 1;
        
     end
     
 
-    if ~strcmp(PODSData.Settings.CurrentTab,'Files')
-        feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
-    end
+     if ~strcmp(PODSData.Settings.CurrentTab,'Files')
+         feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
+     end
     
     UpdateImages(source);
     UpdateTables(source);

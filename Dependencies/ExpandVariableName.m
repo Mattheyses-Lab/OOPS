@@ -10,5 +10,9 @@ function NameOut = ExpandVariableName(NameIn)
             NameOut = 'Object Perimeter';
         case 'Circularity'
             NameOut = 'Object Circularity';
+        case 'AvgColocIntensity'
+            NameOut = 'Average Colocalization Channel Intensity';
+        case 'ROIPearsons'
+            NameOut = 'Single Object (ROI) Pearsons';
     end
 end

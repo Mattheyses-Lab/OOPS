@@ -22,7 +22,7 @@ classdef PODSProject < handle
     
     properties (Dependent = true)  
         nGroups double % depends on the size of dim 1 of Group
-        nChannels double % depends on te size of dim 2 of Groups
+        nChannels double % depends on the size of dim 2 of Group
         
         CurrentGroup PODSGroup % depends on user selection
         CurrentImage PODSImage

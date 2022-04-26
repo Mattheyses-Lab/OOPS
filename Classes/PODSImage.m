@@ -19,6 +19,37 @@ classdef PODSImage < handle
         SelfChannelIdx uint8
         ChannelName char
         
+%% Colocalization Image Properties
+
+        ColocImage double
+        
+        ColocFilename char
+        ColocShortName char
+        ColocFullName char
+        ColocChannelName char
+        
+        % processed coloc channel images
+        ColocNormToMax double
+        ColocEnhanced double
+        ColocThreshLevel double
+        
+        
+        % various image-wide coloc stats
+        RawAllPixelPearsons double
+        ObjectPearsons double
+        MandersM1 double
+        MandersM2 double
+        
+        
+        % masks
+        ColocMask logical
+        ColocOnlyMask logical
+        PrimaryOnlyMask logical
+        CombinedMask logical
+        UnionMask logical
+        
+        
+        
 %% Experimental Data
         % raw image stack - pol_rawdata(y/row,x/col,PolIdx)
         %   PolIdx: 1 = 0 deg | 2 = 45 deg | 3 = 90 deg | 4 = 135 deg
@@ -41,6 +72,7 @@ classdef PODSImage < handle
         OFDone = false
         ObjectDetectionDone = false
         LocalSBDone = false
+        ColocFilesLoaded = false
         
 %% Masking            
         % masks
@@ -66,7 +98,7 @@ classdef PODSImage < handle
         
 %% Object Data        
         % objects
-        CurrentObjectIdx uint16 % i.e. no more than 65535 objects per group (seems reasonable, right?)
+        CurrentObjectIdx uint16 % i.e. no more than 65535 objects per group
         
         ObjectContours
         

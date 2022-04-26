@@ -69,19 +69,32 @@ classdef PODSObject < handle
         SignalAverage
         BGAverage
         SBRatio
+        
+        % Colocalization properties
+        AvgColocIntensity
+        ROIPearsons
+        
 
     end % end properties
     
     properties(Dependent = true)
+        
         OFSubImage 
+        
         PaddedOFSubImage
+        
         MaskedOFSubImage
         
         PaddedFFCIntensitySubImage
         
         PaddedMaskSubImage
         
+        PaddedAnalysisChannelSubImage
+        
+        PaddedColocNorm2MaxSubImage
+        
         CentroidX
+        
         CentroidY
     end
 
@@ -131,8 +144,8 @@ classdef PODSObject < handle
             OFImage = obj.Parent.OF_image;
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
             dim = length(PaddedSubarrayIdx{1,1});
-            OFSubImage = zeros(dim);
-            OFSubImage(:) = OFImage(PaddedSubarrayIdx{:});
+            PaddedOFSubImage = zeros(dim);
+            PaddedOFSubImage(:) = OFImage(PaddedSubarrayIdx{:});
         end        
 
         function MaskedOFSubImage = get.MaskedOFSubImage(obj)
@@ -168,8 +181,21 @@ classdef PODSObject < handle
             PaddedMaskSubImage(:) = MaskImg(PaddedSubarrayIdx{:});
         end        
         
-        
-
+        function PaddedAnalysisChannelSubImage = get.PaddedAnalysisChannelSubImage(obj)
+            AnalysisChannelImage = obj.Parent.ColocImage;
+            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            dim = length(PaddedSubarrayIdx{1,1});
+            PaddedAnalysisChannelSubImage = zeros(dim);
+            PaddedAnalysisChannelSubImage(:) = AnalysisChannelImage(PaddedSubarrayIdx{:});
+        end
+            
+        function PaddedColocNorm2MaxSubImage = get.PaddedColocNorm2MaxSubImage(obj)
+            ColocNorm2MaxImage = obj.Parent.ColocNormToMax;
+            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            dim = length(PaddedSubarrayIdx{1,1});
+            PaddedColocNorm2MaxSubImage = zeros(dim);
+            PaddedColocNorm2MaxSubImage(:) = ColocNorm2MaxImage(PaddedSubarrayIdx{:});
+        end
     end % end methods
     
 

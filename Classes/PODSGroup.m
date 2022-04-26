@@ -21,12 +21,13 @@ classdef PODSGroup < handle
         FiltOFAvg double
         
         % status parameters
-        MaskAllDone logical
-        OFAllDone logical
+        MaskAllDone = false
         
         
         SelfChannelIdx uint8
         ChannelName char
+        
+        CoLocFilesLoaded = false
         
     end
     
@@ -49,9 +50,10 @@ classdef PODSGroup < handle
         
         % don't want to store in memory for every group
         AllObjectData table
-        
-        
+
         FilteredObjectData table
+        
+        OFAllDone logical
     
     end
     
@@ -91,6 +93,21 @@ classdef PODSGroup < handle
             cImage = obj.CurrentImage;
             CurrentObject = cImage.CurrentObject;
         end
+        
+        function OFAllDone = get.OFAllDone(obj)
+            if obj.nReplicates == 0
+                OFAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nReplicates
+                if ~obj.Replicate(i).OFDone
+                    OFAllDone = false;
+                    return
+                end
+            end
+            OFAllDone = true;
+        end
            
         % get x,y data for all objects in group, from first to last replicate
         %       WILL UPDATE TO ALLOW FOR varargin for more flexibility of use
@@ -111,6 +128,21 @@ classdef PODSGroup < handle
                 
             end
         end % end of CombineObjectData()
+        
+        function VariableObjectData = GetAllObjectData(obj,Var2get)
+            %% return a list of Var2Get for all objects in the group
+            count = 0;
+            last = 1;
+            VariableObjectData = [];
+            for i = 1:obj.nReplicates
+                count = count + obj.Replicate(i).nObjects;
+                % column 1 holds x data
+                VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2get)];
+                last = count+1;
+            end            
+
+        end
+        
 
     end
 

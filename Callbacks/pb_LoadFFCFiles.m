@@ -72,6 +72,7 @@ for ChIdx = 1:nChannels
                 end
             end
             %------------------------------.tif Files----------------------------------
+            
         case '.tif'
             uiwait(msgbox(['Select .tif flat-field stack(s) for Channel:' cGroup.ChannelName]));
 
@@ -117,6 +118,7 @@ for ChIdx = 1:nChannels
                     end
                 end
             end
+            
     end % end file-type switch block
     
     
@@ -137,19 +139,19 @@ for ChIdx = 1:nChannels
     clear FFCData
 end
 
-    % update image objects with loaded data FROM FIRST CHANNEL
-    PODSData.Handles.FFCImage0.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,1);
-    PODSData.Handles.FFCAxH(1).XLim = [1,w];
-    PODSData.Handles.FFCAxH(1).YLim = [1,h];
-    PODSData.Handles.FFCImage45.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,2);
-    PODSData.Handles.FFCAxH(2).XLim = [1,w];
-    PODSData.Handles.FFCAxH(2).YLim = [1,h];    
-    PODSData.Handles.FFCImage90.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,3);
-    PODSData.Handles.FFCAxH(3).XLim = [1,w];
-    PODSData.Handles.FFCAxH(3).YLim = [1,h];    
-    PODSData.Handles.FFCImage135.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,4);
-    PODSData.Handles.FFCAxH(4).XLim = [1,w];
-    PODSData.Handles.FFCAxH(4).YLim = [1,h]; 
+%     % update image objects with loaded data FROM FIRST CHANNEL
+%     PODSData.Handles.FFCImage0.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,1);
+%     PODSData.Handles.FFCAxH(1).XLim = [1,w];
+%     PODSData.Handles.FFCAxH(1).YLim = [1,h];
+%     PODSData.Handles.FFCImage45.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,2);
+%     PODSData.Handles.FFCAxH(2).XLim = [1,w];
+%     PODSData.Handles.FFCAxH(2).YLim = [1,h];    
+%     PODSData.Handles.FFCImage90.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,3);
+%     PODSData.Handles.FFCAxH(3).XLim = [1,w];
+%     PODSData.Handles.FFCAxH(3).YLim = [1,h];    
+%     PODSData.Handles.FFCImage135.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,4);
+%     PODSData.Handles.FFCAxH(4).XLim = [1,w];
+%     PODSData.Handles.FFCAxH(4).YLim = [1,h]; 
     
     % if files tab is not current, invoke the callback we need to get there
     if ~strcmp(PODSData.Settings.CurrentTab,'Files')

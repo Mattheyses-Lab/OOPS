@@ -21,7 +21,9 @@ function [] = ZoomToCursor(source,event)
 % shoelson@hotmail.com))
 
     PODSData = guidata(source);
+    
     Handles = PODSData.Handles;
+    
     Zoom = PODSData.Settings.Zoom;
 
     % try and delete previous CursorPositionLabel, this is necessary in
@@ -68,7 +70,6 @@ function [] = ZoomToCursor(source,event)
                 'FontColor','Yellow',...
                 'Text','');
             
-             
             % get original axes values
             pbarOriginal = Zoom.StaticAxes.PlotBoxAspectRatio;
             tagOriginal = Zoom.StaticAxes.Tag;
@@ -123,7 +124,6 @@ function [] = ZoomToCursor(source,event)
              Zoom.ZDist = 0.5*Zoom.ZRange;
              Zoom.ZoomLevelIdx = 4;
              Zoom.pct = 0.5;            
-            
 
     end  
     
@@ -169,9 +169,9 @@ function [] = CursorMoving(source,event)
 
         try
             DynamicAxes.CursorPositionLabel.Text = [' (X,Y) = (',num2str(round(realx)),...
-                                                ',',num2str(round(realy)),') | Zoom: ',...
-                                                num2str(ZoomPct),'%',...
-                                                ' | Value: ',num2str(Zoom.StaticImage.CData(round(realy),round(realx)))];
+                ',',num2str(round(realy)),') | Zoom: ',...
+                num2str(ZoomPct),'%',...
+                ' | Value: ',num2str(Zoom.StaticImage.CData(round(realy),round(realx)))];
         catch
             blah = 0;
             

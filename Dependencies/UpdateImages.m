@@ -101,19 +101,24 @@ function [] = UpdateImages(source)
         case 'Generate Mask'
             %% Masking Steps
             try
-                Handles.MStepsIntensityImage.CData = Replicate.I;
-                Handles.MStepsBackgroundImage.CData = Replicate.BGImg;
+                % average FF-corrected intensity
+                Handles.MStepsImgH(1).CData = Replicate.I;
+                
+                % opened image (BG)
+                Handles.MStepsImgH(2).CData = Replicate.BGImg;
 
-                Handles.MStepsBGSubtractedImage.CData = Replicate.BGSubtractedImg;
-                Handles.MStepsBGSubtracted.CLim = [min(min(Replicate.BGSubtractedImg)) max(max(Replicate.BGSubtractedImg))];
+                % BG-subtracted image (tophat filtered)
+                Handles.MStepsImgH(3).CData = Replicate.BGSubtractedImg;
+                Handles.MStepsAxH(3).CLim = [min(min(Replicate.BGSubtractedImg)) max(max(Replicate.BGSubtractedImg))];
 
-                Handles.MStepsMedianFilteredImage.CData = Replicate.MedianFilteredImg;
-                Handles.MStepsMedianFiltered.CLim = [min(min(Replicate.MedianFilteredImg)) max(max(Replicate.MedianFilteredImg))];
+                % Median filtered image
+                Handles.MStepsImgH(4).CData = Replicate.MedianFilteredImg;
+                Handles.MStepsAxH(4).CLim = [min(min(Replicate.MedianFilteredImg)) max(max(Replicate.MedianFilteredImg))];
             catch
-                Handles.MStepsIntensityImage.CData = EmptyImage;
-                Handles.MStepsBackgroundImage.CData = EmptyImage;
-                Handles.MStepsBGSubtractedImage.CData = EmptyImage;
-                Handles.MStepsMedianFilteredImage.CData = EmptyImage;        
+                Handles.MStepsImgH(1).CData = EmptyImage;
+                Handles.MStepsImgH(2).CData = EmptyImage;
+                Handles.MStepsImgH(3).CData = EmptyImage;
+                Handles.MStepsImgH(4).CData = EmptyImage;        
             end
             
             for i = 1:4
@@ -122,9 +127,9 @@ function [] = UpdateImages(source)
             
             %% Mask
             try
-                Handles.MaskImage.CData = Replicate.bw;
+                Handles.MaskImgH.CData = Replicate.bw;
             catch
-                Handles.MaskImage.CData = EmptyImage;
+                Handles.MaskImgH.CData = EmptyImage;
             end
 
             %% Thresh Slider
@@ -148,28 +153,18 @@ function [] = UpdateImages(source)
             
             %% Mask
             try
-                Handles.MaskImage.CData = Replicate.bw;
+                Handles.MaskImgH.CData = Replicate.bw;
             catch
-                Handles.MaskImage.CData = EmptyImage;
+                Handles.MaskImgH.CData = EmptyImage;
             end
-
-            %% Thresh Slider Limits and Current Value
-            try
-                Handles.ThreshSlider.Limits = [0 1];
-                Handles.ThreshSlider.Value = Replicate.level;
-            catch
-                Handles.ThreshSlider.Value = 0.5;
-            end          
             
-            %% Thresh slider data
-                % Intensity Distribution Plot
             try
                 Handles.ThreshBar.XData = Replicate.IntensityBinCenters;
                 Handles.ThreshBar.YData = Replicate.IntensityHistPlot;
             catch
                 warning('Failed to update threshold slider with currently selected image data...');
             end
-            
+
             try
                 Handles.CurrentThresholdLine.Value = Replicate.level;
                 Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
@@ -178,14 +173,13 @@ function [] = UpdateImages(source)
                 Handles.CurrentThresholdLine.Value = 0.5;
                 Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
             end            
-            
 
             %% Average Intensity
             try
-                Handles.AverageIntensityImage.CData = Replicate.I;
+                Handles.AverageIntensityImgH.CData = Replicate.I;
                 Handles.AverageIntensityAxH.CLim = [min(min(Replicate.I)) max(max(Replicate.I))];
             catch
-                Handles.AverageIntensityImage.CData = EmptyImage;
+                Handles.AverageIntensityImgH.CData = EmptyImage;
             end
             Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{cChannelIdx};
 
@@ -193,33 +187,33 @@ function [] = UpdateImages(source)
             
             %% Order Factor
             try
-                Handles.OrderFactorImage.CData = Replicate.OF_image;
+                Handles.OrderFactorImgH.CData = Replicate.OF_image;
             catch
-                Handles.OrderFactorImage.CData = EmptyImage;
+                Handles.OrderFactorImgH.CData = EmptyImage;
             end
             Handles.OrderFactorAxH.Colormap = PODSData.Settings.OrderFactorColormap;
             
             % if ApplyMask state button set to true, apply current mask by setting AlphaData
             if Handles.ApplyMaskOrderFactor.Value == 1
-                Handles.OrderFactorImage.AlphaData = Replicate.bw
+                Handles.OrderFactorImgH.AlphaData = Replicate.bw
             end
 
             %% Average Intensity
             try
-                Handles.AverageIntensityImage.CData = Replicate.I;
+                Handles.AverageIntensityImgH.CData = Replicate.I;
                 Handles.AverageIntensityAxH.CLim = [min(min(Replicate.I)) max(max(Replicate.I))];
             catch
-                Handles.AverageIntensityImage.CData = EmptyImage;
+                Handles.AverageIntensityImgH.CData = EmptyImage;
             end
             Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{cChannelIdx};
 
         case 'Azimuth'
             
             try 
-                Handles.AverageIntensityImage.CData = Replicate.I;
+                Handles.AverageIntensityImgH.CData = Replicate.I;
                 Handles.AverageIntensityAxH.CLim = [min(min(Replicate.I)) max(max(Replicate.I))];
             catch
-                Handles.AverageIntensityImage.CData = EmptyImage;
+                Handles.AverageIntensityImgH.CData = EmptyImage;
             end
             
             try
@@ -230,10 +224,8 @@ function [] = UpdateImages(source)
 
             Handles.QuiverAxH.XLim = [1 Replicate.Width];
             Handles.QuiverAxH.YLim = [1 Replicate.Height];
-            axis square
-            
-            
-            
+            %axis square
+
             [y,x] = find(Replicate.bw==1);
             theta = Replicate.AzimuthImage(Replicate.bw);
             rho = Replicate.OF_image(Replicate.bw);
@@ -288,68 +280,25 @@ function [] = UpdateImages(source)
 
             set(Handles.AzimuthLines,{'Color'},LineColors);            
 
-% ONE VECTOR PER OBJECT (Azimuth by quiver) - retired for now
-%             try
-%                 angles = zeros(size(Replicate.AzimuthImage));
-%                 angles(Replicate.bw) = Replicate.AzimuthImage(Replicate.bw);
-%                 
-%                 % convert angle data into cartesian coordinates
-%                 theta = angles;
-%                 rho = Replicate.masked_OF_image;
-%                 [m,n] = size(theta);                
-%                 x = 1:n;                            % x-coordinates for width (x = [1,...,n])
-%                 y = 1:m;                            % y-coordinates for height
-%                 [x,y] = meshgrid(x,y);              % expand x and y arrays into matrices for quiver plot indexing
-%                 [u,v] = pol2cart(theta,rho);
-%                 arraylength = Replicate.nObjects;
-%                 qrows = zeros(arraylength,1);
-%                 qcols = zeros(arraylength,1);
-%                 qu = zeros(arraylength,1);
-%                 qv = zeros(arraylength,1);
-%                 
-%                 for ObjIdx = 1:Replicate.nObjects
-% 
-%                     centroid = Replicate.Object(ObjIdx).Centroid;
-%                     qx = round(centroid(1));
-%                     qy = round(centroid(2));
-%                     
-%                     qrows(ObjIdx,1) = qy;
-%                     qcols(ObjIdx,1) = qx;
-%                     
-%                     qtheta = theta(qy,qx);
-%                     qrho = rho(qy,qx);
-% 
-%                     [qu(ObjIdx,1),qv(ObjIdx,1)] = pol2cart(qtheta,qrho);
-%                     
-%                 end
-%                 
-%                 % plot quiver, scaling arrow lengths by 50X (otherwise extremely small)
-%                 Handles.QuiverPlot = quiver(Handles.QuiverAxH,qcols,qrows,50*qu,-50*qv,0);
-%                 
-%                 % disable default interactivity (datatips on hover is very slow with many arrows)
-%                 % disableDefaultInteractivity(Handles.QuiverAxH);
-%                 
-%                 % make axes limits match image data
-%                 Handles.QuiverAxH.XLim = [0 m];
-%                 Handles.QuiverAxH.YLim = [0 n];
-%                 
-%                 disp('Done displaying quiver plot.');
-%            
-%             catch
-%                 error('Error plotting vectors...');
-%             end
-%% End of Azimuth by quiver - retired for now
-
-        case 'Anisotropy'
+        case 'Plots'
+            
+            try
+                %delete(Handles.SwarmPlotAxH.Children)
+                delete(Handles.hSwarmChart)
+            catch
+                % do nothing
+            end
+            
+            Handles.hSwarmChart = PlotGroupSwarmChart(source,Handles.SwarmPlotAxH);
             
         case 'Filtered Order Factor'
-            
             %% Filtered Order Factor
             try
                 Handles.FilteredOFImgH.CData = Replicate.OFFiltered;
             catch
                 Handles.FilteredOFImgH.CData = EmptyImage;
             end
+            
         case 'View Objects'
 
             %% Object Viewer
@@ -359,7 +308,7 @@ function [] = UpdateImages(source)
 %%
             % display the (padded) intensity image of the object
             try
-                Handles.ObjectPolFFCImgH.CData = cObject.PaddedFFCIntensitySubImage;
+                Handles.ObjectPolFFCImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
                 %Handles.ObjectPolFFCAxH.CLim = [0 1];
             catch
                 error('Error displaying object intensity image');
@@ -373,6 +322,17 @@ function [] = UpdateImages(source)
                 error('Error displaying object binary image');
                 Handles.ObjectMaskImgH.CData = EmptyImage;
             end
+            
+            %Handles.ObjectOFImgH.CData = cObject.PaddedOFSubImage;
+            Handles.ObjectOFImgH.CData = cObject.PaddedOFSubImage;
+            Handles.ObjectOFAxH.Colormap = PODSData.Settings.OrderFactorColormap;
+            
+%             try
+%                 Handles.ObjectOFImgH.CData = cObject.PaddedOFSubImage;
+%             catch
+%                 error('Error displaying object OF image');
+%                 Handles.ObjectOFImgH.CData = EmptyImage;
+%             end
 
 %% display object OF contour - retired for now
             try
@@ -382,9 +342,55 @@ function [] = UpdateImages(source)
                 error('Error displaying 2D Object Order Factor contours');
             end
 %%
-            drawnow            
+            drawnow
             
-    end
+        case 'Image Colocalization'
+            
+            try
+                Handles.PrimaryColocIntensityImgH.CData = Replicate.MedianFilteredImg;
+                Handles.PrimaryColocIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{cChannelIdx};
+            catch
+                Handles.PrimaryColocIntensityImgH.CData = EmptyImage;
+            end
+            
+            try
+                Handles.SecondaryColocIntensityImgH.CData = Replicate.ColocEnhanced;
+                Handles.SecondaryColocIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{cChannelIdx};
+            catch
+                Handles.SecondaryColocIntensityImgH.CData = EmptyImage;
+            end            
+            
+            % primary channel mask image
+            try
+                Handles.PrimaryColocMaskImgH.CData = Replicate.bw;
+            catch
+                Handles.PrimaryColocMaskImgH.CData = EmptyImage;
+            end
+            
+            % secondary channel mask image
+            try
+                Handles.SecondaryColocMaskImgH.CData = Replicate.ColocMask;
+            catch
+                Handles.SecondaryColocMaskImgH.CData = EmptyImage;
+            end            
+            
+            % delete current scatter plot
+            try
+                delete(Handles.PixelCorrelationPlot)
+            catch
+                % do nothing
+            end
+
+            %Handles.PixelCorrelationPlot = PlotPixelCorrelation(Handles.PixelCorrelationPlotAxH,Replicate.Pol_ImAvg,Replicate.ColocImage,Replicate.CombinedMask);
+            Handles.PixelCorrelationPlot = PlotPixelCorrelation(Handles.PixelCorrelationPlotAxH,...
+                Replicate.Pol_ImAvg,...
+                Replicate.ColocImage,...
+                Replicate.CombinedMask,...
+                Replicate.UnionMask,...
+                Replicate.PrimaryOnlyMask,...
+                Replicate.ColocOnlyMask);
+            
+        end
 
     % update local PODSData structure with updated Handles
     PODSData.Handles = Handles;
