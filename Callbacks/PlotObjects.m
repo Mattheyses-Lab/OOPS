@@ -13,7 +13,6 @@ function PlotObjects(source,event)
     % center point (x,y) of screen
     center = [ss(3)/2,ss(4)/2];
 
-    
 %% Data Selection
     sz = [center(1)-250 center(2)-200 500 400];    
 
