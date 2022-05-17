@@ -137,26 +137,18 @@ for ChIdx = 1:nChannels
     cGroup.FFCData = FFCData;
     
     clear FFCData
-end
-
-%     % update image objects with loaded data FROM FIRST CHANNEL
-%     PODSData.Handles.FFCImage0.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,1);
-%     PODSData.Handles.FFCAxH(1).XLim = [1,w];
-%     PODSData.Handles.FFCAxH(1).YLim = [1,h];
-%     PODSData.Handles.FFCImage45.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,2);
-%     PODSData.Handles.FFCAxH(2).XLim = [1,w];
-%     PODSData.Handles.FFCAxH(2).YLim = [1,h];    
-%     PODSData.Handles.FFCImage90.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,3);
-%     PODSData.Handles.FFCAxH(3).XLim = [1,w];
-%     PODSData.Handles.FFCAxH(3).YLim = [1,h];    
-%     PODSData.Handles.FFCImage135.CData = PODSData.Group(GroupIndex,1).FFCData.cal_norm(:,:,4);
-%     PODSData.Handles.FFCAxH(4).XLim = [1,w];
-%     PODSData.Handles.FFCAxH(4).YLim = [1,h]; 
+end 
     
+    % update gui with new PODSData
+    guidata(source,PODSData);
+
     % if files tab is not current, invoke the callback we need to get there
     if ~strcmp(PODSData.Settings.CurrentTab,'Files')
         feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
-    end    
-
-    UpdateTables(source);    
+    end
+    
+    UpdateImages(source);
+    UpdateTables(source);
+    UpdateListBoxes(source);
+    
 end
