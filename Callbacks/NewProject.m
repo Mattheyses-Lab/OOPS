@@ -117,7 +117,8 @@
         
             for J = 1:nChannels
                 for I = 1:nGroups
-                    PODSData.Group(I,J) = PODSGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,J);
+                    %PODSData.Group(I,J) = PODSGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,J,PODSData.Settings,I);
+                    PODSData.MakeNewGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,I,J);
                 end
             end
             delete(fHSetGroupNames)
