@@ -1,7 +1,7 @@
 function NameOut = ExpandVariableName(NameIn)
     switch NameIn
         case 'OFAvg'
-            NameOut = 'Average Order Factor';
+            NameOut = 'Object-Average Order Factor';
         case 'SBRatio'
             NameOut = 'Local Signal to Background Ratio';
         case 'Area'
@@ -10,6 +10,18 @@ function NameOut = ExpandVariableName(NameIn)
             NameOut = 'Object Perimeter';
         case 'Circularity'
             NameOut = 'Object Circularity';
+        case 'SignalAverage'
+            NameOut = 'Average Raw Intensity';
+        case 'MaxFeretDiameter'
+            NameOut = 'Maximum Feret Diameter';
+        case 'MinFeretDiameter'
+            NameOut = 'Minimum Feret Diameter'
+        case 'MajorAxisLength'
+            NameOut = 'Major Axis Length';
+        case 'MinorAxisLength'
+            NameOut = 'Minor Axis Length';
+        case 'Eccentricity'
+            NameOut = 'Eccentricity';
         case 'AvgColocIntensity'
             NameOut = 'Average Colocalization Channel Intensity';
         case 'ROIPearsons'
