@@ -92,16 +92,21 @@ if any(strncmpi(varargin,'degrees',3));
    usedegrees = true; 
 end
 
+tmp = strncmpi(varargin,'axes',3);
+if any(strncmpi(varargin,'axes',3))
+    currentAx = varargin{find(tmp)+1};
+end
+
 %% Will Dean: Adding in a new colormap to use instead of phasemap
 hsv_stack = vertcat(hsv(256),hsv(256));
-hsv_stack_black_at_0 = hsv_stack;
-hsv_stack_black_at_0(256:257,:) = zeros(2,3);
+% hsv_stack_black_at_0 = hsv_stack;
+% hsv_stack_black_at_0(256:257,:) = zeros(2,3);
 
 %% Starting settings: 
 
-currentAx = gca;
+%currentAx = gca;
 cm = colormap;
-pos = plotboxpos(currentAx); 
+pos = currentAx.Position; 
 xcol = get(currentAx,'XColor'); 
 
 % Delete old phasebar if it exists: 
@@ -128,24 +133,22 @@ end
 
 %% Plot surface: 
 
-% Will Dean: changed theta to -theta to reverse color wheel for clockwise
-% degrees
-
-ax = axes; 
-pcolor(x,y,-theta)
-shading interp 
+ax = uiaxes(currentAx.Parent,'NextPlot','Add','Units',currentAx.Units);
+pcolor(ax,x,y,theta)
+shading(ax,'interp');
 
 hold on
 
 % Plot a ring: 
 [xc1,yc1] = pol2cart(linspace(-pi,pi,360),innerRadius); 
 [xc2,yc2] = pol2cart(linspace(-pi,pi,360),outerRadius); 
-plot(xc1,yc1,'-','color',xcol,'linewidth',.2); 
-plot(xc2,yc2,'-','color',xcol,'linewidth',.2); 
+plot(ax,xc1,yc1,'-','color',xcol,'linewidth',.2); 
+plot(ax,xc2,yc2,'-','color',xcol,'linewidth',.2); 
 
-axis image off
+ax.Visible = 'Off';
+
 colormap(ax,hsv_stack);
-colormap(currentAx,hsv_stack_black_at_0);
+colormap(currentAx,hsv_stack);
 
 if usedegrees
    caxis([-180 180]) 
@@ -160,15 +163,15 @@ end
 %% will dean: made changes so that text appears white (for black bg)
 %% also changed labels so that degrees read clockwise
 if usedegrees
-   text(xt(1),yt(1),'0\circ','horiz','right','vert','middle','Color','white'); 
-   text(xt(2),yt(2),'-90\circ','horiz','center','vert','top','Color','white'); 
-   text(xt(3),yt(3),'180\circ','horiz','left','vert','middle','Color','white'); 
-   text(xt(4),yt(4),'90\circ','horiz','center','vert','bottom','Color','white'); 
+   text(ax,xt(1),yt(1),'0\circ','horiz','right','vert','middle','Color','white'); 
+   text(ax,xt(2),yt(2),'90\circ','horiz','center','vert','top','Color','white'); 
+   text(ax,xt(3),yt(3),'180\circ','horiz','left','vert','middle','Color','white'); 
+   text(ax,xt(4),yt(4),'-90\circ','horiz','center','vert','bottom','Color','white'); 
 else
-   text(xt(1),yt(1),'0','horiz','right','vert','middle','Color','white'); 
-   text(xt(2),yt(2),'-\pi/2','horiz','center','vert','top','Color','white'); 
-   text(xt(3),yt(3),'\pi','horiz','left','vert','middle','Color','white'); 
-   text(xt(4),yt(4),'\pi/2','horiz','center','vert','bottom','Color','white'); 
+   text(ax,xt(1),yt(1),'0','horiz','right','vert','middle','Color','white'); 
+   text(ax,xt(2),yt(2),'\pi/2','horiz','center','vert','top','Color','white'); 
+   text(ax,xt(3),yt(3),'\pi','horiz','left','vert','middle','Color','white'); 
+   text(ax,xt(4),yt(4),'-\pi/2','horiz','center','vert','bottom','Color','white'); 
 end
 
 %% Set position of colorwheel: 
@@ -198,7 +201,7 @@ set(ax,'tag','phasebar')
 % Will Dean: commented following line so GUI doesn't become visible
 %axes(currentAx); 
 
-uistack(ax,'top'); 
+%uistack(ax,'top'); 
 
 if nargout==0 
    clear ax
@@ -298,7 +301,7 @@ end
 
 % Convert plot box position to the units used by the axis
 
-temp = axes('Units', 'Pixels', 'Position', pos, 'Visible', 'off', 'parent', get(h, 'parent'));
+temp = uiaxes('Units', 'Pixels', 'Position', pos, 'Visible', 'off', 'parent', get(h, 'parent'));
 set(temp, 'Units', currunit);
 pos = get(temp, 'position');
 delete(temp);
