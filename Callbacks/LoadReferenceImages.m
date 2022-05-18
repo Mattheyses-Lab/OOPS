@@ -6,11 +6,11 @@ Settings = PODSData.Settings;
 % group that we will be loading data for
 GroupIndex = PODSData.CurrentGroupIndex;
 % nuber of emission channels we will be loading data for
-nChannels = PODSData.nChannels;
+%nChannels = PODSData.nChannels;
 % user-selected input file type (.nd2 or .tif)
 InputFileType = PODSData.Settings.InputFileType;
 
-cGroup = PODSData.Group(GroupIndex,1);
+cGroup = PODSData.Group(GroupIndex);
 
 switch InputFileType
     %--------------------------------------------------------------------------
@@ -76,11 +76,6 @@ switch InputFileType
         % do nothing for now
         
     end
-
-
-% if ~strcmp(PODSData.Settings.CurrentTab,'Image Colocalization')
-%     feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabImageColocalization,[]);
-% end
 
 UpdateImages(source);
 UpdateTables(source);

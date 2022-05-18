@@ -6,6 +6,9 @@ classdef PODSGroup < handle
 
         % replicates within group, no problem storing in memory (handle class)
         Replicate PODSImage
+        
+        % this group's index (as child of PODSProject)
+        SelfGroupIndex
 
         % indexing group members (Replicate/PODSImage objects)
         CurrentImageIndex double
@@ -15,7 +18,7 @@ classdef PODSGroup < handle
         FFCData struct
         
         % output values
-        OFAvg double
+        %OFAvg double
         OFMax double
         OFMin double
         FiltOFAvg double
@@ -23,11 +26,13 @@ classdef PODSGroup < handle
         % status parameters
         MaskAllDone = false
         
-        
-        SelfChannelIdx uint8
-        ChannelName char
-        
         CoLocFilesLoaded = false
+        
+        % store handle to the master GUI settings
+        Settings PODSSettings
+        
+        % group coloring
+        Color double
         
     end
     
@@ -54,17 +59,22 @@ classdef PODSGroup < handle
         FilteredObjectData table
         
         OFAllDone logical
+        
+        OFAvg double
+        
+        ColorString char
     
     end
     
     methods
         
         % class constructor method
-        function obj = PODSGroup(GroupName,ChannelName,ChannelIdx)
+        function obj = PODSGroup(GroupName,SelfGroupIndex,Settings)
             if nargin > 0
                 obj.GroupName = GroupName;
-                obj.ChannelName = ChannelName;
-                obj.SelfChannelIdx = ChannelIdx;
+                obj.Settings = Settings;
+                obj.SelfGroupIndex = SelfGroupIndex;
+                obj.Color = Settings.DefaultGroupColors{SelfGroupIndex};
             end
         end
             
@@ -76,6 +86,24 @@ classdef PODSGroup < handle
             TotalObjects = 0;
             for i = 1:obj.nReplicates
                 TotalObjects = TotalObjects + obj.Replicate(i).nObjects;
+            end
+        end
+        
+        function DeleteSelectedObjects(obj)
+            for i = 1:obj.nReplicates
+                obj.Replicate(i).DeleteSelectedObjects()
+            end
+        end
+        
+        function LabelSelectedObjects(obj,Label)
+            for i = 1:obj.nReplicates
+                obj.Replicate(i).LabelSelectedObjects(Label)
+            end            
+        end
+        
+        function ClearSelection(obj)
+            for i = 1:obj.nReplicates
+                obj.Replicate(i).ClearSelection();
             end
         end
         
@@ -94,6 +122,11 @@ classdef PODSGroup < handle
             CurrentObject = cImage.CurrentObject;
         end
         
+        function ColorString = get.ColorString(obj)
+            ColorStringCell = colornames('MATLAB',obj.Color);
+            ColorString = ColorStringCell{1};            
+        end
+        
         function OFAllDone = get.OFAllDone(obj)
             if obj.nReplicates == 0
                 OFAllDone = false;
@@ -109,6 +142,10 @@ classdef PODSGroup < handle
             OFAllDone = true;
         end
            
+        function OFAvg = get.OFAvg(obj)
+            OFAvg = mean([obj.Replicate(find([obj.Replicate.OFDone])).OFAvg]);
+        end
+
         % get x,y data for all objects in group, from first to last replicate
         %       WILL UPDATE TO ALLOW FOR varargin for more flexibility of use
         function ObjectData = CombineObjectData(obj,XVar,YVar)
@@ -129,21 +166,39 @@ classdef PODSGroup < handle
             end
         end % end of CombineObjectData()
         
-        function VariableObjectData = GetAllObjectData(obj,Var2get)
-            %% return a list of Var2Get for all objects in the group
+        function VariableObjectData = GetAllObjectData(obj,Var2Get)
+            % return a list of Var2Get for all objects in the group
             count = 0;
             last = 1;
             VariableObjectData = [];
             for i = 1:obj.nReplicates
                 count = count + obj.Replicate(i).nObjects;
                 % column 1 holds x data
-                VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2get)];
+                VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
                 last = count+1;
             end            
-
         end
         
+        function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
+            
+            nLabels = length(obj.Settings.ObjectLabels);
+            
+            % cell array of Object.(Var2Get), grouped by custom label
+            %   single row of cells, each cell holds a vector of object data
+            %   for a single label for all replicates in the group
+            ObjectDataByLabel = cell(1,nLabels);
+            
+            for i = 1:obj.nReplicates
+                % cell array of ObjectDataByLabel for one replicate
+                % each cell is a vector of values for one label
+                ReplicateObjectDataByLabel = obj.Replicate(i).GetObjectDataByLabel(Var2Get);
+                
+                for ii = 1:nLabels
+                    ObjectDataByLabel{ii} = [ObjectDataByLabel{ii} ReplicateObjectDataByLabel{ii}];
+                end
 
+            end
+
+        end
     end
-
 end

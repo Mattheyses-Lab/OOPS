@@ -4,25 +4,25 @@ function [] = pb_LoadFFCFiles(source,event)
     PODSData = guidata(source);
     Settings = PODSData.Settings;
     GroupIndex = PODSData.CurrentGroupIndex;
-    nChannels = PODSData.nChannels;
+    %nChannels = PODSData.nChannels;
     %ImageIndex = PODSData.Group(GroupIndex).CurrentImageIndex;
     InputFileType = Settings.InputFileType;
 
     FFCData = struct();
 
-for ChIdx = 1:nChannels
+%for ChIdx = 1:nChannels
     
     % current group based on user selected group and channel idxs
-    cGroup = PODSData.Group(GroupIndex,ChIdx);
+    cGroup = PODSData.Group(GroupIndex);
 
     %% This switch block should be its own function
     switch InputFileType
         %--------------------------.nd2 Files----------------------------------
         case '.nd2'
 
-            uiwait(msgbox(['Select .nd2 flat-field stack(s) for Channel:' cGroup.ChannelName]));
+            uiwait(msgbox(['Select .nd2 flat-field stack(s)']));
 
-            [cal_files, calPath, ~] = uigetfile('*.nd2',['Select .nd2 flat-field stack(s) for Channel:' cGroup.ChannelName],'MultiSelect','on');
+            [cal_files, calPath, ~] = uigetfile('*.nd2',['Select .nd2 flat-field stack(s)'],'MultiSelect','on');
 
             figure(PODSData.Handles.fH);
             
@@ -74,9 +74,9 @@ for ChIdx = 1:nChannels
             %------------------------------.tif Files----------------------------------
             
         case '.tif'
-            uiwait(msgbox(['Select .tif flat-field stack(s) for Channel:' cGroup.ChannelName]));
+            uiwait(msgbox(['Select .tif flat-field stack(s)']));
 
-            [cal_files, calPath, ~] = uigetfile('*.tif',['Select .nd2 flat-field stack(s) for Channel:' cGroup.ChannelName],'MultiSelect','on');
+            [cal_files, calPath, ~] = uigetfile('*.tif',['Select .nd2 flat-field stack(s)'],'MultiSelect','on');
 
             if(iscell(cal_files)==0)
                 if(cal_files==0)
@@ -137,7 +137,7 @@ for ChIdx = 1:nChannels
     cGroup.FFCData = FFCData;
     
     clear FFCData
-end 
+%end 
     
     % update gui with new PODSData
     guidata(source,PODSData);

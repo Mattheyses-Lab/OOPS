@@ -7,21 +7,21 @@ function [] = pb_LoadFPMFiles(source,event)
     % group that we will be loading data for
     GroupIndex = PODSData.CurrentGroupIndex;
     % nuber of emission channels we will be loading data for
-    nChannels = PODSData.nChannels;
+    %nChannels = PODSData.nChannels;
     % user-selected input file type (.nd2 or .tif)
     InputFileType = PODSData.Settings.InputFileType;
     
-    for ChIdx = 1:nChannels
+    %for ChIdx = 1:nChannels
         
-        cGroup = PODSData.Group(GroupIndex,ChIdx);
+        cGroup = PODSData.Group(GroupIndex);
     
         switch InputFileType
 %--------------------------------------------------------------------------    
             case '.nd2'
                 % msg box with instructions
-                uiwait(msgbox(['Select .nd2 polarization stack(s) for Channel:' cGroup.ChannelName]));
+                uiwait(msgbox(['Select .nd2 polarization stack(s)']));
                 % get FPM files (single or multiple)
-                [Pol_files, PolPath, ~] = uigetfile('*.nd2',['Select .nd2 polarization stack(s) for Channel:' cGroup.ChannelName],'MultiSelect','on');
+                [Pol_files, PolPath, ~] = uigetfile('*.nd2',['Select .nd2 polarization stack(s)'],'MultiSelect','on');
                 % make PODSGUI active figure
                 figure(PODSData.Handles.fH);
 
@@ -76,9 +76,9 @@ function [] = pb_LoadFPMFiles(source,event)
                 end
 %--------------------------------------------------------------------------    
             case '.tif'
-                uiwait(msgbox(['Select .tif polarization stack(s) for Channel:' cGroup.ChannelName]));
+                uiwait(msgbox(['Select .tif polarization stack(s)']));
 
-                [Pol_files, PolPath, ~] = uigetfile('*.tif',['Select .tif polarization stack(s) for Channel:' cGroup.ChannelName],'MultiSelect','on');
+                [Pol_files, PolPath, ~] = uigetfile('*.tif',['Select .tif polarization stack(s)'],'MultiSelect','on');
 
                 if(iscell(Pol_files) == 0)
                     if(Pol_files==0)
@@ -120,15 +120,21 @@ function [] = pb_LoadFPMFiles(source,event)
                 end
         end
        
+    %end
+
+    % set current image to first image of channel 1, by default
+    PODSData.Group(GroupIndex).CurrentImageIndex = 1;
+    
+    % update gui with new PODSData
+    guidata(source,PODSData);
+    
+    if ~strcmp(PODSData.Settings.CurrentTab,'Files')
+        feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
     end
     
-
-     if ~strcmp(PODSData.Settings.CurrentTab,'Files')
-         feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
-     end
-    
+    UpdateListBoxes(source);
     UpdateImages(source);
     UpdateTables(source);
-    UpdateListBoxes(source);
+    
 
 end

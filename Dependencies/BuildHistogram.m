@@ -1,5 +1,5 @@
 function [IntensityBinCenters,IntensityHistPlot] = BuildHistogram(im)
-% Adopted from thresh_tool()
+% Adapted from thresh_tool()
     % (By Brandon Kuczenski for Kensington Labs)
     % (brandon_kuczenski@kensingtonlabs.com)
     % (8 November 2001)
@@ -33,8 +33,5 @@ function [IntensityBinCenters,IntensityHistPlot] = BuildHistogram(im)
     IntensityBinCenters = [color_range(1):di:color_range(2)];
     
     IntensityHistPlot = hist(double(im(:)),IntensityBinCenters);
-    %IntensityBar = bar(bin_ctrs,hist_plot);
-
-
 
 end

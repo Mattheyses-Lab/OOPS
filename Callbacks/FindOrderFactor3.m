@@ -2,10 +2,10 @@ function [] = FindOrderFactor3(source,event)
 
     PODSData = guidata(source);
     cGroupIndex = PODSData.CurrentGroupIndex;
-    cChannelIndex = PODSData.CurrentChannelIndex;
+    %cChannelIndex = PODSData.CurrentChannelIndex;
     
-    cImageIndex = PODSData.Group(cGroupIndex,cChannelIndex).CurrentImageIndex;
-    cReplicate = PODSData.Group(cGroupIndex,cChannelIndex).Replicate;
+    cImageIndex = PODSData.Group(cGroupIndex).CurrentImageIndex;
+    cReplicate = PODSData.Group(cGroupIndex).Replicate;
 
     UpdateLog3(source,'Calculating Order Factor...','append');
     chartab = '    ';
@@ -61,7 +61,7 @@ function [] = FindOrderFactor3(source,event)
     end
 
     % update PODSData with new replicate data
-    PODSData.Group(cGroupIndex,cChannelIndex).Replicate = cReplicate;
+    PODSData.Group(cGroupIndex).Replicate = cReplicate;
     
     % update gui with new PODSData
     guidata(source,PODSData);

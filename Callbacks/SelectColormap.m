@@ -49,8 +49,8 @@ function SelectedMap = SelectColormap(ColormapsStruct)
 
     end
     
-    drawnow
-    pause(0.5)
+     drawnow
+     pause(0.3)
     
     for i = 1:nColormaps
         Colorbars(i) = colorbar(ColormapsAxes(i),'South');

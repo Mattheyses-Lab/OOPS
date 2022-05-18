@@ -2,7 +2,7 @@ classdef PODSObject < handle
     % Object parameters class
     properties
         
-        % parent object
+        % parent image
         Parent PODSImage
         
         Area
@@ -20,8 +20,10 @@ classdef PODSObject < handle
         MinorAxisLength
         Orientation
         Perimeter
+        MaxFeretDiameter
+        MinFeretDiameter
         
-        % linear pixel indices
+        % linear pixel indices to object pixels in full-sized image
         PixelIdxList
         
         % pixel indices
@@ -39,14 +41,9 @@ classdef PODSObject < handle
         
         % object px values for various outputs
         RawPixelValues
-        OFPixelValues
+%        OFPixelValues
         AzimuthPixelValues
         AnisotropyPixelValues
-        
-        % object OF values
-        OFAvg
-        OFMin
-        OFMax
         
         % Object 1, Object 2, etc...
         Name
@@ -63,7 +60,7 @@ classdef PODSObject < handle
         YAdjust
         LineGroup
         
-        % S:B properrties
+        % S:B properties
         BGIdxList
         BufferIdxList
         SignalAverage
@@ -73,6 +70,10 @@ classdef PODSObject < handle
         % Colocalization properties
         AvgColocIntensity
         ROIPearsons
+        
+        % Selection and labeling
+        Label PODSLabel
+        Selected = false
         
 
     end % end properties
@@ -96,11 +97,28 @@ classdef PODSObject < handle
         CentroidX
         
         CentroidY
+        
+        RestrictedPaddedMaskSubImage
+        
+        SelectionBoxLineWidth
+        
+        % OF properties of this object, dependent on OF image of Parent
+        OFAvg
+        OFMin
+        OFMax
+        OFPixelValues
+        
+        % need to make some dependent properties for object labels so
+        % we can search for objects by the properties of their labels
+        LabelIdx
+        LabelName
+        
     end
 
     methods
         
-        function obj = PODSObject(ObjectProps,hPODSImage)
+        % constructor method
+        function obj = PODSObject(ObjectProps,ParentImage,Name,Idx,Label)
             
             if length(ObjectProps) == 0
                 return
@@ -125,12 +143,66 @@ classdef PODSObject < handle
             obj.PixelIdxList = ObjectProps.PixelIdxList;
             obj.PixelList = ObjectProps.PixelList;
             obj.SubarrayIdx = ObjectProps.SubarrayIdx;
+            obj.MaxFeretDiameter = ObjectProps.MaxFeretDiameter;
+            obj.MinFeretDiameter = ObjectProps.MinFeretDiameter;
             
             % Parent of PODSObject obj is the PODSImage obj that detected it
-            obj.Parent = hPODSImage;
+            obj.Parent = ParentImage;
+            
+            % Name of object is "Object (Idx)"
+            obj.Name = Name;
+            
+            % original idx at time of creation
+            obj.OriginalIdx = Idx;
+            
+            % set default object label
+            obj.Label = Label;
             
         end % end constructor method
+
+        function OFAvg = get.OFAvg(obj)
+            % average OF of all pixels identified by the mask
+            try
+                OFAvg = mean(obj.Parent.OF_image(obj.PixelIdxList));
+            catch
+                OFAvg = NaN;
+            end
+        end
         
+        function OFMax = get.OFMax(obj)
+            % max OF of all pixels identified by the mask
+            try
+                OFMax = max(obj.Parent.OF_image(obj.PixelIdxList));
+            catch
+                OFMax = NaN;
+            end
+        end
+        
+        function OFMin = get.OFMin(obj)
+            % min OF of all object pixels
+            try
+                OFMin = min(obj.Parent.OF_image(obj.PixelIdxList));
+            catch
+                OFMin = NaN;
+            end
+        end
+        
+        function LabelIdx = get.LabelIdx(obj)
+            LabelIdx = str2num(obj.Label.LabelNumber);
+        end
+        
+        function LabelName = get.LabelName(obj)
+            LabelName = obj.Label.Name;
+        end
+        
+        function OFPixelValues = get.OFPixelValues(obj)
+            % list of OF in all object pixels
+            try
+                OFPixelValues = obj.Parent.OF_image(obj.PixelIdxList);
+            catch
+                OFPixelValues = NaN;
+            end
+        end        
 
         function OFSubImage = get.OFSubImage(obj)
             OFImage = obj.Parent.OF_image;
@@ -179,8 +251,23 @@ classdef PODSObject < handle
             PaddedMaskSubImage = zeros(dim);
             % extract elements from main image into subimage
             PaddedMaskSubImage(:) = MaskImg(PaddedSubarrayIdx{:});
-        end        
+        end
         
+        function RestrictedPaddedMaskSubImage = get.RestrictedPaddedMaskSubImage(obj)
+            % get full mask image
+            FullSizedMaskImg = logical(zeros(size(obj.Parent.bw)));
+            % set this object's pixels to on
+            FullSizedMaskImg(obj.PixelIdxList) = true;
+            % pad subarray and make square
+            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            % get length of X Idxs (same as Ys)
+            dim = length(PaddedSubarrayIdx{1,1});
+            % initialize new subimage
+            RestrictedPaddedMaskSubImage = zeros(dim);
+            % extract elements from main image into subimage
+            RestrictedPaddedMaskSubImage(:) = FullSizedMaskImg(PaddedSubarrayIdx{:});
+        end        
+
         function PaddedAnalysisChannelSubImage = get.PaddedAnalysisChannelSubImage(obj)
             AnalysisChannelImage = obj.Parent.ColocImage;
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
@@ -196,6 +283,17 @@ classdef PODSObject < handle
             PaddedColocNorm2MaxSubImage = zeros(dim);
             PaddedColocNorm2MaxSubImage(:) = ColocNorm2MaxImage(PaddedSubarrayIdx{:});
         end
+        
+        function SelectionBoxLineWidth = get.SelectionBoxLineWidth(obj)
+            % set value of selection box linewidth depedning on object selection status
+            switch obj.Selected
+                case false
+                    SelectionBoxLineWidth = 1;
+                case true
+                    SelectionBoxLineWidth = 2;
+            end
+        end
+        
     end % end methods
     
 

@@ -16,8 +16,6 @@ classdef PODSImage < handle
         % size of image
         Width double
         Height double
-        SelfChannelIdx uint8
-        ChannelName char
         
 %% Colocalization Image Properties
 
@@ -32,24 +30,20 @@ classdef PODSImage < handle
         ColocNormToMax double
         ColocEnhanced double
         ColocThreshLevel double
-        
-        
+
         % various image-wide coloc stats
         RawAllPixelPearsons double
         ObjectPearsons double
         MandersM1 double
         MandersM2 double
-        
-        
+
         % masks
         ColocMask logical
         ColocOnlyMask logical
         PrimaryOnlyMask logical
         CombinedMask logical
         UnionMask logical
-        
-        
-        
+
 %% Experimental Data
         % raw image stack - pol_rawdata(y/row,x/col,PolIdx)
         %   PolIdx: 1 = 0 deg | 2 = 45 deg | 3 = 90 deg | 4 = 135 deg
@@ -59,7 +53,7 @@ classdef PODSImage < handle
         pol_ffc
         % average image stack - Pol_ImAvg(y/row,x/col)
         Pol_ImAvg
-        % normalized image stack - same indexing as raw
+        % pixel-normalized image stack - same indexing as raw
         norm
         
         r1
@@ -100,7 +94,14 @@ classdef PODSImage < handle
         % objects
         CurrentObjectIdx uint16 % i.e. no more than 65535 objects per group
         
-        ObjectContours
+%% Reference Image
+
+        ReferenceImage double
+        ReferenceImageLoaded = false
+        
+%%
+
+        AzimuthLineData double
         
 %% Output Images
 
@@ -113,10 +114,6 @@ classdef PODSImage < handle
 %% Output Values        
         
         % output values
-        OFAvg double
-        OFMax double
-        OFMin double
-        OFList double
         
         SBAvg double
         
@@ -124,6 +121,10 @@ classdef PODSImage < handle
 
         SBCutoff = 3
         OFFiltered double
+        
+%% Settings
+        % store handle to settings object to speed up retrieval of various settings
+        Settings PODSSettings
 
     end
     
@@ -147,10 +148,16 @@ classdef PODSImage < handle
         CurrentObject PODSObject
         
         % image dimensions, returned as char array for display purposes: 'dim1xdim2'
-        Dimensions
+        Dimensions char
         
         % depends on bwFiltered
-        FiltOFAvg
+        FiltOFAvg double
+        
+        % depend on objects
+        OFAvg double
+        OFMax double
+        OFMin double
+        OFList double        
     end
     
     methods
@@ -158,15 +165,7 @@ classdef PODSImage < handle
         % class constructor
         function obj = PODSImage(Group)
             obj.Parent = Group;
-            
-            % handle multiple channels
-            obj.ChannelName = Group.ChannelName;
-            obj.SelfChannelIdx = Group.SelfChannelIdx;
-            
-            % default values for scalar outputs
-            obj.OFAvg = 0;
-            obj.OFMax = 0;
-            obj.OFMin = 0;
+            obj.Settings = Group.Settings;
             
             % image name (minus path and file extension)
             obj.pol_shortname = '';
@@ -182,18 +181,21 @@ classdef PODSImage < handle
             obj.ThresholdAdjusted = logical(0);
             obj.MaskDone = logical(0);
             obj.OFDone = logical(0);
-            
-            % default object names, updated once we detect some objects
-            %obj.ObjectNames = {['No Objects Found']};
 
             obj.CurrentObjectIdx = 0;
         end
         
         % performs flat field correction for 1 PODSImage
         function FlatFieldCorrection(obj)
+            % divide each raw data image by the corresponding flatfield image
             for i = 1:4
                 obj.pol_ffc(:,:,i) = obj.pol_rawdata(:,:,i)./obj.Parent.FFCData.cal_norm(:,:,i);
             end
+            % average FFC intensity
+            obj.Pol_ImAvg = mean(obj.pol_ffc,3);
+            % normalized average FFC intensity (normalized to max)
+            obj.I = obj.Pol_ImAvg./max(max(obj.Pol_ImAvg));
+            % done with FFC
             obj.FFCDone = true;
         end
 
@@ -202,22 +204,87 @@ classdef PODSImage < handle
             
             % call get method
             props = obj.ObjectProperties;
-            
+
             if length(props)==0 % if no objects
-                obj.Object = [];
+                delete(obj.Object);
                 return
             else
+                % get default label from settings object
+                DefaultLabel = obj.Settings.ObjectLabels(1);
                 for i = 1:length(props) % for each detected object
-                   Object(i) = PODSObject(props(i,1),obj); % create an instance of PODSObject
-                   Object(i).Name = ['Object ',num2str(i),' (Channel:',obj.ChannelName,')'];
-                   Object(i).OriginalIdx = i;
-                   Object(i).Parent = obj;
+                   % create an instance of PODSObject 
+                   Object(i) = PODSObject(props(i,1),...
+                       obj,...
+                       ['Object ',num2str(i)],...
+                       i,...
+                       DefaultLabel);
                 end
             end
             
             obj.Object = Object;
+            obj.ObjectDetectionDone = true;
             
-        end % end of DetectObjects        
+        end % end of DetectObjects
+        
+        % delete seleted objects from one PODSImage
+        function DeleteSelectedObjects(obj)
+            
+            Selected = find([obj.Object.Selected]);
+            NotSelected = find(~[obj.Object.Selected]);
+            
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+            
+            % get list of 'good' objects (not selected)
+            Good = AllObjects(NotSelected);
+            
+            % get list of objects to delete (selected)
+            Bad = AllObjects(Selected);
+            
+            % replace object array of image with only the ones we wish to keep (not selected)
+            obj.Object = Good;
+            
+            for i = 1:length(obj.Object)
+                % reset the object indices
+                obj.Object(i).OriginalIdx = i;
+                obj.Object(i).Name = ['Object ',num2str(i)];
+            end
+            
+            % delete the bad PODSObject objects
+            % set their pixel idxs to 0 in the mask
+            for i = 1:length(Bad)
+                obj.bw(Bad(i).SubarrayIdx{:}) = 0;
+                delete(Bad(i));
+            end
+            % clear Bad array
+            clear Bad
+            % compute a new label matrix
+            obj.L = bwlabel(full(obj.bw),4);
+        end
+        
+        % apply unique label to selected objects in one PODSImage
+        function LabelSelectedObjects(obj,Label)
+            % find indices of currently selected objects
+            Selected = find([obj.Object.Selected]);
+            % apply the new label to those objects
+            [obj.Object(Selected).Label] = deal(Label);
+        end
+        
+        % clear selection status of objects in one PODSImage
+        function ClearSelection(obj)
+            [obj.Object.Selected] = deal(false);
+        end
+        
+        function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
+            nLabels = length(obj.Settings.ObjectLabels);
+            ObjectDataByLabel = cell(1,nLabels);
+            for i = 1:nLabels
+                % find objects with LabelIdx i
+                ObjectLabelIdxs = find([obj.Object.LabelIdx]==i);
+                % add [Var2Get] from those objects to cell i of ObjectDataByLabel
+                ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
+            end
+        end
 
         % detect local signal to BG ratio
         function obj = FindLocalSB(obj,source)
@@ -272,6 +339,7 @@ classdef PODSImage < handle
 
                     % store buffer pixels 
                     obj.Object(i).BufferIdxList = find(buffer_bw==1);
+                    
                     % store BG pixels
                     obj.Object(i).BGIdxList = find(BG_bw==1);
 
@@ -309,6 +377,8 @@ classdef PODSImage < handle
                     %% BUG IDENTIFIED HERE: If there are too many objects within a small region, code may fail to identify 
                         % any BG or buffer pixels. In that case new_buffer and/or new_BG will be empty. Still need to 
                         % implement a fix for this... (maybe delete the object then re-index if no BG pxs found?)
+                        % however, this is a very rare bug that only causes issues in cases of very low S/N, in which 
+                        % DetectObjects() labels most of the BG pixels as objects
                     % update buffer and BG pixel lists
                     obj.Object(i).BufferIdxList = new_buffer;
                     obj.Object(i).BGIdxList = new_BG;
@@ -384,6 +454,44 @@ classdef PODSImage < handle
         % get normalized raw emission images stack
         function pol_rawdata_normalizedbystack = get.pol_rawdata_normalizedbystack(obj)
             pol_rawdata_normalizedbystack = obj.pol_rawdata./(max(max(max(obj.pol_rawdata))));
+        end
+
+%% Dependent output values
+
+        function OFAvg = get.OFAvg(obj)
+            % average OF of all pixels identified by the mask
+            try
+                OFAvg = mean(obj.OF_image(obj.bw));
+            catch
+                OFAvg = NaN;
+            end
+        end
+        
+        function OFMax = get.OFMax(obj)
+            % max OF of all pixels identified by the mask
+            try
+                OFMax = max(obj.OF_image(obj.bw));
+            catch
+                OFMax = NaN;
+            end
+        end
+        
+        function OFMin = get.OFMin(obj)
+            % min OF of all pixels identified by the mask
+            try
+                OFMin = min(obj.OF_image(obj.bw));
+            catch
+                OFMin = NaN;
+            end
+        end
+        
+        function OFList = get.OFList(obj)
+            % list of OF in all pixels identified by mask
+            try
+                OFList = obj.OF_image(obj.bw);
+            catch
+                OFList = NaN;
+            end
         end
 
     end

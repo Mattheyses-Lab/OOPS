@@ -1,9 +1,9 @@
-classdef PODSSettings
+classdef PODSSettings < handle
     %UNTITLED Summary of this class goes here
     %   Detailed explanation goes here
     
+    % need to change to handle class
     properties
-        
         Zoom = struct('XRange',0,...
             'YRange',0,...
             'ZRange',0,...
@@ -42,8 +42,33 @@ classdef PODSSettings
         % currently selected colormaps for each image type
         IntensityColormaps cell
         OrderFactorColormap double
+        ReferenceColormap double
+        
+        % Azimuth display settings
+        AzimuthLineAlpha = 0.5;
+        AzimuthLineWidth = 1;
+        AzimuthLineScale = 100;
+        AzimuthScaleDownFactor = 1;
+        
+        % SwarmChart settings
+        % how to group the data, by group, by custom label, or both
+        SwarmChartGroupingType = 'Label';
+        % y-axis variable to plot
+        SwarmChartYVariable = 'OFAvg';
+        % ID or Magnitude
+        SwarmChartColorMode = 'ID';
+        
+        % ScatterPlot Settings
+        ScatterPlotXVariable = 'SBRatio';
+        ScatterPlotYVariable = 'OFAvg';
+        
+        % Group Colors
+        DefaultGroupColors cell
+
+        % object labeling
+        ObjectLabels PODSLabel
+        
     end
-    
     methods
         function obj = PODSSettings()
             % get monitor positions
@@ -51,7 +76,7 @@ classdef PODSSettings
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(0);
             %clear MonitorPosition
-            
+            obj.ObjectLabels(1) = PODSLabel('Default',[1 1 1],1);
             try
                 colormaps_mat_file = load('Colormaps.mat');
                 obj.AllColormaps = colormaps_mat_file.Colormaps;
@@ -59,10 +84,77 @@ classdef PODSSettings
                 obj.IntensityColormaps{2} = obj.AllColormaps.Red;
                 obj.OrderFactorColormap = obj.AllColormaps.OFMapNew;
             catch
-                warning('Unable to find file: Colormaps.mat, proceeding with default colors');
+                warning('Unable to load "Colormaps.mat"...');
             end
-
+            
+            try
+                obj.UpdateColormapsSettings();
+            catch
+                warning('Unable to load "ColormapsSettings.mat"...');
+            end
+            
+            try
+                obj.UpdateSwarmChartSettings();
+            catch
+                warning('Unable to load "SwarmChartSettings.mat"...');
+            end
+            
+            try
+                obj.UpdateAzimuthDisplaySettings();
+            catch
+                warning('Unable to load "AzimuthDisplaySettings.mat"...');
+            end
+            
+            try
+                obj.UpdateScatterPlotSettings();
+            catch
+                warning('Unable to load "ScatterPlotSettings.mat"...');
+            end
+            
+            try
+                load('DefaultColors.mat')
+                fnames = fieldnames(DefaultColors);
+                nColors = length(fnames);
+                for i = 1:nColors
+                    obj.DefaultGroupColors{i} = DefaultColors.(fnames{i});
+                end
+            catch
+                warning('Unable to load "DefaultColors.mat"...')
+            end
+            
         end
+        
+        function UpdateColormapsSettings(obj)
+            load('ColormapsSettings.mat')
+            obj.IntensityColormaps{1} = ColormapsSettings.Intensity{3};
+            obj.OrderFactorColormap = ColormapsSettings.OrderFactor{3};
+            obj.ReferenceColormap = ColormapsSettings.Reference{3};
+            clear ColormapsSettings
+        end
+
+        function UpdateSwarmChartSettings(obj)
+            load('SwarmChartSettings.mat');
+            obj.SwarmChartGroupingType = SwarmChartSettings.GroupingType;
+            obj.SwarmChartYVariable = SwarmChartSettings.YVariable;
+            obj.SwarmChartColorMode = SwarmChartSettings.ColorMode;
+            clear SwarmChartSettings
+        end
+        
+        function UpdateAzimuthDisplaySettings(obj)
+            load('AzimuthDisplaySettings.mat');
+            obj.AzimuthLineAlpha = AzimuthDisplaySettings.LineAlpha;
+            obj.AzimuthLineWidth = AzimuthDisplaySettings.LineWidth;
+            obj.AzimuthLineScale = AzimuthDisplaySettings.LineScale;
+            obj.AzimuthScaleDownFactor = AzimuthDisplaySettings.ScaleDownFactor;
+            clear AzimuthDisplaySettings
+        end
+        
+        function UpdateScatterPlotSettings(obj)
+            load('ScatterPlotSettings.mat');
+            obj.ScatterPlotXVariable = ScatterPlotSettings.XVariable;
+            obj.ScatterPlotYVariable = ScatterPlotSettings.YVariable;
+            clear AzimuthDisplaySettings
+        end        
     end
 end
 

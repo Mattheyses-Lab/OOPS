@@ -25,6 +25,8 @@ function [] = ZoomToCursor(source,event)
     Handles = PODSData.Handles;
     
     Zoom = PODSData.Settings.Zoom;
+    
+    Zoom.Freeze = false;
 
     % try and delete previous CursorPositionLabel, this is necessary in
     % case the user activates the Toolbar state button (ZoomToCursor) in an
@@ -99,12 +101,15 @@ function [] = ZoomToCursor(source,event)
             Handles.fH.Pointer = 'crosshair';
             Handles.fH.WindowButtonMotionFcn = @CursorMoving;
             Zoom.DynamicImage.ButtonDownFcn = @ChangeZoomLevel;
+            Zoom.DynamicImage.HitTest = 'On';
             %Zoom.StaticAxes.ButtonDownFcn = @ChangeZoomLevel;
             %Zoom.DynamicAxes.Hittest = 'Off';
             %Zoom.StaticAxes.Hittest = 'Off';
             
         case 0
             Handles.fH.WindowButtonMotionFcn = '';
+            Zoom.DynamicImage.ButtonDownFcn = '';
+            Zoom.DynamicImage.HitTest = 'Off';
             
             try
                 delete(Zoom.DynamicAxes.CursorPositionLabel)
@@ -119,11 +124,11 @@ function [] = ZoomToCursor(source,event)
             Zoom.DynamicAxes.XLim = Zoom.OldXLim;
             Zoom.DynamicAxes.YLim = Zoom.OldYLim;
 
-             Zoom.XDist = 0.5*Zoom.XRange;
-             Zoom.YDist = 0.5*Zoom.YRange;
-             Zoom.ZDist = 0.5*Zoom.ZRange;
-             Zoom.ZoomLevelIdx = 4;
-             Zoom.pct = 0.5;            
+            Zoom.XDist = 0.5*Zoom.XRange;
+            Zoom.YDist = 0.5*Zoom.YRange;
+            Zoom.ZDist = 0.5*Zoom.ZRange;
+            Zoom.ZoomLevelIdx = 4;
+            Zoom.pct = 0.5;
 
     end  
     
@@ -131,7 +136,6 @@ function [] = ZoomToCursor(source,event)
     PODSData.Handles = Handles;
     
     guidata(source,PODSData);    
-
 
 end
 
@@ -176,9 +180,11 @@ function [] = CursorMoving(source,event)
             blah = 0;
             
         end
-                                            
-        DynamicAxes.XLim = [x1 x2];
-        DynamicAxes.YLim = [y1 y2];
+        
+        if ~Zoom.Freeze
+            DynamicAxes.XLim = [x1 x2];
+            DynamicAxes.YLim = [y1 y2];
+        end
         
         PODSData.Handles.fH.Pointer = 'crosshair';
 
@@ -205,6 +211,8 @@ function [] = ChangeZoomLevel(source,event)
 
     switch PODSData.Handles.fH.SelectionType
         case 'normal'
+            % click
+            % increases zoom level by 1
             if Zoom.ZoomLevelIdx == 1
                 Zoom.ZoomLevelIdx = 7;
             else
@@ -214,7 +222,8 @@ function [] = ChangeZoomLevel(source,event)
             Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
             
         case 'alt'
-
+            % ctrl-click or right-click
+            % decreases zoom level by 1
             if Zoom.ZoomLevelIdx == 7
                 Zoom.ZoomLevelIdx = 1;
             else
@@ -224,10 +233,20 @@ function [] = ChangeZoomLevel(source,event)
             Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
 
         case 'extend'
-            Zoom.DynamicAxes.XLim = Zoom.OldXLim;
-            Zoom.DynamicAxes.YLim = Zoom.OldXLim;
-            Zoom.DynamicAxes.ZLim = Zoom.OldZLim;
+            % shift-click
+            % zooms out to show full view
+%             Zoom.DynamicAxes.XLim = Zoom.OldXLim;
+%             Zoom.DynamicAxes.YLim = Zoom.OldXLim;
+%             Zoom.DynamicAxes.ZLim = Zoom.OldZLim;
+            if Zoom.Freeze
+                Zoom.Freeze = false;
+            else
+                Zoom.Freeze = true;
+            end
+
         case 'open'
+            % double click
+            % 
             Zoom.pct = 1;
     end
     
