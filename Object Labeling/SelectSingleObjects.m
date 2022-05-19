@@ -1,7 +1,5 @@
 function SelectSingleObjects(source,event)
     PODSData = guidata(source);
-
-    disp(['That worked! Selected Object ',source.Tag])
     
     % get object index from bounding box tag
     ObjIdx = str2num(source.Tag);
