@@ -17,8 +17,5 @@ function SelectSingleObjects(source,event)
             PODSData.Handles.ObjectRectangles(ObjIdx,1).LineWidth = 2;
             PODSData.Handles.ObjectRectangles(ObjIdx,2).LineWidth = 2;
     end
-    
-%     guidata(source,PODSData.Handles);
-%     UpdateImages(source);
 
 end

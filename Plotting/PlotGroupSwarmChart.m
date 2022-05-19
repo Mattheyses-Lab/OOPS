@@ -6,8 +6,6 @@ PODSData = guidata(source);
 % array to hold the group idxs where selected variable has been determined
 GoodGroups = [];
 
-% get the index of the current channel
-cChannelIdx = PODSData.CurrentChannelIndex;
 % only plot groups if order factor is calculated
 
 % set axis ticks, one for each group, even those that won't be plotted
@@ -15,10 +13,10 @@ axH.XTick = [1:1:PODSData.nGroups];
 
 %% Check which groups have OFAllDone true, get the object OF, add to plot
 for i = 1:PODSData.nGroups
-    if PODSData.Group(i,cChannelIdx).OFAllDone
+    if PODSData.Group(i).OFAllDone
         GoodGroups(end+1) = i;
     end
-    axH.XTickLabel{i} = PODSData.Group(i,cChannelIdx).GroupName;
+    axH.XTickLabel{i} = PODSData.Group(i).GroupName;
 end
 
 % cell array to hold vectors of objectOF for each group
@@ -29,7 +27,7 @@ Var2Plot = PODSData.Settings.SwarmChartYVariable;
 % get the data for each group
 for i = 1:length(GoodGroups)
     % could change 'OFAvg' to a variable for more control over plotting
-    GroupObjectData{i} = GetAllObjectData(PODSData.Group(GoodGroups(i),cChannelIdx),Var2Plot);
+    GroupObjectData{i} = GetAllObjectData(PODSData.Group(GoodGroups(i)),Var2Plot);
 end
 
 % determine the number of plots

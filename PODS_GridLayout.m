@@ -305,7 +305,7 @@ Handles.LogWindow = uitextarea(Handles.LogPanel,...
     'BackgroundColor','black',...
     'FontColor','yellow',...
     'FontName','Courier',...
-    'Value',{'Log Window';'Drawing Containers and Tables...'},...
+    'Value',{''},...
     'Visible','Off');
 
 %% CHECKPOINT
@@ -1042,11 +1042,11 @@ disp('Setting up object image axes...')
     
 %% Turning on important containers
 
-old = Handles.LogWindow.Value;
-new = old;
-new{length(old)+1} = 'Drawing Axes';
-Handles.LogWindow.Value = new;
-clear old new
+% old = Handles.LogWindow.Value;
+% new = old;
+% new{length(old)+1} = 'Drawing Axes';
+% Handles.LogWindow.Value = new;
+% clear old new
 
 set(Handles.AppInfoPanel,'Visible','On');
 set(Handles.SettingsPanel,'Visible','On');

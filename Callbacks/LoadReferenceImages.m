@@ -75,7 +75,9 @@ switch InputFileType
         
         % do nothing for now
         
-    end
+end
+    
+Handles.ShowReferenceImageAverageIntensity.Visible = 'On';
 
 UpdateImages(source);
 UpdateTables(source);

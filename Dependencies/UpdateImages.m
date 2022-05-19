@@ -142,7 +142,7 @@ function [] = UpdateImages(source)
                 Handles.CurrentThresholdLine.Value = Replicate.level;
                 Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
             catch
-                disp('Error moving thresh line...')
+                disp('Warning: Error moving thresh line...')
                 Handles.CurrentThresholdLine.Value = 0.5;
                 Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
             end            
@@ -201,8 +201,8 @@ function [] = UpdateImages(source)
 %                 end                
 %             end
             
-            % truecolor composite overlay
             if Replicate.ReferenceImageLoaded
+                % truecolor composite overlay
                 if PODSData.Handles.ShowReferenceImageAverageIntensity.Value == 1
                     ReferenceImage = Scale0To1(Replicate.ReferenceImage);
                     Map1 = PODSData.Settings.IntensityColormaps{1};
@@ -212,7 +212,7 @@ function [] = UpdateImages(source)
                             CompositeRGB(Scale0To1(Replicate.I),Map1,ReferenceImage,Map2);
                         Handles.AverageIntensityAxH.CLim = [0 255];
                     catch
-                        warning('Failed to make composite RGB')
+                        disp('Warning: Failed to make composite RGB')
                     end
                 else % just show avg intensity
                     try
@@ -226,7 +226,7 @@ function [] = UpdateImages(source)
                 end
             else % just show avg intensity
                 try
-                    Handles.AverageIntensityImgH.CData = Scale0To1(Replicate.I)
+                    Handles.AverageIntensityImgH.CData = Scale0To1(Replicate.I);
                     Handles.AverageIntensityAxH.CLim = [0 1];
                 catch
                     Handles.AverageIntensityImgH.CData = EmptyImage;
@@ -234,13 +234,8 @@ function [] = UpdateImages(source)
                 % change colormap to currently selected intensity colormap
                 Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{1};
             end
-            
-            
-            
-            
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%            
-
-
 
             drawnow
             
@@ -255,7 +250,7 @@ function [] = UpdateImages(source)
                 Handles.CurrentThresholdLine.Value = Replicate.level;
                 Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
             catch
-                disp('Error moving thresh line...')
+                disp('Warning: Error while moving thresh line...')
                 Handles.CurrentThresholdLine.Value = 0.5;
                 Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
             end            
@@ -319,7 +314,7 @@ function [] = UpdateImages(source)
             try
                 delete(Handles.AzimuthLines);
             catch
-                warning('Could not delete Azimuth lines');
+                disp('Warning: Could not delete Azimuth lines');
             end
             
             % get y and x coordinates from 'On' pixels in the mask image
@@ -425,7 +420,7 @@ function [] = UpdateImages(source)
         case 'View Objects'
 
             % Object Viewer
-            try;delete(Handles.hObjectOFContour);catch;warning('Failed to delete contour plot');end
+            try;delete(Handles.hObjectOFContour);catch;disp('Warning: Failed to delete contour plot');end
             
             cObject = Replicate.CurrentObject;
 
@@ -434,7 +429,7 @@ function [] = UpdateImages(source)
                 Handles.ObjectPolFFCImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
                 %Handles.ObjectPolFFCAxH.CLim = [0 1];
             catch
-                error('Error displaying object intensity image');
+                disp('Warning: Error displaying object intensity image');
                 Handles.ObjectPolFFCImgH.CData = EmptyImage;
             end
             
@@ -445,7 +440,7 @@ function [] = UpdateImages(source)
                 Handles.ObjectMaskImgH.CData = cObject.RestrictedPaddedMaskSubImage;
                 %Handles.ObjectMaskImgH.CData = cObject.PaddedMaskSubImage;
             catch
-                error('Error displaying object binary image');
+                disp('Warning: Error displaying object binary image');
                 Handles.ObjectMaskImgH.CData = EmptyImage;
             end
             
@@ -494,7 +489,7 @@ function [] = UpdateImages(source)
                 [~,Handles.hObjectOFContour] = contourf(Handles.ObjectOFContourAxH,cObject.OFSubImage,'ShowText','On');
                 colormap(Handles.ObjectOFContourAxH,PODSData.Settings.OrderFactorColormap);
             catch
-                error('Error displaying 2D Object Order Factor contours');
+                disp('Warning: Error displaying 2D Object Order Factor contours');
             end
             
             drawnow
