@@ -26,5 +26,9 @@ function NameOut = ExpandVariableName(NameIn)
             NameOut = 'Average Colocalization Channel Intensity';
         case 'ROIPearsons'
             NameOut = 'Single Object (ROI) Pearsons';
+        case 'AvgReferenceChannelIntensity'
+            NameOut = 'Average Reference Channel Intensity';
+        case 'IntegratedReferenceChannelIntensity'
+            NameOut = 'Integrated Reference Channel Intensity';
     end
 end
