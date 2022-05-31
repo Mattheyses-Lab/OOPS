@@ -14,7 +14,7 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
     
     for i = 1:nGroups
         for ii = 1:nLabels
-            axH.XTickLabel{PlotIdx} = [PODSData.Group(i).GroupName,'(',PODSData.Settings.ObjectLabels(ii).Name,')'];
+            axH.XTickLabel{PlotIdx} = [PODSData.Group(i).GroupName,' (',PODSData.Settings.ObjectLabels(ii).Name,')'];
             PlotIdx = PlotIdx+1;
         end
     end
@@ -41,25 +41,26 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
             
             X{PlotIdx} = PlotIdx*ones(size(Y{PlotIdx}));
             
-            switch PODSData.Settings.SwarmChartColorMode
-                case 'Magnitude'
-                    % color by value
-                    hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},150,Y{PlotIdx},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
-                case 'ID'
-                    % color by group (label)
-                    hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},150,'Filled',...
-                        'HitTest','Off',...
-                        'MarkerEdgeColor',[0 0 0],...
-                        'MarkerFaceColor',PODSData.Settings.ObjectLabels(ii).Color);
+            try
+                switch PODSData.Settings.SwarmChartColorMode
+                    case 'Magnitude'
+                        % color by value
+                        hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},150,Y{PlotIdx},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
+                    case 'ID'
+                        % color by group (label)
+                        hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},150,'Filled',...
+                            'HitTest','Off',...
+                            'MarkerEdgeColor',[0 0 0],...
+                            'MarkerFaceColor',PODSData.Settings.ObjectLabels(ii).Color);
+                end
+                MaxPerGroup(PlotIdx) = max(Y{PlotIdx});
+                hold on
+            catch
+                UpdateLog3(source,['ERROR: Unable to find objects with [Label:',PODSData.Settings.ObjectLabels(ii).Name,'] in [Group:',PODSData.Group(i).GroupName,']'],'append');
+                MaxPerGroup(PlotIdx) = NaN;                
             end
-            
-            MaxPerGroup(PlotIdx) = max(Y{PlotIdx});
-            
             PlotIdx = PlotIdx+1;
-            
-            hold on
         end
-
     end
     
     hold off
@@ -79,9 +80,13 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
         if UpperLim < GlobalMax;UpperLim = UpperLim+0.1;end
     end
     
-    axH.YLim = [0 UpperLim];
-
-    axH.CLim = axH.YLim;
+    try
+        axH.YLim = [0 UpperLim];
+        axH.CLim = axH.YLim;
+    catch
+       axH.YLim = [0 1];
+       axH.CLim = [0 1];
+    end
     
     % set the JitterWidth of each plot
     %[hSwarmPlot(:).XJitterWidth] = deal(0.5);

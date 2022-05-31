@@ -1,7 +1,5 @@
 function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
 
-    %axes(axH)
-
     % get unmasked row,col indices
     [RowIndices,ColIndices] = find(Mask==1);
     
@@ -11,7 +9,8 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     
     DefaultAxColor = axH.Color;
     
-    
+    xp = [0:pi/1000:pi];
+
     for i = 1:nPixels
         
         y = zeros(1,4);
@@ -37,9 +36,8 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
 %% Get x and y values of curve fit for current pixel       
         % x values to plot
         %xp = linspace(min(x),pi);
-        xp = [0:pi/1000:pi];
-        
-        
+        %xp = [0:pi/1000:pi];
+
         % y values to plot - found with the fitting function
         CurveFit{i} = fit(s,xp);
 
@@ -65,12 +63,10 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     % initialize vector to sum up fits
     CurveFitSum = zeros(size(CurveFit{1}));
     
-    RandomColors = MakeRandomColorSet(nPixels);
-    
     for i = 1:nPixels
         CurveFitSum = CurveFitSum+CurveFitsNormalized{i};
         % plot the fit line
-        plot(axH,xp,CurveFitsNormalized{i},'Color','#A9A9A9','LineWidth',2)
+        plot(axH,xp,CurveFitsNormalized{i},'Color','#A9A9A9','LineWidth',1,'HitTest','Off','LineStyle',':')
         axH.NextPlot = 'Add';
         hold on
         % find the max of each curve and draw a vertical line at x where f(x) = YMax
@@ -79,7 +75,7 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
         % 2nd argument of find() set to 1 just in case MaxIdx is exactly
         % 0, which would make make MaxIdx also = pi
         MaxIdx = find(CurveFitsNormalized{i} == MaxVal,1);
-        line(axH,[xp(MaxIdx),xp(MaxIdx)],[0,MaxVal],'LineStyle','-','LineWidth',1);
+        line(axH,[xp(MaxIdx),xp(MaxIdx)],[0,MaxVal],'LineStyle',':','LineWidth',1,'HitTest','Off');
     end
     CurveFitAvg = CurveFitSum./nPixels;
 %%
@@ -88,31 +84,59 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     MinY = min(cell2mat(CurveFitsNormalized));
     YRange = MaxY-MinY;
     
-    % calculate the space below the minimum value as 5% of the range of y-values
-    BottomSpace = 0.05*YRange;
-    YLowerLim = MinY-BottomSpace;
+    PctBuffer = 0.1;
+    
+    % calculate the space below the minimum value as 10% of the range of y-values
+%     BottomSpace = MinY-PctBuffer;
+%     YLowerLim = MinY-BottomSpace;
+    
+    YLowerLim = MinY-PctBuffer;
+    YUpperLim = MaxY+PctBuffer;
 
 
     % plot the average fit
     plot(axH,xp,CurveFitAvg,'LineWidth',4,'Color','Yellow');
     
+    
+    MaxVal = max(CurveFitAvg);
+    MaxIdx = find(CurveFitAvg==MaxVal);
+    
+    MinVal = min(CurveFitAvg);
+    MinIdx = find(CurveFitAvg==MinVal);
+    
+    OrderFactorFit = MaxVal-MinVal
+    AzimuthRadians = xp(MaxIdx)
+    
+    % dotted vert line showing azimuth
+    line(axH,[xp(MaxIdx),xp(MaxIdx)],[0,MaxVal],'LineStyle','--','LineWidth',1,'HitTest','Off','Color',[1 1 0]);
+    
+    % dashed line showing max value
+    line(axH,[xp(MaxIdx),xp(MinIdx)],[MaxVal,MaxVal],'LineStyle','--','LineWidth',1,'HitTest','Off','Color',[1 1 0]);
+    
+    % vert line and text object showing OF fit
+    line(axH,[xp(MinIdx),xp(MinIdx)],[MaxVal,MinVal],'LineStyle','-','LineWidth',1,'HitTest','Off','Color',[1 1 0]);
+    txtOF = [' OF Fit: ',num2str(round(OrderFactorFit,2)),' '];
+    txtAzimuth = [' Azimuth Fit: ',num2str(round(rad2deg(AzimuthRadians))),'° '];
+    
+    %LabelLoc = MaxVal-(MaxVal-YLowerLim)/2;
+    
+    
+    if xp(MaxIdx) > pi/2
+        text(axH,xp(MinIdx),MaxVal-OrderFactorFit/2,txtOF,'HorizontalAlignment','Left','Color',[1 1 0]);
+        text(axH,xp(MaxIdx),MaxVal-(MaxVal-YLowerLim)/2,txtAzimuth,'HorizontalAlignment','Right','Color',[1 1 0]);
+    else
+        text(axH,xp(MinIdx),MaxVal-OrderFactorFit/2,txtOF,'HorizontalAlignment','Right','Color',[1 1 0]);
+        text(axH,xp(MaxIdx),MaxVal-(MaxVal-YLowerLim)/2,txtAzimuth,'HorizontalAlignment','Left','Color',[1 1 0]);
+    end
+    
     hold off
-    axH.NextPlot = 'Replace';
     
     %set(gcf,'Position',[1,1,1792,400]);
     set(axH,'XLim',[0 pi]);
-    set(axH,'YLim',[YLowerLim 1]);
-    set(axH,'Color','Black');
-    set(axH,'XColor','Yellow');
-    set(axH,'YColor','Yellow');
-    set(axH,'Box','on');
-    set(axH,'BoxStyle','back');
-    axH.Title.Color = 'Yellow';
-    axH.Title.Visible = 'On';
+    set(axH,'YLim',[YLowerLim YUpperLim]);
     
-    OrderFactorFit = max(CurveFitAvg) - min(CurveFitAvg)
-    MaxIndex = find(CurveFitAvg==max(CurveFitAvg))
-    AzimuthRadians = xp(MaxIndex)
+
+    
 
 
 end

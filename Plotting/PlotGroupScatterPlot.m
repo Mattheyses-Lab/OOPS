@@ -25,7 +25,7 @@ function axH = PlotGroupScatterPlot(source,axH)
                 'MarkerFaceAlpha',1,...
                 'MarkerEdgeAlpha',0.5);            
         catch
-            UpdateLog3(source,['ERROR: No object data found for Group: ',PODSData.Group(i).GroupName],'append');
+            UpdateLog3(source,['ERROR: No object data found for [Group:',PODSData.Group(i).GroupName,']'],'append');
         end
         
         hold on
