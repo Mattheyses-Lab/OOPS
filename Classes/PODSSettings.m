@@ -74,7 +74,7 @@ classdef PODSSettings < handle
             % get monitor positions
             %MonitorPosition = get(0,'MonitorPositions');
             % size of main monitor
-            obj.ScreenSize = GetMaximizedScreenSize(0);
+            obj.ScreenSize = GetMaximizedScreenSize(1);
             %clear MonitorPosition
             obj.ObjectLabels(1) = PODSLabel('Default',[1 1 1],1);
             try

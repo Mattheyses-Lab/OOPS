@@ -89,6 +89,7 @@ classdef PODSObject < handle
         PaddedFFCIntensitySubImage
         
         PaddedMaskSubImage
+        RestrictedPaddedMaskSubImage        
         
         PaddedAnalysisChannelSubImage
         
@@ -97,9 +98,8 @@ classdef PODSObject < handle
         CentroidX
         
         CentroidY
-        
-        RestrictedPaddedMaskSubImage
-        
+
+        % depends on selection status
         SelectionBoxLineWidth
         
         % OF properties of this object, dependent on OF image of Parent
@@ -112,6 +112,10 @@ classdef PODSObject < handle
         % we can search for objects by the properties of their labels
         LabelIdx
         LabelName
+        
+        % Reference channel properties
+        AvgReferenceChannelIntensity
+        IntegratedReferenceChannelIntensity
         
     end
 
@@ -186,6 +190,22 @@ classdef PODSObject < handle
                 OFMin = NaN;
             end
         end
+        
+        function AvgReferenceChannelIntensity = get.AvgReferenceChannelIntensity(obj)
+            try
+                AvgReferenceChannelIntensity = mean(obj.Parent.ReferenceImage(obj.PixelIdxList));
+            catch
+                AvgReferenceChannelIntensity = NaN;
+            end
+        end
+        
+        function IntegratedReferenceChannelIntensity = get.IntegratedReferenceChannelIntensity(obj)
+            try
+                IntegratedReferenceChannelIntensity = sum(obj.Parent.ReferenceImage(obj.PixelIdxList));
+            catch
+                IntegratedReferenceChannelIntensity = NaN;
+            end
+        end        
         
         function LabelIdx = get.LabelIdx(obj)
             LabelIdx = str2num(obj.Label.LabelNumber);

@@ -17,33 +17,6 @@ classdef PODSImage < handle
         Width double
         Height double
         
-%% Colocalization Image Properties
-
-        ColocImage double
-        
-        ColocFilename char
-        ColocShortName char
-        ColocFullName char
-        ColocChannelName char
-        
-        % processed coloc channel images
-        ColocNormToMax double
-        ColocEnhanced double
-        ColocThreshLevel double
-
-        % various image-wide coloc stats
-        RawAllPixelPearsons double
-        ObjectPearsons double
-        MandersM1 double
-        MandersM2 double
-
-        % masks
-        ColocMask logical
-        ColocOnlyMask logical
-        PrimaryOnlyMask logical
-        CombinedMask logical
-        UnionMask logical
-
 %% Experimental Data
         % raw image stack - pol_rawdata(y/row,x/col,PolIdx)
         %   PolIdx: 1 = 0 deg | 2 = 45 deg | 3 = 90 deg | 4 = 135 deg
@@ -250,6 +223,12 @@ classdef PODSImage < handle
                 obj.Object(i).Name = ['Object ',num2str(i)];
             end
             
+            % in case current object is greater than the total # of objects
+            if obj.CurrentObjectIdx > obj.nObjects
+                % select the last object in the list
+                obj.CurrentObjectIdx = obj.nObjects;
+            end
+            
             % delete the bad PODSObject objects
             % set their pixel idxs to 0 in the mask
             for i = 1:length(Bad)
@@ -299,8 +278,8 @@ classdef PODSImage < handle
                 all_BG_pixels = sparse(false(size(all_object_pixels)));
                 
                 N = obj.nObjects;
-                logmsg = ['Detecting object buffer zone and local BG pixels for ', num2str(N), ' objects...'];
-                UpdateLog3(source,logmsg,'append');
+%                 logmsg = ['Detecting object buffer zone and local BG pixels for ', num2str(N), ' objects...'];
+%                 UpdateLog3(source,logmsg,'append');
                 
                 
                 %% First Step: Treat each object individually, ignoring others.
@@ -347,8 +326,8 @@ classdef PODSImage < handle
                     all_BG_pixels(obj.Object(i).BGIdxList) = 1;
                 end
 
-                logmsg = ['Summing signal and BG intensities, computing SB ratio...'];
-                UpdateLog3(source,logmsg,'append');    
+%                 logmsg = ['Summing signal and BG intensities, computing SB ratio...'];
+%                 UpdateLog3(source,logmsg,'append');    
 
                 %% Second Step: Filter pixels found in step 1
                 %   for each object: 
@@ -391,6 +370,8 @@ classdef PODSImage < handle
                     clear new_buffer new_BG
 
                 end
+                
+                obj.LocalSBDone = true;
 
             else
                 error('Cannot calculate local S:B until objects are detected');
