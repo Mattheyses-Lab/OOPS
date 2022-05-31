@@ -5,8 +5,6 @@ PODSData = guidata(source);
 Settings = PODSData.Settings;
 % group that we will be loading data for
 GroupIndex = PODSData.CurrentGroupIndex;
-% nuber of emission channels we will be loading data for
-%nChannels = PODSData.nChannels;
 % user-selected input file type (.nd2 or .tif)
 InputFileType = PODSData.Settings.InputFileType;
 

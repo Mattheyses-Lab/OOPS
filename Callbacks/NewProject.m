@@ -11,7 +11,7 @@
         center = [ss(3)/2,ss(4)/2];
 
         % position of the first window
-        sz = [center(1)-250 center(2)-100 500 200];
+        sz = [center(1)-250 center(2)-80 500 160];
 
         % draw figure window
         newproject = uifigure('Name','New Project',...
@@ -20,27 +20,19 @@
 
         % editbox to set project name                  
         ProjectNameBox = uieditfield('Parent',newproject,...
-                                     'Position',[200 150 250 20],...
+                                     'Position',[200 110 250 20],...
                                      'Value',PODSData.ProjectName);
         ProjectNameBoxTitle = uilabel('Parent',newproject,...
-                                      'Position',[50 150 100 20],...
+                                      'Position',[50 110 100 20],...
                                       'Text','Project Name');                        
 
         % editfield to set n groups                          
         NumGroupsBox = uieditfield('Parent',newproject,...
-                                   'Position',[200 110 250 20],...
+                                   'Position',[200 70 250 20],...
                                    'Value','1');
         NumGroupsBoxTitle = uilabel('Parent',newproject,...
-                                    'Position',[50 110 100 20],...
-                                    'Text','Number of Groups');
-
-%         % editfield to set n channels(1-2 for now)                        
-%         NumChannelsBox = uieditfield('Parent',newproject,...
-%                                    'Position',[200 70 250 20],...
-%                                    'Value','1');
-%         NumChannelsBoxTitle = uilabel('Parent',newproject,...
-%                                     'Position',[50 70 100 20],...
-%                                     'Text','Number of Channels (1-2)');                                
+                                    'Position',[50 70 100 20],...
+                                    'Text','Number of Groups');                                
                                 
         % pushbutton - deletes the current window and moves to setting group names                        
         pbCont2NameGroups = uibutton(newproject,...
@@ -55,7 +47,7 @@
         waitfor(newproject)                                
          
         % height of next window will be based on user-selected number of groups (same width)
-        fig_height = 50+40*(nGroups-1)+40+40+30; % 30=bottom margin,50=top margin plus title bar,40=space between rows,
+        fig_height = 50+40*(nGroups-1)+40+30; % 30=bottom margin,50=top margin plus title bar,40=space between rows,
         sz = [center(1)-250 center(2)-fig_height/2 500 fig_height];
         
         % draw figure window for user to set group names
@@ -71,19 +63,7 @@
             GroupNamesBoxTitle(i) = uilabel(fHSetGroupNames,...
                 'Position',[50 fig_height-50-40*(i-1) 100 20],...
                 'Text',['Group ',num2str(i),' Name:']);
-        end
-                        
-%         j = 1;
-%         for i = (nGroups+1):(nChannels+nGroups)
-%             ChannelNamesBox(j) = uieditfield(fHSetGroupNames,...
-%                 'Position',[200 fig_height-50-40*(i-1) 250 20],...
-%                 'Value',['Channel ' num2str(j)],...
-%                 'Tag',num2str(j));
-%             ChannelNamesBoxTitle(j) = uilabel(fHSetGroupNames,...
-%                 'Position',[50 fig_height-50-40*(i-1) 100 20],...
-%                 'Text',['Channel ',num2str(j),' Name:']);
-%             j = j+1;
-%         end        
+        end        
 
         pbReturnToPODS = uibutton(fHSetGroupNames,...
                                   'Push',...
@@ -114,18 +94,10 @@
 
         %% Set names and return to Main Window
         function [] = ReturnToPODS(source,event)
-        
-%             for J = 1:nChannels
-%                 for I = 1:nGroups
-%                     %PODSData.Group(I,J) = PODSGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,J,PODSData.Settings,I);
-%                     PODSData.MakeNewGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,I,J);
-%                 end
-%             end
             for I = 1:nGroups
                 %PODSData.Group(I,J) = PODSGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,J,PODSData.Settings,I);
                 PODSData.MakeNewGroup(GroupNamesBox(I).Value,I);
             end
-
             delete(fHSetGroupNames)
         end   
     
