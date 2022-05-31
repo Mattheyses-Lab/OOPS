@@ -1,5 +1,6 @@
 function PODS_GridLayout()
 
+
 % create an instance of PODSProject
 % this object will hold ALL project data and GUI settings
 PODSData = PODSProject;
@@ -73,7 +74,7 @@ Handles.hViewObjects = uimenu(Handles.hTabMenu,'Text','View Objects','MenuSelect
 Handles.hProcessMenu = uimenu(Handles.fH,'Text','Process');
 % Process Operations
 Handles.hProcessFFC = uimenu(Handles.hProcessMenu,'Text','Perform Flat-Field Correction','MenuSelectedFcn',@pb_FFC);
-Handles.hProcessMask = uimenu(Handles.hProcessMenu,'Text','Generate Mask','MenuSelectedFcn',@CreateMask3);
+Handles.hProcessMask = uimenu(Handles.hProcessMenu,'Text','Generate Mask','MenuSelectedFcn',@CreateMask4);
 Handles.hProcessOF = uimenu(Handles.hProcessMenu,'Text','Find Order Factor','MenuSelectedFcn',@FindOrderFactor3);
 Handles.hProcessLocalSB = uimenu(Handles.hProcessMenu,'Text','Find Local Signal:Background','MenuSelectedFcn',@pb_FindLocalSB);
 
@@ -102,7 +103,7 @@ disp('Setting up grid layout manager...')
 pos = Handles.fH.Position;
 
 % width and height of the large plots
-width = round(pos(3)*0.35);
+width = round(pos(3)*0.38);
 height = width;
 height_norm = height/pos(4);
 width_norm = width/pos(3);
@@ -113,13 +114,21 @@ sheight = swidth;
 swidth_norm = swidth/pos(3);
 sheight_norm = sheight/pos(4);
 
+% % main grid for managing layout
+% Handles.MainGrid = uigridlayout(Handles.fH,[4,5]);
+% Handles.MainGrid.BackgroundColor = [0 0 0];
+% Handles.MainGrid.RowSpacing = 5;
+% Handles.MainGrid.ColumnSpacing = 5;
+% Handles.MainGrid.RowHeight = {'0.5x',swidth,swidth,'0.3x'};
+% Handles.MainGrid.ColumnWidth = {'.38x',sheight,sheight,sheight,sheight};
+
 % main grid for managing layout
 Handles.MainGrid = uigridlayout(Handles.fH,[4,5]);
 Handles.MainGrid.BackgroundColor = [0 0 0];
 Handles.MainGrid.RowSpacing = 5;
 Handles.MainGrid.ColumnSpacing = 5;
 Handles.MainGrid.RowHeight = {'0.5x',swidth,swidth,'0.3x'};
-Handles.MainGrid.ColumnWidth = {'0.38x',sheight,sheight,sheight,sheight};
+Handles.MainGrid.ColumnWidth = {'1x',sheight,sheight,sheight,sheight};
 
 %% CHECKPOINT
 
@@ -575,40 +584,6 @@ end
 
 disp('Setting up large image axes...')
 
-%% Large Images
-
-    %% Reference Image
-    Handles.ReferenceAxH = uiaxes(Handles.ImgPanel1,...
-        'Units','Normalized',...
-        'InnerPosition',[0 0 1 1],...
-        'Tag','Reference',...
-        'XTick',[],...
-        'YTick',[]);
-    % save original values to be restored after calling imshow()
-    pbarOriginal = Handles.ReferenceAxH.PlotBoxAspectRatio;
-    tagOriginal = Handles.ReferenceAxH.Tag;
-    % place placeholder image on axis
-    Handles.ReferenceImgH = imshow(full(emptyimage),'Parent',Handles.ReferenceAxH);
-    % set a tag so our callback functions can find the image
-    Handles.ReferenceImgH.Tag = 'ReferenceImage';
-    
-    % restore original values after imshow() call
-    Handles.ReferenceAxH = restore_axis_defaults(Handles.ReferenceAxH,pbarOriginal,tagOriginal);
-    clear pbarOriginal tagOriginal
-    
-    % set axis title
-    Handles.ReferenceAxH = SetAxisTitle(Handles.ReferenceAxH,'Reference Image');
-    % set celormap
-    Handles.ReferenceAxH.Colormap = gray;
-    % hide axes toolbar and title, torn off hittest
-    Handles.ReferenceAxH.Toolbar.Visible = 'Off';
-    Handles.ReferenceAxH.Title.Visible = 'Off';
-    Handles.ReferenceAxH.HitTest = 'Off';
-    disableDefaultInteractivity(Handles.ReferenceAxH);
-    % hide/diable image
-    Handles.ReferenceImgH.Visible = 'Off';
-    Handles.ReferenceImgH.HitTest = 'Off';
-
     %% AVERAGE INTENSITY
     Handles.AverageIntensityAxH = uiaxes(Handles.ImgPanel1,...
         'Units','Normalized',...
@@ -632,7 +607,7 @@ disp('Setting up large image axes...')
     Handles.AverageIntensityAxH = SetAxisTitle(Handles.AverageIntensityAxH,'Average Intensity (Flat-Field Corrected)');
     % set celormap
     Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{1};
-    % hide axes toolbar and title, torn off hittest
+    % hide axes toolbar and title, turn off hittest
     Handles.AverageIntensityAxH.Toolbar.Visible = 'Off';
     Handles.AverageIntensityAxH.Title.Visible = 'Off';
     Handles.AverageIntensityAxH.HitTest = 'Off';
@@ -1110,12 +1085,18 @@ pause(0.5)
     function [] = ResetContainerSizes(source,event)
         disp('Figure Window Size Changed...')
         
+%         SmallWidth = round((source.InnerPosition(3)*0.38)/2);
+%         % update grid size to maatch new image sizes
+%         PODSData.Handles.MainGrid.RowHeight = {'0.5x',SmallWidth,SmallWidth,'0.3x'};
+%         PODSData.Handles.MainGrid.ColumnWidth = {'0.3x',SmallWidth,SmallWidth,SmallWidth,SmallWidth};
+%         drawnow limitrate
+        
         SmallWidth = round((source.InnerPosition(3)*0.38)/2);
         % update grid size to maatch new image sizes
         PODSData.Handles.MainGrid.RowHeight = {'0.5x',SmallWidth,SmallWidth,'0.3x'};
-        PODSData.Handles.MainGrid.ColumnWidth = {'0.3x',SmallWidth,SmallWidth,SmallWidth,SmallWidth};
-        
+        PODSData.Handles.MainGrid.ColumnWidth = {'1x',SmallWidth,SmallWidth,SmallWidth,SmallWidth};
         drawnow limitrate
+
     end
 
     function [] = ImgInfoTabGroupSizeChanged(source,event)
@@ -1138,17 +1119,17 @@ pause(0.5)
             'Position',[Handles.GroupSelector.Position(3)+Handles.ImageSelector.Position(3)+30 10 small_box_width Handles.GroupSelector.Position(4)]);
         set(Handles.ObjectSelectorTitle,...
             'Position',[Handles.ObjectSelector.Position(1) Handles.ObjectSelector.Position(4)+10 small_box_width 20]);
-        
+
     end
 
     function [] = LogPanelSizeChanged(source,event)
-        drawnow
+        %drawnow
         set(Handles.LogWindow,'Position',[1 1 Handles.LogPanel.InnerPosition(3) Handles.LogPanel.InnerPosition(4)]);
     end
 
     function [] = ImgOperationsTabGroupSizeChanged(source,event)
         
-        set(Handles.ThreshAxH,'Position',[0 0 1 1]);
+        %set(Handles.ThreshAxH,'Position',[0 0 1 1]);
     end
 
     function [] = AppInfoPanelSizeChanged(source,event)
@@ -1303,8 +1284,6 @@ pause(0.5)
         % update GUI state to reflect new current/previous tabs
         data.Settings.PreviousTab = data.Settings.CurrentTab;
         data.Settings.CurrentTab = source.Text;
-        
-        %UpdateImages(source);
 
         switch data.Settings.PreviousTab % the tab we are switching from
             
@@ -1391,9 +1370,6 @@ pause(0.5)
                 try
                     delete(PODSData.Handles.ObjectRectangles);
                 end
-                
-                Handles.ReferenceImgH.Visible = 'Off';
-                PODSData.Handles.AverageIntensityImgH.AlphaData = ones(size(PODSData.Handles.AverageIntensityImgH.CData));
 
                 Handles.AverageIntensityImgH.Visible = 'Off';
                 Handles.AverageIntensityAxH.Title.Visible = 'Off';
@@ -1422,7 +1398,9 @@ pause(0.5)
                 Handles.OFCbar.Visible = 'Off';
                 
             case 'Azimuth'
-                
+                try
+                    linkaxes([Handles.AverageIntensityAxH,Handles.AzimuthAxH],'off');
+                end                
                 try
                     delete(data.Handles.AzimuthLines);
                 end
@@ -1595,10 +1573,6 @@ pause(0.5)
                 Handles.AverageIntensityAxH.Toolbar.Visible = 'On';
                 Handles.AverageIntensityAxH.HitTest = 'On';
                 
-                if PODSData.Handles.ShowReferenceImageAverageIntensity.Value == 1
-                    Handles.ReferenceImgH.Visible = 'On';
-                    PODSData.Handles.AverageIntensityImgH.AlphaData = ones(size(PODSData.Handles.AverageIntensityImgH.CData))*0.5;
-                end
                 
                 Handles.MaskImgH.Visible = 'On';
                 Handles.MaskAxH.Title.Visible = 'On';
@@ -1662,6 +1636,9 @@ pause(0.5)
                     Handles.SmallPanels(1,i).Visible = 'Off';
                     Handles.SmallPanels(2,i).Visible = 'Off';
                 end
+                try
+                    linkaxes([Handles.AverageIntensityAxH,Handles.AzimuthAxH],'xy');
+                end                
                 
             case 'Plots'
                 try
@@ -1835,20 +1812,23 @@ pause(0.5)
 %% Local SB
 
     function [] = pb_FindLocalSB(source,event)
-        
+        % get the data structure
         data = guidata(source);
-        cGroupIndex = data.CurrentGroupIndex;
-        cImageIndex = data.Group(cGroupIndex).CurrentImageIndex;
-        
-        for i = 1:length(cImageIndex)
-            data.Group(cGroupIndex).Replicate(cImageIndex(i)) = FindLocalSB(data.Group(cGroupIndex).Replicate(cImageIndex(i)),source);
-            data.Group(cGroupIndex).Replicate(cImageIndex(i)).LocalSBDone = true;
-            
-            cImage = data.Group(cGroupIndex).Replicate(cImageIndex(i));
-            
+        % number of selected images
+        nImages = length(data.CurrentImage);
+        % update log to indicate # of images we are processing
+        UpdateLog3(source,['Detecting Local S/B for ',num2str(nImages),' images'],'append');
+        % counter to track which image we're on
+        Counter = 1;
+        for cImage = data.CurrentImage;
+            % update log to indicate which image we are on
+            UpdateLog3(source,['    ',cImage.pol_shortname,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
+            % detect local S/B for one image
+            cImage.FindLocalSB(source);
+            % preallocate filtered mask and OF image
             cImage.bwFiltered = zeros(size(cImage.bw));
             cImage.OFFiltered = zeros(size(cImage.OF_image));
-            
+            % fill filtered mask and OF images according to local S/B cutoff level
             if cImage.nObjects > 0
                 for ii = 1:length(cImage.Object)
                     if cImage.Object(ii).SBRatio >= cImage.SBCutoff
@@ -1857,9 +1837,15 @@ pause(0.5)
                     cImage.OFFiltered(cImage.bwFiltered) = cImage.OF_image(cImage.bwFiltered);
                 end
             end
+            % log update to indicate we are done with this image
+            UpdateLog3(source,['        Local S/B detected for ',num2str(cImage.nObjects),' objects...'],'append');
+            % increment counter
+            Counter = Counter+1;
         end
-        
-        guidata(source,data);
+        % update log to indicate we are done
+        UpdateLog3(source,'Done.','append');
+        % update summary table
+        UpdateTables(source);
     end
 
 %% Data saving
@@ -2085,7 +2071,7 @@ pause(0.5)
                 im.AlphaData = 1;
         end
         
-        guidata(source,PODSData);
+        %guidata(source,PODSData);
     end
 
     function [] = tbShowSelectionStateChanged(source,event)
@@ -2102,59 +2088,10 @@ pause(0.5)
 
     function [] = tbShowReferenceImageStateChanged(source,event)
         if PODSData.CurrentImage.ReferenceImageLoaded
-%             switch event.Value
-%                 case 1
-%                     PODSData.Handles.ReferenceImgH.Visible = 'On';
-%                     PODSData.Handles.AverageIntensityImgH.AlphaData = ...
-%                         ones(size(PODSData.Handles.AverageIntensityImgH.CData))*0.5;
-%                 case 0
-%                     PODSData.Handles.ReferenceImgH.Visible = 'Off';
-%                     PODSData.Handles.AverageIntensityImgH.AlphaData = ...
-%                         ones(size(PODSData.Handles.AverageIntensityImgH.CData));                    
-%             end
-            UpdateImages(source)
+            UpdateImages(source);
         else
             warning('No reference image to overlay...')
         end
-    end
-
-    function [] = tbRemoveObjects(source,event)
-        
-         ctb = source.Parent;
-         cax = ctb.Parent;
-        
-        roi_remove = drawrectangle(cax);
-        
-        vertices = roi_remove.Vertices;
-        
-        c1 = int16(vertices(1,1));
-        r1 = int16(vertices(1,2));
-        
-        %c2 = int16(vertices(2,1));
-        r2 = int16(vertices(2,2));
-        
-        %c3 = int16(vertices(3,1));
-        %r3 = int16(vertices(3,2));
-        
-        c4 = int16(vertices(4,1));
-        %r4 = int16(vertices(4,2));
-        
-        MainReplicate = PODSData.CurrentImage(1);
-        
-        MainReplicate.bw(r1:r2,c1:c4) = 0
-        
-        % update mask display
-        PODSData.Handles.MaskImgH.CData = MainReplicate.bw;
-        
-        delete(roi_remove);
-        
-        MainReplicate.L = bwlabel(full(MainReplicate.bw),4);
-        
-        UpdateLog3(source,'Deleting objects and updating...','append');
-        delete(MainReplicate.Object);
-        MainReplicate.DetectObjects;
-        %MainReplicate.ObjectDetectionDone = true;
-        UpdateLog3(source,'Done.','append');
     end
 
     function [] = tbRectangularROI(source,event)
