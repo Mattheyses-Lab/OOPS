@@ -7,7 +7,7 @@ function [] = ZoomToCursor(source,event)
 %           clicking within axes will increase zoom through a set number of
 %           zoom levels until max zoom is reached
 %           double-click will return to default zoom value
-%           shift-click will decrease zoom
+%           shift-click will freeze axis limits at current zoom
 %-------------------------------------------------------------------------%
 % Author: Will Dean
 % Organization: University of Alabama at Birmingham
@@ -16,7 +16,7 @@ function [] = ZoomToCursor(source,event)
 %
 %
 %
-% This function uses the same general strategy of zoom2cursor
+% This function is a modified version of zoom2cursor
 % (Written by Brett Shoelson, Ph.D. (shoelson@helix.nih.gov,
 % shoelson@hotmail.com))
 
@@ -102,9 +102,6 @@ function [] = ZoomToCursor(source,event)
             Handles.fH.WindowButtonMotionFcn = @CursorMoving;
             Zoom.DynamicImage.ButtonDownFcn = @ChangeZoomLevel;
             Zoom.DynamicImage.HitTest = 'On';
-            %Zoom.StaticAxes.ButtonDownFcn = @ChangeZoomLevel;
-            %Zoom.DynamicAxes.Hittest = 'Off';
-            %Zoom.StaticAxes.Hittest = 'Off';
             
         case 0
             Handles.fH.WindowButtonMotionFcn = '';
@@ -191,8 +188,11 @@ function [] = CursorMoving(source,event)
     else
 
         DynamicAxes.CursorPositionLabel.Text = sprintf('x = %3.0f;  y = %3.0f',0,0);
-        DynamicAxes.XLim = Zoom.OldXLim;
-        DynamicAxes.YLim = Zoom.OldYLim;
+        
+        if ~Zoom.Freeze
+            DynamicAxes.XLim = Zoom.OldXLim;
+            DynamicAxes.YLim = Zoom.OldYLim;
+        end
         
         PODSData.Handles.fH.Pointer = 'arrow';
 
