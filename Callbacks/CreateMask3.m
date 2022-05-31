@@ -90,6 +90,8 @@ function [] = CreateMask3(source,event)
         % a mask exists for this replicate
         cReplicate(ii).MaskDone = 1;
         
+        cReplicate(ii).LocalSBDone = false;
+        
         UpdateLog3(source,[chartab,chartab,num2str(cReplicate(ii).nObjects) ' objects detected.'],'append');
         
         % end main loop timer
