@@ -131,11 +131,13 @@ function [] = UpdateImages(source)
                 Handles.MaskImgH.CData = EmptyImage;
             end
 
+            % update intensity histogram
             try
+                [Replicate.IntensityBinCenters,Replicate.IntensityHistPlot] = BuildHistogram(Replicate.MedianFilteredImg);
                 Handles.ThreshBar.XData = Replicate.IntensityBinCenters;
                 Handles.ThreshBar.YData = Replicate.IntensityHistPlot;
             catch
-                disp('Warning: Failed to update threshold slider with currently selected image data');
+                disp('Warning: Failed to display intensity histogram');
             end
             
             try
@@ -186,30 +188,16 @@ function [] = UpdateImages(source)
                         'ButtonDownFcn',@SelectSingleObjects);
                 end
             end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%            
-            %%!!NEEDS WORK!!%% Alpha blending overlay
-%             if Replicate.ReferenceImageLoaded
-%                 PODSData.Handles.ReferenceImgH.CData = Scale0To1(Replicate.ReferenceImage);
-%                 if PODSData.Handles.ShowReferenceImageAverageIntensity.Value == 1
-%                     try
-%                         PODSData.Handles.AverageIntensityImgH.AlphaData = ones(size(EmptyImage))*0.5;
-%                         PODSData.Handles.ReferenceAxH.Colormap = PODSData.Settings.ReferenceColormap;
-%                         linkaxes([Handles.AverageIntensityAxH,Handles.ReferenceAxH],'xy');
-%                     catch
-%                         warning('Failed to set reference image CData')
-%                     end
-%                 end                
-%             end
-            
+           
+            % make avg intensity/reference composite RGB, if applicable
             if Replicate.ReferenceImageLoaded
                 % truecolor composite overlay
                 if PODSData.Handles.ShowReferenceImageAverageIntensity.Value == 1
-                    ReferenceImage = Scale0To1(Replicate.ReferenceImage);
                     Map1 = PODSData.Settings.IntensityColormaps{1};
                     Map2 = PODSData.Settings.ReferenceColormap;
                     try
                         PODSData.Handles.AverageIntensityImgH.CData = ...
-                            CompositeRGB(Scale0To1(Replicate.I),Map1,ReferenceImage,Map2);
+                            CompositeRGB(Replicate.I,Map1,Scale0To1(Replicate.ReferenceImage),Map2);
                         Handles.AverageIntensityAxH.CLim = [0 255];
                     catch
                         disp('Warning: Failed to make composite RGB')
@@ -240,6 +228,7 @@ function [] = UpdateImages(source)
             drawnow
             
             try
+                [Replicate.IntensityBinCenters,Replicate.IntensityHistPlot] = BuildHistogram(Replicate.MedianFilteredImg);
                 Handles.ThreshBar.XData = Replicate.IntensityBinCenters;
                 Handles.ThreshBar.YData = Replicate.IntensityHistPlot;
             catch
@@ -281,6 +270,23 @@ function [] = UpdateImages(source)
             end
             % change colormap to currently selected intensity colormap
             Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{1};
+            
+            try
+                [Replicate.IntensityBinCenters,Replicate.IntensityHistPlot] = BuildHistogram(Replicate.MedianFilteredImg);
+                Handles.ThreshBar.XData = Replicate.IntensityBinCenters;
+                Handles.ThreshBar.YData = Replicate.IntensityHistPlot;
+            catch
+                disp('Warning: Failed to update threshold slider with currently selected image data');
+            end
+
+            try
+                Handles.CurrentThresholdLine.Value = Replicate.level;
+                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
+            catch
+                disp('Warning: Error while moving thresh line...')
+                Handles.CurrentThresholdLine.Value = 0.5;
+                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
+            end            
 
         case 'Azimuth'
             % average intensity image
@@ -364,6 +370,10 @@ function [] = UpdateImages(source)
                 if ColorIdx==0
                     ColorIdx=1;
                 end
+                if ColorIdx>256
+                    ColorIdx = 256;
+                end
+
                 Clr = [cmap(ColorIdx,:),LineAlpha];
                 LineColors{i} = Clr;
             end
@@ -418,22 +428,48 @@ function [] = UpdateImages(source)
             end
             
         case 'View Objects'
-
-            % Object Viewer
-            try;delete(Handles.hObjectOFContour);catch;disp('Warning: Failed to delete contour plot');end
             
             cObject = Replicate.CurrentObject;
+            
+            % get object mask image, restrictive -> does not include nearby objects
+            % within padded object bounding box
+            RestrictedPaddedObjMask = cObject.RestrictedPaddedMaskSubImage;
+            
+            % pad the object subarrayidx with 5 pixels per side
+            PaddedSubarrayIdx = padSubarrayIdx(cObject.SubarrayIdx,5);
+            
+            try
+                delete(Handles.ObjectIntensityPlotAxH.Children);
+            catch
+                disp('Warning: Failed to delete object intensity fit plot...');
+            end
+
+            % initialize pixel-normalized intensity stack for curve fitting
+            PaddedObjPixelNormIntensity = zeros([size(RestrictedPaddedObjMask),4]);
+            % get pixel-normalized intensity stack for curve fitting
+            PaddedObjPixelNormIntensity(:) = cObject.Parent.norm(PaddedSubarrayIdx{:},:);
+            % calculate and plot object intensity curve fits
+            Handles.ObjectIntensityPlotAxH = PlotObjectIntensityProfile([0,pi/4,pi/2,3*(pi/4)],...
+                PaddedObjPixelNormIntensity,...
+                RestrictedPaddedObjMask,...
+                Handles.ObjectIntensityPlotAxH);            
+            
+            
+            % Object Viewer
+            try
+                delete(Handles.hObjectOFContour);
+            catch
+                disp('Warning: Failed to delete contour plot');
+            end
 
             % display the (padded) intensity image of the object
             try
                 Handles.ObjectPolFFCImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
-                %Handles.ObjectPolFFCAxH.CLim = [0 1];
+                colormap(Handles.ObjectPolFFCAxH,PODSData.Settings.IntensityColormaps{1});
             catch
                 disp('Warning: Error displaying object intensity image');
                 Handles.ObjectPolFFCImgH.CData = EmptyImage;
             end
-            
-            colormap(Handles.ObjectPolFFCAxH,PODSData.Settings.IntensityColormaps{1});
 
             % display object binary image
             try
@@ -444,33 +480,15 @@ function [] = UpdateImages(source)
                 Handles.ObjectMaskImgH.CData = EmptyImage;
             end
             
-            %Handles.ObjectOFImgH.CData = cObject.PaddedOFSubImage;
-            Handles.ObjectOFImgH.CData = cObject.PaddedOFSubImage;
-            Handles.ObjectOFAxH.Colormap = PODSData.Settings.OrderFactorColormap;
-            
-            % get object mask image, restrictive -> does not include nearby objects
-            % within padded object bounding box
-            RestrictedPaddedObjMask = cObject.RestrictedPaddedMaskSubImage;
-            % pad the object subarrayidc with 5 pixels per side
-            PaddedSubarrayIdx = padSubarrayIdx(cObject.SubarrayIdx,5);            
-            % initialize pixel-normalized intensity stack for curve fitting
-            PaddedObjPixelNormIntensity = zeros([size(RestrictedPaddedObjMask),4]);
-            % get pixel-normalized intensity stack for curve fitting
-            PaddedObjPixelNormIntensity(:) = cObject.Parent.norm(PaddedSubarrayIdx{:},:);
-            % calculate and plot object intensity curve fits
-            Handles.ObjectIntensityPlotAxH = PlotObjectIntensityProfile([0,pi/4,pi/2,3*(pi/4)],...
-                PaddedObjPixelNormIntensity,...
-                RestrictedPaddedObjMask,...
-                Handles.ObjectIntensityPlotAxH);
-            
-            % show pixel-normalized object intensity stack
-            % show all 4 images in same image object by horizontal concatenation
-            Handles.ObjectPixelNormIntStackImgH.CData = [PaddedObjPixelNormIntensity(:,:,1),...
-                PaddedObjPixelNormIntensity(:,:,2),...
-                PaddedObjPixelNormIntensity(:,:,3),...
-                PaddedObjPixelNormIntensity(:,:,4)];
-            colormap(Handles.ObjectPixelNormIntStackAxH,PODSData.Settings.IntensityColormaps{1});
-            
+            try
+                %Handles.ObjectOFImgH.CData = cObject.PaddedOFSubImage;
+                Handles.ObjectOFImgH.CData = cObject.PaddedOFSubImage;
+                Handles.ObjectOFAxH.Colormap = PODSData.Settings.OrderFactorColormap;
+            catch
+                disp('Warning: Error displaying object binary image');
+                Handles.ObjectOFImgH.CData = EmptyImage;
+            end
+
             % initialize stack-normalized intensity stack for display
             PaddedObjNormIntensity = zeros([size(RestrictedPaddedObjMask),4]);
             % get stack-normalized intensity stack for display
@@ -483,6 +501,8 @@ function [] = UpdateImages(source)
                 PaddedObjNormIntensity(:,:,3),...
                 PaddedObjNormIntensity(:,:,4)];
             colormap(Handles.ObjectNormIntStackAxH,PODSData.Settings.IntensityColormaps{1});
+            
+                        
 
 %% display object OF contour
             try
