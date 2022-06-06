@@ -1,9 +1,10 @@
 classdef PODSSettings < handle
-    %UNTITLED Summary of this class goes here
-    %   Detailed explanation goes here
+    %PODSSettings - PODSGUI project & display settings
+    %   An instance of this class holds and determines various 
+    %   settings for a single run of PODS GUI
     
-    % need to change to handle class
     properties
+        
         Zoom = struct('XRange',0,...
             'YRange',0,...
             'ZRange',0,...
@@ -21,10 +22,14 @@ classdef PODSSettings < handle
         
         MaskType = 'MakeNew';
         
+        % monitor tab switching
         CurrentTab = 'Files';
-        
         PreviousTab = 'Files';
         
+        % current image operation
+        CurrentImageOperation = 'Mask Threshold';
+        
+        % size of the display (to set main window Position)
         ScreenSize
         
         % sturcturing element for masking
@@ -32,9 +37,9 @@ classdef PODSSettings < handle
         SESize = 3;
         SELines = 0;
         
-        % for now, either 'One-Color' or 'Two-Color'
+        % for now, just 'One-Color'
         ExperimentType = 'One-Color';
-        % for now, from 1-2
+        % for now, just 1
         nChannels = 1;
         
         % struct of all colormaps
@@ -68,15 +73,31 @@ classdef PODSSettings < handle
         % object labeling
         ObjectLabels PODSLabel
         
+        % Fonts
+        DefaultFont char
+        
+        % px size (um/px)
+        PixelSize = 0.1083;
+        
     end
+    
     methods
+        
+        % constructor method
         function obj = PODSSettings()
-            % get monitor positions
-            %MonitorPosition = get(0,'MonitorPositions');
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
-            %clear MonitorPosition
+            % set up default object label (PODSLabel object)
             obj.ObjectLabels(1) = PODSLabel('Default',[1 1 1],1);
+            % get list of supported fonts
+            FontList = listfonts();
+            % check if 'Consolas' is in list of supported fonts
+            if ismember('Consolas',FontList)
+                obj.DefaultFont = 'Consolas';   % if so, make it default
+            else
+                obj.DefaultFont = 'Courier New';  % otherwise, use 'Courier New'
+            end            
+
             try
                 colormaps_mat_file = load('Colormaps.mat');
                 obj.AllColormaps = colormaps_mat_file.Colormaps;

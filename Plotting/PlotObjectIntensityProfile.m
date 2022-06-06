@@ -33,10 +33,7 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
         fcn = @(b) sum((fit(b,x) - y).^2);
         % Minimise Least-Squares
         s = fminsearch(fcn, [yr; 1;  ym]);
-%% Get x and y values of curve fit for current pixel       
-        % x values to plot
-        %xp = linspace(min(x),pi);
-        %xp = [0:pi/1000:pi];
+%% Get y values of curve fit for current pixel       
 
         % y values to plot - found with the fitting function
         CurveFit{i} = fit(s,xp);
@@ -48,13 +45,13 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     MaxY = max(cell2mat(CurveFitsNormalized));
     if MaxY>1
         Offset = MaxY-1;
-        disp(['Max y fit value > 1, subtracting ',num2str(Offset),' offset from each pixel fit...'])
+        %disp(['Max y fit value > 1, subtracting ',num2str(Offset),' offset from each pixel fit...']);
         for i = 1:nPixels
             CurveFitsNormalized{i} = CurveFitsNormalized{i}-Offset;
         end
     else
         Offset = 1-MaxY;
-        disp(['Max y fit value < 1, adding ',num2str(Offset),' offset to each pixel fit...'])
+        %disp(['Max y fit value < 1, adding ',num2str(Offset),' offset to each pixel fit...']);
         for i = 1:nPixels
             CurveFitsNormalized{i} = CurveFitsNormalized{i}+Offset;
         end
@@ -104,8 +101,8 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     MinVal = min(CurveFitAvg);
     MinIdx = find(CurveFitAvg==MinVal);
     
-    OrderFactorFit = MaxVal-MinVal
-    AzimuthRadians = xp(MaxIdx)
+    OrderFactorFit = MaxVal-MinVal;
+    AzimuthRadians = xp(MaxIdx);
     
     % dotted vert line showing azimuth
     line(axH,[xp(MaxIdx),xp(MaxIdx)],[0,MaxVal],'LineStyle','--','LineWidth',1,'HitTest','Off','Color',[1 1 0]);
@@ -118,15 +115,32 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     txtOF = [' OF Fit: ',num2str(round(OrderFactorFit,2)),' '];
     txtAzimuth = [' Azimuth Fit: ',num2str(round(rad2deg(AzimuthRadians))),'° '];
     
-    %LabelLoc = MaxVal-(MaxVal-YLowerLim)/2;
-    
-    
     if xp(MaxIdx) > pi/2
-        text(axH,xp(MinIdx),MaxVal-OrderFactorFit/2,txtOF,'HorizontalAlignment','Left','Color',[1 1 0]);
-        text(axH,xp(MaxIdx),MaxVal-(MaxVal-YLowerLim)/2,txtAzimuth,'HorizontalAlignment','Right','Color',[1 1 0]);
+        text(axH,...
+            xp(MinIdx),MaxVal-OrderFactorFit/2,...
+            txtOF,...
+            'Units','data',...
+            'HorizontalAlignment','Left',...
+            'Color',[1 1 0]);
+        text(axH,...
+            xp(MaxIdx),MaxVal-(MaxVal-YLowerLim)/2,...
+            txtAzimuth,...
+            'Units','data',...            
+            'HorizontalAlignment','Right',...
+            'Color',[1 1 0]);
     else
-        text(axH,xp(MinIdx),MaxVal-OrderFactorFit/2,txtOF,'HorizontalAlignment','Right','Color',[1 1 0]);
-        text(axH,xp(MaxIdx),MaxVal-(MaxVal-YLowerLim)/2,txtAzimuth,'HorizontalAlignment','Left','Color',[1 1 0]);
+        text(axH,...
+            xp(MinIdx),MaxVal-OrderFactorFit/2,...
+            txtOF,...
+            'Units','data',...            
+            'HorizontalAlignment','Right',...
+            'Color',[1 1 0]);
+        text(axH,...
+            xp(MaxIdx),MaxVal-(MaxVal-YLowerLim)/2,...
+            txtAzimuth,...
+            'Units','data',...            
+            'HorizontalAlignment','Left',...
+            'Color',[1 1 0]);
     end
     
     hold off
@@ -134,9 +148,5 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     %set(gcf,'Position',[1,1,1792,400]);
     set(axH,'XLim',[0 pi]);
     set(axH,'YLim',[YLowerLim YUpperLim]);
-    
-
-    
-
 
 end

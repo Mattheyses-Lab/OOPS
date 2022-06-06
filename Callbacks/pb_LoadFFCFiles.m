@@ -1,16 +1,11 @@
 function [] = pb_LoadFFCFiles(source,event)
-    %calls LoadFFCFiles(), which loads .nd2 FFC files using bfopen()
-    %displays images in upper panel of 'Files' tab
+
     PODSData = guidata(source);
     Settings = PODSData.Settings;
     GroupIndex = PODSData.CurrentGroupIndex;
-    %nChannels = PODSData.nChannels;
-    %ImageIndex = PODSData.Group(GroupIndex).CurrentImageIndex;
     InputFileType = Settings.InputFileType;
 
     FFCData = struct();
-
-%for ChIdx = 1:nChannels
     
     % current group based on user selected group and channel idxs
     cGroup = PODSData.Group(GroupIndex);
@@ -20,10 +15,14 @@ function [] = pb_LoadFFCFiles(source,event)
         %--------------------------.nd2 Files----------------------------------
         case '.nd2'
 
-            uiwait(msgbox(['Select .nd2 flat-field stack(s)']));
-
+            uialert(PODSData.Handles.fH,'Select .nd2 flat-field stack(s)','Load flat-field image stack(s)',...
+                'Icon','',...
+                'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
+            
+            uiwait(PODSData.Handles.fH);
+            PODSData.Handles.fH.Visible = 'Off';
             [cal_files, calPath, ~] = uigetfile('*.nd2',['Select .nd2 flat-field stack(s)'],'MultiSelect','on');
-
+            PODSData.Handles.fH.Visible = 'On';
             figure(PODSData.Handles.fH);
             
             if ~iscell(cal_files)
@@ -67,14 +66,18 @@ function [] = pb_LoadFFCFiles(source,event)
                 end
                 for j=1:4
                     FFCData.all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
-                    % indexing example:
-                    % FFCData.all_cal(row,col,pol,stack)
+                    % indexing example: FFCData.all_cal(row,col,pol,stack)
                 end
             end
             %------------------------------.tif Files----------------------------------
             
         case '.tif'
-            uiwait(msgbox(['Select .tif flat-field stack(s)']));
+            
+            uialert(PODSData.Handles.fH,'Select .tif flat-field stack(s)','Load flat-field image stack(s)',...
+                'Icon','',...
+                'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
+            
+            uiwait(PODSData.Handles.fH);
 
             [cal_files, calPath, ~] = uigetfile('*.tif',['Select .nd2 flat-field stack(s)'],'MultiSelect','on');
 
@@ -137,7 +140,6 @@ function [] = pb_LoadFFCFiles(source,event)
     cGroup.FFCData = FFCData;
     
     clear FFCData
-%end 
     
     % update gui with new PODSData
     guidata(source,PODSData);

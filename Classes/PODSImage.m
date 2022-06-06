@@ -95,9 +95,16 @@ classdef PODSImage < handle
         SBCutoff = 3
         OFFiltered double
         
+%%
+
+        PrimaryIntensityDisplayLimits = [0 1];
+        ReferenceIntensityDisplayLimits = [0 1];
+        
 %% Settings
         % store handle to settings object to speed up retrieval of various settings
         Settings PODSSettings
+        
+
 
     end
     
@@ -122,6 +129,9 @@ classdef PODSImage < handle
         
         % image dimensions, returned as char array for display purposes: 'dim1xdim2'
         Dimensions char
+        
+        % 2-element vector describing the limits of the image in real-world coordinates
+        RealWorldLimits double        
         
         % depends on bwFiltered
         FiltOFAvg double
@@ -383,7 +393,11 @@ classdef PODSImage < handle
             
             Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
             
-        end 
+        end
+        
+        function RealWorldLimits = get.RealWorldLimits(obj)
+            RealWorldLimits = [0 obj.Settings.PixelSize*obj.Width];
+        end
         
         function FiltOFAvg = get.FiltOFAvg(obj)
             

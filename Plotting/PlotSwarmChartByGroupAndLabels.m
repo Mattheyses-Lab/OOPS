@@ -42,6 +42,11 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
             X{PlotIdx} = PlotIdx*ones(size(Y{PlotIdx}));
             
             try
+                % throw error if we have any NaNs
+                if any(isnan(Y{PlotIdx}))
+                    error();
+                end
+                
                 switch PODSData.Settings.SwarmChartColorMode
                     case 'Magnitude'
                         % color by value

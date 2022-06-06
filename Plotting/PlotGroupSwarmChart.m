@@ -35,8 +35,8 @@ end
 Y = cell(nPlots,1);
 X = cell(nPlots,1);
 
-% empty array to hold the swarm plots
-%hSwarmPlot = [];
+% empty array to hold the swarmcharts
+hSwarmPlot = [];
 
 % maximum value in each group
 MaxPerGroup = [];
@@ -48,6 +48,11 @@ for i = 1:nPlots
     X{i} = i*ones(size(Y{i}));
     
     try
+        % throw error if we have any NaNs
+        if any(isnan(Y{i}))
+            error();
+        end
+
         switch PODSData.Settings.SwarmChartColorMode
             case 'Magnitude'
                 % color by value

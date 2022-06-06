@@ -32,6 +32,7 @@ classdef PODSObject < handle
         % index to the subimage such that L(idx{:}) extracts the elements
         SubarrayIdx
         
+        
         MaxFFCAvgIntensity
         MeanFFCAvgIntensity
         MinFFCAvgIntensity
@@ -197,6 +198,13 @@ classdef PODSObject < handle
             catch
                 AvgReferenceChannelIntensity = NaN;
             end
+%             Img = obj.Parent.ReferenceImage./max(max(obj.Parent.ReferenceImage));
+%             try
+%                 AvgReferenceChannelIntensity = mean(Img(obj.PixelIdxList));
+%             catch
+%                 AvgReferenceChannelIntensity = NaN;
+%             end
+
         end
         
         function IntegratedReferenceChannelIntensity = get.IntegratedReferenceChannelIntensity(obj)
@@ -205,6 +213,12 @@ classdef PODSObject < handle
             catch
                 IntegratedReferenceChannelIntensity = NaN;
             end
+%             Img = obj.Parent.ReferenceImage./max(max(obj.Parent.ReferenceImage));
+%             try
+%                 IntegratedReferenceChannelIntensity = sum(Img(obj.PixelIdxList));
+%             catch
+%                 IntegratedReferenceChannelIntensity = NaN;
+%             end
         end        
         
         function LabelIdx = get.LabelIdx(obj)

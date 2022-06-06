@@ -46,20 +46,6 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
     MainReplicate.ThresholdAdjusted = 1;
     % update mask display
     Handles.MaskImgH.CData = bw;
-
-%     % build mask and detect object for other channels, if applicable
-%     for i = 1:PODSData.nChannels
-%         if i ~= MainReplicate.SelfChannelIdx
-%             cReplicate = PODSData.Group(cGroupIdx,i).Replicate(cImageIdx);
-%             cReplicate.bw = MainReplicate.bw;
-%             cReplicate.L = MainReplicate.L;
-%             UpdateLog3(source,['Building objects for Channel:',cReplicate.ChannelName,' from objects in Channel:',MainReplicate.ChannelName,'...'],'append');
-%             delete(cReplicate.Object);
-%             cReplicate.DetectObjects;
-%             cReplicate.ObjectDetectionDone = true;
-%             cReplicate.ThresholdAdjusted = 1;
-%         end
-%     end
     
     UpdateLog3(source,'Done.','append');
     

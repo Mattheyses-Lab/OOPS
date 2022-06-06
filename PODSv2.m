@@ -20,10 +20,17 @@ Handles.fH = uifigure('Name','PODS GUI',...
     'AutoResizeChildren','off',...
     'SizeChangedFcn',@ResetContainerSizes);
 
-% set some defaults to save time and improve readability
-set(gcf,'defaultUipanelFontName','Consolas');
+%% set some defaults to save time and improve readability
+% panel properties
+set(gcf,'defaultUipanelFontName',PODSData.Settings.DefaultFont);
+set(gcf,'defaultUipanelFontWeight','Bold');
 set(gcf,'defaultUipanelBackgroundColor','Black');
 set(gcf,'defaultUipanelForegroundColor','White');
+set(gcf,'defaultUipanelAutoResizeChildren','Off');
+
+% text properties
+set(gcf,'defaultTextFontName',PODSData.Settings.DefaultFont);
+set(gcf,'defaultTextFontWeight','bold');
 
 %% CHECKPOINT
 
@@ -156,12 +163,13 @@ Handles.SettingsSelector = uilistbox('parent',Handles.SettingsSelectorPanelGrid,
     'Visible','Off',...
     'enable','on',...
     'tag','SettingsSelector',...
-    'Items',{'Adjust mask threshold'},...
+    'Items',{'Mask Threshold','Intensity Display'},...
     'BackgroundColor',[1 1 1],...
     'FontColor',[0 0 0],...
-    'FontName','Consolas',...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontWeight','Bold',...
     'MultiSelect','Off',...
-    'Enable',0);
+    'ValueChangedFcn',@ChangeImageOperation);
 
 Handles.SettingsPanel = uipanel(Handles.ImageOperationsGrid,...
     'Visible','Off',...
@@ -245,9 +253,9 @@ Handles.GroupSelector = uilistbox('parent',Handles.GroupSelectorPanelGrid,...
     'ValueChangedFcn',@ChangeActiveGroup,...
     'BackgroundColor',[1 1 1],...
     'FontColor',[0 0 0],...
-    'FontName','Consolas',...
-    'MultiSelect','Off',...
-    'Enable',0);
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontWeight','Bold',...
+    'MultiSelect','Off');
 
 Handles.ImageSelectorPanel = uipanel(Handles.SelectorGrid,'Title','Image Selection','Visible','Off');
 Handles.ImageSelectorPanelGrid = uigridlayout(Handles.ImageSelectorPanel,[1,1],'Padding',[0 0 0 0]);
@@ -259,9 +267,9 @@ Handles.ImageSelector = uilistbox('parent',Handles.ImageSelectorPanelGrid,...
     'ValueChangedFcn',@ChangeActiveImage,...
     'BackgroundColor',[1 1 1],...
     'FontColor',[0 0 0],...
-    'FontName','Consolas',...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontWeight','Bold',...
     'MultiSelect','on',...
-    'Enable',0,...
     'Visible','Off');
 
 Handles.ObjectSelectorPanel = uipanel(Handles.SelectorGrid,'Title','Object Selection','Visible','Off');
@@ -274,9 +282,9 @@ Handles.ObjectSelector = uilistbox('parent',Handles.ObjectSelectorPanelGrid,...
     'ValueChangedFcn',@ChangeActiveObject,...
     'BackgroundColor',[1 1 1],...
     'FontColor',[0 0 0],...
-    'FontName','Consolas',...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontWeight','Bold',...
     'MultiSelect','off',...
-    'Enable',0,...
     'Visible','Off');
 
 %% CHECKPOINT
@@ -291,8 +299,9 @@ Handles.ThreshAxH = uiaxes(Handles.SettingsPanel,...
     'OuterPosition',[0 0 1 1],...
     'Color',[0 0 0],...
     'Visible','Off',...
-    'FontName','Consolas',...
+    'FontName',PODSData.Settings.DefaultFont,...
     'FontSize',12,...
+    'FontWeight','Bold',...
     'XTick',[],...
     'XTickMode','Manual',...
     'XTickLabel',{'0' '0.1' '0.2' '0.3' '0.4' '0.5' '0.6' '0.7' '0.8' '0.9' '1.0'},...
@@ -323,7 +332,7 @@ Handles.CurrentThresholdLine = xline(Handles.ThreshAxH,0.5,'-',{'Threshold = 0.5
     'LabelOrientation','Horizontal',...
     'PickableParts','None',...
     'HitTest','Off',...
-    'FontName','Consolas',...
+    'FontName',PODSData.Settings.DefaultFont,...
     'FontWeight','Bold',...
     'LineWidth',1.5,...
     'Color',[1 1 0],...
@@ -331,6 +340,48 @@ Handles.CurrentThresholdLine = xline(Handles.ThreshAxH,0.5,'-',{'Threshold = 0.5
 
 drawnow
 pause(0.1)
+
+%% Intensity display limits range sliders
+
+Handles.PrimaryIntensitySlider = RangeSlider('Parent',Handles.SettingsPanel,...
+        'Position',[0 0.5 1 0.5],...
+        'Visible','Off',...
+        'Limits',[0 1],...
+        'Value',[0 1],...
+        'Knob1Color',[1 1 1],...
+        'Knob1EdgeColor',[0 0 0],...
+        'Knob2Color',[1 1 1],...
+        'Knob2EdgeColor',[0 0 0],...
+        'RangeColor',[1 1 1],...
+        'MidLineColor','#A9A9A9',...
+        'Title','Primary channel intensity',...
+        'TitleColor',[1 1 1],...
+        'BackgroundColor','Black',...
+        'LabelColor','Black',...
+        'LabelBGColor',[1 1 1 0.5],...
+        'TickColor','White');
+
+Handles.PrimaryIntensitySlider.ValueChangedFcn = @AdjustPrimaryChannelIntensity;
+
+Handles.ReferenceIntensitySlider = RangeSlider('Parent',Handles.SettingsPanel,...
+        'Position',[0 0 1 0.5],...
+        'Visible','Off',...
+        'Limits',[0 1],...
+        'Value',[0 1],...
+        'Knob1Color',[1 1 1],...
+        'Knob1EdgeColor',[0 0 0],...
+        'Knob2Color',[1 1 1],...
+        'Knob2EdgeColor',[0 0 0],...
+        'RangeColor',[1 1 1],...
+        'MidLineColor','#A9A9A9',...
+        'Title','Reference channel intensity',...
+        'TitleColor',[1 1 1],...
+        'BackgroundColor','Black',...
+        'LabelColor','Black',...
+        'LabelBGColor',[1 1 1 0.5],...
+        'TickColor','White');
+
+Handles.ReferenceIntensitySlider.ValueChangedFcn = @AdjustReferenceChannelIntensity;
 
 %% CHECKPOINT
 
@@ -344,7 +395,7 @@ Handles.LogWindow = uitextarea(Handles.LogWindowGrid,...
     'tag','LogWindow',...
     'BackgroundColor','black',...
     'FontColor','yellow',...
-    'FontName','Consolas',...
+    'FontName',PODSData.Settings.DefaultFont,...
     'Value',{''},...
     'Visible','Off');
 
@@ -357,7 +408,7 @@ Handles.ProjectDataTableGrid = uigridlayout(Handles.AppInfoPanel,[1,1],'Backgrou
 Handles.ProjectDataTable = uilabel(Handles.ProjectDataTableGrid,...
     'tag','ProjectDataTable',...
     'FontColor','Yellow',...
-    'FontName','Consolas',...
+    'FontName',PODSData.Settings.DefaultFont,...
     'BackgroundColor','Black',...
     'VerticalAlignment','Top',...
     'Interpreter','html');
@@ -398,20 +449,13 @@ for i = 1:4
     clear pbarOriginal tagOriginal
     
     Handles.FFCAxH(i) = SetAxisTitle(Handles.FFCAxH(i),['Flat-Field Image (' num2str((i-1)*45) '^{\circ} Excitation)']);
-    
     Handles.FFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-%     Handles.FFCAxH(i).Toolbar.Visible = 'Off';
-%     Handles.FFCAxH(i).Title.Visible = 'Off';
-%     Handles.FFCAxH(i).HitTest = 'Off';
+    Handles.FFCImgH(i).HitTest = 'Off';
     
-%     Handles.FFCImgH(i).Visible = 'Off';
-     Handles.FFCImgH(i).HitTest = 'Off';
-     disableDefaultInteractivity(Handles.FFCAxH(i));
+    disableDefaultInteractivity(Handles.FFCAxH(i));
 end
 
 Handles.AllSmallAxes = Handles.FFCAxH;
-
-%linkaxes(FFCAxH);
 
     %% RAW INTENSITY IMAGES
 for i = 1:4
@@ -434,12 +478,10 @@ for i = 1:4
     clear pbarOriginal tagOriginal
     
     Handles.RawIntensityAxH(i) = SetAxisTitle(Handles.RawIntensityAxH(i),['Raw Intensity (' num2str((i-1)*45) '^{\circ} Excitation)']);
-    
     Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-
     Handles.RawIntensityImgH(i).HitTest = 'Off';
-    disableDefaultInteractivity(Handles.RawIntensityAxH(i));
     
+    disableDefaultInteractivity(Handles.RawIntensityAxH(i));
     Handles.AllSmallAxes(end+1) = Handles.RawIntensityAxH(i);
 end
 
@@ -642,8 +684,10 @@ disp('Setting up large image axes...')
     
     Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
     Handles.SwarmPlotAxH.XAxis.Label.Color = 'Yellow';
+    Handles.SwarmPlotAxH.XAxis.FontName = PODSData.Settings.DefaultFont;
     Handles.SwarmPlotAxH.YAxis.Label.String = "Object Order Factor";
     Handles.SwarmPlotAxH.YAxis.Label.Color = 'Yellow';
+    Handles.SwarmPlotAxH.YAxis.FontName = PODSData.Settings.DefaultFont;
     Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
 
     Handles.SwarmPlotAxH.Title.Visible = 'Off';
@@ -669,8 +713,10 @@ disp('Setting up large image axes...')
     
     Handles.ScatterPlotAxH.XAxis.Label.String = "Local S/B";
     Handles.ScatterPlotAxH.XAxis.Label.Color = 'Yellow';
+    Handles.ScatterPlotAxH.XAxis.Label.FontName = PODSData.Settings.DefaultFont;
     Handles.ScatterPlotAxH.YAxis.Label.String = "Object-Average Order Factor";
     Handles.ScatterPlotAxH.YAxis.Label.Color = 'Yellow';
+    Handles.ScatterPlotAxH.YAxis.Label.FontName = PODSData.Settings.DefaultFont;
     Handles.ScatterPlotAxH.Toolbar.Visible = 'Off';
 
     Handles.ScatterPlotAxH.Title.Visible = 'Off';
@@ -738,6 +784,7 @@ disp('Setting up large image axes...')
     Handles.FilteredOFAxH.Toolbar.Visible = 'Off';
     Handles.FilteredOFAxH.Title.Visible = 'Off';
     Handles.FilteredOFAxH.HitTest = 'Off';
+    
     disableDefaultInteractivity(Handles.FilteredOFAxH);
     
     Handles.FilteredOFImgH.Visible = 'Off';
@@ -925,7 +972,7 @@ disp('Setting up object image axes...')
         'XTickLabel',{'0°' '45°' '90°' '135°' '180°'});
     Handles.ObjectIntensityPlotAxH.Title.String = 'Pixel-normalized intensitites fit to sinusoids';
     Handles.ObjectIntensityPlotAxH.Title.Color = 'Yellow';
-    Handles.ObjectIntensityPlotAxH.Title.FontName = 'Consolas';
+    Handles.ObjectIntensityPlotAxH.Title.FontName = PODSData.Settings.DefaultFont;
     Handles.ObjectIntensityPlotAxH.Title.HorizontalAlignment = 'Center';
     Handles.ObjectIntensityPlotAxH.Title.VerticalAlignment = 'Top';
     
@@ -935,7 +982,6 @@ disp('Setting up object image axes...')
     Handles.ObjectIntensityPlotAxH.YAxis.Label.Color = [1 1 0];    
     
     disableDefaultInteractivity(Handles.ObjectIntensityPlotAxH);
-    
     
     %% Object Stack-Normalized Intensity Stack
     
@@ -984,6 +1030,10 @@ set(Handles.ImageSelectorPanel,'Visible','On');
 set(Handles.ImageSelector,'Visible','On');
 set(Handles.ObjectSelectorPanel,'Visible','On');
 set(Handles.ObjectSelector,'Visible','On');
+
+Handles.LineScanROI = [];
+Handles.LineScanFig = [];
+Handles.LineScanPlot = [];
 
 PODSData.Handles = Handles;
 guidata(PODSData.Handles.fH,PODSData)
@@ -1081,6 +1131,37 @@ pause(0.5)
         drawnow limitrate
     end
 
+%% Callbacks for intensity display scaling
+
+    function [] = AdjustPrimaryChannelIntensity(source,event)
+        PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits = source.Value;
+        
+        if PODSData.CurrentImage(1).ReferenceImageLoaded & Handles.ShowReferenceImageAverageIntensity.Value
+            UpdateCompositeRGB();
+        else
+            Handles.AverageIntensityAxH.CLim = source.Value;
+        end
+    end
+
+    function [] = AdjustReferenceChannelIntensity(source,event)
+        PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits = source.Value;
+        
+        if PODSData.CurrentImage(1).ReferenceImageLoaded & Handles.ShowReferenceImageAverageIntensity.Value
+            UpdateCompositeRGB();
+        end
+    end
+
+    function UpdateCompositeRGB()
+        Handles.AverageIntensityImgH.CData = ...
+            CompositeRGB(PODSData.CurrentImage(1).I,...
+            PODSData.Settings.IntensityColormaps{1},...
+            PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits,...
+            Scale0To1(PODSData.CurrentImage(1).ReferenceImage),...
+            PODSData.Settings.ReferenceColormap,...
+            PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits);
+        Handles.AverageIntensityAxH.CLim = [0 255];
+    end
+
 %% Settings axes properties during startup (to be eventually replaced with custom container classes)
 
     function [axH] = restore_axis_defaults(axH,OriginalPlotBoxAspectRatio,OriginalTag)
@@ -1111,6 +1192,7 @@ pause(0.5)
                 addShowSelectionToolbarBtn;
                 addRectangularROIToolbarBtn;
                 addShowReferenceImageToolbarBtn;
+                addLineScanToolbarBtn;
             case 'MStepsIntensity'
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
@@ -1175,6 +1257,14 @@ pause(0.5)
             Handles.(btn.Tag) = btn;
         end
         
+        function addLineScanToolbarBtn;
+            btn = axtoolbarbtn(tb,'push');
+            btn.Icon = 'LineScanIcon.png';
+            btn.ButtonPushedFcn = @tbLineScan;
+            btn.Tag = ['LineScan',axH.Tag];
+            Handles.(btn.Tag) = btn;
+        end
+        
         
     end
 
@@ -1182,11 +1272,12 @@ pause(0.5)
         % Set image (actually axis) title to top center of axis
         axH.Title.String = title;
         axH.Title.Units = 'Normalized';
-        axH.Title.FontName = 'Consolas';
+        axH.Title.FontName = PODSData.Settings.DefaultFont;
         axH.Title.HorizontalAlignment = 'Center';
         axH.Title.VerticalAlignment = 'Top';
         axH.Title.Color = 'White';
         axH.Title.Position = [0.5,1.0,0];
+        axH.Title.BackgroundColor = [0 0 0 0.5];
         axH.Title.HitTest = 'Off';
     end
 
@@ -1359,6 +1450,11 @@ pause(0.5)
 
             case 'Filtered Order Factor'
                 
+                Handles.AverageIntensityImgH.Visible = 'Off';
+                Handles.AverageIntensityAxH.Title.Visible = 'Off';
+                Handles.AverageIntensityAxH.Toolbar.Visible = 'Off';
+                Handles.AverageIntensityAxH.HitTest = 'Off';                
+
                 Handles.FilteredOFImgH.Visible = 'Off';
                 Handles.FilteredOFAxH.Title.Visible = 'Off';
                 Handles.FilteredOFAxH.Toolbar.Visible = 'Off';
@@ -1477,8 +1573,7 @@ pause(0.5)
                     Handles.SmallPanels(1,i+2).Visible = 'Off';
                     Handles.SmallPanels(2,i+2).Visible = 'Off';
                 end
-                
-                
+
                 linkaxes([Handles.MStepsAxH,Handles.MaskAxH],'xy');
                 
             case 'View/Adjust Mask'
@@ -1489,8 +1584,7 @@ pause(0.5)
                 Handles.AverageIntensityAxH.Title.Visible = 'On';
                 Handles.AverageIntensityAxH.Toolbar.Visible = 'On';
                 Handles.AverageIntensityAxH.HitTest = 'On';
-                
-                
+
                 Handles.MaskImgH.Visible = 'On';
                 Handles.MaskAxH.Title.Visible = 'On';
                 Handles.MaskAxH.Toolbar.Visible = 'On';
@@ -1509,8 +1603,6 @@ pause(0.5)
                 Handles.OrderFactorAxH.Title.Visible = 'On';
                 Handles.OrderFactorAxH.Toolbar.Visible = 'On';
                 Handles.OrderFactorAxH.HitTest = 'On';
-%                 Handles.OrderFactorAxH.XLim = [1 1024];
-%                 Handles.OrderFactorAxH.YLim = Handles.OrderFactorAxH.XLim;
                 
                 Handles.AverageIntensityImgH.Visible = 'On';
                 Handles.AverageIntensityAxH.Title.Visible = 'On';
@@ -1531,7 +1623,6 @@ pause(0.5)
                 
             case 'Azimuth'
                 
-                %Handles.AzimuthAxH.Visible = 'On';
                 Handles.AzimuthImgH.Visible = 'On';
                 Handles.AzimuthAxH.Title.Visible = 'On';
                 Handles.AzimuthAxH.Toolbar.Visible = 'On';
@@ -1559,8 +1650,7 @@ pause(0.5)
                 try
                     Handles.ScatterPlotAxH.Legend.Visible = 'On';
                 end
-                
-                
+
                 Handles.ScatterPlotAxH.Title.Visible = 'On';
                 Handles.ScatterPlotAxH.Toolbar.Visible = 'On';
                 Handles.ScatterPlotAxH.Visible = 'On';
@@ -1578,6 +1668,11 @@ pause(0.5)
                 end
                 
             case 'Filtered Order Factor'
+                
+                Handles.AverageIntensityImgH.Visible = 'On';
+                Handles.AverageIntensityAxH.Title.Visible = 'On';
+                Handles.AverageIntensityAxH.Toolbar.Visible = 'On';
+                Handles.AverageIntensityAxH.HitTest = 'On';
                 
                 Handles.FilteredOFImgH.Visible = 'On';
                 Handles.FilteredOFAxH.Title.Visible = 'On';
@@ -1721,6 +1816,39 @@ pause(0.5)
         UpdateImages(source);
         UpdateTables(source);
     end
+
+%% Changing active image operation
+
+    function[] = ChangeImageOperation(source,event)
+        
+        data = guidata(source);
+        OldOperation = data.Settings.CurrentImageOperation;
+        data.Settings.CurrentImageOperation = source.Value;
+        
+        switch OldOperation
+            case 'Mask Threshold'
+                data.Handles.ThreshAxH.Visible = 'Off';
+                data.Handles.ThreshBar.Visible = 'Off';
+                data.Handles.CurrentThresholdLine.Visible = 'Off';
+            case 'Intensity Display'
+                data.Handles.PrimaryIntensitySlider.Visible = 'Off';
+                data.Handles.ReferenceIntensitySlider.Visible = 'Off';
+        end
+
+        switch data.Settings.CurrentImageOperation
+            case 'Mask Threshold'
+                data.Handles.SettingsPanel.Title = 'Adjust mask threshold';
+                data.Handles.ThreshAxH.Visible = 'On';
+                data.Handles.ThreshBar.Visible = 'On';
+                data.Handles.CurrentThresholdLine.Visible = 'On';
+            case 'Intensity Display'
+                data.Handles.SettingsPanel.Title = 'Adjust intensity display limits';
+                data.Handles.PrimaryIntensitySlider.Visible = 'On';
+                data.Handles.ReferenceIntensitySlider.Visible = 'On';
+        end
+
+    end
+
 
 %% Local SB
 
@@ -1984,7 +2112,6 @@ pause(0.5)
                 im.AlphaData = 1;
         end
         
-        %guidata(source,PODSData);
     end
 
     function [] = tbShowSelectionStateChanged(source,event)
@@ -2003,6 +2130,7 @@ pause(0.5)
         if PODSData.CurrentImage.ReferenceImageLoaded
             UpdateImages(source);
         else
+            source.Value = 0;
             warning('No reference image to overlay...')
         end
     end
@@ -2019,4 +2147,66 @@ pause(0.5)
         % update display
         UpdateImages(source);
     end
+
+    function [] = tbLineScan(source,event)
+        
+        try
+            delete(Handles.LineScanROI);
+            delete(Handles.LineScanFig);
+        catch
+            % do nothing for now
+        end
+        
+        Handles.LineScanROI = images.roi.Line(Handles.AverageIntensityAxH);
+        XRange = Handles.AverageIntensityAxH.XLim(2)-Handles.AverageIntensityAxH.XLim(1);
+        YRange = Handles.AverageIntensityAxH.YLim(2)-Handles.AverageIntensityAxH.YLim(1);
+        x1 = Handles.AverageIntensityAxH.XLim(1)+0.25*XRange;
+        x2 = Handles.AverageIntensityAxH.XLim(2)-0.25*XRange;
+        y1 = Handles.AverageIntensityAxH.YLim(1)+0.5*YRange;
+        y2 = Handles.AverageIntensityAxH.YLim(1)+0.5*YRange;
+        
+        Handles.LineScanFig = uifigure('Name','Intensity line scan',...
+            'HandleVisibility','On',...
+            'WindowStyle','AlwaysOnTop',...
+            'Units','Normalized',...
+            'Position',[0.6 0.8 0.4 0.2],...
+            'CloseRequestFcn',@CloseLineScanFig);        
+        
+        Handles.LineScanAxes = uiaxes(Handles.LineScanFig,'Units','Normalized','OuterPosition',[0 0 1 1]);
+        
+        Handles.LineScanROI.Position = [x1 y1; x2 y2];
+        
+        addlistener(Handles.LineScanROI,'MovingROI',@OneChannelLineScan);
+        addlistener(Handles.LineScanROI,'ROIMoved',@OneChannelLineScan);        
+
+    end
+
+    function CloseLineScanFig(source,event)
+        
+        delete(Handles.LineScanROI);
+        delete(Handles.LineScanFig);
+        
+    end
+
+
+    function OneChannelLineScan(source,event)
+        
+        if PODSData.CurrentImage.ReferenceImageLoaded & PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
+            Handles.LineScanAxes = PlotDoubleLineScan(Handles.LineScanAxes,...
+                Handles.LineScanROI.Position,...
+                PODSData.CurrentImage.I,...
+                Scale0To1(PODSData.CurrentImage.ReferenceImage),...
+                PODSData.CurrentImage.RealWorldLimits);
+            %drawnow limitrate
+        else
+            Handles.LineScanAxes = PlotLineScan(Handles.LineScanAxes,...
+                Handles.LineScanROI.Position,...
+                PODSData.CurrentImage.I,...
+                PODSData.CurrentImage.RealWorldLimits);
+            %drawnow limitrate
+        end
+        
+    end
+
+
 end

@@ -13,13 +13,19 @@ cGroup = PODSData.Group(GroupIndex);
 switch InputFileType
     %--------------------------------------------------------------------------
     case '.nd2'
-        % msg box with instructions
-        uiwait(msgbox(['Select .nd2 reference images']));
+        
+        uialert(PODSData.Handles.fH,'Select .nd2 reference images','Load Reference Images',...
+            'Icon','',...
+            'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
+        
+        uiwait(PODSData.Handles.fH);
+        % hide main window
+        PODSData.Handles.fH.Visible = 'Off';
         % get reference image files (single or multiple)
         [Pol_files, PolPath, ~] = uigetfile('*.nd2',['Select .nd2 reference images'],'MultiSelect','on');
-        % make PODSGUI active figure
-        figure(PODSData.Handles.fH);
-        
+        % show main window
+        PODSData.Handles.fH.Visible = 'On';
+
         if(iscell(Pol_files) == 0)
             if(Pol_files==0)
                 error('No files selected. Exiting...');
@@ -61,12 +67,20 @@ switch InputFileType
             Height = size(temp2{1,1},1);
             Width = size(temp2{1,1},2);
             
-            if Height~=cGroup.Replicate(i).Height | Width~=cGroup.Replicate(i).Width
-                error('Reference image dimensions do not match polarization image dimensions...')
+            try
+                if Height~=cGroup.Replicate(i).Height | Width~=cGroup.Replicate(i).Width
+                    error(['Error loading reference images' newline 'Reference image dimensions do not match polarization image dimensions']);
+                end
+            catch ME
+                report = getReport(ME);
+                uialert(PODSData.fH,report,'Error');
+                return
             end
             
             cGroup.Replicate(i).ReferenceImage(:,:,1) = im2double(temp2{1,1})*65535;
             cGroup.Replicate(i).ReferenceImageLoaded = true;
+            
+            
         end
         %--------------------------------------------------------------------------
     case '.tif'
@@ -74,6 +88,8 @@ switch InputFileType
         % do nothing for now
         
 end
+
+UpdateLog3(source,'Done.','append');
     
 Handles.ShowReferenceImageAverageIntensity.Visible = 'On';
 
