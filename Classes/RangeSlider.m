@@ -47,7 +47,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
     methods (Access=protected)
         function setup(obj)
             
-            obj.Interruptible = 'Off';
+            obj.Interruptible = 'On';
             obj.BusyAction = 'Cancel';
             obj.Units = 'Normalized';
             
@@ -120,8 +120,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 'VerticalAlignment','Bottom',...
                 'HorizontalAlignment','Right',...
                 'HitTest','Off',...
-                'Margin',1,...
-                'FontUnits','Normalized');
+                'Margin',1);
             obj.KnobLabel(2) = text(obj.RangeAxes,...
                 obj.Limits(2)+0.015,...
                 obj.YDist+0.1,...
@@ -129,8 +128,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 'VerticalAlignment','Bottom',...
                 'HorizontalAlignment','Left',...
                 'HitTest','Off',...
-                'Margin',1,...
-                'FontUnits','Normalized');
+                'Margin',1);
         end
         
         function update(obj)
@@ -216,7 +214,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             end
 
             function CurrentPoint = get.CurrentPoint(obj)
-                CurrentPoint = round(obj.RangeAxes.CurrentPoint(1,1),4);
+                CurrentPoint = obj.RangeAxes.CurrentPoint(1,1)
             end
             
             function MoveKnob1(obj)
@@ -229,7 +227,9 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 end
                 obj.RangeLine.XData(1) = obj.Knob(1).Value;
                 obj.KnobLabel(1).Position(1) = obj.Knob(1).Value-0.01;
-                obj.KnobLabel(1).String = num2str(round(obj.Knob(1).Value,2));                
+                obj.KnobLabel(1).String = num2str(round(obj.Knob(1).Value,2));
+
+                drawnow
             end
             
             function MoveKnob2(obj)
@@ -242,7 +242,8 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 end
                 obj.RangeLine.XData(2) = obj.Knob(2).Value;
                 obj.KnobLabel(2).Position(1) = obj.Knob(2).Value+0.01;
-                obj.KnobLabel(2).String = num2str(round(obj.Knob(2).Value,2));                
+                obj.KnobLabel(2).String = num2str(round(obj.Knob(2).Value,2));
+                drawnow
             end
 
             function StopMovingAndRestoreCallbacks(obj)

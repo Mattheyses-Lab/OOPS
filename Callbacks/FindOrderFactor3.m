@@ -64,7 +64,7 @@ function [] = FindOrderFactor3(source,event)
     PODSData.Group(cGroupIndex).Replicate = cReplicate;
     
     % update gui with new PODSData
-    guidata(source,PODSData);
+    %guidata(source,PODSData);
     
     % change to the Order Factor 'tab' if not there already
     if ~strcmp(PODSData.Settings.CurrentTab,'Order Factor')

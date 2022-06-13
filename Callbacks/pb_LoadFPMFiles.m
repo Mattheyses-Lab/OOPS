@@ -23,7 +23,13 @@ function [] = pb_LoadFPMFiles(source,event)
             % hide main window
             PODSData.Handles.fH.Visible = 'Off';
             % get FPM files (single or multiple)
-            [Pol_files, PolPath, ~] = uigetfile('*.nd2',['Select .nd2 polarization stack(s)'],'MultiSelect','on');
+            [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
+                ['Select .nd2 polarization stack(s)'],...
+                'MultiSelect','on',...
+                PODSData.Settings.LastDirectory);
+
+            PODSData.Settings.LastDirectory = PolPath;
+
             % show main window
             PODSData.Handles.fH.Visible = 'On';
             
@@ -88,7 +94,12 @@ function [] = pb_LoadFPMFiles(source,event)
             
             uiwait(PODSData.Handles.fH);            
             
-            [Pol_files, PolPath, ~] = uigetfile('*.tif',['Select .tif polarization stack(s)'],'MultiSelect','on');
+            [Pol_files, PolPath, ~] = uigetfile('*.tif',...
+                ['Select .tif polarization stack(s)'],...
+                'MultiSelect','on',...
+                PODSData.Settings.LastDirectory);
+
+            PODSData.Settings.LastDirectory = PolPath;
             
             if(iscell(Pol_files) == 0)
                 if(Pol_files==0)

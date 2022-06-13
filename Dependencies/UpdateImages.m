@@ -1,5 +1,4 @@
 function [] = UpdateImages(source)
-    %% Get relevant variables needed to update image data
     
     % get main data structure
     PODSData = guidata(source);
@@ -9,7 +8,6 @@ function [] = UpdateImages(source)
     
     % get current group index
     cGroupIndex = PODSData.CurrentGroupIndex;
-    % get current channel index
 
     % get current replicate index within group
     cImageIndex = PODSData.Group(cGroupIndex).CurrentImageIndex;
@@ -27,6 +25,7 @@ function [] = UpdateImages(source)
     % empty image to serve as a placeholder
     EmptyImage = sparse(zeros(cImage.Height,cImage.Width));
     
+    % get the current tab
     CurrentTab = PODSData.Settings.CurrentTab;
 
 %% Update CData of gui image objects to reflect user-specified group/image change 
@@ -39,14 +38,12 @@ function [] = UpdateImages(source)
                     Handles.FFCImgH(i).CData = FFCData.cal_norm(:,:,i);
                     Handles.FFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end
-                drawnow
             catch
                 UpdateLog3(source,'WARNING: No FFC Images found for this group, try loading them now','append');
                 for i = 1:4
                     Handles.FFCImgH(i).CData = EmptyImage;
                     Handles.FFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-                end                
-                drawnow
+                end
             end
 
             try
@@ -55,14 +52,12 @@ function [] = UpdateImages(source)
                     Handles.RawIntensityImgH(i).CData = images(:,:,i);
                     Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end
-                drawnow
                 clear images
             catch
                 for i = 1:4
                     Handles.RawIntensityImgH(i).CData = EmptyImage;
                     Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end                
-                drawnow
             end
             
         case 'FFC'
@@ -72,14 +67,14 @@ function [] = UpdateImages(source)
                 for i = 1:4
                     Handles.PolFFCImgH(i).CData = images(:,:,i);
                     Handles.PolFFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-                end        
+                end
+                clear images
             catch
                 for i = 1:4
                     Handles.PolFFCImgH(i).CData = EmptyImage;
                     Handles.PolFFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end                      
             end
-            clear images
 
             % raw data images, normalized to stack max
             try
@@ -88,14 +83,13 @@ function [] = UpdateImages(source)
                     Handles.RawIntensityImgH(i).CData = images(:,:,i);
                     Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end
-                drawnow                 
+                clear images
             catch
                 for i = 1:4
                     Handles.RawIntensityImgH(i).CData = EmptyImage;
                     Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};                    
                 end
             end
-            clear images
             
         case 'Generate Mask'
             % individual masking steps
@@ -111,8 +105,8 @@ function [] = UpdateImages(source)
                 Handles.MStepsAxH(3).CLim = [min(min(cImage.BGSubtractedImg)) max(max(cImage.BGSubtractedImg))];
 
                 % Median filtered image
-                Handles.MStepsImgH(4).CData = cImage.MedianFilteredImg;
-                Handles.MStepsAxH(4).CLim = [min(min(cImage.MedianFilteredImg)) max(max(cImage.MedianFilteredImg))];
+                Handles.MStepsImgH(4).CData = cImage.EnhancedImg;
+                Handles.MStepsAxH(4).CLim = [min(min(cImage.EnhancedImg)) max(max(cImage.EnhancedImg))];
             catch
                 Handles.MStepsImgH(1).CData = EmptyImage;
                 Handles.MStepsImgH(2).CData = EmptyImage;
@@ -131,23 +125,7 @@ function [] = UpdateImages(source)
                 Handles.MaskImgH.CData = EmptyImage;
             end
 
-            % update intensity histogram
-            try
-                [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.MedianFilteredImg);
-                Handles.ThreshBar.XData = cImage.IntensityBinCenters;
-                Handles.ThreshBar.YData = cImage.IntensityHistPlot;
-            catch
-                disp('Warning: Failed to display intensity histogram');
-            end
-            
-            try
-                Handles.CurrentThresholdLine.Value = cImage.level;
-                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
-            catch
-                disp('Warning: Error moving thresh line...')
-                Handles.CurrentThresholdLine.Value = 0.5;
-                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
-            end            
+            UpdateThreshholdSlider();          
 
         case 'View/Adjust Mask'
             
@@ -160,25 +138,57 @@ function [] = UpdateImages(source)
                 Handles.MaskImgH.CData = EmptyImage;
             end
 
+            try
+                delete(Handles.ObjectBoundaries);
+            end
             % update appearance of object bounding boxes for object selection and labeling
             try
-                delete(Handles.ObjectRectangles)
-            catch
-                disp('Warning: Failed to delete object boxes');
+                delete(Handles.ObjectRectangles);
             end
             
             % if ShowSelection toolbar state button is pressed
             if PODSData.Handles.ShowSelectionAverageIntensity.Value == 1
+%                 Handles.fH.CurrentAxes = Handles.AverageIntensityAxH;
+%                 hold on
+%                 %Boundaries = cImage.ObjectBoundaries8;
+%                 for ObjIdx=1:cImage.nObjects
+%                     Boundary = cImage.Object(ObjIdx).Boundary;
+%                     Handles.ObjectBoundaries(ObjIdx) = plot(Boundary(:,2),...
+%                         Boundary(:,1),...
+%                         'Yellow',...
+%                         'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
+%                         'Tag',[num2str(ObjIdx)],...
+%                         'HitTest','On',...
+%                         'ButtonDownFcn',@SelectSingleObjects,...
+%                         'PickableParts','all');
+%                 end
+%                 hold off
+
                 for ObjIdx = 1:cImage.nObjects;
+                    Handles.fH.CurrentAxes = Handles.AverageIntensityAxH;
+                    hold on
+                    Boundary = cImage.Object(ObjIdx).Boundary;
+                    Handles.ObjectBoundaries(ObjIdx) = plot(Boundary(:,2),...
+                        Boundary(:,1),...
+                        'Yellow',...
+                        'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
+                        'Tag',[num2str(ObjIdx)],...
+                        'HitTest','On',...
+                        'ButtonDownFcn',@SelectSingleObjects,...
+                        'PickableParts','all');
+                    hold off
+
                     % plot expanded bounding boxes of each object...
                     % on intensity image
                     Handles.ObjectRectangles(ObjIdx,1) = rectangle(Handles.AverageIntensityAxH,...
                         'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
                         'EdgeColor',cImage.Object(ObjIdx).Label.Color,...
                         'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
-                        'PickableParts','All',...
+                        'HitTest','off',...
+                        'PickableParts','None',...
                         'Tag',[num2str(ObjIdx)],...
-                        'ButtonDownFcn',@SelectSingleObjects);
+                        'ButtonDownFcn',@SelectSingleObjects,...
+                        'Visible','Off');
                     % and on mask image
                     Handles.ObjectRectangles(ObjIdx,2) = rectangle(Handles.MaskAxH,...
                         'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
@@ -190,27 +200,10 @@ function [] = UpdateImages(source)
                 end
             end
             
-            UpdateAverageIntensity();
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%            
+            UpdateAverageIntensity();            
+            UpdateThreshholdSlider();
 
             drawnow
-
-            try
-                [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.MedianFilteredImg);
-                Handles.ThreshBar.XData = cImage.IntensityBinCenters;
-                Handles.ThreshBar.YData = cImage.IntensityHistPlot;
-            catch
-                disp('Warning: Failed to update threshold slider with currently selected image data');
-            end
-
-            try
-                Handles.CurrentThresholdLine.Value = cImage.level;
-                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
-            catch
-                disp('Warning: Error while moving thresh line...')
-                Handles.CurrentThresholdLine.Value = 0.5;
-                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
-            end            
 
         case 'Order Factor'
             
@@ -232,51 +225,12 @@ function [] = UpdateImages(source)
                 Handles.OrderFactorImgH.AlphaData = cImage.bw;
             end
 
-% interpolated OF image
-%             OFImg = cImage.OF_image;
-%             [X,Y] = meshgrid(1:1:length(OFImg));
-%             [Xq,Yq] = meshgrid(1:0.25:length(OFImg));
-%             OFImg_Interp = interp2(X,Y,OFImg,Xq,Yq,'cubic');
-%             
-%             try
-%                 Handles.OrderFactorImgH.CData = OFImg_Interp;
-%                  Handles.OrderFactorAxH.XLim = [1 length(OFImg_Interp)];
-%                  Handles.OrderFactorAxH.YLim = [1 length(OFImg_Interp)];
-%             catch
-%                 Handles.OrderFactorImgH.CData = EmptyImage;
-%             end
-
             UpdateAverageIntensity();
-
-            try
-                [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.MedianFilteredImg);
-                Handles.ThreshBar.XData = cImage.IntensityBinCenters;
-                Handles.ThreshBar.YData = cImage.IntensityHistPlot;
-            catch
-                disp('Warning: Failed to update threshold slider with currently selected image data');
-            end
-
-            try
-                Handles.CurrentThresholdLine.Value = cImage.level;
-                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
-            catch
-                disp('Warning: Error while moving thresh line...')
-                Handles.CurrentThresholdLine.Value = 0.5;
-                Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
-            end            
+            UpdateThreshholdSlider();            
 
         case 'Azimuth'
             
             UpdateSliders();
-            
-%             % average intensity image
-%             try 
-%                 Handles.AverageIntensityImgH.CData = Scale0To1(cImage.I);
-%                 Handles.AverageIntensityAxH.CLim = cImage.PrimaryIntensityDisplayLimits;
-%             catch
-%                 Handles.AverageIntensityImgH.CData = EmptyImage;
-%             end
-
             UpdateAverageIntensity();
             
             try
@@ -289,7 +243,9 @@ function [] = UpdateImages(source)
             % create 'circular' colormap by vertically concatenating
             %   2 hsv maps and make it current
             tempmap = hsv;
-            colormap(Handles.AzimuthAxH,vertcat(tempmap,tempmap));
+            circmap = vertcat(tempmap,tempmap);
+
+            colormap(Handles.AzimuthAxH,circmap);
             
             % if ApplyMask state button set to true, apply current mask by setting AlphaData
             if Handles.ApplyMaskAzimuthImage.Value == 1
@@ -302,12 +258,23 @@ function [] = UpdateImages(source)
                 disp('Warning: Could not delete Azimuth lines');
             end
             
+%             tempmask = logical(zeros(1024,1024));
+% 
+%             for rowidx = 4:4:1024
+%                 for colidx = 4:4:1024
+%                     tempmask(rowidx,colidx) = true;
+%                 end
+%             end
+
             % get y and x coordinates from 'On' pixels in the mask image
             [y,x] = find(cImage.bw==1);
+            %[y,x] = find(tempmask==1);
             % theta values are azimuth values from the pixels above
             theta = cImage.AzimuthImage(cImage.bw);
+            %theta = cImage.AzimuthImage(tempmask);
             % rho (magnitude) values come from the OF image
             rho = cImage.OF_image(cImage.bw);
+            %rho = cImage.OF_image(tempmask);
             % conver to cartesian coordinates
             [u,v] = pol2cart(theta,rho);
 
@@ -321,47 +288,81 @@ function [] = UpdateImages(source)
             HalfLineScale = PODSData.Settings.AzimuthLineScale/2;
 
             % x and y coordinates for each 'half-line'
-            xnew3 = [x+HalfLineScale*u;x-HalfLineScale*u];
-            ynew3 = [y-HalfLineScale*v;y+HalfLineScale*v];
+            xnew = [x+HalfLineScale*u;x-HalfLineScale*u];
+            ynew = [y-HalfLineScale*v;y+HalfLineScale*v];
 
-            % colormap used to color azimuth lines
+            % colormap used to color azimuth lines by magnitude
             cmap = PODSData.Settings.OrderFactorColormap;
 
             % number of unique colors in the current colormap
             nColors = length(cmap);
 
-            % plot the azimuth lines and store their handles
-            Handles.AzimuthLines = line(Handles.AverageIntensityAxH,...
-                xnew3(:,1:PODSData.Settings.AzimuthScaleDownFactor:end),...
-                ynew3(:,1:PODSData.Settings.AzimuthScaleDownFactor:end),...
-                'LineWidth',PODSData.Settings.AzimuthLineWidth);
+            % 'bin' the x and y coords if desired,
+            %   sometimes useful if plotting many lines
+            xnew = xnew(:,1:PODSData.Settings.AzimuthScaleDownFactor:end);
+            ynew = ynew(:,1:PODSData.Settings.AzimuthScaleDownFactor:end);
+            rho = rho(1:PODSData.Settings.AzimuthScaleDownFactor:end);
+            theta = theta(1:PODSData.Settings.AzimuthScaleDownFactor:end);
+
+            % determine how many lines we will plot
+            nLines = length(xnew);
 
             % cell array of azimuth line colors (empty for now)
-            LineColors = cell(length(Handles.AzimuthLines),1);
+            LineColors = cell(nLines,1);
+            PatchColors = zeros(nLines,3);
             
             % transparency of the azimuth lines
             LineAlpha = PODSData.Settings.AzimuthLineAlpha;
 
-            % determine the color of each line based on the OF
-            % in its corresponding pixel
-            for i = 1:length(Handles.AzimuthLines)
-                ColorIdx = round(nColors*rho(i));
-                if ColorIdx==0
-                    ColorIdx=1;
-                end
-                if ColorIdx>256
-                    ColorIdx = 256;
-                end
+            ColorMode = 'ByAngle';
 
-                Clr = [cmap(ColorIdx,:),LineAlpha];
-                LineColors{i} = Clr;
+            switch ColorMode
+                case 'ByMagnitude'
+                    % determine the color of each line based on the OF
+                    % in its corresponding pixel
+                    for i = 1:nLines
+                        ColorIdx = round(nColors*rho(i));
+                        if ColorIdx==0
+                            ColorIdx=1;
+                        end
+                        if ColorIdx>nColors
+                            ColorIdx = nColors;
+                        end
+                        PatchColors(i,:) = cmap(ColorIdx,:);
+                    end
+                case 'ByAngle'
+                    nColors = length(circmap);
+                    % get the region of the circular map from
+                    % -pi/2 to pi/2 (the range of our values)
+                    halfcircmap = circmap(0.25*nColors:0.75*nColors,:);
+                    nColors = length(halfcircmap);
+                    ColorIdxsNorm = round(((theta+pi/2)./(pi))*nColors);
+                    
+                    for i = 1:nLines
+                        ColorIdx = ColorIdxsNorm(i);
+                        if ColorIdx==0
+                            ColorIdx=1;
+                        end
+                        if ColorIdx>nColors
+                            ColorIdx = nColors;
+                        end
+
+                        Clr = [halfcircmap(ColorIdx,:),LineAlpha];
+                        LineColors{i} = Clr;
+                        PatchColors(i,:) = halfcircmap(ColorIdx,:);
+                    end
+                case 'Mono'
+                    MonoColor = [1 1 1];
+                    for i = 1:nLines
+                        PatchColors(i,:) = MonoColor;
+                    end
             end
-            
-            % set the line colors we just determined
-            set(Handles.AzimuthLines,{'Color'},LineColors);
-            % disable interactivity because it is horribly slow and causes display issues
-            set(Handles.AzimuthLines,'HitTest','Off');
-            set(Handles.AzimuthLines,'PickableParts','None');
+
+            Handles.AzimuthLines = QuiverPatch(Handles.AverageIntensityAxH,...
+                xnew,ynew,...
+                PatchColors,...
+                PODSData.Settings.AzimuthLineWidth,...
+                LineAlpha);
 
         case 'Plots'
             
@@ -491,13 +492,16 @@ function [] = UpdateImages(source)
                 PaddedObjNormIntensity(:,:,4)];
             colormap(Handles.ObjectNormIntStackAxH,PODSData.Settings.IntensityColormaps{1});
 
-            drawnow limitrate
+            drawnow
              
     end
 
     function UpdateSliders()
-        Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
-        Handles.ReferenceIntensitySlider.Value = cImage.ReferenceIntensityDisplayLimits;
+        % only update the sliders if the intensity display setting is active
+        if strcmp(PODSData.Settings.CurrentImageOperation,'Intensity Display')
+            Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
+            Handles.ReferenceIntensitySlider.Value = cImage.ReferenceIntensityDisplayLimits;
+        end
     end
 
     function UpdateAverageIntensity()
@@ -537,7 +541,27 @@ function [] = UpdateImages(source)
         end
     end
 
+    function UpdateThreshholdSlider()
+        try
+            [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
+            Handles.ThreshBar.XData = cImage.IntensityBinCenters;
+            Handles.ThreshBar.YData = cImage.IntensityHistPlot;
+        catch
+            disp('Warning: Failed to update threshold slider with currently selected image data');
+        end
+
+        try
+            Handles.CurrentThresholdLine.Value = cImage.level;
+            Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
+        catch
+            disp('Warning: Error while moving thresh line...')
+            Handles.CurrentThresholdLine.Value = 0.5;
+            Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
+        end
+    end
+
     % update local PODSData structure with updated Handles
     PODSData.Handles = Handles;
+    guidata(PODSData.Handles.fH,PODSData);
 
 end

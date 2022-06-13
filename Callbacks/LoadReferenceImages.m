@@ -22,7 +22,13 @@ switch InputFileType
         % hide main window
         PODSData.Handles.fH.Visible = 'Off';
         % get reference image files (single or multiple)
-        [Pol_files, PolPath, ~] = uigetfile('*.nd2',['Select .nd2 reference images'],'MultiSelect','on');
+        [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
+            ['Select .nd2 reference images'],...
+            'MultiSelect','on',...
+            PODSData.Settings.LastDirectory);
+
+        PODSData.Settings.LastDirectory = PolPath;
+
         % show main window
         PODSData.Handles.fH.Visible = 'On';
 
@@ -80,7 +86,7 @@ switch InputFileType
             cGroup.Replicate(i).ReferenceImage(:,:,1) = im2double(temp2{1,1})*65535;
             cGroup.Replicate(i).ReferenceImageLoaded = true;
             
-            
+            cGroup.Replicate(i).ReferenceImageEnhanced = EnhanceGrayScale(cGroup.Replicate(i).ReferenceImage);
         end
         %--------------------------------------------------------------------------
     case '.tif'

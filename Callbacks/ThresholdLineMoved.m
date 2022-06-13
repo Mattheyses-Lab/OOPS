@@ -18,7 +18,7 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
     rows = MainReplicate.Height;
     cols = MainReplicate.Width;
 
-    IM = MainReplicate.MedianFilteredImg;
+    IM = MainReplicate.EnhancedImg;
     IM = IM./max(max(IM));
     bw = IM > ThresholdLevel;
 
@@ -59,7 +59,7 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
         Handles.ObjectSelector.Items = {'No objects found...'};
     end    
 
-    guidata(source,PODSData);
+    %guidata(source,PODSData);
     UpdateImages(source);
     UpdateTables(source);
 

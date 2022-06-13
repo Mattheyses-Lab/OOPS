@@ -10,18 +10,20 @@ function LineScanAxes = PlotDoubleLineScan(LineScanAxes,ScanLinePosition,Img1,Im
     y2 = ScanLinePosition(2,2);
 
     pxdist = sqrt((y2-y1)^2+(x2-x1)^2);
-    
     umdist = pxdist*umperpixel;
-    
     N_10nm = round((umdist*100));
-
     umXData = linspace(0,umdist,N_10nm);
     
     LineScanYData1 = improfile(Img1,[x1 x2],[y1 y2],N_10nm,'bicubic');
+    LineScanYData1 = LineScanYData1./max(LineScanYData1);
     LineScanYData2 = improfile(Img2,[x1 x2],[y1 y2],N_10nm,'bicubic');
+    LineScanYData2 = LineScanYData2./max(LineScanYData2);   
+
     plot(LineScanAxes,umXData,LineScanYData1);
     LineScanAxes.NextPlot = 'Add';
     plot(LineScanAxes,umXData,LineScanYData2);
     LineScanAxes.NextPlot = 'Replace';
+
+    drawnow nocallbacks
 
 end

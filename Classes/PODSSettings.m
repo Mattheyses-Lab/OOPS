@@ -16,9 +16,14 @@ classdef PODSSettings < handle
             'OldZLim',[0 1],...
             'pct',0.5,...
             'ZoomLevels',[1/10 1/5 1/3 1/2 1/1.5 1/1.25 1],...
-            'ZoomLevelIdx',4);
+            'ZoomLevelIdx',4,...
+            'OldWindowButtonMotionFcn','',...
+            'OldImageButtonDownFcn','',...
+            'AlreadyActive',false);
         
         InputFileType = '.nd2';
+
+        LastDirectory = pwd;
         
         MaskType = 'MakeNew';
         
@@ -54,6 +59,7 @@ classdef PODSSettings < handle
         AzimuthLineWidth = 1;
         AzimuthLineScale = 100;
         AzimuthScaleDownFactor = 1;
+        AzimuthColorMode = 'Angle';
         
         % SwarmChart settings
         % how to group the data, by group, by custom label, or both

@@ -31,6 +31,9 @@ classdef PODSObject < handle
         
         % index to the subimage such that L(idx{:}) extracts the elements
         SubarrayIdx
+
+        % coordinates to trace object boundary
+        Boundary
         
         
         MaxFFCAvgIntensity
@@ -123,12 +126,15 @@ classdef PODSObject < handle
     methods
         
         % constructor method
-        function obj = PODSObject(ObjectProps,ParentImage,Name,Idx,Label)
+        function obj = PODSObject(ObjectProps,ParentImage,Name,Idx,Label,Boundary)
             
             if length(ObjectProps) == 0
                 return
             end
-            
+
+            % Parent of PODSObject obj is the PODSImage obj that detected it
+            obj.Parent = ParentImage;
+
             % properties from ObjectProps struct
             obj.Area = ObjectProps.Area;
             obj.BoundingBox = ObjectProps.BoundingBox;
@@ -150,9 +156,10 @@ classdef PODSObject < handle
             obj.SubarrayIdx = ObjectProps.SubarrayIdx;
             obj.MaxFeretDiameter = ObjectProps.MaxFeretDiameter;
             obj.MinFeretDiameter = ObjectProps.MinFeretDiameter;
+
+            obj.Boundary = Boundary;
             
-            % Parent of PODSObject obj is the PODSImage obj that detected it
-            obj.Parent = ParentImage;
+
             
             % Name of object is "Object (Idx)"
             obj.Name = Name;

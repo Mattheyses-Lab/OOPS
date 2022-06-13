@@ -31,19 +31,26 @@ function [] = ZoomToCursor(source,event)
     % try and delete previous CursorPositionLabel, this is necessary in
     % case the user activates the Toolbar state button (ZoomToCursor) in an
     % axes without first deactivating the button in another axes
+
     try
         delete(Zoom.DynamicAxes.CursorPositionLabel)
     catch
         % no cursor position label exists for these axes
     end
 
-    % Axes where limits will be changing = Axes that called the callback
-    Zoom.DynamicAxes = event.Axes;
-    % Get the parent container to place static reference Axes
-    Zoom.DynamicAxesParent = Zoom.DynamicAxes.Parent;
+
+%     % Axes where limits will be changing = Axes that called the callback
+%     Zoom.DynamicAxes = event.Axes;
+%     % Get the parent container to place static reference Axes
+%     Zoom.DynamicAxesParent = Zoom.DynamicAxes.Parent;
     
     switch event.Value
         case 1
+            Zoom.AlreadyActive = true;
+            % Axes where limits will be changing = Axes that called the callback
+            Zoom.DynamicAxes = event.Axes;
+            % Get the parent container to place static reference Axes
+            Zoom.DynamicAxesParent = Zoom.DynamicAxes.Parent;
             
             pos = Zoom.DynamicAxes.InnerPosition;
 
@@ -98,14 +105,18 @@ function [] = ZoomToCursor(source,event)
             Zoom.OldYLim = Zoom.DynamicAxes.YLim;
             Zoom.OldZLim = Zoom.DynamicAxes.ZLim;
 
+            Zoom.OldWindowButtonMotionFcn = Handles.fH.WindowButtonMotionFcn;
+            Zoom.OldImageButtonDownFcn = Zoom.DynamicImage.ButtonDownFcn;
+
             Handles.fH.Pointer = 'crosshair';
             Handles.fH.WindowButtonMotionFcn = @CursorMoving;
             Zoom.DynamicImage.ButtonDownFcn = @ChangeZoomLevel;
             Zoom.DynamicImage.HitTest = 'On';
             
         case 0
-            Handles.fH.WindowButtonMotionFcn = '';
-            Zoom.DynamicImage.ButtonDownFcn = '';
+            Zoom.AlreadyActive = false;
+            Handles.fH.WindowButtonMotionFcn = Zoom.OldWindowButtonMotionFcn;
+            Zoom.DynamicImage.ButtonDownFcn = Zoom.OldImageButtonDownFcn;
             Zoom.DynamicImage.HitTest = 'Off';
             
             try
@@ -196,18 +207,15 @@ function [] = CursorMoving(source,event)
         
         PODSData.Handles.fH.Pointer = 'arrow';
 
-    end    
-    Zoom.DynamicAxes = DynamicAxes;
+    end
+
     PODSData.Settings.Zoom = Zoom;
-    
-    guidata(fH,PODSData);
 end
 
 function [] = ChangeZoomLevel(source,event)
     PODSData = guidata(source);
     
     Zoom = PODSData.Settings.Zoom;
-    %DynamicAxes = PODSData.Settings.Zoom.DynamicAxes;
 
     switch PODSData.Handles.fH.SelectionType
         case 'normal'
@@ -234,10 +242,7 @@ function [] = ChangeZoomLevel(source,event)
 
         case 'extend'
             % shift-click
-            % zooms out to show full view
-%             Zoom.DynamicAxes.XLim = Zoom.OldXLim;
-%             Zoom.DynamicAxes.YLim = Zoom.OldXLim;
-%             Zoom.DynamicAxes.ZLim = Zoom.OldZLim;
+            %   freezes current view
             if Zoom.Freeze
                 Zoom.Freeze = false;
             else
@@ -246,7 +251,7 @@ function [] = ChangeZoomLevel(source,event)
 
         case 'open'
             % double click
-            % 
+            %   shows default zoom
             Zoom.pct = 1;
     end
     
@@ -254,8 +259,7 @@ function [] = ChangeZoomLevel(source,event)
     Zoom.YDist = Zoom.pct*Zoom.YRange;
     Zoom.ZDist = Zoom.pct*Zoom.ZRange;
 
-    PODSData.Settings.Zoom = Zoom;
-    guidata(source,PODSData);    
+    PODSData.Settings.Zoom = Zoom;   
     
      if ~strcmp(PODSData.Handles.fH.SelectionType,'extend')
          CursorMoving(source,event);
@@ -266,10 +270,8 @@ function [axH] = restore_axis_defaults(axH,OriginalPlotBoxAspectRatio,OriginalTa
         % restore axis defaults that were changed by imshow()
         axH.YDir = 'Reverse';
         axH.PlotBoxAspectRatioMode = 'manual';
-        %axH.DataAspectRatioMode = 'auto';
         axH.PlotBoxAspectRatio = OriginalPlotBoxAspectRatio;
         axH.XTick = [];
         axH.YTick = [];
         axH.Tag = OriginalTag;
-
 end

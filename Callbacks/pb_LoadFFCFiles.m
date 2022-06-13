@@ -21,9 +21,13 @@ function [] = pb_LoadFFCFiles(source,event)
             
             uiwait(PODSData.Handles.fH);
             PODSData.Handles.fH.Visible = 'Off';
-            [cal_files, calPath, ~] = uigetfile('*.nd2',['Select .nd2 flat-field stack(s)'],'MultiSelect','on');
+            [cal_files, calPath, ~] = uigetfile('*.nd2',...
+                ['Select .nd2 flat-field stack(s)'],...
+                'MultiSelect','on',PODSData.Settings.LastDirectory);
             PODSData.Handles.fH.Visible = 'On';
             figure(PODSData.Handles.fH);
+
+            PODSData.Settings.LastDirectory = calPath;
             
             if ~iscell(cal_files)
                 if cal_files == 0

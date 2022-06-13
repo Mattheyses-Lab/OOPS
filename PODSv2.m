@@ -1,8 +1,16 @@
-function PODSv2
+function PODSv2()
+
+try
+    parpool("threads");
+catch
+    warning("Unable to create parallel pool...")
+end
 
 % create an instance of PODSProject
 % this object will hold ALL project data and GUI settings
 PODSData = PODSProject;
+
+%PODSData = saveddata;
 
 % get the default colormap for Order Factor images
 OrderFactorMap = PODSData.Settings.OrderFactorColormap;
@@ -211,14 +219,14 @@ Handles.ImgPanel1 = uipanel(Handles.MainGrid,'Visible','Off');
 Handles.ImgPanel1.Layout.Row = [2 3];
 Handles.ImgPanel1.Layout.Column = [2 3];
 %ImgPanel1.Title = 'Large Panel 1'
-Handles.ImgPanel1.AutoResizeChildren = 'On';
+%Handles.ImgPanel1.AutoResizeChildren = 'On';
 
 % second one (righthand panel)
 Handles.ImgPanel2 = uipanel(Handles.MainGrid,'Visible','Off');
 Handles.ImgPanel2.Layout.Row = [2 3];
 Handles.ImgPanel2.Layout.Column = [4 5];
 %ImgPanel2.Title = 'Large Panel 2';
-Handles.ImgPanel2.AutoResizeChildren = 'On';
+%Handles.ImgPanel2.AutoResizeChildren = 'On';
 
 % add these to an array so we can change their settings simultaneously
 Handles.LargePanels = [Handles.ImgPanel1,Handles.ImgPanel2];
@@ -429,6 +437,7 @@ disp('Setting up small image axes...')
 
 %% Small Images
     %% FLAT-FIELD IMAGES
+
 for i = 1:4
     Handles.FFCAxH(i) = uiaxes('Parent',Handles.SmallPanels(1,i),...
         'Units','Normalized',...
@@ -484,8 +493,8 @@ for i = 1:4
     disableDefaultInteractivity(Handles.RawIntensityAxH(i));
     Handles.AllSmallAxes(end+1) = Handles.RawIntensityAxH(i);
 end
-
-    %% FLAT-FIELD CORRECTED INTENSITY
+ 
+%% FLAT-FIELD CORRECTED INTENSITY
 for i = 1:4
     Handles.PolFFCAxH(i) = uiaxes('Parent',Handles.SmallPanels(2,i),...
         'Units','Normalized',...
@@ -539,7 +548,7 @@ for i = 1:4
                 'Tag','MStepsBackground',...
                 'XTick',[],...
                 'YTick',[]);
-            image_title = 'Background Intensity';
+            image_title = 'Background';
             image_tag = 'MStepsBackgroundImage';
         case 3
             Handles.MStepsAxH(i) = uiaxes('Parent',Handles.SmallPanels(2,1),...
@@ -548,7 +557,7 @@ for i = 1:4
                 'Tag','MStepsBGSubtracted',...
                 'XTick',[],...
                 'YTick',[]);
-            image_title = 'Background Subtracted Intensity';
+            image_title = 'Background Subtracted';
             image_tag = 'MStepsBGSubtractedImage';
         case 4
             Handles.MStepsAxH(i) = uiaxes('Parent',Handles.SmallPanels(2,2),...
@@ -557,8 +566,8 @@ for i = 1:4
                 'Tag','MStepsMedianFiltered',...
                 'XTick',[],...
                 'YTick',[]);
-            image_title = 'Median Filtered';
-            image_tag = 'MStepsMedianFilteredImage';
+            image_title = 'Enhanced';
+            image_tag = 'MStepsEnhancedImage';
     end
     
     % save original values
@@ -1031,9 +1040,12 @@ set(Handles.ImageSelector,'Visible','On');
 set(Handles.ObjectSelectorPanel,'Visible','On');
 set(Handles.ObjectSelector,'Visible','On');
 
-Handles.LineScanROI = [];
-Handles.LineScanFig = [];
-Handles.LineScanPlot = [];
+Handles.LineScanROI = gobjects(1,1);
+Handles.LineScanFig = gobjects(1,1);
+Handles.LineScanPlot = gobjects(1,1);
+Handles.ObjectBoundaries = gobjects(1,1);
+Handles.ObjectRectangles = gobjects(1,1);
+Handles.AzimuthLines = gobjects(1,1);
 
 PODSData.Handles = Handles;
 guidata(PODSData.Handles.fH,PODSData)
@@ -1087,7 +1099,7 @@ pause(0.5)
         % update grid size to maatch new image sizes
         PODSData.Handles.MainGrid.RowHeight = {'0.5x',SmallWidth,SmallWidth,'0.3x'};
         PODSData.Handles.MainGrid.ColumnWidth = {'1x',SmallWidth,SmallWidth,SmallWidth,SmallWidth};
-        drawnow limitrate
+        drawnow
 
     end
 
@@ -1119,7 +1131,7 @@ pause(0.5)
         %drawnow limitrate
         %testing below
         ThresholdLineMoving(source,Handles.CurrentThresholdLine.Value);
-        drawnow limitrate
+        drawnow
     end
 % Set final thresh position and restore callbacks
     function [] = StopMovingAndSetThresholdLine(source,event)
@@ -1128,7 +1140,7 @@ pause(0.5)
         Handles.fH.WindowButtonMotionFcn = '';
         Handles.fH.WindowButtonUpFcn = '';
         ThresholdLineMoved(source,Handles.CurrentThresholdLine.Value);
-        drawnow limitrate
+        drawnow
     end
 
 %% Callbacks for intensity display scaling
@@ -1136,16 +1148,15 @@ pause(0.5)
     function [] = AdjustPrimaryChannelIntensity(source,event)
         PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits = source.Value;
         
-        if PODSData.CurrentImage(1).ReferenceImageLoaded & Handles.ShowReferenceImageAverageIntensity.Value
+        if PODSData.CurrentImage(1).ReferenceImageLoaded & PODSData.Handles.ShowReferenceImageAverageIntensity.Value
             UpdateCompositeRGB();
         else
-            Handles.AverageIntensityAxH.CLim = source.Value;
+            PODSData.Handles.AverageIntensityAxH.CLim = source.Value;
         end
     end
 
     function [] = AdjustReferenceChannelIntensity(source,event)
         PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits = source.Value;
-        
         if PODSData.CurrentImage(1).ReferenceImageLoaded & Handles.ShowReferenceImageAverageIntensity.Value
             UpdateCompositeRGB();
         end
@@ -1153,10 +1164,10 @@ pause(0.5)
 
     function UpdateCompositeRGB()
         Handles.AverageIntensityImgH.CData = ...
-            CompositeRGB(PODSData.CurrentImage(1).I,...
+            CompositeRGB(PODSData.CurrentImage(1).EnhancedImg,...
             PODSData.Settings.IntensityColormaps{1},...
             PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits,...
-            Scale0To1(PODSData.CurrentImage(1).ReferenceImage),...
+            Scale0To1(PODSData.CurrentImage(1).ReferenceImageEnhanced),...
             PODSData.Settings.ReferenceColormap,...
             PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits);
         Handles.AverageIntensityAxH.CLim = [0 255];
@@ -1283,6 +1294,7 @@ pause(0.5)
 
 %% Tab Selection (uimenu callback)
 
+
     function [] = TabSelection(source,event)
         % current PODSData structure
         data = guidata(source);
@@ -1380,6 +1392,10 @@ pause(0.5)
                 
                 try
                     delete(PODSData.Handles.ObjectRectangles);
+                end
+
+                try
+                    delete(PODSData.Handles.ObjectBoundaries);
                 end
 
                 Handles.AverageIntensityImgH.Visible = 'Off';
@@ -1832,7 +1848,9 @@ pause(0.5)
                 data.Handles.CurrentThresholdLine.Visible = 'Off';
             case 'Intensity Display'
                 data.Handles.PrimaryIntensitySlider.Visible = 'Off';
+                data.Handles.PrimaryIntensitySlider.ValueChangedFcn = '';
                 data.Handles.ReferenceIntensitySlider.Visible = 'Off';
+                data.Handles.ReferenceIntensitySlider.ValueChangedFcn = '';
         end
 
         switch data.Settings.CurrentImageOperation
@@ -1844,9 +1862,12 @@ pause(0.5)
             case 'Intensity Display'
                 data.Handles.SettingsPanel.Title = 'Adjust intensity display limits';
                 data.Handles.PrimaryIntensitySlider.Visible = 'On';
+                data.Handles.PrimaryIntensitySlider.Value = data.CurrentImage(1).PrimaryIntensityDisplayLimits;
+                data.Handles.PrimaryIntensitySlider.ValueChangedFcn = @AdjustPrimaryChannelIntensity;
                 data.Handles.ReferenceIntensitySlider.Visible = 'On';
+                data.Handles.ReferenceIntensitySlider.ValueChangedFcn = @AdjustReferenceChannelIntensity;
+                data.Handles.ReferenceIntensitySlider.Value = data.CurrentImage(1).ReferenceIntensityDisplayLimits;
         end
-
     end
 
 
@@ -2149,35 +2170,37 @@ pause(0.5)
     end
 
     function [] = tbLineScan(source,event)
-        
+
         try
             delete(Handles.LineScanROI);
             delete(Handles.LineScanFig);
         catch
             % do nothing for now
         end
-        
-        Handles.LineScanROI = images.roi.Line(Handles.AverageIntensityAxH);
+
+        Handles.LineScanROI = images.roi.Line(Handles.AverageIntensityAxH,...
+            'Color','Yellow',...
+            'Alpha',0.5);
         XRange = Handles.AverageIntensityAxH.XLim(2)-Handles.AverageIntensityAxH.XLim(1);
         YRange = Handles.AverageIntensityAxH.YLim(2)-Handles.AverageIntensityAxH.YLim(1);
         x1 = Handles.AverageIntensityAxH.XLim(1)+0.25*XRange;
         x2 = Handles.AverageIntensityAxH.XLim(2)-0.25*XRange;
         y1 = Handles.AverageIntensityAxH.YLim(1)+0.5*YRange;
         y2 = Handles.AverageIntensityAxH.YLim(1)+0.5*YRange;
-        
+
         Handles.LineScanFig = uifigure('Name','Intensity line scan',...
             'HandleVisibility','On',...
             'WindowStyle','AlwaysOnTop',...
             'Units','Normalized',...
-            'Position',[0.6 0.8 0.4 0.2],...
-            'CloseRequestFcn',@CloseLineScanFig);        
+            'Position',[0.65 0.8 0.35 0.2],...
+            'CloseRequestFcn',@CloseLineScanFig);
         
         Handles.LineScanAxes = uiaxes(Handles.LineScanFig,'Units','Normalized','OuterPosition',[0 0 1 1]);
         
         Handles.LineScanROI.Position = [x1 y1; x2 y2];
         
-        addlistener(Handles.LineScanROI,'MovingROI',@OneChannelLineScan);
-        addlistener(Handles.LineScanROI,'ROIMoved',@OneChannelLineScan);        
+        addlistener(Handles.LineScanROI,'MovingROI',@LineScanROIMoving);
+        addlistener(Handles.LineScanROI,'ROIMoved',@LineScanROIMoved);
 
     end
 
@@ -2188,22 +2211,40 @@ pause(0.5)
         
     end
 
+    function LineScanROIMoving(source,event)
 
-    function OneChannelLineScan(source,event)
+        cImage = PODSData.CurrentImage;
         
-        if PODSData.CurrentImage.ReferenceImageLoaded & PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
-            Handles.LineScanAxes = PlotDoubleLineScan(Handles.LineScanAxes,...
+        if cImage.ReferenceImageLoaded & PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
+            Handles.LineScanAxes = PlotIntegratedDoubleLineScan(Handles.LineScanAxes,...
                 Handles.LineScanROI.Position,...
-                PODSData.CurrentImage.I,...
-                Scale0To1(PODSData.CurrentImage.ReferenceImage),...
-                PODSData.CurrentImage.RealWorldLimits);
-            %drawnow limitrate
+                cImage.EnhancedImg,...
+                cImage.ReferenceImageEnhanced,...
+                cImage.RealWorldLimits);
         else
-            Handles.LineScanAxes = PlotLineScan(Handles.LineScanAxes,...
+            Handles.LineScanAxes = PlotIntegratedLineScan(Handles.LineScanAxes,...
                 Handles.LineScanROI.Position,...
-                PODSData.CurrentImage.I,...
-                PODSData.CurrentImage.RealWorldLimits);
-            %drawnow limitrate
+                cImage.Pol_ImAvg,...
+                cImage.RealWorldLimits);
+        end
+
+    end
+
+    function LineScanROIMoved(source,event)
+
+        cImage = PODSData.CurrentImage;
+        
+        if cImage.ReferenceImageLoaded & PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
+            Handles.LineScanAxes = PlotIntegratedDoubleLineScan(Handles.LineScanAxes,...
+                Handles.LineScanROI.Position,...
+                cImage.EnhancedImg,...
+                cImage.ReferenceImageEnhanced,...
+                cImage.RealWorldLimits);
+        else
+            Handles.LineScanAxes = PlotIntegratedLineScan(Handles.LineScanAxes,...
+                Handles.LineScanROI.Position,...
+                cImage.Pol_ImAvg,...
+                cImage.RealWorldLimits);
         end
         
     end

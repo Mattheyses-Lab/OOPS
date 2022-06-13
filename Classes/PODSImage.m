@@ -40,6 +40,7 @@ classdef PODSImage < handle
         ObjectDetectionDone = false
         LocalSBDone = false
         ColocFilesLoaded = false
+        ReferenceImageLoaded = false
         
 %% Masking            
         % masks
@@ -57,7 +58,8 @@ classdef PODSImage < handle
         I double
         BGImg double
         BGSubtractedImg double
-        MedianFilteredImg double
+        %MedianFilteredImg double
+        EnhancedImg double
         
         % mask threshold adjustment (for display purposes)
         IntensityBinCenters
@@ -70,7 +72,7 @@ classdef PODSImage < handle
 %% Reference Image
 
         ReferenceImage double
-        ReferenceImageLoaded = false
+        ReferenceImageEnhanced double
         
 %%
 
@@ -87,7 +89,6 @@ classdef PODSImage < handle
 %% Output Values        
         
         % output values
-        
         SBAvg double
         
 %% Filtering
@@ -103,9 +104,7 @@ classdef PODSImage < handle
 %% Settings
         % store handle to settings object to speed up retrieval of various settings
         Settings PODSSettings
-        
-
-
+ 
     end
     
     % dependent properties
@@ -113,6 +112,9 @@ classdef PODSImage < handle
         
         % no need to keep this in memory, calculating is pretty fast and it will change frequently
         ObjectProperties struct
+
+        ObjectBoundaries4
+        ObjectBoundaries8
         
         % only the individual PODSObject objects themselves will store their names in memory
         ObjectNames cell
@@ -194,13 +196,16 @@ classdef PODSImage < handle
             else
                 % get default label from settings object
                 DefaultLabel = obj.Settings.ObjectLabels(1);
+
+                Boundaries = obj.ObjectBoundaries8;
                 for i = 1:length(props) % for each detected object
-                   % create an instance of PODSObject 
+                   % create an instance of PODSObject
                    Object(i) = PODSObject(props(i,1),...
                        obj,...
                        ['Object ',num2str(i)],...
                        i,...
-                       DefaultLabel);
+                       DefaultLabel,...
+                       Boundaries{i});
                 end
             end
             
@@ -418,6 +423,16 @@ classdef PODSImage < handle
             % should as well
             ObjectProperties = regionprops(full(obj.L),full(obj.bw),'all');
         end
+
+        % get 4-connected object boundaries
+        function ObjectBoundaries4 = get.ObjectBoundaries4(obj)
+            ObjectBoundaries4 = bwboundaries(full(obj.bw),4,'noholes');
+        end
+
+        % get 8-connected object boundaries
+        function ObjectBoundaries8 = get.ObjectBoundaries8(obj)
+            ObjectBoundaries8 = bwboundaries(full(obj.bw),8,'noholes');
+        end        
 
         % get ObjectNames
         function ObjectNames = get.ObjectNames(obj)
