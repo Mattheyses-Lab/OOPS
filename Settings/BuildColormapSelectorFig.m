@@ -95,10 +95,18 @@ function BuildColormapSelectorFig()
     end
 
     function SaveColormapSettings(source,event)
-        CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-        SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-        save([SavePath,'/ColormapsSettings.mat'],'ColormapsSettings');        
-        delete(fHColormapSelector)
+        if ismac
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
+            save([SavePath,'/ColormapsSettings.mat'],'ColormapsSettings');        
+            delete(fHColormapSelector)
+        elseif ispc
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
+            save([SavePath,'\ColormapsSettings.mat'],'ColormapsSettings');        
+            delete(fHColormapSelector)
+        end
+
     end
 
     function AdjustColorbarSize(source,event)

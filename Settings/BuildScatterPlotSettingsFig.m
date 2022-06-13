@@ -60,12 +60,21 @@ function BuildScatterPlotSettingsFig()
     DoneButton.Layout.Column = [1 2];
 
     function SaveScatterPlotSettings(source,event)
-        ScatterPlotSettings.XVariable = XSelectBox.Value;
-        ScatterPlotSettings.YVariable = YSelectBox.Value;
-        CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-        SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-        save([SavePath,'/ScatterPlotSettings.mat'],'ScatterPlotSettings');
-        close(fHScatterPlotSettings)
+        if ismac
+            ScatterPlotSettings.XVariable = XSelectBox.Value;
+            ScatterPlotSettings.YVariable = YSelectBox.Value;
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
+            save([SavePath,'/ScatterPlotSettings.mat'],'ScatterPlotSettings');
+            close(fHScatterPlotSettings)
+        elseif ispc
+            ScatterPlotSettings.XVariable = XSelectBox.Value;
+            ScatterPlotSettings.YVariable = YSelectBox.Value;
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
+            save([SavePath,'\ScatterPlotSettings.mat'],'ScatterPlotSettings');
+            close(fHScatterPlotSettings)
+        end
     end    
 
     function LoadScatterPlotSettings(source,event)

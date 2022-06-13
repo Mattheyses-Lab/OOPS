@@ -89,13 +89,23 @@ function BuildSwarmChartSettingsFig()
     fHSwarmChartSettings.Visible = 'On';
     
     function SaveSwarmChartSettings(source,event)
-        SwarmChartSettings.GroupingType = ButtonGroup1.SelectedObject.Text;
-        SwarmChartSettings.ColorMode = ButtonGroup2.SelectedObject.Text;
-        SwarmChartSettings.YVariable = YSelectBox.Value;
-        CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-        SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-        save([SavePath,'/SwarmChartSettings.mat'],'SwarmChartSettings');
-        close(fHSwarmChartSettings)
+        if ismac
+            SwarmChartSettings.GroupingType = ButtonGroup1.SelectedObject.Text;
+            SwarmChartSettings.ColorMode = ButtonGroup2.SelectedObject.Text;
+            SwarmChartSettings.YVariable = YSelectBox.Value;
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
+            save([SavePath,'/SwarmChartSettings.mat'],'SwarmChartSettings');
+            close(fHSwarmChartSettings)
+        elseif ispc
+            SwarmChartSettings.GroupingType = ButtonGroup1.SelectedObject.Text;
+            SwarmChartSettings.ColorMode = ButtonGroup2.SelectedObject.Text;
+            SwarmChartSettings.YVariable = YSelectBox.Value;
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
+            save([SavePath,'\SwarmChartSettings.mat'],'SwarmChartSettings');
+            close(fHSwarmChartSettings)
+        end
     end
 
     function LoadSwarmChartSettings(source,event)

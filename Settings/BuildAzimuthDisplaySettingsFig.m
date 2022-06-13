@@ -63,14 +63,25 @@ function BuildAzimuthDisplaySettingsFig()
 
 
     function SaveAzimuthSettings(source,event)
-        AzimuthDisplaySettings.LineAlpha = AzimuthLineAlphaDropdown.Value;
-        AzimuthDisplaySettings.LineWidth = AzimuthLineWidthDropdown.Value;
-        AzimuthDisplaySettings.LineScale = str2num(AzimuthLineScaleEditfield.Value);
-        AzimuthDisplaySettings.ScaleDownFactor = AzimuthLineScaleDownDropdown.Value;
-        CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-        SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-        save([SavePath,'/AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');
-        close(fHAzimuthSettings)
+        if ismac
+            AzimuthDisplaySettings.LineAlpha = AzimuthLineAlphaDropdown.Value;
+            AzimuthDisplaySettings.LineWidth = AzimuthLineWidthDropdown.Value;
+            AzimuthDisplaySettings.LineScale = str2num(AzimuthLineScaleEditfield.Value);
+            AzimuthDisplaySettings.ScaleDownFactor = AzimuthLineScaleDownDropdown.Value;
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
+            save([SavePath,'/AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');
+            close(fHAzimuthSettings)
+        elseif ispc
+            AzimuthDisplaySettings.LineAlpha = AzimuthLineAlphaDropdown.Value;
+            AzimuthDisplaySettings.LineWidth = AzimuthLineWidthDropdown.Value;
+            AzimuthDisplaySettings.LineScale = str2num(AzimuthLineScaleEditfield.Value);
+            AzimuthDisplaySettings.ScaleDownFactor = AzimuthLineScaleDownDropdown.Value;
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
+            save([SavePath,'\AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');
+            close(fHAzimuthSettings)
+        end
     end
 
     function LoadAzimuthDisplaySettings(source,event)
