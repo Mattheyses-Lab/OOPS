@@ -48,11 +48,9 @@ classdef PODSProject < handle
 
             GroupNames = cell(obj.nGroups,1);
 
-%              for i = 1:obj.nGroups
-%                  GroupNames{i} = obj.Group(i).GroupName;
-%              end
-
-            [GroupNames{:}] = deal([obj.Group(:).GroupName]);
+              for i = 1:obj.nGroups
+                  GroupNames{i} = obj.Group(i).GroupName;
+              end
 
          end
 

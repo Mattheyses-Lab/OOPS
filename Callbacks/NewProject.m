@@ -88,7 +88,7 @@
         
 %% Nested callbacks for NewProject
 
-        function [] = Cont2NameGroups(source,event)
+        function [] = Cont2NameGroups(~,~)
             PODSData.ProjectName = ProjectNameBox.Value;
             nGroups = str2num(NumGroupsBox.Value);
             %nChannels = str2num(NumChannelsBox.Value);
@@ -96,7 +96,7 @@
         end
 
         %% Set names and return to Main Window
-        function [] = ReturnToPODS(source,event)
+        function [] = ReturnToPODS(~,~)
             for I = 1:nGroups
                 %PODSData.Group(I,J) = PODSGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,J,PODSData.Settings,I);
                 PODSData.MakeNewGroup(GroupNamesBox(I).Value,I);
