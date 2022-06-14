@@ -1,4 +1,4 @@
-    function [] = NewProject(source,event)
+    function [] = NewProject(source,~)
         
         PODSData = guidata(source);
         
@@ -16,7 +16,8 @@
         % draw figure window
         newproject = uifigure('Name','New Project',...
                               'Menubar','none',...
-                              'Position',sz);
+                              'Position',sz,...
+                              'Visible','Off');
 
         % editbox to set project name                  
         ProjectNameBox = uieditfield('Parent',newproject,...
@@ -42,6 +43,8 @@
                                     'ButtonPushedFcn',@Cont2NameGroups);
                                 
         drawnow
+
+        newproject.Visible = 'On';
         
         % wait until figure is deleted                       
         waitfor(newproject)                                

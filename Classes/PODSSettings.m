@@ -139,7 +139,7 @@ classdef PODSSettings < handle
             end
             
             try
-                load('DefaultColors.mat')
+                load DefaultColors.mat DefaultColors
                 fnames = fieldnames(DefaultColors);
                 nColors = length(fnames);
                 for i = 1:nColors
@@ -152,7 +152,7 @@ classdef PODSSettings < handle
         end
         
         function UpdateColormapsSettings(obj)
-            load('ColormapsSettings.mat')
+            load ColormapsSettings.mat ColormapsSettings
             obj.IntensityColormaps{1} = ColormapsSettings.Intensity{3};
             obj.OrderFactorColormap = ColormapsSettings.OrderFactor{3};
             obj.ReferenceColormap = ColormapsSettings.Reference{3};
@@ -160,7 +160,7 @@ classdef PODSSettings < handle
         end
 
         function UpdateSwarmChartSettings(obj)
-            load('SwarmChartSettings.mat');
+            load SwarmChartSettings.mat SwarmChartSettings
             obj.SwarmChartGroupingType = SwarmChartSettings.GroupingType;
             obj.SwarmChartYVariable = SwarmChartSettings.YVariable;
             obj.SwarmChartColorMode = SwarmChartSettings.ColorMode;
@@ -168,7 +168,7 @@ classdef PODSSettings < handle
         end
         
         function UpdateAzimuthDisplaySettings(obj)
-            load('AzimuthDisplaySettings.mat');
+            load AzimuthDisplaySettings.mat AzimuthDisplaySettings
             obj.AzimuthLineAlpha = AzimuthDisplaySettings.LineAlpha;
             obj.AzimuthLineWidth = AzimuthDisplaySettings.LineWidth;
             obj.AzimuthLineScale = AzimuthDisplaySettings.LineScale;
@@ -177,7 +177,7 @@ classdef PODSSettings < handle
         end
         
         function UpdateScatterPlotSettings(obj)
-            load('ScatterPlotSettings.mat');
+            load ScatterPlotSettings.mat ScatterPlotSettings
             obj.ScatterPlotXVariable = ScatterPlotSettings.XVariable;
             obj.ScatterPlotYVariable = ScatterPlotSettings.YVariable;
             clear AzimuthDisplaySettings

@@ -1,9 +1,7 @@
-function [] = pb_LoadFPMFiles(source,event)
+function [] = pb_LoadFPMFiles(source,~)
 
     % main data structure
     PODSData = guidata(source);
-    % GUI settings structure
-    Settings = PODSData.Settings;
     % group that we will be loading data for
     GroupIndex = PODSData.CurrentGroupIndex;
     % user-selected input file type (.nd2 or .tif)
@@ -24,7 +22,7 @@ function [] = pb_LoadFPMFiles(source,event)
             PODSData.Handles.fH.Visible = 'Off';
             % get FPM files (single or multiple)
             [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
-                ['Select .nd2 polarization stack(s)'],...
+                'Select .nd2 polarization stack(s)',...
                 'MultiSelect','on',...
                 PODSData.Settings.LastDirectory);
 
@@ -39,7 +37,6 @@ function [] = pb_LoadFPMFiles(source,event)
             if(iscell(Pol_files) == 0)
                 if(Pol_files==0)
                     error('No files selected. Exiting...');
-                    return
                 end
             end
             
@@ -95,7 +92,7 @@ function [] = pb_LoadFPMFiles(source,event)
             uiwait(PODSData.Handles.fH);            
             
             [Pol_files, PolPath, ~] = uigetfile('*.tif',...
-                ['Select .tif polarization stack(s)'],...
+                'Select .tif polarization stack(s)',...
                 'MultiSelect','on',...
                 PODSData.Settings.LastDirectory);
 
@@ -104,7 +101,6 @@ function [] = pb_LoadFPMFiles(source,event)
             if(iscell(Pol_files) == 0)
                 if(Pol_files==0)
                     error('No files selected. Exiting...');
-                    return
                 end
             end
             

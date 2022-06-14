@@ -45,9 +45,15 @@ classdef PODSProject < handle
          end
 
          function GroupNames = get.GroupNames(obj)
-             for i = 1:obj.nGroups
-                 GroupNames{i} = obj.Group(i).GroupName;
-             end
+
+            GroupNames = cell(obj.nGroups,1);
+
+%              for i = 1:obj.nGroups
+%                  GroupNames{i} = obj.Group(i).GroupName;
+%              end
+
+            [GroupNames{:}] = deal([obj.Group(:).GroupName]);
+
          end
 
          function nGroups = get.nGroups(obj)
@@ -64,19 +70,19 @@ classdef PODSProject < handle
          end
          
          function CurrentObject = get.CurrentObject(obj)
-             cImage = obj.CurrentImage;
-             cObject = cImage.CurrentObject;
+%              cImage = obj.CurrentImage;
+%              cObject = cImage.CurrentObject;
+            CurrentObject = obj.CurrentImage.CurrentObject;
          end
          
          function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
-             nGroups = obj.nGroups;
              nLabels = length(obj.Settings.ObjectLabels);
 
              % cell array to hold all object data for the project, split by group and label
              %   each row is one group, each column is a unique label
-             ObjectDataByLabel = cell(nGroups,nLabels);
+             ObjectDataByLabel = cell(obj.nGroups,nLabels);
              
-             for i = 1:nGroups
+             for i = 1:obj.nGroups
                  % cell array of ObjectDataByLabel for one replicate
                  % each cell is a vector of values for one label
                  %GroupObjectDataByLabel = obj.Group(i).GetObjectDataByLabel(Var2Get);

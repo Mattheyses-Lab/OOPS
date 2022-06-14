@@ -1,8 +1,7 @@
-function [] = FindOrderFactor3(source,event)
+function [] = FindOrderFactor3(source,~)
 
     PODSData = guidata(source);
     cGroupIndex = PODSData.CurrentGroupIndex;
-    %cChannelIndex = PODSData.CurrentChannelIndex;
     
     cImageIndex = PODSData.Group(cGroupIndex).CurrentImageIndex;
     cReplicate = PODSData.Group(cGroupIndex).Replicate;

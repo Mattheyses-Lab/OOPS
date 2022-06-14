@@ -5,7 +5,6 @@ function Scaled = Scale0To1(UnscaledImage)
     
     if ndim > 3
         error('Dimensions > 3 not supported!');
-        return
     end
     
     switch ndim

@@ -17,7 +17,6 @@ function LineScanAxes = PlotIntegratedDoubleLineScan(LineScanAxes,ScanLinePositi
 
     % the rest of the lines
     ParallelLines = MultiParallelTranslation(xend1,xend2,yend1,yend2,scanwidth);
-
     ParallelLines = [ParallelLines;ParallelLines];
 
     umperpixel = RealWorldLims(2)/length(Img1);
@@ -30,8 +29,8 @@ function LineScanAxes = PlotIntegratedDoubleLineScan(LineScanAxes,ScanLinePositi
     LineScanYData = cell(scanwidth*2,1);
     LineScanYData{1} = zeros(1,N_10nm);
 
-    IntegratedLineScan1 = zeros(1,N_10nm);
-    IntegratedLineScan2 = IntegratedLineScan1;
+%     IntegratedLineScan1 = zeros(1,N_10nm);
+%     IntegratedLineScan2 = IntegratedLineScan1;
 
     parfor i = 1:scanwidth*2
 

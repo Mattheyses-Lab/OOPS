@@ -4,13 +4,8 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
 % then detect the new objects defined by the mask
 
     PODSData = guidata(source);
-    cGroupIdx = PODSData.CurrentGroupIndex;
-    cImageIdx = PODSData.Group(cGroupIdx).CurrentImageIndex;
-    Handles = PODSData.Handles;
-    
-    if length(cImageIdx) > 1
-        cImageIdx = cImageIdx(1);
-    end    
+
+    Handles = PODSData.Handles;   
     
     % get main channel (currently selected) of current replicate
     MainReplicate = PODSData.CurrentImage(1);
@@ -35,11 +30,11 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
     bw = ismember(L, find([S.Area] >= 10));
 
     MainReplicate.bw = bw;
-    MainReplicate.L = bwlabel(bw,4);
+    MainReplicate.L = bwlabel(bw,8);
     MainReplicate.level = ThresholdLevel;
     
     UpdateLog3(source,'Updating Object Data...','append');
-    delete(MainReplicate.Object);
+    %delete(MainReplicate.Object);
     MainReplicate.DetectObjects();
     %MainReplicate.ObjectDetectionDone = true;
     
@@ -53,7 +48,7 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
     if MainReplicate.nObjects >= 1
         names = MainReplicate.ObjectNames();
         Handles.ObjectSelector.Items = names;
-        Handles.ObjectSelector.ItemsData = [1:length(names)];
+        Handles.ObjectSelector.ItemsData = 1:length(names);
         Handles.ObjectSelector.Value = MainReplicate.CurrentObjectIdx;
     else
         Handles.ObjectSelector.Items = {'No objects found...'};

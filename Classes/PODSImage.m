@@ -163,9 +163,9 @@ classdef PODSImage < handle
             obj.Height = 0;
             
             % status tracking (false by default)
-            obj.ThresholdAdjusted = logical(0);
-            obj.MaskDone = logical(0);
-            obj.OFDone = logical(0);
+            obj.ThresholdAdjusted = false;
+            obj.MaskDone = false;
+            obj.OFDone = false;
 
             obj.CurrentObjectIdx = 0;
         end
@@ -187,11 +187,12 @@ classdef PODSImage < handle
         % detects objects in one PODSImage
         function DetectObjects(obj)
             
+            obj.deleteObjects();
+
             % call get method
             props = obj.ObjectProperties;
 
-            if length(props)==0 % if no objects
-                delete(obj.Object);
+            if isempty(props) % if no objects
                 return
             else
                 % get default label from settings object
@@ -200,7 +201,7 @@ classdef PODSImage < handle
                 Boundaries = obj.ObjectBoundaries8;
                 for i = 1:length(props) % for each detected object
                    % create an instance of PODSObject
-                   Object(i) = PODSObject(props(i,1),...
+                   obj.Object(i) = PODSObject(props(i,1),...
                        obj,...
                        ['Object ',num2str(i)],...
                        i,...
@@ -209,7 +210,6 @@ classdef PODSImage < handle
                 end
             end
             
-            obj.Object = Object;
             obj.ObjectDetectionDone = true;
             
         end % end of DetectObjects
@@ -217,17 +217,17 @@ classdef PODSImage < handle
         % delete seleted objects from one PODSImage
         function DeleteSelectedObjects(obj)
             
-            Selected = find([obj.Object.Selected]);
-            NotSelected = find(~[obj.Object.Selected]);
+            %Selected = find([obj.Object.Selected]);
+            %NotSelected = find(~[obj.Object.Selected]);
             
             % get handles to all objects in this image
             AllObjects = obj.Object;
             
             % get list of 'good' objects (not selected)
-            Good = AllObjects(NotSelected);
+            Good = AllObjects(~[obj.Object.Selected]);
             
             % get list of objects to delete (selected)
-            Bad = AllObjects(Selected);
+            Bad = AllObjects([obj.Object.Selected]);
             
             % replace object array of image with only the ones we wish to keep (not selected)
             obj.Object = Good;
@@ -281,20 +281,18 @@ classdef PODSImage < handle
         end
 
         % detect local signal to BG ratio
-        function obj = FindLocalSB(obj,source)
+        function obj = FindLocalSB(obj)
             
             % can't detect local S/B until we detect the objects!
             if obj.ObjectDetectionDone
                 
                 % square structuring element for object dilation
                 se = ones(3,3);
-                all_object_pixels = sparse(obj.bw);
-                all_buffer_pixels = sparse(false(size(all_object_pixels)));
-                all_BG_pixels = sparse(false(size(all_object_pixels)));
+                all_object_pixels = obj.bw;
+                all_buffer_pixels = false(size(all_object_pixels));
+                all_BG_pixels = false(size(all_object_pixels));
                 
                 N = obj.nObjects;
-%                 logmsg = ['Detecting object buffer zone and local BG pixels for ', num2str(N), ' objects...'];
-%                 UpdateLog3(source,logmsg,'append');
                 
                 
                 %% First Step: Treat each object individually, ignoring others.
@@ -303,7 +301,7 @@ classdef PODSImage < handle
                 %       SBObjectProperties struct
                 for i = 1:N
                     % empty logical matrix
-                    object_bw = sparse(false(size(obj.bw)));
+                    object_bw = false(size(obj.bw));
                     % get object pixels for current object
                     %object_pixels = obj.Object(i).PixelIdxList;
                     % set object pixels to 1
@@ -362,7 +360,7 @@ classdef PODSImage < handle
 
                     % check each BG pixel for overlap with objects or object buffers
                     for j = 1:length(obj.Object(i).BGIdxList)
-                        if ~(all_object_pixels(obj.Object(i).BGIdxList(j)) == 1 | all_buffer_pixels(obj.Object(i).BGIdxList(j)) == 1)
+                        if ~(all_object_pixels(obj.Object(i).BGIdxList(j)) == 1 || all_buffer_pixels(obj.Object(i).BGIdxList(j)) == 1)
                             BG_count = BG_count+1;
                             new_BG(BG_count) = obj.Object(i).BGIdxList(j);
                         end            
@@ -452,7 +450,15 @@ classdef PODSImage < handle
             else
                 nObjects = 0;
             end
-        end      
+        end
+
+        function deleteObjects(obj)
+            Objects = obj.Object;
+            delete(Objects);
+            clear Objects
+            obj.Object = [];
+            delete(obj.Object);
+        end
         
 %% Normalize Image Stacks
 

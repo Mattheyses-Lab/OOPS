@@ -1,8 +1,6 @@
-function [] = LoadReferenceImages(source,event)
+function [] = LoadReferenceImages(source,~)
 % main data structure
 PODSData = guidata(source);
-% GUI settings structure
-Settings = PODSData.Settings;
 % group that we will be loading data for
 GroupIndex = PODSData.CurrentGroupIndex;
 % user-selected input file type (.nd2 or .tif)
@@ -23,7 +21,7 @@ switch InputFileType
         PODSData.Handles.fH.Visible = 'Off';
         % get reference image files (single or multiple)
         [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
-            ['Select .nd2 reference images'],...
+            'Select .nd2 reference images',...
             'MultiSelect','on',...
             PODSData.Settings.LastDirectory);
 
@@ -35,7 +33,6 @@ switch InputFileType
         if(iscell(Pol_files) == 0)
             if(Pol_files==0)
                 error('No files selected. Exiting...');
-                return
             end
         end
         
@@ -64,8 +61,6 @@ switch InputFileType
                 Filename = Pol_files;
             end
             
-            temp = strsplit(Filename,'.');
-            ShortName = temp{1};
             FullName = [PolPath Filename];
             temp = bfopen(char(FullName));
             temp2 = temp{1,1};
@@ -74,7 +69,7 @@ switch InputFileType
             Width = size(temp2{1,1},2);
             
             try
-                if Height~=cGroup.Replicate(i).Height | Width~=cGroup.Replicate(i).Width
+                if Height~=cGroup.Replicate(i).Height || Width~=cGroup.Replicate(i).Width
                     error(['Error loading reference images' newline 'Reference image dimensions do not match polarization image dimensions']);
                 end
             catch ME
@@ -97,7 +92,7 @@ end
 
 UpdateLog3(source,'Done.','append');
     
-Handles.ShowReferenceImageAverageIntensity.Visible = 'On';
+PODSData.Handles.ShowReferenceImageAverageIntensity.Visible = 'On';
 
 UpdateImages(source);
 UpdateTables(source);

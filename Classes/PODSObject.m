@@ -128,7 +128,7 @@ classdef PODSObject < handle
         % constructor method
         function obj = PODSObject(ObjectProps,ParentImage,Name,Idx,Label,Boundary)
             
-            if length(ObjectProps) == 0
+            if isempty(ObjectProps)
                 return
             end
 
@@ -172,6 +172,10 @@ classdef PODSObject < handle
             
         end % end constructor method
 
+        function delete(obj)
+            delete(obj);
+        end
+
         function OFAvg = get.OFAvg(obj)
             % average OF of all pixels identified by the mask
             try
@@ -205,13 +209,6 @@ classdef PODSObject < handle
             catch
                 AvgReferenceChannelIntensity = NaN;
             end
-%             Img = obj.Parent.ReferenceImage./max(max(obj.Parent.ReferenceImage));
-%             try
-%                 AvgReferenceChannelIntensity = mean(Img(obj.PixelIdxList));
-%             catch
-%                 AvgReferenceChannelIntensity = NaN;
-%             end
-
         end
         
         function IntegratedReferenceChannelIntensity = get.IntegratedReferenceChannelIntensity(obj)
@@ -220,16 +217,10 @@ classdef PODSObject < handle
             catch
                 IntegratedReferenceChannelIntensity = NaN;
             end
-%             Img = obj.Parent.ReferenceImage./max(max(obj.Parent.ReferenceImage));
-%             try
-%                 IntegratedReferenceChannelIntensity = sum(Img(obj.PixelIdxList));
-%             catch
-%                 IntegratedReferenceChannelIntensity = NaN;
-%             end
         end        
         
         function LabelIdx = get.LabelIdx(obj)
-            LabelIdx = str2num(obj.Label.LabelNumber);
+            LabelIdx = str2double(obj.Label.LabelNumber);
         end
         
         function LabelName = get.LabelName(obj)
@@ -296,7 +287,7 @@ classdef PODSObject < handle
         
         function RestrictedPaddedMaskSubImage = get.RestrictedPaddedMaskSubImage(obj)
             % get full mask image
-            FullSizedMaskImg = logical(zeros(size(obj.Parent.bw)));
+            FullSizedMaskImg = false(size(obj.Parent.bw));
             % set this object's pixels to on
             FullSizedMaskImg(obj.PixelIdxList) = true;
             % pad subarray and make square

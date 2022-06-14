@@ -29,7 +29,7 @@ classdef SliderKnob < handle
             Value = obj.Knob.XData;
         end
         
-        function obj = set.Value(obj,val)
+        function set.Value(obj,val)
             obj.Knob.XData = val;
         end
         
@@ -37,7 +37,7 @@ classdef SliderKnob < handle
             Color = obj.Knob.MarkerFaceColor;
         end
         
-        function obj = set.Color(obj,val)
+        function set.Color(obj,val)
             obj.Knob.MarkerFaceColor = val;
         end
         
@@ -45,7 +45,7 @@ classdef SliderKnob < handle
             EdgeColor = obj.Knob.MarkerEdgeColor;
         end
         
-        function obj = set.EdgeColor(obj,val)
+        function set.EdgeColor(obj,val)
             obj.Knob.MarkerEdgeColor = val;
         end        
 
@@ -53,7 +53,7 @@ classdef SliderKnob < handle
             KnobSize = obj.Knob.MarkerSize;
         end
         
-        function obj = set.KnobSize(obj,val)
+        function set.KnobSize(obj,val)
             obj.Knob.MarkerSize = val;
         end     
         
@@ -61,7 +61,7 @@ classdef SliderKnob < handle
             YPosition = obj.Knob.YData;
         end
         
-        function obj = set.YPosition(obj,val)
+        function set.YPosition(obj,val)
             obj.Knob.YData = val;
         end        
 

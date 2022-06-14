@@ -1,4 +1,4 @@
-function [] = CreateMask4(source,event)
+function [] = CreateMask4(source,~)
 
 PODSData = guidata(source);
 
@@ -37,7 +37,7 @@ switch MaskMode
 
             %% Build mask
             nObjects = 500;
-            notfirst = logical(0);
+            notfirst = false;
             % Set the max nObjects to 500 by increasing the threshold until nObjects <= 500
             while nObjects >= 500
 
@@ -46,7 +46,7 @@ switch MaskMode
                     cImage.level = cImage.level*2;
                     UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
                 end
-                notfirst = logical(1);
+                notfirst = true;
 
                 % binarize median-filtered image at level determined above
                 cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
@@ -77,7 +77,7 @@ switch MaskMode
             UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
 
             % delete old objects for current replicate...
-            delete(cImage.Object);
+            %cImage.deleteObjects();
             % ...so we can detect the new ones (requires bw and L to be computed previously)
             cImage.DetectObjects();
             % current object will be the first object by default
@@ -121,7 +121,7 @@ switch MaskMode
 
             %% Build mask
             nObjects = 500;
-            notfirst = logical(0);
+            notfirst = false;
             % Set the max nObjects to 500 by increasing the threshold until nObjects <= 500
             while nObjects >= 500
 
@@ -130,7 +130,7 @@ switch MaskMode
                     cImage.level = cImage.level*2;
                     UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
                 end
-                notfirst = logical(1);
+                notfirst = true;
 
                 % binarize median-filtered image at level determined above
                 cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
@@ -220,9 +220,6 @@ switch MaskMode
             % BUILD 8-CONNECTED LABEL MATRIX
             cImage.L = sparse(bwlabel(full(cImage.bw),8));
 
-            % GET # OF OBJETCS
-            nObjects = max(max(full(cImage.L)));
-
             % update log with masking output
             UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
             UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
@@ -285,9 +282,6 @@ switch MaskMode
 
             % BUILD 8-CONNECTED LABEL MATRIX
             cImage.L = sparse(bwlabel(full(cImage.bw),8));
-
-            % GET # OF OBJETCS
-            nObjects = max(max(full(cImage.L)));
 
             % update log with masking output
             UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');

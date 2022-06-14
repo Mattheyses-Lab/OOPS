@@ -164,7 +164,7 @@ function [] = UpdateImages(source)
 %                 end
 %                 hold off
 
-                for ObjIdx = 1:cImage.nObjects;
+                for ObjIdx = 1:cImage.nObjects
                     Handles.fH.CurrentAxes = Handles.AverageIntensityAxH;
                     hold on
                     Boundary = cImage.Object(ObjIdx).Boundary;
@@ -513,7 +513,7 @@ function [] = UpdateImages(source)
                 Map2 = PODSData.Settings.ReferenceColormap;
                 try
                     PODSData.Handles.AverageIntensityImgH.CData = ...
-                        CompositeRGB(cImage.I,Map1,cImage.PrimaryIntensityDisplayLimits,...
+                        CompositeRGB(Scale0To1(cImage.I),Map1,cImage.PrimaryIntensityDisplayLimits,...
                         Scale0To1(cImage.ReferenceImage),Map2,cImage.ReferenceIntensityDisplayLimits);
                     Handles.AverageIntensityAxH.CLim = [0 255];
                 catch

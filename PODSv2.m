@@ -12,9 +12,6 @@ PODSData = PODSProject;
 
 %PODSData = saveddata;
 
-% get the default colormap for Order Factor images
-OrderFactorMap = PODSData.Settings.OrderFactorColormap;
-
 Handles = struct();
 
 % create the uifigure (main gui window)
@@ -117,15 +114,10 @@ pos = Handles.fH.Position;
 
 % width and height of the large plots
 width = round(pos(3)*0.38);
-height = width;
-height_norm = height/pos(4);
-width_norm = width/pos(3);
 
 % and the small plots
 swidth = round(width/2);
 sheight = swidth;
-swidth_norm = swidth/pos(3);
-sheight_norm = sheight/pos(4);
 
 % main grid for managing layout
 Handles.MainGrid = uigridlayout(Handles.fH,[4,5]);
@@ -421,15 +413,12 @@ Handles.ProjectDataTable = uilabel(Handles.ProjectDataTableGrid,...
     'VerticalAlignment','Top',...
     'Interpreter','html');
 
-Handles.ProjectDataTable.Text = {['Start a new project first...']};
+Handles.ProjectDataTable.Text = {'Start a new project first...'};
 
 %% AXES AND IMAGE PLACEHOLDERS
 
 % empty placeholder image
 emptyimage = zeros(1024,1024);
-
-AllSmallAxes = [];
-AllLargeAxes = [];
 
 %% CHECKPOINT
 
@@ -438,102 +427,102 @@ disp('Setting up small image axes...')
 %% Small Images
     %% FLAT-FIELD IMAGES
 
-for i = 1:4
-    Handles.FFCAxH(i) = uiaxes('Parent',Handles.SmallPanels(1,i),...
+for k = 1:4
+    Handles.FFCAxH(k) = uiaxes('Parent',Handles.SmallPanels(1,k),...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
-        'Tag',['FFC' num2str((i-1)*45)],...
+        'Tag',['FFC' num2str((k-1)*45)],...
         'XTick',[],...
         'YTick',[]);
     % save original values
-    pbarOriginal = Handles.FFCAxH(i).PlotBoxAspectRatio;
-    tagOriginal = Handles.FFCAxH(i).Tag;
+    pbarOriginal = Handles.FFCAxH(k).PlotBoxAspectRatio;
+    tagOriginal = Handles.FFCAxH(k).Tag;
     % place placeholder image on axis
-    Handles.FFCImgH(i) = imshow(full(emptyimage),'Parent',Handles.FFCAxH(i));
+    Handles.FFCImgH(k) = imshow(full(emptyimage),'Parent',Handles.FFCAxH(k));
     % set a tag so our callback functions can find the image
-    set(Handles.FFCImgH(i),'Tag',['FFCImage' num2str((i-1)*45)]);
+    set(Handles.FFCImgH(k),'Tag',['FFCImage' num2str((k-1)*45)]);
     
     % restore original values after imshow() call
-    Handles.FFCAxH(i) = restore_axis_defaults(Handles.FFCAxH(i),pbarOriginal,tagOriginal);
+    Handles.FFCAxH(k) = restore_axis_defaults(Handles.FFCAxH(k),pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     
-    Handles.FFCAxH(i) = SetAxisTitle(Handles.FFCAxH(i),['Flat-Field Image (' num2str((i-1)*45) '^{\circ} Excitation)']);
-    Handles.FFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-    Handles.FFCImgH(i).HitTest = 'Off';
+    Handles.FFCAxH(k) = SetAxisTitle(Handles.FFCAxH(k),['Flat-Field Image (' num2str((k-1)*45) '^{\circ} Excitation)']);
+    Handles.FFCAxH(k).Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.FFCImgH(k).HitTest = 'Off';
     
-    disableDefaultInteractivity(Handles.FFCAxH(i));
+    disableDefaultInteractivity(Handles.FFCAxH(k));
 end
 
 Handles.AllSmallAxes = Handles.FFCAxH;
 
     %% RAW INTENSITY IMAGES
-for i = 1:4
-    Handles.RawIntensityAxH(i) = uiaxes('Parent',Handles.SmallPanels(2,i),...
+for k = 1:4
+    Handles.RawIntensityAxH(k) = uiaxes('Parent',Handles.SmallPanels(2,k),...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
-        'Tag',['Raw' num2str((i-1)*45)],...
+        'Tag',['Raw' num2str((k-1)*45)],...
         'XTick',[],...
         'YTick',[]);
     % save original values
-    pbarOriginal = Handles.RawIntensityAxH(i).PlotBoxAspectRatio;
-    tagOriginal = Handles.RawIntensityAxH(i).Tag;
+    pbarOriginal = Handles.RawIntensityAxH(k).PlotBoxAspectRatio;
+    tagOriginal = Handles.RawIntensityAxH(k).Tag;
     % place placeholder image on axis
-    Handles.RawIntensityImgH(i) = imshow(full(emptyimage),'Parent',Handles.RawIntensityAxH(i));
+    Handles.RawIntensityImgH(k) = imshow(full(emptyimage),'Parent',Handles.RawIntensityAxH(k));
     % set a tag so our callback functions can find the image
-    set(Handles.RawIntensityImgH(i),'Tag',['RawImage' num2str((i-1)*45)]);
+    set(Handles.RawIntensityImgH(k),'Tag',['RawImage' num2str((k-1)*45)]);
     
     % restore original values after imshow() call
-    Handles.RawIntensityAxH(i) = restore_axis_defaults(Handles.RawIntensityAxH(i),pbarOriginal,tagOriginal);
+    Handles.RawIntensityAxH(k) = restore_axis_defaults(Handles.RawIntensityAxH(k),pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     
-    Handles.RawIntensityAxH(i) = SetAxisTitle(Handles.RawIntensityAxH(i),['Raw Intensity (' num2str((i-1)*45) '^{\circ} Excitation)']);
-    Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-    Handles.RawIntensityImgH(i).HitTest = 'Off';
+    Handles.RawIntensityAxH(k) = SetAxisTitle(Handles.RawIntensityAxH(k),['Raw Intensity (' num2str((k-1)*45) '^{\circ} Excitation)']);
+    Handles.RawIntensityAxH(k).Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.RawIntensityImgH(k).HitTest = 'Off';
     
-    disableDefaultInteractivity(Handles.RawIntensityAxH(i));
-    Handles.AllSmallAxes(end+1) = Handles.RawIntensityAxH(i);
+    disableDefaultInteractivity(Handles.RawIntensityAxH(k));
+    Handles.AllSmallAxes(end+1) = Handles.RawIntensityAxH(k);
 end
  
 %% FLAT-FIELD CORRECTED INTENSITY
-for i = 1:4
-    Handles.PolFFCAxH(i) = uiaxes('Parent',Handles.SmallPanels(2,i),...
+for k = 1:4
+    Handles.PolFFCAxH(k) = uiaxes('Parent',Handles.SmallPanels(2,k),...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
-        'Tag',['PolFFC' num2str((i-1)*45)],...
+        'Tag',['PolFFC' num2str((k-1)*45)],...
         'XTick',[],...
         'YTick',[]);
     % save original values
-    pbarOriginal = Handles.PolFFCAxH(i).PlotBoxAspectRatio;
-    tagOriginal = Handles.PolFFCAxH(i).Tag;
+    pbarOriginal = Handles.PolFFCAxH(k).PlotBoxAspectRatio;
+    tagOriginal = Handles.PolFFCAxH(k).Tag;
     % place placeholder image on axis
-    Handles.PolFFCImgH(i) = imshow(full(emptyimage),'Parent',Handles.PolFFCAxH(i));
+    Handles.PolFFCImgH(k) = imshow(full(emptyimage),'Parent',Handles.PolFFCAxH(k));
     % set a tag so our callback functions can find the image
-    set(Handles.PolFFCImgH(i),'Tag',['PolFFCImage' num2str((i-1)*45)]);
+    set(Handles.PolFFCImgH(k),'Tag',['PolFFCImage' num2str((k-1)*45)]);
     
     % restore original values after imshow() call
-    Handles.PolFFCAxH(i) = restore_axis_defaults(Handles.PolFFCAxH(i),pbarOriginal,tagOriginal);
+    Handles.PolFFCAxH(k) = restore_axis_defaults(Handles.PolFFCAxH(k),pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     
     % set axis title
-    Handles.PolFFCAxH(i) = SetAxisTitle(Handles.PolFFCAxH(i),['Flat-Field Corrected Intensity (' num2str((i-1)*45) '^{\circ} Excitation)']);
+    Handles.PolFFCAxH(k) = SetAxisTitle(Handles.PolFFCAxH(k),['Flat-Field Corrected Intensity (' num2str((k-1)*45) '^{\circ} Excitation)']);
     
-    Handles.PolFFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-    Handles.PolFFCAxH(i).Toolbar.Visible = 'Off';
-    Handles.PolFFCAxH(i).Title.Visible = 'Off';
-    Handles.PolFFCAxH(i).HitTest = 'Off';
-    disableDefaultInteractivity(Handles.PolFFCAxH(i));
+    Handles.PolFFCAxH(k).Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.PolFFCAxH(k).Toolbar.Visible = 'Off';
+    Handles.PolFFCAxH(k).Title.Visible = 'Off';
+    Handles.PolFFCAxH(k).HitTest = 'Off';
+    disableDefaultInteractivity(Handles.PolFFCAxH(k));
     
-    Handles.PolFFCImgH(i).Visible = 'Off';
-    Handles.PolFFCImgH(i).HitTest = 'Off';
+    Handles.PolFFCImgH(k).Visible = 'Off';
+    Handles.PolFFCImgH(k).HitTest = 'Off';
 
-    Handles.AllSmallAxes(end+1) = Handles.PolFFCAxH(i);
+    Handles.AllSmallAxes(end+1) = Handles.PolFFCAxH(k);
 end
 
     %% MASKING STEPS
-for i = 1:4
-    switch i
+for k = 1:4
+    switch k
         case 1
-            Handles.MStepsAxH(i) = uiaxes('Parent',Handles.SmallPanels(1,1),...
+            Handles.MStepsAxH(k) = uiaxes('Parent',Handles.SmallPanels(1,1),...
                 'Units','Normalized',...
                 'InnerPosition',[0 0 1 1],...
                 'Tag','MStepsIntensity',...
@@ -542,7 +531,7 @@ for i = 1:4
             image_title = 'Average Intensity';
             image_tag = 'MStepsIntensityImage';
         case 2
-            Handles.MStepsAxH(i) = uiaxes('Parent',Handles.SmallPanels(1,2),...
+            Handles.MStepsAxH(k) = uiaxes('Parent',Handles.SmallPanels(1,2),...
                 'Units','Normalized',...
                 'InnerPosition',[0 0 1 1],...
                 'Tag','MStepsBackground',...
@@ -551,7 +540,7 @@ for i = 1:4
             image_title = 'Background';
             image_tag = 'MStepsBackgroundImage';
         case 3
-            Handles.MStepsAxH(i) = uiaxes('Parent',Handles.SmallPanels(2,1),...
+            Handles.MStepsAxH(k) = uiaxes('Parent',Handles.SmallPanels(2,1),...
                 'Units','Normalized',...
                 'InnerPosition',[0 0 1 1],...
                 'Tag','MStepsBGSubtracted',...
@@ -560,7 +549,7 @@ for i = 1:4
             image_title = 'Background Subtracted';
             image_tag = 'MStepsBGSubtractedImage';
         case 4
-            Handles.MStepsAxH(i) = uiaxes('Parent',Handles.SmallPanels(2,2),...
+            Handles.MStepsAxH(k) = uiaxes('Parent',Handles.SmallPanels(2,2),...
                 'Units','Normalized',...
                 'InnerPosition',[0 0 1 1],...
                 'Tag','MStepsMedianFiltered',...
@@ -571,29 +560,29 @@ for i = 1:4
     end
     
     % save original values
-    pbarOriginal = Handles.MStepsAxH(i).PlotBoxAspectRatio;
-    tagOriginal = Handles.MStepsAxH(i).Tag;
+    pbarOriginal = Handles.MStepsAxH(k).PlotBoxAspectRatio;
+    tagOriginal = Handles.MStepsAxH(k).Tag;
     % place placeholder image on axis
-    Handles.MStepsImgH(i) = imshow(full(emptyimage),'Parent',Handles.MStepsAxH(i));
+    Handles.MStepsImgH(k) = imshow(full(emptyimage),'Parent',Handles.MStepsAxH(k));
     % set a tag so our callback functions can find the image
-    set(Handles.MStepsImgH(i),'Tag',image_tag);
+    set(Handles.MStepsImgH(k),'Tag',image_tag);
     
     % restore original values after imshow() call
-    Handles.MStepsAxH(i) = restore_axis_defaults(Handles.MStepsAxH(i),pbarOriginal,tagOriginal);
+    Handles.MStepsAxH(k) = restore_axis_defaults(Handles.MStepsAxH(k),pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     
     % set axis title
-    Handles.MStepsAxH(i) = SetAxisTitle(Handles.MStepsAxH(i),image_title);
+    Handles.MStepsAxH(k) = SetAxisTitle(Handles.MStepsAxH(k),image_title);
     
-    Handles.MStepsAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-    Handles.MStepsAxH(i).Toolbar.Visible = 'Off';
-    Handles.MStepsAxH(i).Title.Visible = 'Off';
-    Handles.MStepsAxH(i).HitTest = 'Off';
-    disableDefaultInteractivity(Handles.PolFFCAxH(i));
+    Handles.MStepsAxH(k).Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.MStepsAxH(k).Toolbar.Visible = 'Off';
+    Handles.MStepsAxH(k).Title.Visible = 'Off';
+    Handles.MStepsAxH(k).HitTest = 'Off';
+    disableDefaultInteractivity(Handles.PolFFCAxH(k));
     
-    Handles.MStepsImgH(i).Visible = 'Off';
+    Handles.MStepsImgH(k).Visible = 'Off';
 
-    Handles.AllSmallAxes(end+1) = Handles.MStepsAxH(i);
+    Handles.AllSmallAxes(end+1) = Handles.MStepsAxH(k);
 end
 
 %% CHECKPOINT
@@ -1056,7 +1045,7 @@ pause(0.5)
 
 %% Azimuth display settings
 
-    function [] = SetAzimuthDisplaySettings(source,event)
+    function [] = SetAzimuthDisplaySettings(source,~)
         fHAzimuthDisplaySettings = openfig('AzimuthDisplaySettings.fig');
         waitfor(fHAzimuthDisplaySettings);
         PODSData.Settings.UpdateAzimuthDisplaySettings();
@@ -1065,7 +1054,7 @@ pause(0.5)
 
 %% Swarmchart settings
 
-    function [] = SetSwarmChartSettings(source,event)
+    function [] = SetSwarmChartSettings(source,~)
         fHSwarmChartSettings = openfig('SwarmChartSettings.fig');
         waitfor(fHSwarmChartSettings);
         PODSData.Settings.UpdateSwarmChartSettings();
@@ -1074,7 +1063,7 @@ pause(0.5)
 
 %% Scatterplot settings
 
-    function [] = SetScatterPlotSettings(source,event)
+    function [] = SetScatterPlotSettings(source,~)
         fHScatterPlotSettings = openfig('ScatterPlotSettings.fig');
         waitfor(fHScatterPlotSettings);
         PODSData.Settings.UpdateScatterPlotSettings();
@@ -1083,7 +1072,7 @@ pause(0.5)
 
 %% Colormap settings
 
-    function [] = SetColormapsSettings(source,event)
+    function [] = SetColormapsSettings(source,~)
         fHColormapsSettings = openfig('ColormapsSettings.fig');
         waitfor(fHColormapsSettings);
         PODSData.Settings.UpdateColormapsSettings();
@@ -1092,7 +1081,7 @@ pause(0.5)
 
 %% Callbacks controlling dynamic resizing of GUI containers
 
-    function [] = ResetContainerSizes(source,event)
+    function [] = ResetContainerSizes(source,~)
         disp('Figure Window Size Changed...');
         
         SmallWidth = round((source.InnerPosition(3)*0.38)/2);
@@ -1103,29 +1092,14 @@ pause(0.5)
 
     end
 
-    function [] = LogPanelSizeChanged(source,event)
-        %drawnow
-        %set(Handles.LogWindow,'Position',[1 1 Handles.LogPanel.InnerPosition(3) Handles.LogPanel.InnerPosition(4)]);
-    end
-
-    function [] = ImgOperationsTabGroupSizeChanged(source,event)
-        
-        %set(Handles.ThreshAxH,'Position',[0 0 1 1]);
-    end
-
-    function [] = AppInfoPanelSizeChanged(source,event)
-        
-        set(Handles.ProjectDataTable,'Position',[10 10 Handles.AppInfoPanel.InnerPosition(3)-20 Handles.AppInfoPanel.InnerPosition(4)-20]);
-    end
-
 %% Callbacks for interactive thresholding
 % Set figure callbacks WindowButtonMotionFcn and WindowButtonUpFcn
-    function [] = StartUserThresholding(source,event)
+    function [] = StartUserThresholding(~,~)
         Handles.fH.WindowButtonMotionFcn = @MoveThresholdLine;
         Handles.fH.WindowButtonUpFcn = @StopMovingAndSetThresholdLine;
     end
 % Update display while thresh line is moving
-    function [] = MoveThresholdLine(source,event)
+    function [] = MoveThresholdLine(source,~)
         Handles.CurrentThresholdLine.Value = round(Handles.ThreshAxH.CurrentPoint(1,1),4);
         Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
         %drawnow limitrate
@@ -1134,7 +1108,7 @@ pause(0.5)
         drawnow
     end
 % Set final thresh position and restore callbacks
-    function [] = StopMovingAndSetThresholdLine(source,event)
+    function [] = StopMovingAndSetThresholdLine(source,~)
         Handles.CurrentThresholdLine.Value = round(Handles.ThreshAxH.CurrentPoint(1,1),4);
         Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
         Handles.fH.WindowButtonMotionFcn = '';
@@ -1145,29 +1119,29 @@ pause(0.5)
 
 %% Callbacks for intensity display scaling
 
-    function [] = AdjustPrimaryChannelIntensity(source,event)
+    function [] = AdjustPrimaryChannelIntensity(source,~)
         PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits = source.Value;
         
-        if PODSData.CurrentImage(1).ReferenceImageLoaded & PODSData.Handles.ShowReferenceImageAverageIntensity.Value
+        if PODSData.CurrentImage(1).ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value
             UpdateCompositeRGB();
         else
             PODSData.Handles.AverageIntensityAxH.CLim = source.Value;
         end
     end
 
-    function [] = AdjustReferenceChannelIntensity(source,event)
+    function [] = AdjustReferenceChannelIntensity(source,~)
         PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits = source.Value;
-        if PODSData.CurrentImage(1).ReferenceImageLoaded & Handles.ShowReferenceImageAverageIntensity.Value
+        if PODSData.CurrentImage(1).ReferenceImageLoaded && Handles.ShowReferenceImageAverageIntensity.Value
             UpdateCompositeRGB();
         end
     end
 
     function UpdateCompositeRGB()
         Handles.AverageIntensityImgH.CData = ...
-            CompositeRGB(PODSData.CurrentImage(1).EnhancedImg,...
+            CompositeRGB(Scale0To1(PODSData.CurrentImage(1).I),...
             PODSData.Settings.IntensityColormaps{1},...
             PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits,...
-            Scale0To1(PODSData.CurrentImage(1).ReferenceImageEnhanced),...
+            Scale0To1(PODSData.CurrentImage(1).ReferenceImage),...
             PODSData.Settings.ReferenceColormap,...
             PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits);
         Handles.AverageIntensityAxH.CLim = [0 255];
@@ -1268,7 +1242,7 @@ pause(0.5)
             Handles.(btn.Tag) = btn;
         end
         
-        function addLineScanToolbarBtn;
+        function addLineScanToolbarBtn
             btn = axtoolbarbtn(tb,'push');
             btn.Icon = 'LineScanIcon.png';
             btn.ButtonPushedFcn = @tbLineScan;
@@ -1295,19 +1269,15 @@ pause(0.5)
 %% Tab Selection (uimenu callback)
 
 
-    function [] = TabSelection(source,event)
+    function [] = TabSelection(source,~)
         % current PODSData structure
         data = guidata(source);
-        % the tab to switch to
-        NewTab = source.Text;
-        % the tab we switched from
-        OldTab = data.Settings.CurrentTab;
-        % indicate tab selection in log
-        UpdateLog3(source,[NewTab, ' Tab Selected'],'append');
+
         % update GUI state to reflect new current/previous tabs
         data.Settings.PreviousTab = data.Settings.CurrentTab;
         data.Settings.CurrentTab = source.Text;
-
+        % indicate tab selection in log
+        UpdateLog3(source,[data.Settings.CurrentTab,' Tab Selected'],'append');
         switch data.Settings.PreviousTab % the tab we are switching from
             
             case 'Files'
@@ -1384,19 +1354,11 @@ pause(0.5)
                 
             case 'View/Adjust Mask'
                 % link large AvgIntensityAxH and MaskAxH
-                try
-                    linkaxes([Handles.AverageIntensityAxH,Handles.MaskAxH],'off');
-                catch
-                    % do nothing
-                end
+                linkaxes([Handles.AverageIntensityAxH,Handles.MaskAxH],'off');
                 
-                try
-                    delete(PODSData.Handles.ObjectRectangles);
-                end
+                delete(PODSData.Handles.ObjectRectangles);
 
-                try
-                    delete(PODSData.Handles.ObjectBoundaries);
-                end
+                delete(PODSData.Handles.ObjectBoundaries);
 
                 Handles.AverageIntensityImgH.Visible = 'Off';
                 Handles.AverageIntensityAxH.Title.Visible = 'Off';
@@ -1425,12 +1387,12 @@ pause(0.5)
                 Handles.OFCbar.Visible = 'Off';
                 
             case 'Azimuth'
-                try
-                    linkaxes([Handles.AverageIntensityAxH,Handles.AzimuthAxH],'off');
-                end                
-                try
-                    delete(data.Handles.AzimuthLines);
-                end
+
+                linkaxes([Handles.AverageIntensityAxH,Handles.AzimuthAxH],'off');
+
+
+                delete(data.Handles.AzimuthLines);
+
                 
                 set(Handles.PhaseBarComponents,'Visible','Off');
                 
@@ -1446,19 +1408,17 @@ pause(0.5)
                 
             case 'Plots'
 
-                try
-                    delete(Handles.ScatterPlotAxH.Children)
+                delete(Handles.ScatterPlotAxH.Children)
+
+                if isvalid(Handles.ScatterPlotAxH.Legend)
+                    Handles.ScatterPlotAxH.Legend.Visible = 'Off';
                 end
-                
-                Handles.ScatterPlotAxH.Legend.Visible = 'Off';
                 Handles.ScatterPlotAxH.Title.Visible = 'Off';
                 Handles.ScatterPlotAxH.Toolbar.Visible = 'Off';
                 Handles.ScatterPlotAxH.Visible = 'Off';
 
-                try
-                    % hide the swarm plot
-                    delete(Handles.SwarmPlotAxH.Children)
-                end
+                % hide the swarm plot
+                delete(Handles.SwarmPlotAxH.Children)
 
                 Handles.SwarmPlotAxH.Title.Visible = 'Off';
                 Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
@@ -1481,15 +1441,11 @@ pause(0.5)
             case 'View Objects'
                 
                 % delete the object OF contour plot
-                try
-                    delete(data.Handles.hObjectOFContour);
-                end
-                
+                delete(data.Handles.hObjectOFContour);
+
                 % delete the object intensity curves
-                try
-                    delete(Handles.ObjectIntensityPlotAxH.Children);
-                end
-                
+                delete(Handles.ObjectIntensityPlotAxH.Children);
+
                 % object intensity image
                 Handles.ObjectPolFFCAxH.Title.Visible = 'Off';
                 Handles.ObjectPolFFCImgH.Visible = 'Off';
@@ -1653,17 +1609,17 @@ pause(0.5)
                 
                 Handles.ImgPanel1.Visible = 'On';
                 Handles.ImgPanel2.Visible = 'On';
-                
+
                 for i = 1:4
                     Handles.SmallPanels(1,i).Visible = 'Off';
                     Handles.SmallPanels(2,i).Visible = 'Off';
                 end
-                try
-                    linkaxes([Handles.AverageIntensityAxH,Handles.AzimuthAxH],'xy');
-                end                
-                
+
+                linkaxes([Handles.AverageIntensityAxH,Handles.AzimuthAxH],'xy');
+
             case 'Plots'
-                try
+
+                if isvalid(Handles.ScatterPlotAxH.Legend)
                     Handles.ScatterPlotAxH.Legend.Visible = 'On';
                 end
 
@@ -1745,7 +1701,7 @@ pause(0.5)
 
 %% 'Objects' menubar callbacks
 
-    function [] = mbDeleteSelectedObjects(source,event)
+    function [] = mbDeleteSelectedObjects(source,~)
         
         cGroup = PODSData.CurrentGroup;
         
@@ -1756,12 +1712,12 @@ pause(0.5)
         UpdateTables(source);
     end
 
-    function [] = mbLabelSelectedObjects(source,event)
+    function [] = mbLabelSelectedObjects(source,~)
         
         CustomLabel = ChooseObjectLabel(source);
         
-        for i = 1:PODSData.nGroups
-            PODSData.Group(i,1).LabelSelectedObjects(CustomLabel);
+        for GroupIdx = 1:PODSData.nGroups
+            PODSData.Group(GroupIdx,1).LabelSelectedObjects(CustomLabel);
         end
         
         UpdateImages(source);
@@ -1769,7 +1725,7 @@ pause(0.5)
         UpdateTables(source);
     end
 
-    function [] = mbClearSelection(source,event)
+    function [] = mbClearSelection(source,~)
         
         cGroup = PODSData.CurrentGroup;
         
@@ -1782,11 +1738,9 @@ pause(0.5)
 
 %% Changing file input settings
 
-    function [] = ChangeInputFileType(source,event)
-        OldInputFileType = PODSData.Settings.InputFileType;
-        NewInputFileType = source.Text
-        PODSData.Settings.InputFileType = NewInputFileType;
-        UpdateLog3(source,['Input File Type Changed to ',NewInputFileType],'append');
+    function [] = ChangeInputFileType(source,~)
+        PODSData.Settings.InputFileType = source.Text;
+        UpdateLog3(source,['Input File Type Changed to ',source.Text],'append');
         
         switch NewInputFileType
             case '.nd2'
@@ -1800,7 +1754,7 @@ pause(0.5)
 
 %% Changing active object/image/group indices
 
-    function [] = ChangeActiveObject(source,event)
+    function [] = ChangeActiveObject(source,~)
         data = guidata(source);
         
         cImage = data.CurrentImage;
@@ -1810,7 +1764,7 @@ pause(0.5)
         UpdateTables(source);
     end
 
-    function [] = ChangeActiveGroup(source,event)
+    function [] = ChangeActiveGroup(source,~)
         data = guidata(source);
         % set new group index based on user selection
         data.CurrentGroupIndex = source.Value;
@@ -1820,7 +1774,7 @@ pause(0.5)
         UpdateTables(source);
     end
 
-    function [] = ChangeActiveImage(source,event)
+    function [] = ChangeActiveImage(source,~)
         % get PODSData
         data = guidata(source);
         % get current group index
@@ -1835,7 +1789,7 @@ pause(0.5)
 
 %% Changing active image operation
 
-    function[] = ChangeImageOperation(source,event)
+    function[] = ChangeImageOperation(source,~)
         
         data = guidata(source);
         OldOperation = data.Settings.CurrentImageOperation;
@@ -1873,7 +1827,7 @@ pause(0.5)
 
 %% Local SB
 
-    function [] = pb_FindLocalSB(source,event)
+    function [] = pb_FindLocalSB(source,~)
         % get the data structure
         data = guidata(source);
         % number of selected images
@@ -1882,11 +1836,11 @@ pause(0.5)
         UpdateLog3(source,['Detecting Local S/B for ',num2str(nImages),' images'],'append');
         % counter to track which image we're on
         Counter = 1;
-        for cImage = data.CurrentImage;
+        for cImage = data.CurrentImage
             % update log to indicate which image we are on
             UpdateLog3(source,['    ',cImage.pol_shortname,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
             % detect local S/B for one image
-            cImage.FindLocalSB(source);
+            cImage.FindLocalSB();
             % preallocate filtered mask and OF image
             cImage.bwFiltered = zeros(size(cImage.bw));
             cImage.OFFiltered = zeros(size(cImage.OF_image));
@@ -1912,12 +1866,12 @@ pause(0.5)
 
 %% Data saving
 
-    function [] = SaveImages(source,event)
+    function [] = SaveImages(source,~)
         
-        data = guidata(source)
-        cGroupIndex = data.CurrentGroupIndex;
+        data = guidata(source);
+        %cGroupIndex = data.CurrentGroupIndex;
         % array of selected image(s) indices
-        cImageIndex = data.Group(cGroupIndex).CurrentImageIndex;
+        %cImageIndex = data.Group(cGroupIndex).CurrentImageIndex;
         
         % get screensize
         ss = data.Settings.ScreenSize;
@@ -1933,22 +1887,23 @@ pause(0.5)
             'HandleVisibility','On');
         
         % cell array of char vectors of possible save options
-        SaveOptions = {['Average Intensity Image'];...
-            ['Background Subtracted Image'];...
-            ['Masked Order Factor'];...
-            ['Binary Mask'];...
-            ['Filtered Order Factor'];...
-            ['Filtered Mask']};
+        SaveOptions = {'Average Intensity Image';...
+            'Background Subtracted Image';...
+            'Masked Order Factor';...
+            'Binary Mask';...
+            'Filtered Order Factor';...
+            'Filtered Mask'};
         
         % generate save options check boxes
-        for i = 1:length(SaveOptions)
-            SaveCBox(i) = uicheckbox(fig,...
-                'Text',SaveOptions{i},...
+        SaveCBox = gobjects(length(SaveOptions));
+        for SaveOption = 1:length(SaveOptions)
+            SaveCBox(SaveOption) = uicheckbox(fig,...
+                'Text',SaveOptions{SaveOption},...
                 'Value',0,...
-                'Position',[20 600-40*i 160 20]);
+                'Position',[20 600-40*SaveOption 160 20]);
         end
         
-        Btn = uibutton(fig,'Push',...
+        uibutton(fig,'Push',...
             'Text','Choose Save Directory',...
             'Position',[20 20 160 20],...
             'ButtonPushedFcn',@ContinueToSave);
@@ -1956,10 +1911,11 @@ pause(0.5)
         UserSaveChoices = {};
         
         % callback for Btn to close fig
-        function [] = ContinueToSave(source,event)
-            for i = 1:length(SaveCBox)
-                if SaveCBox(i).Value == 1
-                    UserSaveChoices{end+1} = SaveCBox(i).Text;
+        function [] = ContinueToSave(~,~)
+
+            for SaveOptionIdx = 1:length(SaveCBox)
+                if SaveCBox(SaveOptionIdx).Value == 1
+                    UserSaveChoices{end+1} = SaveCBox(SaveOptionIdx).Text;
                 end
             end
             delete(fig)
@@ -1975,10 +1931,10 @@ pause(0.5)
         cd(folder_name);
         
         % save user-specified data for each currently selected image
-        for i = 1:length(cImageIndex)
+        for cImage = data.CurrentImage
             
             % current replicate to save images for
-            cImage = data.Group(cGroupIndex).Replicate(cImageIndex(i));
+            %cImage = data.Group(cGroupIndex).Replicate(cImageIndex(i));
             % data struct to hold output variable for current image
             ImageSummary = struct();
             % mask and average OF
@@ -2075,7 +2031,7 @@ pause(0.5)
         
     end % end SaveImages
 
-    function [] = SaveObjectData(source,event)
+    function [] = SaveObjectData(source,~)
         
         data = guidata(source);
         
@@ -2147,7 +2103,7 @@ pause(0.5)
         UpdateImages(source);
     end
 
-    function [] = tbShowReferenceImageStateChanged(source,event)
+    function [] = tbShowReferenceImageStateChanged(source,~)
         if PODSData.CurrentImage.ReferenceImageLoaded
             UpdateImages(source);
         else
@@ -2156,7 +2112,7 @@ pause(0.5)
         end
     end
 
-    function [] = tbRectangularROI(source,event)
+    function [] = tbRectangularROI(source,~)
         ctb = source.Parent;
         cax = ctb.Parent;
         % draw rectangular ROI
@@ -2169,7 +2125,7 @@ pause(0.5)
         UpdateImages(source);
     end
 
-    function [] = tbLineScan(source,event)
+    function [] = tbLineScan(~,~)
 
         try
             delete(Handles.LineScanROI);
@@ -2204,18 +2160,18 @@ pause(0.5)
 
     end
 
-    function CloseLineScanFig(source,event)
+    function CloseLineScanFig(~,~)
         
         delete(Handles.LineScanROI);
         delete(Handles.LineScanFig);
         
     end
 
-    function LineScanROIMoving(source,event)
+    function LineScanROIMoving(~,~)
 
         cImage = PODSData.CurrentImage;
         
-        if cImage.ReferenceImageLoaded & PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
+        if cImage.ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
             Handles.LineScanAxes = PlotIntegratedDoubleLineScan(Handles.LineScanAxes,...
                 Handles.LineScanROI.Position,...
                 cImage.EnhancedImg,...
@@ -2230,11 +2186,11 @@ pause(0.5)
 
     end
 
-    function LineScanROIMoved(source,event)
+    function LineScanROIMoved(~,~)
 
         cImage = PODSData.CurrentImage;
         
-        if cImage.ReferenceImageLoaded & PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
+        if cImage.ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
             Handles.LineScanAxes = PlotIntegratedDoubleLineScan(Handles.LineScanAxes,...
                 Handles.LineScanROI.Position,...
                 cImage.EnhancedImg,...

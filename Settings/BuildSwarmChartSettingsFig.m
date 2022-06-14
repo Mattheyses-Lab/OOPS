@@ -88,7 +88,7 @@ function BuildSwarmChartSettingsFig()
 
     fHSwarmChartSettings.Visible = 'On';
     
-    function SaveSwarmChartSettings(source,event)
+    function SaveSwarmChartSettings(~,~)
         if ismac
             SwarmChartSettings.GroupingType = ButtonGroup1.SelectedObject.Text;
             SwarmChartSettings.ColorMode = ButtonGroup2.SelectedObject.Text;
@@ -108,7 +108,7 @@ function BuildSwarmChartSettingsFig()
         end
     end
 
-    function LoadSwarmChartSettings(source,event)
+    function LoadSwarmChartSettings(source,~)
         movegui(source,'center');
         load('SwarmChartSettings.mat');
         % select button in group according to settings file

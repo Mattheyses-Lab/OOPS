@@ -199,7 +199,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 Value = [obj.Knob(1).Value obj.Knob(2).Value];
             end
             
-            function obj = set.Value(obj,val)
+            function set.Value(obj,val)
                 obj.Knob(1).Value = val(1);
                 obj.KnobLabel(1).Position(1) = val(1)-0.01;
                 obj.KnobLabel(1).String = num2str(round(val(1),2));
@@ -214,7 +214,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             end
 
             function CurrentPoint = get.CurrentPoint(obj)
-                CurrentPoint = obj.RangeAxes.CurrentPoint(1,1)
+                CurrentPoint = obj.RangeAxes.CurrentPoint(1,1);
             end
             
             function MoveKnob1(obj)

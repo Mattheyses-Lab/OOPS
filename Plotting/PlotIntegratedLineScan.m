@@ -27,15 +27,15 @@ function LineScanAxes = PlotIntegratedLineScan(LineScanAxes,ScanLinePosition,Img
 
     LineScanYData = cell(scanwidth,1);
     LineScanYData{1} = zeros(1,N_10nm);
-    IntegratedLineScan = zeros(1,N_10nm);
 
     parfor i = 1:scanwidth
 
         LineScanYData{i} = improfile(Img,ParallelLines{i}(:,1),ParallelLines{i}(:,2),N_10nm,'bilinear')';
 
-        IntegratedLineScan = IntegratedLineScan+LineScanYData{i};
-
     end
+
+    IntegratedLineScan = sum(cell2mat(LineScanYData(1:scanwidth)),1);
+    
 
     plot(LineScanAxes,umXData,Scale0To1(IntegratedLineScan),'Color',[0 1 0],'LineWidth',2);
 

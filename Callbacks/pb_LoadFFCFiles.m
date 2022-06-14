@@ -1,4 +1,4 @@
-function [] = pb_LoadFFCFiles(source,event)
+function [] = pb_LoadFFCFiles(source,~)
 
     PODSData = guidata(source);
     Settings = PODSData.Settings;
@@ -22,7 +22,7 @@ function [] = pb_LoadFFCFiles(source,event)
             uiwait(PODSData.Handles.fH);
             PODSData.Handles.fH.Visible = 'Off';
             [cal_files, calPath, ~] = uigetfile('*.nd2',...
-                ['Select .nd2 flat-field stack(s)'],...
+                'Select .nd2 flat-field stack(s)',...
                 'MultiSelect','on',PODSData.Settings.LastDirectory);
             PODSData.Handles.fH.Visible = 'On';
             figure(PODSData.Handles.fH);
@@ -83,7 +83,7 @@ function [] = pb_LoadFFCFiles(source,event)
             
             uiwait(PODSData.Handles.fH);
 
-            [cal_files, calPath, ~] = uigetfile('*.tif',['Select .nd2 flat-field stack(s)'],'MultiSelect','on');
+            [cal_files, calPath, ~] = uigetfile('*.tif','Select .nd2 flat-field stack(s)','MultiSelect','on');
 
             if(iscell(cal_files)==0)
                 if(cal_files==0)
