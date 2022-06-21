@@ -19,7 +19,12 @@ classdef PODSSettings < handle
             'ZoomLevelIdx',4,...
             'OldWindowButtonMotionFcn','',...
             'OldImageButtonDownFcn','',...
-            'AlreadyActive',false);
+            'Active',false,...
+            'CurrentButton',gobjects(1,1),...
+            'StaticAxes',gobjects(1,1),...
+            'StaticImage',gobjects(1,1),...
+            'DynamicAxes',gobjects(1,1),...
+            'DynamicAxesParent',gobjects(1,1));
         
         InputFileType = '.nd2';
 
@@ -47,6 +52,9 @@ classdef PODSSettings < handle
         % for now, just 1
         nChannels = 1;
         
+        % colormaps settings
+        Colormaps struct
+        ColormapsSettings struct
         % struct of all colormaps
         AllColormaps struct
         % currently selected colormaps for each image type
@@ -59,7 +67,7 @@ classdef PODSSettings < handle
         AzimuthLineWidth = 1;
         AzimuthLineScale = 100;
         AzimuthScaleDownFactor = 1;
-        AzimuthColorMode = 'Angle';
+        AzimuthColorMode = 'Direction';
         
         % SwarmChart settings
         % how to group the data, by group, by custom label, or both
@@ -105,11 +113,11 @@ classdef PODSSettings < handle
             end            
 
             try
-                colormaps_mat_file = load('Colormaps.mat');
-                obj.AllColormaps = colormaps_mat_file.Colormaps;
-                obj.IntensityColormaps{1} = obj.AllColormaps.Turbo;
-                obj.IntensityColormaps{2} = obj.AllColormaps.Red;
-                obj.OrderFactorColormap = obj.AllColormaps.OFMapNew;
+                Colormaps_mat_file = load('Colormaps.mat');
+                obj.Colormaps = Colormaps_mat_file.Colormaps;
+                obj.IntensityColormaps{1} = obj.Colormaps.Turbo;
+                obj.IntensityColormaps{2} = obj.Colormaps.Red;
+                obj.OrderFactorColormap = obj.Colormaps.OFMapNew;
             catch
                 warning('Unable to load "Colormaps.mat"...');
             end
@@ -152,11 +160,11 @@ classdef PODSSettings < handle
         end
         
         function UpdateColormapsSettings(obj)
-            load ColormapsSettings.mat ColormapsSettings
-            obj.IntensityColormaps{1} = ColormapsSettings.Intensity{3};
-            obj.OrderFactorColormap = ColormapsSettings.OrderFactor{3};
-            obj.ReferenceColormap = ColormapsSettings.Reference{3};
-            clear ColormapsSettings
+            ColormapsSettings_mat_file = load('ColormapsSettings.mat');
+            obj.ColormapsSettings = ColormapsSettings_mat_file.ColormapsSettings;
+            obj.IntensityColormaps{1} = obj.ColormapsSettings.Intensity{3};
+            obj.OrderFactorColormap = obj.ColormapsSettings.OrderFactor{3};
+            obj.ReferenceColormap = obj.ColormapsSettings.Reference{3};
         end
 
         function UpdateSwarmChartSettings(obj)
@@ -173,6 +181,7 @@ classdef PODSSettings < handle
             obj.AzimuthLineWidth = AzimuthDisplaySettings.LineWidth;
             obj.AzimuthLineScale = AzimuthDisplaySettings.LineScale;
             obj.AzimuthScaleDownFactor = AzimuthDisplaySettings.ScaleDownFactor;
+            obj.AzimuthColorMode = AzimuthDisplaySettings.ColorMode;
             clear AzimuthDisplaySettings
         end
         

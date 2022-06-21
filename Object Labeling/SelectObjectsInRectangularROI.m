@@ -1,4 +1,4 @@
-function ObjIdxsInRectangle = SelectObjectsInRectangularROI(source,ROI)
+function SelectObjectsInRectangularROI(source,ROI)
 
     % get data structure
     PODSData = guidata(source);
@@ -18,7 +18,7 @@ function ObjIdxsInRectangle = SelectObjectsInRectangularROI(source,ROI)
         x = centroid(1);
         y = centroid(2);
         % check if obj is within retangular roi, save idx if so
-        if x > left & x < right & y < top & y > bottom
+        if x > left && x < right && y < top && y > bottom
             switch CurrentImage.Object(i).Selected
                 case true
                     % if selected, deselect

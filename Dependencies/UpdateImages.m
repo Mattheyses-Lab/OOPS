@@ -6,21 +6,31 @@ function [] = UpdateImages(source)
     % get gui handles
     Handles = PODSData.Handles;
     
-    % get current group index
-    cGroupIndex = PODSData.CurrentGroupIndex;
+%     % get current group index
+%     cGroupIndex = PODSData.CurrentGroupIndex;
+% 
+%     % get current replicate index within group
+%     cImageIndex = PODSData.Group(cGroupIndex).CurrentImageIndex;
+%     
+%     % if multiple replicates selected, only update the gui to show the first one
+%     if length(cImageIndex) > 1
+%         cImageIndex = cImageIndex(1);
+%     end
+%     
+%     % get current replicate data structure, based on current group, image, and channel
+%     cImage = PODSData.Group(cGroupIndex).Replicate(cImageIndex);
+%     % get FFC data for current group, separate data per channel
+%     FFCData = PODSData.Group(cGroupIndex).FFCData;
 
-    % get current replicate index within group
-    cImageIndex = PODSData.Group(cGroupIndex).CurrentImageIndex;
-    
-    % if multiple replicates selected, only update the gui to show the first one
-    if length(cImageIndex) > 1
-        cImageIndex = cImageIndex(1);
+
+    FFCData = PODSData.CurrentGroup(1).FFCData;
+    cImage = PODSData.CurrentImage;
+
+    % if the current selection includes at least one image
+    if ~isempty(cImage)
+        % then we will update the display according to the first image in the list
+        cImage = cImage(1);
     end
-    
-    % get current replicate data structure, based on current group, image, and channel
-    cImage = PODSData.Group(cGroupIndex).Replicate(cImageIndex);
-    % get FFC data for current group, separate data per channel
-    FFCData = PODSData.Group(cGroupIndex).FFCData;
 
     % empty image to serve as a placeholder
     EmptyImage = sparse(zeros(cImage.Height,cImage.Width));
@@ -36,13 +46,13 @@ function [] = UpdateImages(source)
             try
                 for i = 1:4
                     Handles.FFCImgH(i).CData = FFCData.cal_norm(:,:,i);
-                    Handles.FFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
+                    %Handles.FFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end
             catch
                 UpdateLog3(source,'WARNING: No FFC Images found for this group, try loading them now','append');
                 for i = 1:4
                     Handles.FFCImgH(i).CData = EmptyImage;
-                    Handles.FFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
+                    %Handles.FFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end
             end
 
@@ -50,13 +60,13 @@ function [] = UpdateImages(source)
                 images = cImage.pol_rawdata_normalizedbystack;
                 for i = 1:4
                     Handles.RawIntensityImgH(i).CData = images(:,:,i);
-                    Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
+                    %Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end
                 clear images
             catch
                 for i = 1:4
                     Handles.RawIntensityImgH(i).CData = EmptyImage;
-                    Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
+                    %Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end                
             end
             
@@ -66,13 +76,13 @@ function [] = UpdateImages(source)
                 images = cImage.pol_ffc_normalizedbystack;
                 for i = 1:4
                     Handles.PolFFCImgH(i).CData = images(:,:,i);
-                    Handles.PolFFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
+                    %Handles.PolFFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end
                 clear images
             catch
                 for i = 1:4
                     Handles.PolFFCImgH(i).CData = EmptyImage;
-                    Handles.PolFFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
+                    %Handles.PolFFCAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end                      
             end
 
@@ -81,13 +91,13 @@ function [] = UpdateImages(source)
                 images = cImage.pol_rawdata_normalizedbystack;
                 for i = 1:4
                     Handles.RawIntensityImgH(i).CData = images(:,:,i);
-                    Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
+                    %Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
                 end
                 clear images
             catch
                 for i = 1:4
                     Handles.RawIntensityImgH(i).CData = EmptyImage;
-                    Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};                    
+                    %Handles.RawIntensityAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};                    
                 end
             end
             
@@ -114,9 +124,9 @@ function [] = UpdateImages(source)
                 Handles.MStepsImgH(4).CData = EmptyImage;        
             end
             
-            for i = 1:4
-                Handles.MStepsAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
-            end
+%             for i = 1:4
+%                 Handles.MStepsAxH(i).Colormap = PODSData.Settings.IntensityColormaps{1};
+%             end
             
             % mask
             try
@@ -139,30 +149,21 @@ function [] = UpdateImages(source)
             end
 
             try
-                delete(Handles.ObjectBoundaries);
+                %delete(Handles.ObjectBoundaries);
+                delete(findobj('Tag','ObjectBoundary'));
+            catch
+                warning('Unable to delete object boundaries!');
             end
             % update appearance of object bounding boxes for object selection and labeling
             try
-                delete(Handles.ObjectRectangles);
+                %delete(Handles.ObjectRectangles);
+                delete(findobj('Tag','ObjectRectangles'));
+            catch
+                warning('Unable to delete object rectangles!');
             end
             
             % if ShowSelection toolbar state button is pressed
             if PODSData.Handles.ShowSelectionAverageIntensity.Value == 1
-%                 Handles.fH.CurrentAxes = Handles.AverageIntensityAxH;
-%                 hold on
-%                 %Boundaries = cImage.ObjectBoundaries8;
-%                 for ObjIdx=1:cImage.nObjects
-%                     Boundary = cImage.Object(ObjIdx).Boundary;
-%                     Handles.ObjectBoundaries(ObjIdx) = plot(Boundary(:,2),...
-%                         Boundary(:,1),...
-%                         'Yellow',...
-%                         'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
-%                         'Tag',[num2str(ObjIdx)],...
-%                         'HitTest','On',...
-%                         'ButtonDownFcn',@SelectSingleObjects,...
-%                         'PickableParts','all');
-%                 end
-%                 hold off
 
                 for ObjIdx = 1:cImage.nObjects
                     Handles.fH.CurrentAxes = Handles.AverageIntensityAxH;
@@ -172,10 +173,11 @@ function [] = UpdateImages(source)
                         Boundary(:,1),...
                         'Yellow',...
                         'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
-                        'Tag',[num2str(ObjIdx)],...
+                        'Tag','ObjectBoundary',...
                         'HitTest','On',...
                         'ButtonDownFcn',@SelectSingleObjects,...
-                        'PickableParts','all');
+                        'PickableParts','all',...
+                        'UserData',ObjIdx);
                     hold off
 
                     % plot expanded bounding boxes of each object...
@@ -186,17 +188,19 @@ function [] = UpdateImages(source)
                         'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
                         'HitTest','off',...
                         'PickableParts','None',...
-                        'Tag',[num2str(ObjIdx)],...
+                        'Tag','ObjectRectangles',...
                         'ButtonDownFcn',@SelectSingleObjects,...
-                        'Visible','Off');
+                        'Visible','Off',...
+                        'UserData',ObjIdx);
                     % and on mask image
                     Handles.ObjectRectangles(ObjIdx,2) = rectangle(Handles.MaskAxH,...
                         'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
                         'EdgeColor',cImage.Object(ObjIdx).Label.Color,...
                         'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
                         'PickableParts','All',...
-                        'Tag',[num2str(ObjIdx)],...
-                        'ButtonDownFcn',@SelectSingleObjects);
+                        'Tag','ObjectRectangles',...
+                        'ButtonDownFcn',@SelectSingleObjects,...
+                        'UserData',ObjIdx);
                 end
             end
             
@@ -206,9 +210,7 @@ function [] = UpdateImages(source)
             drawnow
 
         case 'Order Factor'
-            
-            UpdateSliders();
-            
+
             % Order Factor
             try
                 Handles.OrderFactorImgH.CData = cImage.OF_image;
@@ -225,11 +227,70 @@ function [] = UpdateImages(source)
                 Handles.OrderFactorImgH.AlphaData = cImage.bw;
             end
 
+            try
+                %delete(Handles.ObjectBoundaries);
+                delete(findobj('Tag','ObjectBoundary'));
+            catch
+                warning('Unable to delete object boundaries!');
+            end
+            % update appearance of object bounding boxes for object selection and labeling
+            try
+                %delete(Handles.ObjectRectangles);
+                delete(findobj('Tag','ObjectRectangles'));
+            catch
+                warning('Unable to delete object rectangles!');
+            end
+            
+            % if ShowSelection toolbar state button is pressed
+            if PODSData.Handles.ShowSelectionAverageIntensity.Value == 1
+
+                for ObjIdx = 1:cImage.nObjects
+                    Handles.fH.CurrentAxes = Handles.AverageIntensityAxH;
+                    hold on
+                    Boundary = cImage.Object(ObjIdx).Boundary;
+                    Handles.ObjectBoundaries(ObjIdx) = plot(Boundary(:,2),...
+                        Boundary(:,1),...
+                        'Yellow',...
+                        'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
+                        'Tag','ObjectBoundary',...
+                        'HitTest','On',...
+                        'ButtonDownFcn',@SelectSingleObjects,...
+                        'PickableParts','all',...
+                        'UserData',ObjIdx);
+                    hold off
+
+                    % plot expanded bounding boxes of each object...
+                    % on intensity image
+                    Handles.ObjectRectangles(ObjIdx,1) = rectangle(Handles.AverageIntensityAxH,...
+                        'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
+                        'EdgeColor',cImage.Object(ObjIdx).Label.Color,...
+                        'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
+                        'HitTest','off',...
+                        'PickableParts','None',...
+                        'Tag','ObjectRectangles',...
+                        'ButtonDownFcn',@SelectSingleObjects,...
+                        'Visible','Off',...
+                        'UserData',ObjIdx);
+                    % and on mask image
+                    Handles.ObjectRectangles(ObjIdx,2) = rectangle(Handles.OrderFactorAxH,...
+                        'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
+                        'EdgeColor',cImage.Object(ObjIdx).Label.Color,...
+                        'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
+                        'PickableParts','All',...
+                        'Tag','ObjectRectangles',...
+                        'ButtonDownFcn',@SelectSingleObjects,...
+                        'Visible','Off',...
+                        'UserData',ObjIdx);
+                end
+            end
+
+            UpdateSliders();
             UpdateAverageIntensity();
             UpdateThreshholdSlider();            
+            drawnow
 
         case 'Azimuth'
-            
+            %% Azimuth
             UpdateSliders();
             UpdateAverageIntensity();
             
@@ -258,66 +319,57 @@ function [] = UpdateImages(source)
                 disp('Warning: Could not delete Azimuth lines');
             end
             
-%             tempmask = logical(zeros(1024,1024));
+            % if we wanted to show all lines (one per pixel) - NOT RECOMMENDED
+%             tempmask = false(1024,1024);
 % 
 %             for rowidx = 4:4:1024
 %                 for colidx = 4:4:1024
 %                     tempmask(rowidx,colidx) = true;
 %                 end
 %             end
+%             [y,x] = find(tempmask==1);
+%             theta = cImage.AzimuthImage(tempmask);
+%             rho = cImage.OF_image(tempmask);
 
             % get y and x coordinates from 'On' pixels in the mask image
             [y,x] = find(cImage.bw==1);
-            %[y,x] = find(tempmask==1);
-            % theta values are azimuth values from the pixels above
+            % theta (direction) values are azimuth values from the pixels above
             theta = cImage.AzimuthImage(cImage.bw);
-            %theta = cImage.AzimuthImage(tempmask);
             % rho (magnitude) values come from the OF image
             rho = cImage.OF_image(cImage.bw);
-            %rho = cImage.OF_image(tempmask);
-            % conver to cartesian coordinates
+            % convert to cartesian coordinates
             [u,v] = pol2cart(theta,rho);
-
             % transpose each set of endpoint coordinates
             x = x';
             y = y';
             u = u';
             v = v';
-
             % scaling factor of each 'half-line'
             HalfLineScale = PODSData.Settings.AzimuthLineScale/2;
-
             % x and y coordinates for each 'half-line'
             xnew = [x+HalfLineScale*u;x-HalfLineScale*u];
             ynew = [y-HalfLineScale*v;y+HalfLineScale*v];
-
-            % colormap used to color azimuth lines by magnitude
-            cmap = PODSData.Settings.OrderFactorColormap;
-
-            % number of unique colors in the current colormap
-            nColors = length(cmap);
-
             % 'bin' the x and y coords if desired,
             %   sometimes useful if plotting many lines
             xnew = xnew(:,1:PODSData.Settings.AzimuthScaleDownFactor:end);
             ynew = ynew(:,1:PODSData.Settings.AzimuthScaleDownFactor:end);
             rho = rho(1:PODSData.Settings.AzimuthScaleDownFactor:end);
             theta = theta(1:PODSData.Settings.AzimuthScaleDownFactor:end);
-
             % determine how many lines we will plot
             nLines = length(xnew);
-
             % cell array of azimuth line colors (empty for now)
-            LineColors = cell(nLines,1);
             PatchColors = zeros(nLines,3);
-            
             % transparency of the azimuth lines
             LineAlpha = PODSData.Settings.AzimuthLineAlpha;
-
-            ColorMode = 'ByAngle';
+            % mode by which to color the lines
+            ColorMode = PODSData.Settings.AzimuthColorMode;
 
             switch ColorMode
-                case 'ByMagnitude'
+                case 'Magnitude'
+                    % colormap used to color azimuth lines by magnitude
+                    MagnitudeColorMap = PODSData.Settings.OrderFactorColormap;
+                    % number of colors in the map (for indexing)
+                    nColors = length(MagnitudeColorMap);
                     % determine the color of each line based on the OF
                     % in its corresponding pixel
                     for i = 1:nLines
@@ -328,9 +380,9 @@ function [] = UpdateImages(source)
                         if ColorIdx>nColors
                             ColorIdx = nColors;
                         end
-                        PatchColors(i,:) = cmap(ColorIdx,:);
+                        PatchColors(i,:) = MagnitudeColorMap(ColorIdx,:);
                     end
-                case 'ByAngle'
+                case 'Direction'
                     nColors = length(circmap);
                     % get the region of the circular map from
                     % -pi/2 to pi/2 (the range of our values)
@@ -346,9 +398,6 @@ function [] = UpdateImages(source)
                         if ColorIdx>nColors
                             ColorIdx = nColors;
                         end
-
-                        Clr = [halfcircmap(ColorIdx,:),LineAlpha];
-                        LineColors{i} = Clr;
                         PatchColors(i,:) = halfcircmap(ColorIdx,:);
                     end
                 case 'Mono'
@@ -365,7 +414,7 @@ function [] = UpdateImages(source)
                 LineAlpha);
 
         case 'Plots'
-            
+            %% Scatter and swarm plots
             try
                 delete(Handles.ScatterPlotAxH.Children)
             catch
@@ -405,6 +454,10 @@ function [] = UpdateImages(source)
             catch
                 Handles.FilteredOFImgH.CData = EmptyImage;
             end
+
+            UpdateSliders();
+            UpdateAverageIntensity();            
+            UpdateThreshholdSlider();            
             
         case 'View Objects'
 
@@ -471,7 +524,7 @@ function [] = UpdateImages(source)
                 Handles.ObjectOFImgH.CData = EmptyImage;
             end
 
-            % display object OF contour
+            % display object OF contour VERY SLOW - SHOULD REPLACE WITH A DIFFERENT PLOT
             try
                 [~,Handles.hObjectOFContour] = contourf(Handles.ObjectOFContourAxH,ObjectOFImg_Interp,'ShowText','On');
                 colormap(Handles.ObjectOFContourAxH,PODSData.Settings.OrderFactorColormap);

@@ -25,7 +25,30 @@ function [] = ZoomToCursor(source,event)
     Handles = PODSData.Handles;
     
     Zoom = PODSData.Settings.Zoom;
-    
+
+    % If ZoomToCursor is already active, check that the axes that called the callback
+    %   is the current zoom axes. If so, continue as normal. If not, disable 
+    %   zoom on current axes before continuing
+    if Zoom.Active
+        % get the tag to axes where ZoomToCursor is currently enabled
+        CurrentButtonTag = Zoom.CurrentButton.Tag;
+        % get the tag of the button that called the callback
+        CallingButtonTag = source.Tag;
+        % the tag of the ZoomToCursor axes toolbar button is formatted like:
+        %   ['ZoomToCursor',ax.Tag]
+        %   where ax is the axes containing the button
+
+        % If the axes calling the callback is not the current zoom axes
+        if ~strcmp(CurrentButtonTag,CallingButtonTag)
+            % then disable zoom before continuing
+            % use tag to index the Handles structure and change state of button
+            Handles.(CurrentButtonTag).Value = 0;
+            % call ZoomToCursor with current button to deactivate the zoom
+            ZoomToCursor(Handles.(CurrentButtonTag));
+        end
+        
+    end
+
     Zoom.Freeze = false;
 
     % try and delete previous CursorPositionLabel, this is necessary in
@@ -37,23 +60,20 @@ function [] = ZoomToCursor(source,event)
     catch
         % no cursor position label exists for these axes
     end
-
-
-%     % Axes where limits will be changing = Axes that called the callback
-%     Zoom.DynamicAxes = event.Axes;
-%     % Get the parent container to place static reference Axes
-%     Zoom.DynamicAxesParent = Zoom.DynamicAxes.Parent;
     
-    switch event.Value
+    switch source.Value
         case 1
-            Zoom.AlreadyActive = true;
-            % Axes where limits will be changing = Axes that called the callback
-            Zoom.DynamicAxes = event.Axes;
+            % set status as active
+            Zoom.Active = true;
+            % set current zoom button, obj that called the callback
+            Zoom.CurrentButton = source;
+            % Get axes where limits will be changing, ancestor axes of button
+            Zoom.DynamicAxes = ancestor(source,'Axes');
             % Get the parent container to place static reference Axes
             Zoom.DynamicAxesParent = Zoom.DynamicAxes.Parent;
-            
+            % Determine the positioning of the axes that called the callback
             pos = Zoom.DynamicAxes.InnerPosition;
-
+            % Build new axes with same position and limits
             Zoom.StaticAxes = uiaxes(Zoom.DynamicAxesParent,...
                 'Units','Normalized',...
                 'InnerPosition',pos,...
@@ -63,14 +83,13 @@ function [] = ZoomToCursor(source,event)
                 'YLim',Zoom.DynamicAxes.YLim,...
                 'Tag','StaticReferenceAxes');
             Zoom.StaticAxes.Toolbar.Visible = 'Off';
-            %Zoom.DynamicAxesParent.Children = flip(Zoom.DynamicAxesParent.Children);
-            
+            % Hide the static axes
             Zoom.StaticAxes.Visible = 'Off';
 
             try
                 Zoom.DynamicAxes.addprop('CursorPositionLabel');
             catch
-                % Property already exists
+                % property already exists
             end
             % label to display cursor position
             Zoom.DynamicAxes.CursorPositionLabel = uilabel(Zoom.DynamicAxesParent,...
@@ -114,19 +133,25 @@ function [] = ZoomToCursor(source,event)
             Zoom.DynamicImage.HitTest = 'On';
             
         case 0
-            Zoom.AlreadyActive = false;
+            Zoom.Active = false;
             Handles.fH.WindowButtonMotionFcn = Zoom.OldWindowButtonMotionFcn;
             Zoom.DynamicImage.ButtonDownFcn = Zoom.OldImageButtonDownFcn;
             Zoom.DynamicImage.HitTest = 'Off';
             
             try
                 delete(Zoom.DynamicAxes.CursorPositionLabel)
+            catch
+                error('Failed to delete cursor label');
             end
             try
                 delete(Zoom.StaticAxes)
+            catch
+                error('Failed to delete static axes');
             end
             try
                 delete(Zoom.StaticImage)
+            catch
+                error('Failed to delete static image');
             end            
 
             Zoom.DynamicAxes.XLim = Zoom.OldXLim;
@@ -137,7 +162,6 @@ function [] = ZoomToCursor(source,event)
             Zoom.ZDist = 0.5*Zoom.ZRange;
             Zoom.ZoomLevelIdx = 4;
             Zoom.pct = 0.5;
-
     end  
     
     PODSData.Settings.Zoom = Zoom;
@@ -147,7 +171,7 @@ function [] = ZoomToCursor(source,event)
 
 end
 
-function [] = CursorMoving(source,event)
+function [] = CursorMoving(source,~)
 
     PODSData = guidata(source);
     fH = PODSData.Handles.fH;
@@ -170,9 +194,9 @@ function [] = CursorMoving(source,event)
     z2 = z1 + Zoom.ZDist;
     
     % if cursor is still within axes limits
-    if x >= Zoom.OldXLim(1) & x <= Zoom.OldXLim(2) & ...
-            y >= Zoom.OldYLim(1) & y <= Zoom.OldYLim(2) & ...
-        z >= Zoom.OldZLim(1) & z <= Zoom.OldZLim(2)
+    if x >= Zoom.OldXLim(1) && x <= Zoom.OldXLim(2) && ...
+            y >= Zoom.OldYLim(1) && y <= Zoom.OldYLim(2) && ...
+        z >= Zoom.OldZLim(1) && z <= Zoom.OldZLim(2)
 
         ZoomPct = round((Zoom.XRange/Zoom.XDist)*100);
         posn2 = Zoom.DynamicAxes.CurrentPoint(1,:);

@@ -48,7 +48,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
         function setup(obj)
             
             obj.Interruptible = 'On';
-            obj.BusyAction = 'Cancel';
+            obj.BusyAction = 'Queue';
             obj.Units = 'Normalized';
             
             % Container for lines
@@ -75,7 +75,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             obj.RangeAxes.Title.VerticalAlignment = 'Top';
             obj.RangeAxes.Title.Color = obj.TitleColor;
             obj.RangeAxes.Title.BackgroundColor = obj.TitleBGColor;
-            obj.RangeAxes.Title.Position = [0.5,1.0,0];
+            obj.RangeAxes.Title.Position = [0.5,0.8,0];
             obj.RangeAxes.Title.HitTest = 'Off';
             
             obj.Knob(1) = SliderKnob(obj.RangeAxes,...
@@ -169,8 +169,9 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 obj.OldWindowButtonMotionFcn = get(gcf,'WindowButtonMotionFcn');
                 obj.OldWindowButtonUpFcn = get(gcf,'WindowButtonUpFcn');
                 % set callbacks to adjust sliders
-                set(gcf,'WindowButtonMotionFcn',@(o,e) obj.MoveKnob1());
                 set(gcf,'WindowButtonUpFcn',@(o,e) obj.StopMovingAndRestoreCallbacks());
+                set(gcf,'WindowButtonMotionFcn',@(o,e) obj.MoveKnob1());
+                
             end
             function StartMovingKnob2(obj)
                 obj.Knob(2).KnobSize = 12;
@@ -178,8 +179,8 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 obj.OldWindowButtonMotionFcn = get(gcf,'WindowButtonMotionFcn');
                 obj.OldWindowButtonUpFcn = get(gcf,'WindowButtonUpFcn');
                 % set callbacks to adjust sliders
-                set(gcf,'WindowButtonMotionFcn',@(o,e) obj.MoveKnob2());
                 set(gcf,'WindowButtonUpFcn',@(o,e) obj.StopMovingAndRestoreCallbacks());
+                set(gcf,'WindowButtonMotionFcn',@(o,e) obj.MoveKnob2());
             end
             
             function HandleKnob1ValueChanged(obj)

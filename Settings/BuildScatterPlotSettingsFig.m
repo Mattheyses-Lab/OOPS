@@ -3,13 +3,13 @@ function BuildScatterPlotSettingsFig()
 %       this function is not used by the main gui, only to build the figure
 %       which will be saved as a .fig file for faster loading
     try
-        load('ScatterPlotSettings.mat');
+        load ScatterPlotSettings.mat ScatterPlotSettings
     catch
         ScatterPlotSettings = struct();
         ScatterPlotSettings.XVariable = 'SBRatio';
         ScatterPlotSettings.YVariable = 'OFAvg';
     end
-    
+
     fHScatterPlotSettings = uifigure('Name','Scatter Plot Settings',...
         'Visible','Off',...
         'WindowStyle','Modal',...
@@ -20,7 +20,7 @@ function BuildScatterPlotSettingsFig()
 
     movegui(fHScatterPlotSettings,'center');
     
-    MyGrid = uigridlayout(fHScatterPlotSettings,[2,2])
+    MyGrid = uigridlayout(fHScatterPlotSettings,[2,2]);
     MyGrid.RowSpacing = 10;
     MyGrid.ColumnSpacing = 10;
     MyGrid.RowHeight = {'1x',20};
@@ -59,7 +59,7 @@ function BuildScatterPlotSettingsFig()
     DoneButton.Layout.Row = 2;
     DoneButton.Layout.Column = [1 2];
 
-    function SaveScatterPlotSettings(source,event)
+    function SaveScatterPlotSettings(~,~)
         if ismac
             ScatterPlotSettings.XVariable = XSelectBox.Value;
             ScatterPlotSettings.YVariable = YSelectBox.Value;
@@ -77,25 +77,21 @@ function BuildScatterPlotSettingsFig()
         end
     end    
 
-    function LoadScatterPlotSettings(source,event)
+    function LoadScatterPlotSettings(source,~)
         movegui(source,'center');
-        load('ScatterPlotSettings.mat');
-        try
-            XSelectBox.Items = ScatterPlotSettings.VariablesLong;
-            XSelectBox.ItemsData = ScatterPlotSettings.VariablesShort;
-        end
-        try
-            YSelectBox.Items = ScatterPlotSettings.VariablesLong;
-            YSelectBox.ItemsData = ScatterPlotSettings.VariablesShort;
-        end        
-        % select button in group according to settings file
-        try
-            XSelectBox.Value = ScatterPlotSettings.XVariable;
-        end
-        try
-            YSelectBox.Value = ScatterPlotSettings.YVariable;
-        end
-        set(source,'Visible','On');        
+        load ScatterPlotSettings.mat ScatterPlotSettings
+
+        XSelectBox.Items = ScatterPlotSettings.VariablesLong;
+        XSelectBox.ItemsData = ScatterPlotSettings.VariablesShort;
+
+        YSelectBox.Items = ScatterPlotSettings.VariablesLong;
+        YSelectBox.ItemsData = ScatterPlotSettings.VariablesShort;
+
+        % select variables in list according to settings file
+        XSelectBox.Value = ScatterPlotSettings.XVariable;
+        YSelectBox.Value = ScatterPlotSettings.YVariable;
+
+        set(source,'Visible','On');
     end
 
 

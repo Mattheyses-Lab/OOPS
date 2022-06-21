@@ -20,7 +20,7 @@ function Scaled = Scale0To1(UnscaledImage)
             min_value = min(UnscaledImage); 
     end
 
-    Scaled = zeros(sz);
+    Scaled = UnscaledImage;
 
     Scaled = (UnscaledImage-min_value)./(max_value-min_value);
 

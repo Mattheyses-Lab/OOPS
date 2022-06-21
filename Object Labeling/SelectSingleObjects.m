@@ -1,8 +1,8 @@
-function SelectSingleObjects(source,event)
+function SelectSingleObjects(source,~)
     PODSData = guidata(source);
     
     % get object index from bounding box tag
-    ObjIdx = str2num(source.Tag);
+    ObjIdx = source.UserData;
     
     % get active image
     CurrentImage = PODSData.CurrentImage(1);

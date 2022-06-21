@@ -20,7 +20,9 @@ function [] = pb_LoadFFCFiles(source,~)
                 'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
             
             uiwait(PODSData.Handles.fH);
+
             PODSData.Handles.fH.Visible = 'Off';
+            
             [cal_files, calPath, ~] = uigetfile('*.nd2',...
                 'Select .nd2 flat-field stack(s)',...
                 'MultiSelect','on',PODSData.Settings.LastDirectory);

@@ -58,7 +58,6 @@ classdef PODSImage < handle
         I double
         BGImg double
         BGSubtractedImg double
-        %MedianFilteredImg double
         EnhancedImg double
         
         % mask threshold adjustment (for display purposes)
@@ -247,7 +246,8 @@ classdef PODSImage < handle
             % delete the bad PODSObject objects
             % set their pixel idxs to 0 in the mask
             for i = 1:length(Bad)
-                obj.bw(Bad(i).SubarrayIdx{:}) = 0;
+%                 obj.bw(Bad(i).SubarrayIdx{:}) = 0;
+                obj.bw(Bad(i).PixelIdxList) = 0;
                 delete(Bad(i));
             end
             % clear Bad array

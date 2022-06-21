@@ -5,11 +5,11 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     
     nPixels = length(RowIndices);
     
-    CurveFit = {};
-    
     DefaultAxColor = axH.Color;
     
-    xp = [0:pi/1000:pi];
+    xp = 0:pi/1000:pi;
+
+    CurveFit = cell(1,nPixels);
 
     for i = 1:nPixels
         
@@ -59,12 +59,13 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     
     % initialize vector to sum up fits
     CurveFitSum = zeros(size(CurveFit{1}));
+    set(gcf,'CurrentAxes',axH);
     
     for i = 1:nPixels
         CurveFitSum = CurveFitSum+CurveFitsNormalized{i};
         % plot the fit line
         plot(axH,xp,CurveFitsNormalized{i},'Color','#A9A9A9','LineWidth',1,'HitTest','Off','LineStyle',':')
-        axH.NextPlot = 'Add';
+        %axH.NextPlot = 'Add';
         hold on
         % find the max of each curve and draw a vertical line at x where f(x) = YMax
         % to show the phase
@@ -74,18 +75,14 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
         MaxIdx = find(CurveFitsNormalized{i} == MaxVal,1);
         line(axH,[xp(MaxIdx),xp(MaxIdx)],[0,MaxVal],'LineStyle',':','LineWidth',1,'HitTest','Off');
     end
+
     CurveFitAvg = CurveFitSum./nPixels;
 %%
 
     MaxY = max(cell2mat(CurveFitsNormalized));
     MinY = min(cell2mat(CurveFitsNormalized));
-    YRange = MaxY-MinY;
     
     PctBuffer = 0.1;
-    
-    % calculate the space below the minimum value as 10% of the range of y-values
-%     BottomSpace = MinY-PctBuffer;
-%     YLowerLim = MinY-BottomSpace;
     
     YLowerLim = MinY-PctBuffer;
     YUpperLim = MaxY+PctBuffer;

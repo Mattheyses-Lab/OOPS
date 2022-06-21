@@ -31,10 +31,11 @@ function [] = UpdateLog3(source,msg,operation)
     
     %disp(['n lines in log window: ',num2str(length(PODSData.Handles.LogWindow.Value))]);
 
-    drawnow
+    
     
     scroll(PODSData.Handles.LogWindow,'bottom');
-        
-    guidata(source,PODSData);
+    
+    drawnow    
+    %guidata(source,PODSData);
     
 end

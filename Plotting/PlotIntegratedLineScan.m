@@ -35,7 +35,6 @@ function LineScanAxes = PlotIntegratedLineScan(LineScanAxes,ScanLinePosition,Img
     end
 
     IntegratedLineScan = sum(cell2mat(LineScanYData(1:scanwidth)),1);
-    
 
     plot(LineScanAxes,umXData,Scale0To1(IntegratedLineScan),'Color',[0 1 0],'LineWidth',2);
 

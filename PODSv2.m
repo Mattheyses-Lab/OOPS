@@ -49,9 +49,11 @@ Handles.hNewProject = uimenu(Handles.hFileMenu,'Text','New Project','Callback',@
 Handles.hLoadFFCFiles = uimenu(Handles.hFileMenu,'Text','Load FFC Files','Separator','On','Callback',@pb_LoadFFCFiles);
 Handles.hLoadFPMFiles = uimenu(Handles.hFileMenu,'Text','Load FPM Files','Callback',@pb_LoadFPMFiles);
 Handles.hLoadReferenceImages = uimenu(Handles.hFileMenu,'Text','Load Reference Images','Callback',@LoadReferenceImages);
-% save
+% save data
 Handles.hSaveOF = uimenu(Handles.hFileMenu,'Text','Save Selected Image Data','Separator','On','Callback',@SaveImages);
 Handles.hSaveObjectData = uimenu(Handles.hFileMenu,'Text','Save Object Data','Callback',@SaveObjectData);
+% save settings
+Handles.hSaveColormapsSettings = uimenu(Handles.hFileMenu,'Text','Save Colormaps Settings','Callback',@SaveColormapsSettings);
 
 %% Options Menu Button - Change gui option and settings
 Handles.hOptionsMenu = uimenu(Handles.fH,'Text','Options');
@@ -60,8 +62,6 @@ Handles.hFileInputType = uimenu(Handles.hOptionsMenu,'Text','File Input Type');
 % Options for input file type
 Handles.hFileInputType_nd2 = uimenu(Handles.hFileInputType,'Text','.nd2','Checked','On','Callback',@ChangeInputFileType);
 Handles.hFileInputType_tif = uimenu(Handles.hFileInputType,'Text','.tif','Checked','Off','Callback',@ChangeInputFileType);
-% Colormap settings
-Handles.hColormapsSettingsMenu = uimenu(Handles.hOptionsMenu,'Text','Colormaps Settings','Callback',@SetColormapsSettings);
 % Change azimuth display settings
 Handles.hAzimuthDisplaySettingsMenu = uimenu(Handles.hOptionsMenu,'Text','Azimuth Display Settings','Separator','On','Callback',@SetAzimuthDisplaySettings);
 Handles.hSwarmChartSettingsMenu = uimenu(Handles.hOptionsMenu,'Text','Swarm Chart Settings','Callback',@SetSwarmChartSettings);
@@ -137,10 +137,88 @@ Handles.AppInfoPanel = uipanel(Handles.MainGrid,...
     'Visible','Off',...
     'AutoResizeChildren','Off');
 Handles.AppInfoPanel.Title = 'Project Summary';
-Handles.AppInfoPanel.Layout.Row = [1 3];
+Handles.AppInfoPanel.Layout.Row = [1 2];
 Handles.AppInfoPanel.Layout.Column = 1;
 
-% ImgOperations grid layout (currently just for interactive thresholding)
+%% set up main settings panel
+
+Handles.SettingsPanel = uipanel(Handles.MainGrid,...
+    'Visible','Off',...
+    'AutoResizeChildren','Off');
+Handles.SettingsPanel.Layout.Row = 3;
+Handles.SettingsPanel.Layout.Column = 1;
+Handles.SettingsPanel.Title = 'Display Settings';
+
+% colormaps settings
+ColormapNames = fieldnames(PODSData.Settings.Colormaps);
+ImageTypeFields = fieldnames(PODSData.Settings.ColormapsSettings);
+nImageTypes = length(ImageTypeFields);
+ImageTypeFullNames = cell(1,nImageTypes);
+ImageTypeColormapsNames = cell(1,nImageTypes);
+ImageTypeColormaps = cell(1,nImageTypes);
+for k = 1:nImageTypes
+    ImageTypeFullNames{k} = PODSData.Settings.ColormapsSettings.(ImageTypeFields{k}){1};
+    ImageTypeColormapsNames{k} = PODSData.Settings.ColormapsSettings.(ImageTypeFields{k}){2};
+    ImageTypeColormaps{k} = PODSData.Settings.ColormapsSettings.(ImageTypeFields{k}){3};
+end
+
+Handles.ColormapsSettingsGrid = uigridlayout(Handles.SettingsPanel,[4,1]);
+Handles.ColormapsSettingsGrid.BackgroundColor = 'Black';
+Handles.ColormapsSettingsGrid.Padding = [5 5 5 5];
+Handles.ColormapsSettingsGrid.RowSpacing = 5;
+Handles.ColormapsSettingsGrid.ColumnSpacing = 5;
+Handles.ColormapsSettingsGrid.RowHeight = {20,'0.5x','1x',30};
+Handles.ColormapsSettingsGrid.ColumnWidth = {'1x'};
+    
+Handles.SettingsDropDown = uidropdown(Handles.ColormapsSettingsGrid,'Items',{'Colormaps'},...
+    'ItemsData',{'Colormaps'},...
+    'Value','Colormaps');
+
+Handles.ColormapsImageTypePanel = uipanel(Handles.ColormapsSettingsGrid,'Title','Image Type');
+    
+Handles.ColormapsSettingsGrid2 = uigridlayout(Handles.ColormapsImageTypePanel,[1,1]);
+Handles.ColormapsSettingsGrid2.Padding = [0 0 0 0];
+
+Handles.ColormapsImageTypeSelector = uilistbox(Handles.ColormapsSettingsGrid2,...
+    'Items',ImageTypeFullNames,...
+    'ItemsData',ImageTypeFields,...
+    'Value',ImageTypeFields{1},...
+    'Tag','ImageTypeSelectBox',...
+    'ValueChangedFcn',@ImageTypeSelectionChanged);
+    
+Handles.ColormapsPanel = uipanel(Handles.ColormapsSettingsGrid,'Title','Colormaps');
+
+Handles.ColormapsSettingsGrid3 = uigridlayout(Handles.ColormapsPanel,[1,1]);
+Handles.ColormapsSettingsGrid3.Padding = [0 0 0 0];
+
+Handles.ColormapsSelector = uilistbox(Handles.ColormapsSettingsGrid3,...
+    'Items',ColormapNames,...
+    'Value',ImageTypeColormapsNames{1},...
+    'Tag','ColormapSelectBox',...
+    'ValueChangedFcn',@ColormapSelectionChanged);
+
+Handles.ExampleColormapPanel = uipanel(Handles.ColormapsSettingsGrid);
+
+Handles.ExampleColormapAx = uiaxes(Handles.ExampleColormapPanel,...
+    'Visible','Off',...
+    'XTick',[],...
+    'YTick',[],...
+    'Units','Normalized',...
+    'InnerPosition',[0 0 1 1]);
+Handles.ExampleColormapAx.Toolbar.Visible = 'Off';
+disableDefaultInteractivity(Handles.ExampleColormapAx);
+
+cbarslice = 1:1:256;
+cbarimage = repmat(cbarslice,50,1);
+
+Handles.ExampleColorbar = image(Handles.ExampleColormapAx,'CData',cbarimage,'CDataMapping','direct');
+
+Handles.ExampleColormapAx.YLim = [0.5 50.5];
+Handles.ExampleColormapAx.XLim = [0.5 256.5];
+
+Handles.ExampleColormapAx.Colormap = ImageTypeColormaps{1};
+
+%% ImgOperations grid layout (currently for interactive thresholding and intensity display)
 Handles.ImageOperationsGrid = uigridlayout(Handles.MainGrid,[1,2],'BackgroundColor',[0 0 0],'Padding',[0 0 0 0]);
 Handles.ImageOperationsGrid.ColumnWidth = {'0.25x','0.75x'};
 Handles.ImageOperationsGrid.ColumnSpacing = 5;
@@ -148,18 +226,18 @@ Handles.ImageOperationsGrid.Layout.Row = 1;
 Handles.ImageOperationsGrid.Layout.Column = [4 5];
 
 % panel to hold img operations listbox grid
-Handles.SettingsSelectorPanel = uipanel(Handles.ImageOperationsGrid,...
+Handles.ImageOperationsSelectorPanel = uipanel(Handles.ImageOperationsGrid,...
     'Visible','Off',...
     'AutoResizeChildren','Off');
-Handles.SettingsSelectorPanel.Title = 'Image Operations';
-Handles.SettingsSelectorPanel.Layout.Column = 1;
+Handles.ImageOperationsSelectorPanel.Title = 'Image Operations';
+Handles.ImageOperationsSelectorPanel.Layout.Column = 1;
 
 % grid to hold img operations listbox
-Handles.SettingsSelectorPanelGrid = uigridlayout(Handles.SettingsSelectorPanel,[1,1],...
+Handles.ImageOperationsSelectorPanelGrid = uigridlayout(Handles.ImageOperationsSelectorPanel,[1,1],...
     'BackgroundColor',[0 0 0],...
     'Padding',[0 0 0 0]);
 % img operations listbox
-Handles.SettingsSelector = uilistbox('parent',Handles.SettingsSelectorPanelGrid,...
+Handles.ImageOperationsSelector = uilistbox('parent',Handles.ImageOperationsSelectorPanelGrid,...
     'Visible','Off',...
     'enable','on',...
     'tag','SettingsSelector',...
@@ -171,11 +249,11 @@ Handles.SettingsSelector = uilistbox('parent',Handles.SettingsSelectorPanelGrid,
     'MultiSelect','Off',...
     'ValueChangedFcn',@ChangeImageOperation);
 
-Handles.SettingsPanel = uipanel(Handles.ImageOperationsGrid,...
+Handles.ImageOperationsPanel = uipanel(Handles.ImageOperationsGrid,...
     'Visible','Off',...
     'AutoResizeChildren','Off');
-Handles.SettingsPanel.Layout.Column = 2;
-Handles.SettingsPanel.Title = 'Adjust mask threshold';
+Handles.ImageOperations.Layout.Column = 2;
+Handles.ImageOperations.Title = 'Adjust mask threshold';
 
 % panel to display log messages (updates user on running/completed processes)
 Handles.LogPanel = uipanel(Handles.MainGrid,...
@@ -210,15 +288,11 @@ end
 Handles.ImgPanel1 = uipanel(Handles.MainGrid,'Visible','Off');
 Handles.ImgPanel1.Layout.Row = [2 3];
 Handles.ImgPanel1.Layout.Column = [2 3];
-%ImgPanel1.Title = 'Large Panel 1'
-%Handles.ImgPanel1.AutoResizeChildren = 'On';
 
 % second one (righthand panel)
 Handles.ImgPanel2 = uipanel(Handles.MainGrid,'Visible','Off');
 Handles.ImgPanel2.Layout.Row = [2 3];
 Handles.ImgPanel2.Layout.Column = [4 5];
-%ImgPanel2.Title = 'Large Panel 2';
-%Handles.ImgPanel2.AutoResizeChildren = 'On';
 
 % add these to an array so we can change their settings simultaneously
 Handles.LargePanels = [Handles.ImgPanel1,Handles.ImgPanel2];
@@ -289,12 +363,12 @@ Handles.ObjectSelector = uilistbox('parent',Handles.ObjectSelectorPanelGrid,...
 
 %% CHECKPOINT
 
-disp('    Interactive thresholding tab group...')
+disp('Setting up thresholding histogram/slider...')
 
 %% Interactive User Thresholding
 
 % axes to show intensity histogram
-Handles.ThreshAxH = uiaxes(Handles.SettingsPanel,...
+Handles.ThreshAxH = uiaxes(Handles.ImageOperationsPanel,...
     'Units','Normalized',...
     'OuterPosition',[0 0 1 1],...
     'Color',[0 0 0],...
@@ -343,7 +417,7 @@ pause(0.1)
 
 %% Intensity display limits range sliders
 
-Handles.PrimaryIntensitySlider = RangeSlider('Parent',Handles.SettingsPanel,...
+Handles.PrimaryIntensitySlider = RangeSlider('Parent',Handles.ImageOperationsPanel,...
         'Position',[0 0.5 1 0.5],...
         'Visible','Off',...
         'Limits',[0 1],...
@@ -363,7 +437,7 @@ Handles.PrimaryIntensitySlider = RangeSlider('Parent',Handles.SettingsPanel,...
 
 Handles.PrimaryIntensitySlider.ValueChangedFcn = @AdjustPrimaryChannelIntensity;
 
-Handles.ReferenceIntensitySlider = RangeSlider('Parent',Handles.SettingsPanel,...
+Handles.ReferenceIntensitySlider = RangeSlider('Parent',Handles.ImageOperationsPanel,...
         'Position',[0 0 1 0.5],...
         'Visible','Off',...
         'Limits',[0 1],...
@@ -910,9 +984,7 @@ disp('Setting up object image axes...')
         'YTick',[]);
     
     SetAxisTitle(Handles.ObjectOFContourAxH,'OF 2D Contour');
-    Handles.ObjectOFContourAxH.Colormap = PODSData.Settings.OrderFactorColormap;
-    %colormap(gca,OrderFactorMap);
-    
+    Handles.ObjectOFContourAxH.Colormap = PODSData.Settings.OrderFactorColormap;    
     Handles.ObjectOFContourAxH.YDir = 'Reverse';
     Handles.ObjectOFContourAxH.Visible = 'Off';
     Handles.ObjectOFContourAxH.HitTest = 'Off';
@@ -1009,13 +1081,20 @@ disp('Setting up object image axes...')
     Handles.ObjectNormIntStackImgH.Visible = 'Off';    
     Handles.ObjectNormIntStackImgH.HitTest = 'Off';
     
-%% Turning on important containers
+%% Turning on important containers and adjusting some components for proper display
+
+
 
 set(Handles.AppInfoPanel,'Visible','On');
 set(Handles.SettingsPanel,'Visible','On');
+set(Handles.ExampleColormapAx,'Visible','On');
+
+%Handles.ExampleColorbar.Position = Handles.ExampleColormapAx.Position;
+
+set(Handles.ImageOperationsPanel,'Visible','On');
 set(Handles.ThreshAxH,'Visible','On');
-set(Handles.SettingsSelectorPanel,'Visible','On');
-set(Handles.SettingsSelector,'Visible','On');
+set(Handles.ImageOperationsSelectorPanel,'Visible','On');
+set(Handles.ImageOperationsSelector,'Visible','On');
 
 set(Handles.LogPanel,'Visible','On');
 set(Handles.LogWindow,'Visible','On');
@@ -1072,11 +1151,66 @@ pause(0.5)
 
 %% Colormap settings
 
-    function [] = SetColormapsSettings(source,~)
-        fHColormapsSettings = openfig('ColormapsSettings.fig');
-        waitfor(fHColormapsSettings);
+%     function [] = SetColormapsSettings(source,~)
+%         fHColormapsSettings = openfig('ColormapsSettings.fig');
+%         waitfor(fHColormapsSettings);
+%         PODSData.Settings.UpdateColormapsSettings();
+%         UpdateImages(source);
+%     end
+
+    function ImageTypeSelectionChanged(source,~)
+        ImageTypeName = source.Value;
+        PODSData.Handles.ColormapsSelector.Value = PODSData.Settings.ColormapsSettings.(ImageTypeName){2};
+        PODSData.Handles.ExampleColormapAx.Colormap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
+    end
+
+    function ColormapSelectionChanged(source,~)
+        ImageTypeName = PODSData.Handles.ColormapsImageTypeSelector.Value;
+        PODSData.Settings.ColormapsSettings.(ImageTypeName){2} = source.Value;
+        PODSData.Settings.ColormapsSettings.(ImageTypeName){3} = PODSData.Settings.Colormaps.(source.Value);
+        PODSData.Handles.ExampleColormapAx.Colormap = PODSData.Settings.Colormaps.(source.Value);
+        UpdateColormaps(ImageTypeName);
+    end
+
+    function UpdateColormaps(ImageTypeName)
+
+        switch ImageTypeName
+
+            case 'Intensity'
+                IntensityMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
+                PODSData.Settings.IntensityColormaps{1} = IntensityMap;
+                PODSData.Handles.AverageIntensityAxH.Colormap = IntensityMap;
+                [PODSData.Handles.FFCAxH.Colormap] = deal(IntensityMap);
+                [PODSData.Handles.RawIntensityAxH.Colormap] = deal(IntensityMap);
+                PODSData.Handles.ObjectPolFFCAxH.Colormap = IntensityMap;
+                PODSData.Handles.ObjectNormIntStackAxH.Colormap = IntensityMap;
+            case 'OrderFactor'
+                OrderFactorMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
+                PODSData.Settings.OrderFactorColormap = OrderFactorMap;
+                PODSData.Handles.OrderFactorAxH.Colormap = OrderFactorMap;
+                PODSData.Handles.ObjectOFAxH.Colormap = OrderFactorMap;
+                PODSData.Handles.ObjectOFContourAxH.Colormap = OrderFactorMap;
+            case 'Reference'
+                ReferenceMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
+                PODSData.Settings.ReferenceColormap = ReferenceMap;
+        end
+
+    end
+
+    function SaveColormapsSettings(source,~)
+        UpdateLog3(source,'Saving colormaps settings...','append');
+        ColormapsSettings = PODSData.Settings.ColormapsSettings;
+        if ismac
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
+            save([SavePath,'/Settings/ColormapsSettings.mat'],'ColormapsSettings');        
+        elseif ispc
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
+            save([SavePath,'\Settings\ColormapsSettings.mat'],'ColormapsSettings');        
+        end
+        UpdateLog3(source,'Done.','append');
         PODSData.Settings.UpdateColormapsSettings();
-        UpdateImages(source);
     end
 
 %% Callbacks controlling dynamic resizing of GUI containers
@@ -1088,8 +1222,8 @@ pause(0.5)
         % update grid size to maatch new image sizes
         PODSData.Handles.MainGrid.RowHeight = {'0.5x',SmallWidth,SmallWidth,'0.3x'};
         PODSData.Handles.MainGrid.ColumnWidth = {'1x',SmallWidth,SmallWidth,SmallWidth,SmallWidth};
+        %PODSData.Handles.ExampleColorbar.Position = PODSData.Handles.ExampleColormapAx.Position;
         drawnow
-
     end
 
 %% Callbacks for interactive thresholding
@@ -1102,8 +1236,6 @@ pause(0.5)
     function [] = MoveThresholdLine(source,~)
         Handles.CurrentThresholdLine.Value = round(Handles.ThreshAxH.CurrentPoint(1,1),4);
         Handles.CurrentThresholdLine.Label = {['Threshold = ',num2str(Handles.CurrentThresholdLine.Value)]};
-        %drawnow limitrate
-        %testing below
         ThresholdLineMoving(source,Handles.CurrentThresholdLine.Value);
         drawnow
     end
@@ -1131,20 +1263,20 @@ pause(0.5)
 
     function [] = AdjustReferenceChannelIntensity(source,~)
         PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits = source.Value;
-        if PODSData.CurrentImage(1).ReferenceImageLoaded && Handles.ShowReferenceImageAverageIntensity.Value
+        if PODSData.CurrentImage(1).ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value
             UpdateCompositeRGB();
         end
     end
 
     function UpdateCompositeRGB()
-        Handles.AverageIntensityImgH.CData = ...
+        PODSData.Handles.AverageIntensityImgH.CData = ...
             CompositeRGB(Scale0To1(PODSData.CurrentImage(1).I),...
             PODSData.Settings.IntensityColormaps{1},...
             PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits,...
             Scale0To1(PODSData.CurrentImage(1).ReferenceImage),...
             PODSData.Settings.ReferenceColormap,...
             PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits);
-        Handles.AverageIntensityAxH.CLim = [0 255];
+        PODSData.Handles.AverageIntensityAxH.CLim = [0 255];
     end
 
 %% Settings axes properties during startup (to be eventually replaced with custom container classes)
@@ -1200,6 +1332,8 @@ pause(0.5)
             btn = axtoolbarbtn(tb,'state');
             btn.Icon = 'MagnifyingGlassBlackAndYellow.png';
             btn.ValueChangedFcn = @ZoomToCursor;
+            btn.Tag = ['ZoomToCursor',axH.Tag];
+            Handles.(btn.Tag) = btn;            
         end
         
         function addApplyMaskToolbarBtn
@@ -1250,7 +1384,6 @@ pause(0.5)
             Handles.(btn.Tag) = btn;
         end
         
-        
     end
 
     function [axH] = SetAxisTitle(axH,title)
@@ -1268,7 +1401,6 @@ pause(0.5)
 
 %% Tab Selection (uimenu callback)
 
-
     function [] = TabSelection(source,~)
         % current PODSData structure
         data = guidata(source);
@@ -1276,6 +1408,13 @@ pause(0.5)
         % update GUI state to reflect new current/previous tabs
         data.Settings.PreviousTab = data.Settings.CurrentTab;
         data.Settings.CurrentTab = source.Text;
+
+        % if ZoomToCursor is active, disable it before switching tabs
+        if data.Settings.Zoom.Active
+            data.Settings.Zoom.CurrentButton.Value = 0;
+            ZoomToCursor(data.Settings.Zoom.CurrentButton);
+        end
+
         % indicate tab selection in log
         UpdateLog3(source,[data.Settings.CurrentTab,' Tab Selected'],'append');
         switch data.Settings.PreviousTab % the tab we are switching from
@@ -1719,6 +1858,8 @@ pause(0.5)
         for GroupIdx = 1:PODSData.nGroups
             PODSData.Group(GroupIdx,1).LabelSelectedObjects(CustomLabel);
         end
+
+        mbClearSelection(source);
         
         UpdateImages(source);
         UpdateListBoxes(source);
@@ -1809,12 +1950,12 @@ pause(0.5)
 
         switch data.Settings.CurrentImageOperation
             case 'Mask Threshold'
-                data.Handles.SettingsPanel.Title = 'Adjust mask threshold';
+                data.Handles.ImageOperationsPanel.Title = 'Adjust mask threshold';
                 data.Handles.ThreshAxH.Visible = 'On';
                 data.Handles.ThreshBar.Visible = 'On';
                 data.Handles.CurrentThresholdLine.Visible = 'On';
             case 'Intensity Display'
-                data.Handles.SettingsPanel.Title = 'Adjust intensity display limits';
+                data.Handles.ImageOperationsPanel.Title = 'Adjust intensity display limits';
                 data.Handles.PrimaryIntensitySlider.Visible = 'On';
                 data.Handles.PrimaryIntensitySlider.Value = data.CurrentImage(1).PrimaryIntensityDisplayLimits;
                 data.Handles.PrimaryIntensitySlider.ValueChangedFcn = @AdjustPrimaryChannelIntensity;
@@ -1823,7 +1964,6 @@ pause(0.5)
                 data.Handles.ReferenceIntensitySlider.Value = data.CurrentImage(1).ReferenceIntensityDisplayLimits;
         end
     end
-
 
 %% Local SB
 
@@ -1884,34 +2024,47 @@ pause(0.5)
         fig = uifigure('Name','Select Images to Save',...
             'Menubar','None',...
             'Position',sz,...
-            'HandleVisibility','On');
+            'HandleVisibility','On',...
+            'Visible','Off');
+
+        MainGrid = uigridlayout(fig,[2,1]);
+        MainGrid.RowHeight = {'fit',20};
+        
+        SaveOptionsPanel = uipanel(MainGrid);
+        SaveOptionsPanel.Title = 'Save Options';
         
         % cell array of char vectors of possible save options
-        SaveOptions = {'Average Intensity Image';...
-            'Background Subtracted Image';...
-            'Masked Order Factor';...
-            'Binary Mask';...
-            'Filtered Order Factor';...
-            'Filtered Mask'};
+        SaveOptions = {'Average Intensity Image (.tif)';...
+            'Enhanced Intensity Image (.tif)';...
+            'Order Factor (.png)';...
+            'Masked Order Factor (.png)';...
+            'S/B-Filtered Order Factor (.png)';...
+            'Mask (.tif)';...
+            'S/B-Filtered Mask (.tif)'};
+
+        SaveOptionsGrid = uigridlayout(SaveOptionsPanel,[length(SaveOptions),1]);
+        SaveOptionsGrid.Padding = [5 5 5 5];
         
         % generate save options check boxes
         SaveCBox = gobjects(length(SaveOptions));
         for SaveOption = 1:length(SaveOptions)
-            SaveCBox(SaveOption) = uicheckbox(fig,...
+            SaveCBox(SaveOption) = uicheckbox(SaveOptionsGrid,...
                 'Text',SaveOptions{SaveOption},...
-                'Value',0,...
-                'Position',[20 600-40*SaveOption 160 20]);
+                'Value',0);
         end
         
-        uibutton(fig,'Push',...
+        uibutton(MainGrid,'Push',...
             'Text','Choose Save Directory',...
-            'Position',[20 20 160 20],...
             'ButtonPushedFcn',@ContinueToSave);
+
+        fig.Visible = 'On';
         
         UserSaveChoices = {};
-        
+
         % callback for Btn to close fig
         function [] = ContinueToSave(~,~)
+            % hide main fig
+            PODSData.Handles.fH.Visible = 'Off';
 
             for SaveOptionIdx = 1:length(SaveCBox)
                 if SaveCBox(SaveOptionIdx).Value == 1
@@ -1919,17 +2072,18 @@ pause(0.5)
                 end
             end
             delete(fig)
+
         end
-        
-        % wait for deletion of SaveOptions figure (button push)
-        waitfor(fig)
-        
-        % let user select save directory
+
+        % wait until fig deleted
+        waitfor(fig);
+        % get save directory
         folder_name = uigetdir(pwd);
-        
+        % turn main fig back on
+        PODSData.Handles.fH.Visible = 'On';
         % move into user-selected save directory
         cd(folder_name);
-        
+
         % save user-specified data for each currently selected image
         for cImage = data.CurrentImage
             
@@ -1976,55 +2130,60 @@ pause(0.5)
             
             %% Masked OF Image
             % if user selected this save option, then...
-            if any(strcmp(UserSaveChoices,'Masked Order Factor'))
-                
-                name = [loc,'-OF_masked'];
+            if any(strcmp(UserSaveChoices,'Order Factor (.png)'))
+                name = [loc,'-OF.png'];
                 UpdateLog3(source,name,'append');
-                fig = figure('Visible','off','Color','Black');
-                hImage = imshow(full(cImage.OF_image),[0,1]);
-                colormap(gca,PODSData.Settings.OrderFactorColormap);
-                hImage.AlphaData = cImage.bw;
-                set(hImage.Parent,'YDir','Reverse');
-                
-                % dirty trick to get export fig to save transparent pixels - need to improve
-                hImage.AlphaData(1,1) = 1;
-                hImage.AlphaData(end,end) = 1;
-                
-                % save and close fig
-                export_fig(name,'-native');
-                close(fig);
-                
+                IOut = ind2rgb(im2uint8(cImage.OF_image),PODSData.Settings.OrderFactorColormap);
+                imwrite(IOut,name);
+            end
+
+
+            if any(strcmp(UserSaveChoices,'Masked Order Factor (.png)'))
+                name = [loc,'-MaskedOF.png'];
+                UpdateLog3(source,name,'append');
+                temporarymap = PODSData.Settings.OrderFactorColormap;
+                temporarymap(1,:) = [0 0 0];
+                IOut = ind2rgb(im2uint8(full(cImage.masked_OF_image)),temporarymap);
+                imwrite(IOut,name);
             end
             
             %% Filtered OF Image
-            if any(strcmp(UserSaveChoices,'Filtered Order Factor'))
+            if any(strcmp(UserSaveChoices,'S/B-Filtered Order Factor (.png)'))
                 
-                name = [loc '-OF_Filtered'];
+                name = [loc '-FilteredOF.png'];
                 UpdateLog3(source,name,'append');
-                fig = figure('Visible','off');
-                hImage = imshow(full(cImage.OFFiltered),[0,1]);
-                colormap(gca,PODSData.Settings.OrderFactorColormap);
-                hImage.AlphaData = cImage.bw;
-                hImage.YDir = 'Reverse';
-                
-                % save and close fig
-                export_fig(name,'-native');
-                close(fig);
-                
+                temporarymap = PODSData.Settings.OrderFactorColormap;
+                temporarymap(1,:) = [0 0 0];                
+                IOut = ind2rgb(im2uint8(full(cImage.OFFiltered)),temporarymap);
+                imwrite(IOut,name);
             end
             %% Average Intensity
-            if any(strcmp(UserSaveChoices,'Average Intensity Image'))
-                
-                name = [loc '-Avg_Intensity'];
+            if any(strcmp(UserSaveChoices,'Average Intensity Image (.tif)'))
+                name = [loc '-AvgIntensity.tif'];
                 UpdateLog3(source,name,'append');
-                fig = figure('Visible','off');
-                hImage = imshow(full(cImage.I),[min(min(cImage.I)),max(max(cImage.I))]);
-                colormap(gca,PODSData.Settings.IntensityColormaps{1});
-                set(hImage.Parent,'YDir','Reverse');
-                
-                export_fig(name,'-native');
-                %close(fig)
-                
+                IOut = im2uint8(Scale0To1(cImage.Pol_ImAvg));
+                imwrite(IOut,PODSData.Settings.IntensityColormaps{1},name);                
+            end
+
+            if any(strcmp(UserSaveChoices,'Enhanced Intensity Image (.tif)'))    
+                name = [loc '-EnhancedIntensity.tif'];
+                UpdateLog3(source,name,'append');
+                IOut = im2uint8(Scale0To1(cImage.EnhancedImg));
+                imwrite(IOut,PODSData.Settings.IntensityColormaps{1},name);
+            end
+
+            if any(strcmp(UserSaveChoices,'Mask (.tif)'))    
+                name = [loc '-Mask.tif'];
+                UpdateLog3(source,name,'append');
+                IOut = im2uint8(full(cImage.bw));
+                imwrite(IOut,name);
+            end    
+
+            if any(strcmp(UserSaveChoices,'S/B-Filtered Mask (.tif)'))
+                name = [loc '-FilteredMask.tif'];
+                UpdateLog3(source,name,'append');
+                IOut = im2uint8(cImage.bwFiltered);
+                imwrite(IOut,name);
             end
             
         end % end of main save loop
@@ -2088,7 +2247,6 @@ pause(0.5)
             case 0 % 'Off'
                 im.AlphaData = 1;
         end
-        
     end
 
     function [] = tbShowSelectionStateChanged(source,event)
@@ -2128,43 +2286,46 @@ pause(0.5)
     function [] = tbLineScan(~,~)
 
         try
-            delete(Handles.LineScanROI);
-            delete(Handles.LineScanFig);
+            delete(PODSData.Handles.LineScanROI);
+            delete(PODSData.Handles.LineScanFig);
+            delete(PODSData.Handles.LineScanListeners(1));
+            delete(PODSData.Handles.LineScanListeners(2));
         catch
             % do nothing for now
         end
 
-        Handles.LineScanROI = images.roi.Line(Handles.AverageIntensityAxH,...
+        PODSData.Handles.LineScanROI = images.roi.Line(PODSData.Handles.AverageIntensityAxH,...
             'Color','Yellow',...
             'Alpha',0.5);
-        XRange = Handles.AverageIntensityAxH.XLim(2)-Handles.AverageIntensityAxH.XLim(1);
-        YRange = Handles.AverageIntensityAxH.YLim(2)-Handles.AverageIntensityAxH.YLim(1);
-        x1 = Handles.AverageIntensityAxH.XLim(1)+0.25*XRange;
-        x2 = Handles.AverageIntensityAxH.XLim(2)-0.25*XRange;
-        y1 = Handles.AverageIntensityAxH.YLim(1)+0.5*YRange;
-        y2 = Handles.AverageIntensityAxH.YLim(1)+0.5*YRange;
+        XRange = PODSData.Handles.AverageIntensityAxH.XLim(2)-PODSData.Handles.AverageIntensityAxH.XLim(1);
+        YRange = PODSData.Handles.AverageIntensityAxH.YLim(2)-PODSData.Handles.AverageIntensityAxH.YLim(1);
+        x1 = PODSData.Handles.AverageIntensityAxH.XLim(1)+0.25*XRange;
+        x2 = PODSData.Handles.AverageIntensityAxH.XLim(2)-0.25*XRange;
+        y1 = PODSData.Handles.AverageIntensityAxH.YLim(1)+0.5*YRange;
+        y2 = PODSData.Handles.AverageIntensityAxH.YLim(1)+0.5*YRange;
 
-        Handles.LineScanFig = uifigure('Name','Intensity line scan',...
+        PODSData.Handles.LineScanFig = uifigure('Name','Intensity line scan',...
             'HandleVisibility','On',...
             'WindowStyle','AlwaysOnTop',...
             'Units','Normalized',...
             'Position',[0.65 0.8 0.35 0.2],...
             'CloseRequestFcn',@CloseLineScanFig);
         
-        Handles.LineScanAxes = uiaxes(Handles.LineScanFig,'Units','Normalized','OuterPosition',[0 0 1 1]);
+        PODSData.Handles.LineScanAxes = uiaxes(PODSData.Handles.LineScanFig,'Units','Normalized','OuterPosition',[0 0 1 1]);
         
-        Handles.LineScanROI.Position = [x1 y1; x2 y2];
+        PODSData.Handles.LineScanROI.Position = [x1 y1; x2 y2];
         
-        addlistener(Handles.LineScanROI,'MovingROI',@LineScanROIMoving);
-        addlistener(Handles.LineScanROI,'ROIMoved',@LineScanROIMoved);
+        PODSData.Handles.LineScanListeners(1) = addlistener(PODSData.Handles.LineScanROI,'MovingROI',@LineScanROIMoving);
+        PODSData.Handles.LineScanListeners(2) = addlistener(PODSData.Handles.LineScanROI,'ROIMoved',@LineScanROIMoved);
 
     end
 
     function CloseLineScanFig(~,~)
         
-        delete(Handles.LineScanROI);
-        delete(Handles.LineScanFig);
-        
+        delete(PODSData.Handles.LineScanROI);
+        delete(PODSData.Handles.LineScanListeners(1));
+        delete(PODSData.Handles.LineScanListeners(2));        
+        delete(PODSData.Handles.LineScanFig);
     end
 
     function LineScanROIMoving(~,~)
@@ -2172,14 +2333,14 @@ pause(0.5)
         cImage = PODSData.CurrentImage;
         
         if cImage.ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
-            Handles.LineScanAxes = PlotIntegratedDoubleLineScan(Handles.LineScanAxes,...
-                Handles.LineScanROI.Position,...
-                cImage.EnhancedImg,...
-                cImage.ReferenceImageEnhanced,...
+            PODSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(PODSData.Handles.LineScanAxes,...
+                PODSData.Handles.LineScanROI.Position,...
+                cImage.Pol_ImAvg,...
+                cImage.ReferenceImage,...
                 cImage.RealWorldLimits);
         else
-            Handles.LineScanAxes = PlotIntegratedLineScan(Handles.LineScanAxes,...
-                Handles.LineScanROI.Position,...
+            PODSData.Handles.LineScanAxes = PlotIntegratedLineScan(PODSData.Handles.LineScanAxes,...
+                PODSData.Handles.LineScanROI.Position,...
                 cImage.Pol_ImAvg,...
                 cImage.RealWorldLimits);
         end
@@ -2191,14 +2352,14 @@ pause(0.5)
         cImage = PODSData.CurrentImage;
         
         if cImage.ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
-            Handles.LineScanAxes = PlotIntegratedDoubleLineScan(Handles.LineScanAxes,...
-                Handles.LineScanROI.Position,...
-                cImage.EnhancedImg,...
-                cImage.ReferenceImageEnhanced,...
+            PODSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(PODSData.Handles.LineScanAxes,...
+                PODSData.Handles.LineScanROI.Position,...
+                cImage.Pol_ImAvg,...
+                cImage.ReferenceImage,...
                 cImage.RealWorldLimits);
         else
-            Handles.LineScanAxes = PlotIntegratedLineScan(Handles.LineScanAxes,...
-                Handles.LineScanROI.Position,...
+            PODSData.Handles.LineScanAxes = PlotIntegratedLineScan(PODSData.Handles.LineScanAxes,...
+                PODSData.Handles.LineScanROI.Position,...
                 cImage.Pol_ImAvg,...
                 cImage.RealWorldLimits);
         end

@@ -5,17 +5,18 @@
         nGroups = 1;
         %nChannels = 1;
         
-        % get screensize to set gui position
-        ss = PODSData.Settings.ScreenSize;
+        % get main window position to set newproject window position
+        ss = PODSData.Handles.fH.Position;
         % center point (x,y) of screen
-        center = [ss(3)/2,ss(4)/2];
+        center = [ss(1)+ss(3)/2,ss(2)+ss(4)/2];
 
         % position of the first window
         sz = [center(1)-250 center(2)-80 500 160];
 
-        % draw figure window
+        % draw 'newproject' figure window, set up to resume main figure window on close
         newproject = uifigure('Name','New Project',...
                               'Menubar','none',...
+                              'Color','Black',...
                               'Position',sz,...
                               'Visible','Off');
 
@@ -25,7 +26,8 @@
                                      'Value',PODSData.ProjectName);
         ProjectNameBoxTitle = uilabel('Parent',newproject,...
                                       'Position',[50 110 100 20],...
-                                      'Text','Project Name');                        
+                                      'Text','Project Name',...
+                                      'FontColor','White');                        
 
         % editfield to set n groups                          
         NumGroupsBox = uieditfield('Parent',newproject,...
@@ -33,7 +35,8 @@
                                    'Value','1');
         NumGroupsBoxTitle = uilabel('Parent',newproject,...
                                     'Position',[50 70 100 20],...
-                                    'Text','Number of Groups');                                
+                                    'Text','Number of Groups',...
+                                      'FontColor','White');                                
                                 
         % pushbutton - deletes the current window and moves to setting group names                        
         pbCont2NameGroups = uibutton(newproject,...
@@ -45,7 +48,7 @@
         drawnow
 
         newproject.Visible = 'On';
-        
+
         % wait until figure is deleted                       
         waitfor(newproject)                                
          
@@ -56,7 +59,10 @@
         % draw figure window for user to set group names
         fHSetGroupNames = uifigure('Name','Set Group Names',...
                                    'Menubar','none',...
-                                   'Position',sz);        
+                                   'Position',sz,...
+                                   'Color','Black');
+        
+        GroupNamesBox = gobjects(nGroups,1);
 
         for i = 1:nGroups
             GroupNamesBox(i) = uieditfield(fHSetGroupNames,...
@@ -65,7 +71,8 @@
                 'Tag',num2str(i));
             GroupNamesBoxTitle(i) = uilabel(fHSetGroupNames,...
                 'Position',[50 fig_height-50-40*(i-1) 100 20],...
-                'Text',['Group ',num2str(i),' Name:']);
+                'Text',['Group ',num2str(i),' Name:'],...
+                'FontColor','White');
         end        
 
         pbReturnToPODS = uibutton(fHSetGroupNames,...
@@ -90,7 +97,7 @@
 
         function [] = Cont2NameGroups(~,~)
             PODSData.ProjectName = ProjectNameBox.Value;
-            nGroups = str2num(NumGroupsBox.Value);
+            nGroups = str2double(NumGroupsBox.Value);
             %nChannels = str2num(NumChannelsBox.Value);
             delete(newproject)
         end
