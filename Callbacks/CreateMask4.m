@@ -8,7 +8,7 @@ nImages = length(PODSData.CurrentImage);
 
 UpdateLog3(source,['Building mask(s) for ',num2str(nImages),' images...'],'append');
 
-MaskMode = 'Filamentv2';
+MaskMode = 'Legacy8';
 
 i = 1;
 

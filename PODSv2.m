@@ -1486,7 +1486,7 @@ pause(0.5)
         switch axH.Tag
             case 'Mask'
                 addZoomToCursorToolbarBtn;
-                addRemoveObjectsToolbarBtn;
+                %addRemoveObjectsToolbarBtn;
                 addShowSelectionToolbarBtn;
                 addRectangularROIToolbarBtn;
             case 'OrderFactor'
@@ -1533,13 +1533,13 @@ pause(0.5)
             Handles.(btn.Tag) = btn;
         end
         
-        function addRemoveObjectsToolbarBtn
-            btn = axtoolbarbtn(tb,'push');
-            btn.Icon = 'RemoveObjects.png';
-            btn.ButtonPushedFcn = @tbRemoveObjects;
-            btn.Tag = ['RemoveObjects',axH.Tag];
-            Handles.(btn.Tag) = btn;
-        end
+%         function addRemoveObjectsToolbarBtn
+%             btn = axtoolbarbtn(tb,'push');
+%             btn.Icon = 'RemoveObjects.png';
+%             btn.ButtonPushedFcn = @tbRemoveObjects;
+%             btn.Tag = ['RemoveObjects',axH.Tag];
+%             Handles.(btn.Tag) = btn;
+%         end
         
         function addShowSelectionToolbarBtn
             btn = axtoolbarbtn(tb,'state');
