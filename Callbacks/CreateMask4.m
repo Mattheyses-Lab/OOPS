@@ -8,7 +8,7 @@ nImages = length(PODSData.CurrentImage);
 
 UpdateLog3(source,['Building mask(s) for ',num2str(nImages),' images...'],'append');
 
-MaskMode = 'Filament';
+MaskMode = 'Filamentv2';
 
 i = 1;
 
@@ -419,7 +419,7 @@ switch MaskMode
             [cImage.level,~] = graythresh(cImage.EnhancedImg);
             % ADAPTIVE THRESHOLD
 
-            AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,0.30,...
+            AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,0.15,...
                 'Statistic','gaussian',...
                 'NeighborhoodSize',3);
 
@@ -475,9 +475,14 @@ switch MaskMode
             % dilation followed by erosion
             cImage.bw = imclose(full(cImage.bw),strel('disk',1,0));
 
-
             % CLEAR 10 PX BORDER
-            cImage.bw = ClearImageBorder(cImage.bw,10);            
+            cImage.bw = ClearImageBorder(cImage.bw,10);
+
+            % remove small objects one final time
+            CC = bwconncomp(cImage.bw,4);
+            S = regionprops(CC, 'Area');
+            L = labelmatrix(CC);
+            cImage.bw = sparse(ismember(L, find([S.Area] >= 50)));
 
             % BUILD 8-CONNECTED LABEL MATRIX
             cImage.L = sparse(bwlabel(full(cImage.bw),8));

@@ -10,8 +10,6 @@ end
 % this object will hold ALL project data and GUI settings
 PODSData = PODSProject;
 
-%PODSData = saveddata;
-
 Handles = struct();
 
 % create the uifigure (main gui window)
@@ -54,6 +52,8 @@ Handles.hSaveOF = uimenu(Handles.hFileMenu,'Text','Save Selected Image Data','Se
 Handles.hSaveObjectData = uimenu(Handles.hFileMenu,'Text','Save Object Data','Callback',@SaveObjectData);
 % save settings
 Handles.hSaveColormapsSettings = uimenu(Handles.hFileMenu,'Text','Save Colormaps Settings','Callback',@SaveColormapsSettings);
+Handles.hSaveAzimuthDisplaySettings = uimenu(Handles.hFileMenu,'Text','Save Azimuth Display Settings','Callback',@SaveAzimuthDisplaySettings);
+Handles.hScatterPlotSettingsMenu = uimenu(Handles.hFileMenu,'Text','Save Scatter Plot Settings','Callback',@SaveScatterPlotSettings);
 
 %% Options Menu Button - Change gui option and settings
 Handles.hOptionsMenu = uimenu(Handles.fH,'Text','Options');
@@ -63,9 +63,7 @@ Handles.hFileInputType = uimenu(Handles.hOptionsMenu,'Text','File Input Type');
 Handles.hFileInputType_nd2 = uimenu(Handles.hFileInputType,'Text','.nd2','Checked','On','Callback',@ChangeInputFileType);
 Handles.hFileInputType_tif = uimenu(Handles.hFileInputType,'Text','.tif','Checked','Off','Callback',@ChangeInputFileType);
 % Change azimuth display settings
-Handles.hAzimuthDisplaySettingsMenu = uimenu(Handles.hOptionsMenu,'Text','Azimuth Display Settings','Separator','On','Callback',@SetAzimuthDisplaySettings);
 Handles.hSwarmChartSettingsMenu = uimenu(Handles.hOptionsMenu,'Text','Swarm Chart Settings','Callback',@SetSwarmChartSettings);
-Handles.hScatterPlotSettingsMenu = uimenu(Handles.hOptionsMenu,'Text','Scatter Plot Settings','Callback',@SetScatterPlotSettings);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
 Handles.hTabMenu = uimenu(Handles.fH,'Text','View');
@@ -149,7 +147,7 @@ Handles.SettingsPanel.Layout.Row = 3;
 Handles.SettingsPanel.Layout.Column = 1;
 Handles.SettingsPanel.Title = 'Display Settings';
 
-% colormaps settings
+%% colormaps settings
 ColormapNames = fieldnames(PODSData.Settings.Colormaps);
 ImageTypeFields = fieldnames(PODSData.Settings.ColormapsSettings);
 nImageTypes = length(ImageTypeFields);
@@ -167,14 +165,19 @@ Handles.ColormapsSettingsGrid.BackgroundColor = 'Black';
 Handles.ColormapsSettingsGrid.Padding = [5 5 5 5];
 Handles.ColormapsSettingsGrid.RowSpacing = 5;
 Handles.ColormapsSettingsGrid.ColumnSpacing = 5;
-Handles.ColormapsSettingsGrid.RowHeight = {20,'0.5x','1x',30};
+Handles.ColormapsSettingsGrid.RowHeight = {20,'fit','1x',30};
 Handles.ColormapsSettingsGrid.ColumnWidth = {'1x'};
     
-Handles.SettingsDropDown = uidropdown(Handles.ColormapsSettingsGrid,'Items',{'Colormaps'},...
-    'ItemsData',{'Colormaps'},...
-    'Value','Colormaps');
+Handles.SettingsDropDown = uidropdown(Handles.ColormapsSettingsGrid,...
+    'Items',{'Colormaps','Azimuth Display','Scatter Plots'},...
+    'ItemsData',{'ColormapsSettings','AzimuthDisplaySettings','ScatterPlotSettings'},...
+    'Value','ColormapsSettings',...
+    'ValueChangedFcn',@ChangeSettingsType,...
+    'FontName',PODSData.Settings.DefaultFont);
 
-Handles.ColormapsImageTypePanel = uipanel(Handles.ColormapsSettingsGrid,'Title','Image Type');
+Handles.ColormapsImageTypePanel = uipanel(Handles.ColormapsSettingsGrid,...
+    'Title','Image Type',...
+    'FontName',PODSData.Settings.DefaultFont);
     
 Handles.ColormapsSettingsGrid2 = uigridlayout(Handles.ColormapsImageTypePanel,[1,1]);
 Handles.ColormapsSettingsGrid2.Padding = [0 0 0 0];
@@ -184,9 +187,11 @@ Handles.ColormapsImageTypeSelector = uilistbox(Handles.ColormapsSettingsGrid2,..
     'ItemsData',ImageTypeFields,...
     'Value',ImageTypeFields{1},...
     'Tag','ImageTypeSelectBox',...
-    'ValueChangedFcn',@ImageTypeSelectionChanged);
+    'ValueChangedFcn',@ImageTypeSelectionChanged,...
+    'FontName',PODSData.Settings.DefaultFont);
     
-Handles.ColormapsPanel = uipanel(Handles.ColormapsSettingsGrid,'Title','Colormaps');
+Handles.ColormapsPanel = uipanel(Handles.ColormapsSettingsGrid,'Title','Colormaps',...
+    'FontName',PODSData.Settings.DefaultFont);
 
 Handles.ColormapsSettingsGrid3 = uigridlayout(Handles.ColormapsPanel,[1,1]);
 Handles.ColormapsSettingsGrid3.Padding = [0 0 0 0];
@@ -195,10 +200,13 @@ Handles.ColormapsSelector = uilistbox(Handles.ColormapsSettingsGrid3,...
     'Items',ColormapNames,...
     'Value',ImageTypeColormapsNames{1},...
     'Tag','ColormapSelectBox',...
-    'ValueChangedFcn',@ColormapSelectionChanged);
+    'ValueChangedFcn',@ColormapSelectionChanged,...
+    'FontName',PODSData.Settings.DefaultFont);
 
+% panel to hold example colormap axes
 Handles.ExampleColormapPanel = uipanel(Handles.ColormapsSettingsGrid);
 
+% axes to hold example colorbar
 Handles.ExampleColormapAx = uiaxes(Handles.ExampleColormapPanel,...
     'Visible','Off',...
     'XTick',[],...
@@ -208,15 +216,146 @@ Handles.ExampleColormapAx = uiaxes(Handles.ExampleColormapPanel,...
 Handles.ExampleColormapAx.Toolbar.Visible = 'Off';
 disableDefaultInteractivity(Handles.ExampleColormapAx);
 
+% create image to show example colorbar for colormap switching
 cbarslice = 1:1:256;
 cbarimage = repmat(cbarslice,50,1);
-
 Handles.ExampleColorbar = image(Handles.ExampleColormapAx,'CData',cbarimage,'CDataMapping','direct');
 
+% set display limits to show full cbarimage without extra borders
 Handles.ExampleColormapAx.YLim = [0.5 50.5];
 Handles.ExampleColormapAx.XLim = [0.5 256.5];
 
 Handles.ExampleColormapAx.Colormap = ImageTypeColormaps{1};
+
+%% azimuth display settings
+
+Handles.AzimuthDisplaySettingsGrid = uigridlayout(Handles.SettingsPanel,[7,2],...
+    'Visible','Off',...
+    'BackgroundColor','Black');
+Handles.AzimuthDisplaySettingsGrid.Padding = [5 5 5 5];
+Handles.AzimuthDisplaySettingsGrid.RowSpacing = 10;
+Handles.AzimuthDisplaySettingsGrid.ColumnSpacing = 5;
+Handles.AzimuthDisplaySettingsGrid.RowHeight = {20,20,20,20,20,20,20};
+Handles.AzimuthDisplaySettingsGrid.ColumnWidth = {'fit','1x'};
+
+Handles.AzimuthLineAlphaLabel = uilabel('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Text','Azimuth Line Alpha (default: 0.5)',...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontColor','White');
+Handles.AzimuthLineAlphaLabel.Layout.Row = 2;
+Handles.AzimuthLineAlphaLabel.Layout.Column = 1;
+Handles.AzimuthLineAlphaDropdown = uidropdown('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Items',{'0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'},...
+    'ItemsData',{0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1},...
+    'Value',PODSData.Settings.AzimuthLineAlpha,...
+    'FontName',PODSData.Settings.DefaultFont);
+Handles.AzimuthLineAlphaDropdown.Layout.Row = 2;
+Handles.AzimuthLineAlphaDropdown.Layout.Column = 2;
+
+Handles.AzimuthLineWidthLabel = uilabel('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Text','Azimuth Line Width (default: 1 pt)',...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontColor','White');
+Handles.AzimuthLineWidthLabel.Layout.Row = 3;
+Handles.AzimuthLineWidthLabel.Layout.Column = 1;
+Handles.AzimuthLineWidthDropdown = uidropdown('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Items',{'1','2','3','4','5','6','7','8','9','10'},...
+    'ItemsData',{1,2,3,4,5,6,7,8,9,10},...
+    'Value',PODSData.Settings.AzimuthLineWidth,...
+    'FontName',PODSData.Settings.DefaultFont);
+Handles.AzimuthLineWidthDropdown.Layout.Row = 3;
+Handles.AzimuthLineWidthDropdown.Layout.Column = 2;
+
+Handles.AzimuthLineScaleLabel = uilabel('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Text','Azimuth Line Scale Factor (default: 100)',...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontColor','White');
+Handles.AzimuthLineScaleLabel.Layout.Row = 4;
+Handles.AzimuthLineScaleLabel.Layout.Column = 1;
+Handles.AzimuthLineScaleEditfield = uieditfield('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Value',num2str(PODSData.Settings.AzimuthLineScale),...
+    'FontName',PODSData.Settings.DefaultFont);
+Handles.AzimuthLineScaleEditfield.Layout.Row = 4;
+Handles.AzimuthLineScaleEditfield.Layout.Column = 2;
+
+Handles.AzimuthLineScaleDownLabel = uilabel('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Text','Number of Lines to Show (default: All)',...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontColor','White');
+Handles.AzimuthLineScaleDownLabel.Layout.Row = 5;
+Handles.AzimuthLineScaleDownLabel.Layout.Column = 1;
+Handles.AzimuthLineScaleDownDropdown = uidropdown('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Items',{'All','Half','Quarter'},...
+    'ItemsData',{1,2,4},...
+    'Value',PODSData.Settings.AzimuthScaleDownFactor,...
+    'FontName',PODSData.Settings.DefaultFont);
+Handles.AzimuthLineScaleDownDropdown.Layout.Row = 5;
+Handles.AzimuthLineScaleDownDropdown.Layout.Column = 2;
+Handles.AzimuthLineScaleDownDropdown.ItemsData = [1 2 4];
+
+Handles.AzimuthColorModeDropdownLabel = uilabel('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Text','Line color mode (default: Direction)',...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontColor','White');
+Handles.AzimuthColorModeDropdownLabel.Layout.Row = 6;
+Handles.AzimuthColorModeDropdownLabel.Layout.Column = 1;
+Handles.AzimuthColorModeDropdown = uidropdown('Parent',Handles.AzimuthDisplaySettingsGrid,...
+    'Items',{'Direction','Magnitude','Mono'},...
+    'Value',PODSData.Settings.AzimuthColorMode,...
+    'FontName',PODSData.Settings.DefaultFont);
+Handles.AzimuthColorModeDropdown.Layout.Row = 6;
+Handles.AzimuthColorModeDropdown.Layout.Column = 2;
+
+Handles.ApplyAzimuthDisplaySettingsButton = uibutton(Handles.AzimuthDisplaySettingsGrid,...
+    'Push',...
+    'Text','Apply',...
+    'ButtonPushedFcn',@ApplyAzimuthSettings,...
+    'FontName',PODSData.Settings.DefaultFont);
+Handles.ApplyAzimuthDisplaySettingsButton.Layout.Row = 7;
+Handles.ApplyAzimuthDisplaySettingsButton.Layout.Column = [1 2];
+
+%% Scatterplot settings
+
+Handles.ScatterPlotSettingsGrid = uigridlayout(Handles.SettingsPanel,[3,1],...
+    'BackgroundColor','Black',...
+    'Visible','Off');
+Handles.ScatterPlotSettingsGrid.Padding = [5 5 5 5];
+Handles.ScatterPlotSettingsGrid.RowSpacing = 5;
+Handles.ScatterPlotSettingsGrid.ColumnSpacing = 5;
+Handles.ScatterPlotSettingsGrid.RowHeight = {20,'1x','1x'};
+Handles.ScatterPlotSettingsGrid.ColumnWidth = {'1x'};
+
+% setting up x-axis variable selection
+Handles.ScatterPlotXVarListBoxPanel = uipanel(Handles.ScatterPlotSettingsGrid,'Title','X-axis Variable');
+Handles.ScatterPlotXVarListBoxPanel.Layout.Row = 2;
+Handles.ScatterPlotXVarListBoxPanel.Layout.Column = 1;
+
+Handles.ScatterPlotXVarGrid = uigridlayout(Handles.ScatterPlotXVarListBoxPanel,[1,1]);
+Handles.ScatterPlotXVarGrid.Padding = [0 0 0 0];
+
+Handles.ScatterPlotXVarSelectBox = uilistbox(Handles.ScatterPlotXVarGrid,...
+    'Items', PODSData.Settings.ScatterPlotVariablesLong,...
+    'ItemsData', PODSData.Settings.ScatterPlotVariablesShort,...
+    'Value',PODSData.Settings.ScatterPlotXVariable,...
+    'Tag','XVariable',...
+    'ValueChangedFcn',@ScatterPlotVariablesChanged,...
+    'FontName',PODSData.Settings.DefaultFont);
+
+% setting up y-axis variable selection
+Handles.ScatterPlotYVarListBoxPanel = uipanel(Handles.ScatterPlotSettingsGrid,'Title','Y-axis Variable');
+Handles.ScatterPlotYVarListBoxPanel.Layout.Row = 3;
+Handles.ScatterPlotYVarListBoxPanel.Layout.Column = 1;
+
+Handles.ScatterPlotYVarGrid = uigridlayout(Handles.ScatterPlotYVarListBoxPanel,[1,1]);
+Handles.ScatterPlotYVarGrid.Padding = [0 0 0 0];
+
+Handles.ScatterPlotYVarSelectBox = uilistbox(Handles.ScatterPlotYVarGrid,...
+    'Items', PODSData.Settings.ScatterPlotVariablesLong,...
+    'ItemsData', PODSData.Settings.ScatterPlotVariablesShort,...
+    'Value',PODSData.Settings.ScatterPlotYVariable,...
+    'Tag','YVariable',...
+    'ValueChangedFcn',@ScatterPlotVariablesChanged,...
+    'FontName',PODSData.Settings.DefaultFont);
 
 %% ImgOperations grid layout (currently for interactive thresholding and intensity display)
 Handles.ImageOperationsGrid = uigridlayout(Handles.MainGrid,[1,2],'BackgroundColor',[0 0 0],'Padding',[0 0 0 0]);
@@ -252,8 +391,8 @@ Handles.ImageOperationsSelector = uilistbox('parent',Handles.ImageOperationsSele
 Handles.ImageOperationsPanel = uipanel(Handles.ImageOperationsGrid,...
     'Visible','Off',...
     'AutoResizeChildren','Off');
-Handles.ImageOperations.Layout.Column = 2;
-Handles.ImageOperations.Title = 'Adjust mask threshold';
+Handles.ImageOperationsPanel.Layout.Column = 2;
+Handles.ImageOperationsPanel.Title = 'Adjust mask threshold';
 
 % panel to display log messages (updates user on running/completed processes)
 Handles.LogPanel = uipanel(Handles.MainGrid,...
@@ -521,7 +660,7 @@ for k = 1:4
     clear pbarOriginal tagOriginal
     
     Handles.FFCAxH(k) = SetAxisTitle(Handles.FFCAxH(k),['Flat-Field Image (' num2str((k-1)*45) '^{\circ} Excitation)']);
-    Handles.FFCAxH(k).Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.FFCAxH(k).Colormap = PODSData.Settings.IntensityColormap;
     Handles.FFCImgH(k).HitTest = 'Off';
     
     disableDefaultInteractivity(Handles.FFCAxH(k));
@@ -550,14 +689,14 @@ for k = 1:4
     clear pbarOriginal tagOriginal
     
     Handles.RawIntensityAxH(k) = SetAxisTitle(Handles.RawIntensityAxH(k),['Raw Intensity (' num2str((k-1)*45) '^{\circ} Excitation)']);
-    Handles.RawIntensityAxH(k).Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.RawIntensityAxH(k).Colormap = PODSData.Settings.IntensityColormap;
     Handles.RawIntensityImgH(k).HitTest = 'Off';
     
     disableDefaultInteractivity(Handles.RawIntensityAxH(k));
     Handles.AllSmallAxes(end+1) = Handles.RawIntensityAxH(k);
 end
  
-%% FLAT-FIELD CORRECTED INTENSITY
+    %% FLAT-FIELD CORRECTED INTENSITY
 for k = 1:4
     Handles.PolFFCAxH(k) = uiaxes('Parent',Handles.SmallPanels(2,k),...
         'Units','Normalized',...
@@ -580,7 +719,7 @@ for k = 1:4
     % set axis title
     Handles.PolFFCAxH(k) = SetAxisTitle(Handles.PolFFCAxH(k),['Flat-Field Corrected Intensity (' num2str((k-1)*45) '^{\circ} Excitation)']);
     
-    Handles.PolFFCAxH(k).Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.PolFFCAxH(k).Colormap = PODSData.Settings.IntensityColormap;
     Handles.PolFFCAxH(k).Toolbar.Visible = 'Off';
     Handles.PolFFCAxH(k).Title.Visible = 'Off';
     Handles.PolFFCAxH(k).HitTest = 'Off';
@@ -648,7 +787,7 @@ for k = 1:4
     % set axis title
     Handles.MStepsAxH(k) = SetAxisTitle(Handles.MStepsAxH(k),image_title);
     
-    Handles.MStepsAxH(k).Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.MStepsAxH(k).Colormap = PODSData.Settings.IntensityColormap;
     Handles.MStepsAxH(k).Toolbar.Visible = 'Off';
     Handles.MStepsAxH(k).Title.Visible = 'Off';
     Handles.MStepsAxH(k).HitTest = 'Off';
@@ -685,7 +824,7 @@ disp('Setting up large image axes...')
     % set axis title
     Handles.AverageIntensityAxH = SetAxisTitle(Handles.AverageIntensityAxH,'Average Intensity (Flat-Field Corrected)');
     % set celormap
-    Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormap;
     % hide axes toolbar and title, turn off hittest
     Handles.AverageIntensityAxH.Toolbar.Visible = 'Off';
     Handles.AverageIntensityAxH.Title.Visible = 'Off';
@@ -933,7 +1072,7 @@ disp('Setting up object image axes...')
     Handles.ObjectPolFFCAxH = restore_axis_defaults(Handles.ObjectPolFFCAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     Handles.ObjectPolFFCAxH = SetAxisTitle(Handles.ObjectPolFFCAxH,'Flat-Field-Corrected Average Intensity');
-    Handles.ObjectPolFFCAxH.Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.ObjectPolFFCAxH.Colormap = PODSData.Settings.IntensityColormap;
     Handles.ObjectPolFFCAxH.Toolbar.Visible = 'Off';
     Handles.ObjectPolFFCAxH.Title.Visible = 'Off';
     Handles.ObjectPolFFCAxH.HitTest = 'Off';
@@ -1073,7 +1212,7 @@ disp('Setting up object image axes...')
     Handles.ObjectNormIntStackAxH = restore_axis_defaults(Handles.ObjectNormIntStackAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     Handles.ObjectNormIntStackAxH = SetAxisTitle(Handles.ObjectNormIntStackAxH,'Stack-Normalized Object Intensity');
-    Handles.ObjectNormIntStackAxH.Colormap = PODSData.Settings.IntensityColormaps{1};
+    Handles.ObjectNormIntStackAxH.Colormap = PODSData.Settings.IntensityColormap;
     Handles.ObjectNormIntStackAxH.Title.Visible = 'Off';
     Handles.ObjectNormIntStackAxH.Toolbar.Visible = 'Off';
     disableDefaultInteractivity(Handles.ObjectNormIntStackAxH);
@@ -1087,9 +1226,6 @@ disp('Setting up object image axes...')
 
 set(Handles.AppInfoPanel,'Visible','On');
 set(Handles.SettingsPanel,'Visible','On');
-set(Handles.ExampleColormapAx,'Visible','On');
-
-%Handles.ExampleColorbar.Position = Handles.ExampleColormapAx.Position;
 
 set(Handles.ImageOperationsPanel,'Visible','On');
 set(Handles.ThreshAxH,'Visible','On');
@@ -1122,13 +1258,46 @@ PODSData.Handles.fH.Visible = 'On';
 drawnow
 pause(0.5)
 
+%% Settings type selection
+
+    function ChangeSettingsType(source,event)
+        PODSData.Handles.([event.PreviousValue,'Grid']).Visible = 'Off';
+        PODSData.Handles.([event.Value,'Grid']).Visible = 'On';
+        ncols = length(PODSData.Handles.([event.Value,'Grid']).ColumnWidth);
+        source.Parent = PODSData.Handles.([event.Value,'Grid']);
+        if ncols > 1
+            source.Layout.Column = [1 ncols];
+        else
+            source.Layout.Column = 1;
+        end
+    end
+
 %% Azimuth display settings
 
-    function [] = SetAzimuthDisplaySettings(source,~)
-        fHAzimuthDisplaySettings = openfig('AzimuthDisplaySettings.fig');
-        waitfor(fHAzimuthDisplaySettings);
-        PODSData.Settings.UpdateAzimuthDisplaySettings();
+    function ApplyAzimuthSettings(source,~)
+        PODSData.Settings.AzimuthDisplaySettings.LineAlpha = PODSData.Handles.AzimuthLineAlphaDropdown.Value;
+        PODSData.Settings.AzimuthDisplaySettings.LineWidth = PODSData.Handles.AzimuthLineWidthDropdown.Value;
+        PODSData.Settings.AzimuthDisplaySettings.LineScale = str2double(PODSData.Handles.AzimuthLineScaleEditfield.Value);
+        PODSData.Settings.AzimuthDisplaySettings.ScaleDownFactor = PODSData.Handles.AzimuthLineScaleDownDropdown.Value;
+        PODSData.Settings.AzimuthDisplaySettings.ColorMode = PODSData.Handles.AzimuthColorModeDropdown.Value;
         UpdateImages(source);
+    end
+
+    function SaveAzimuthDisplaySettings(source,~)
+        % saves the currently selected colormaps settings to a .mat file
+        % which will be loaded in future sessions by PODSSettings
+        UpdateLog3(source,'Saving azimuth display settings...','append');
+        AzimuthDisplaySettings = PODSData.Settings.AzimuthDisplaySettings;
+        if ismac
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
+            save([SavePath,'/Settings/AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');        
+        elseif ispc
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
+            save([SavePath,'\Settings\AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');        
+        end
+        UpdateLog3(source,'Done.','append');
     end
 
 %% Swarmchart settings
@@ -1142,21 +1311,31 @@ pause(0.5)
 
 %% Scatterplot settings
 
-    function [] = SetScatterPlotSettings(source,~)
-        fHScatterPlotSettings = openfig('ScatterPlotSettings.fig');
-        waitfor(fHScatterPlotSettings);
-        PODSData.Settings.UpdateScatterPlotSettings();
-        UpdateImages(source);        
+    function ScatterPlotVariablesChanged(source,~)
+        PODSData.Settings.ScatterPlotSettings.(source.Tag) = source.Value;
+        if strcmp(PODSData.Settings.CurrentTab,'Plots')
+            UpdateImages(source);
+        end
     end
 
-%% Colormap settings
+    function SaveScatterPlotSettings(source,~)
+        % saves the currently selected colormaps settings to a .mat file
+        % which will be loaded in future sessions by PODSSettings
+        UpdateLog3(source,'Saving scatterplot settings...','append');
+        ScatterPlotSettings = PODSData.Settings.ScatterPlotSettings;
+        if ismac
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
+            save([SavePath,'/Settings/ScatterPlotSettings.mat'],'ScatterPlotSettings');        
+        elseif ispc
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
+            save([SavePath,'\Settings\ScatterPlotSettings.mat'],'ScatterPlotSettings');        
+        end
+        UpdateLog3(source,'Done.','append');
+    end
 
-%     function [] = SetColormapsSettings(source,~)
-%         fHColormapsSettings = openfig('ColormapsSettings.fig');
-%         waitfor(fHColormapsSettings);
-%         PODSData.Settings.UpdateColormapsSettings();
-%         UpdateImages(source);
-%     end
+%% Colormaps settings
 
     function ImageTypeSelectionChanged(source,~)
         ImageTypeName = source.Value;
@@ -1178,12 +1357,15 @@ pause(0.5)
 
             case 'Intensity'
                 IntensityMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
-                PODSData.Settings.IntensityColormaps{1} = IntensityMap;
+                PODSData.Settings.IntensityColormap = IntensityMap;
                 PODSData.Handles.AverageIntensityAxH.Colormap = IntensityMap;
                 [PODSData.Handles.FFCAxH.Colormap] = deal(IntensityMap);
                 [PODSData.Handles.RawIntensityAxH.Colormap] = deal(IntensityMap);
                 PODSData.Handles.ObjectPolFFCAxH.Colormap = IntensityMap;
                 PODSData.Handles.ObjectNormIntStackAxH.Colormap = IntensityMap;
+                if PODSData.CurrentImage(1).ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value
+                    UpdateCompositeRGB();
+                end
             case 'OrderFactor'
                 OrderFactorMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
                 PODSData.Settings.OrderFactorColormap = OrderFactorMap;
@@ -1193,11 +1375,16 @@ pause(0.5)
             case 'Reference'
                 ReferenceMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
                 PODSData.Settings.ReferenceColormap = ReferenceMap;
+                if PODSData.CurrentImage(1).ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value
+                    UpdateCompositeRGB();
+                end
         end
 
     end
 
     function SaveColormapsSettings(source,~)
+        % saves the currently selected colormaps settings to a .mat file
+        % which will be loaded in future sessions by PODSSettings
         UpdateLog3(source,'Saving colormaps settings...','append');
         ColormapsSettings = PODSData.Settings.ColormapsSettings;
         if ismac
@@ -1210,6 +1397,8 @@ pause(0.5)
             save([SavePath,'\Settings\ColormapsSettings.mat'],'ColormapsSettings');        
         end
         UpdateLog3(source,'Done.','append');
+        % update the settings object with these settings - maybe not necessary since we do that dynamically
+        % as the listbox selections change??
         PODSData.Settings.UpdateColormapsSettings();
     end
 
@@ -1271,7 +1460,7 @@ pause(0.5)
     function UpdateCompositeRGB()
         PODSData.Handles.AverageIntensityImgH.CData = ...
             CompositeRGB(Scale0To1(PODSData.CurrentImage(1).I),...
-            PODSData.Settings.IntensityColormaps{1},...
+            PODSData.Settings.IntensityColormap,...
             PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits,...
             Scale0To1(PODSData.CurrentImage(1).ReferenceImage),...
             PODSData.Settings.ReferenceColormap,...
@@ -2038,6 +2227,8 @@ pause(0.5)
             'Enhanced Intensity Image (.tif)';...
             'Order Factor (.png)';...
             'Masked Order Factor (.png)';...
+            'Azimuth (.png)';...
+            'Masked Azimuth (.png)';...
             'S/B-Filtered Order Factor (.png)';...
             'Mask (.tif)';...
             'S/B-Filtered Mask (.tif)'};
@@ -2146,6 +2337,34 @@ pause(0.5)
                 IOut = ind2rgb(im2uint8(full(cImage.masked_OF_image)),temporarymap);
                 imwrite(IOut,name);
             end
+
+            %% Azimuth (.png)
+            if any(strcmp(UserSaveChoices,'Azimuth (.png)'))
+                name = [loc,'-Azimuth.png'];
+                UpdateLog3(source,name,'append');
+                Aztemp = cImage.AzimuthImage;
+                % rescale values between [0,pi]
+                Aztemp(Aztemp<0) = Aztemp(Aztemp<0)+pi;
+                % scale to between [0 1]
+                Aztemp = Aztemp./max(max(Aztemp));
+                temporarymap = hsv;
+                IOut = ind2rgb(im2uint8(Aztemp),temporarymap);
+                imwrite(IOut,name);
+            end
+
+            %% Masked azimuth (.png)
+            if any(strcmp(UserSaveChoices,'Masked Azimuth (.png)'))
+                name = [loc,'-MaskedAzimuth.png'];
+                UpdateLog3(source,name,'append');
+                Aztemp = cImage.AzimuthImage;
+                Aztemp(Aztemp<0) = Aztemp(Aztemp<0)+pi;
+                Aztemp = Aztemp./max(max(Aztemp));
+                Aztemp(~cImage.bw) = 0;
+                temporarymap = hsv;
+                temporarymap(1,:) = [0 0 0];
+                IOut = ind2rgb(im2uint8(Aztemp),temporarymap);
+                imwrite(IOut,name);
+            end            
             
             %% Filtered OF Image
             if any(strcmp(UserSaveChoices,'S/B-Filtered Order Factor (.png)'))
@@ -2162,14 +2381,14 @@ pause(0.5)
                 name = [loc '-AvgIntensity.tif'];
                 UpdateLog3(source,name,'append');
                 IOut = im2uint8(Scale0To1(cImage.Pol_ImAvg));
-                imwrite(IOut,PODSData.Settings.IntensityColormaps{1},name);                
+                imwrite(IOut,PODSData.Settings.IntensityColormap,name);                
             end
 
             if any(strcmp(UserSaveChoices,'Enhanced Intensity Image (.tif)'))    
                 name = [loc '-EnhancedIntensity.tif'];
                 UpdateLog3(source,name,'append');
                 IOut = im2uint8(Scale0To1(cImage.EnhancedImg));
-                imwrite(IOut,PODSData.Settings.IntensityColormaps{1},name);
+                imwrite(IOut,PODSData.Settings.IntensityColormap,name);
             end
 
             if any(strcmp(UserSaveChoices,'Mask (.tif)'))    
@@ -2336,7 +2555,7 @@ pause(0.5)
             PODSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(PODSData.Handles.LineScanAxes,...
                 PODSData.Handles.LineScanROI.Position,...
                 cImage.Pol_ImAvg,...
-                cImage.ReferenceImage,...
+                cImage.ReferenceImageEnhanced,...
                 cImage.RealWorldLimits);
         else
             PODSData.Handles.LineScanAxes = PlotIntegratedLineScan(PODSData.Handles.LineScanAxes,...
@@ -2355,7 +2574,7 @@ pause(0.5)
             PODSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(PODSData.Handles.LineScanAxes,...
                 PODSData.Handles.LineScanROI.Position,...
                 cImage.Pol_ImAvg,...
-                cImage.ReferenceImage,...
+                cImage.ReferenceImageEnhanced,...
                 cImage.RealWorldLimits);
         else
             PODSData.Handles.LineScanAxes = PlotIntegratedLineScan(PODSData.Handles.LineScanAxes,...

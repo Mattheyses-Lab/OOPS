@@ -496,7 +496,6 @@ function [] = UpdateImages(source)
             % display the (padded) intensity image of the object
             try
                 Handles.ObjectPolFFCImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
-                colormap(Handles.ObjectPolFFCAxH,PODSData.Settings.IntensityColormaps{1});
             catch
                 disp('Warning: Error displaying object intensity image');
                 Handles.ObjectPolFFCImgH.CData = EmptyImage;
@@ -518,7 +517,7 @@ function [] = UpdateImages(source)
             try
                 %Handles.ObjectOFImgH.CData = cObject.PaddedOFSubImage;
                 Handles.ObjectOFImgH.CData = ObjectOFImg_Interp;
-                Handles.ObjectOFAxH.Colormap = PODSData.Settings.OrderFactorColormap;
+                %Handles.ObjectOFAxH.Colormap = PODSData.Settings.OrderFactorColormap;
             catch
                 disp('Warning: Error displaying object binary image');
                 Handles.ObjectOFImgH.CData = EmptyImage;
@@ -527,7 +526,6 @@ function [] = UpdateImages(source)
             % display object OF contour VERY SLOW - SHOULD REPLACE WITH A DIFFERENT PLOT
             try
                 [~,Handles.hObjectOFContour] = contourf(Handles.ObjectOFContourAxH,ObjectOFImg_Interp,'ShowText','On');
-                colormap(Handles.ObjectOFContourAxH,PODSData.Settings.OrderFactorColormap);
             catch
                 disp('Warning: Error displaying 2D Object OF contour');
             end            
@@ -543,7 +541,6 @@ function [] = UpdateImages(source)
                 PaddedObjNormIntensity(:,:,2),...
                 PaddedObjNormIntensity(:,:,3),...
                 PaddedObjNormIntensity(:,:,4)];
-            colormap(Handles.ObjectNormIntStackAxH,PODSData.Settings.IntensityColormaps{1});
 
             drawnow
              
@@ -562,7 +559,7 @@ function [] = UpdateImages(source)
         if cImage.ReferenceImageLoaded
             % truecolor composite overlay
             if PODSData.Handles.ShowReferenceImageAverageIntensity.Value == 1
-                Map1 = PODSData.Settings.IntensityColormaps{1};
+                Map1 = PODSData.Settings.IntensityColormap;
                 Map2 = PODSData.Settings.ReferenceColormap;
                 try
                     PODSData.Handles.AverageIntensityImgH.CData = ...
@@ -579,8 +576,6 @@ function [] = UpdateImages(source)
                 catch
                     Handles.AverageIntensityImgH.CData = EmptyImage;
                 end
-                % change colormap to currently selected intensity colormap
-                Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{1};
             end
         else % just show avg intensity
             try
@@ -589,8 +584,6 @@ function [] = UpdateImages(source)
             catch
                 Handles.AverageIntensityImgH.CData = EmptyImage;
             end
-            % change colormap to currently selected intensity colormap
-            Handles.AverageIntensityAxH.Colormap = PODSData.Settings.IntensityColormaps{1};
         end
     end
 

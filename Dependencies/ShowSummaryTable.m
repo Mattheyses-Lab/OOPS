@@ -13,6 +13,6 @@ function ShowSummaryTable(source,event)
     uit = uitable(SummaryFig,'data',T);
     
     % maximize table size within figure window
-    uit.Position = PODSData.Handles.fH.InnerPosition;
+    uit.Position = SummaryFig.InnerPosition;
 
 end

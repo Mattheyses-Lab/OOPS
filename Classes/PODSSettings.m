@@ -56,18 +56,15 @@ classdef PODSSettings < handle
         Colormaps struct
         ColormapsSettings struct
         % struct of all colormaps
-        AllColormaps struct
+        %AllColormaps struct
         % currently selected colormaps for each image type
-        IntensityColormaps cell
+        IntensityColormap double
         OrderFactorColormap double
         ReferenceColormap double
         
+
         % Azimuth display settings
-        AzimuthLineAlpha = 0.5;
-        AzimuthLineWidth = 1;
-        AzimuthLineScale = 100;
-        AzimuthScaleDownFactor = 1;
-        AzimuthColorMode = 'Direction';
+        AzimuthDisplaySettings struct
         
         % SwarmChart settings
         % how to group the data, by group, by custom label, or both
@@ -78,8 +75,7 @@ classdef PODSSettings < handle
         SwarmChartColorMode = 'ID';
         
         % ScatterPlot Settings
-        ScatterPlotXVariable = 'SBRatio';
-        ScatterPlotYVariable = 'OFAvg';
+        ScatterPlotSettings struct
         
         % Group Colors
         DefaultGroupColors cell
@@ -90,9 +86,26 @@ classdef PODSSettings < handle
         % Fonts
         DefaultFont char
         
-        % px size (um/px)
+        % default px size (um/px)
         PixelSize = 0.1083;
         
+    end
+
+    properties (Dependent = true)
+
+        % azimuth display settings
+        AzimuthLineAlpha
+        AzimuthLineWidth
+        AzimuthLineScale
+        AzimuthScaleDownFactor
+        AzimuthColorMode
+
+        % Scatterplot settings
+        ScatterPlotXVariable
+        ScatterPlotYVariable
+        ScatterPlotVariablesLong
+        ScatterPlotVariablesShort
+
     end
     
     methods
@@ -115,9 +128,9 @@ classdef PODSSettings < handle
             try
                 Colormaps_mat_file = load('Colormaps.mat');
                 obj.Colormaps = Colormaps_mat_file.Colormaps;
-                obj.IntensityColormaps{1} = obj.Colormaps.Turbo;
-                obj.IntensityColormaps{2} = obj.Colormaps.Red;
+                obj.IntensityColormap = obj.Colormaps.Turbo;
                 obj.OrderFactorColormap = obj.Colormaps.OFMapNew;
+                obj.ReferenceColormap = obj.Colormaps.Gray;
             catch
                 warning('Unable to load "Colormaps.mat"...');
             end
@@ -162,7 +175,7 @@ classdef PODSSettings < handle
         function UpdateColormapsSettings(obj)
             ColormapsSettings_mat_file = load('ColormapsSettings.mat');
             obj.ColormapsSettings = ColormapsSettings_mat_file.ColormapsSettings;
-            obj.IntensityColormaps{1} = obj.ColormapsSettings.Intensity{3};
+            obj.IntensityColormap = obj.ColormapsSettings.Intensity{3};
             obj.OrderFactorColormap = obj.ColormapsSettings.OrderFactor{3};
             obj.ReferenceColormap = obj.ColormapsSettings.Reference{3};
         end
@@ -176,21 +189,51 @@ classdef PODSSettings < handle
         end
         
         function UpdateAzimuthDisplaySettings(obj)
-            load AzimuthDisplaySettings.mat AzimuthDisplaySettings
-            obj.AzimuthLineAlpha = AzimuthDisplaySettings.LineAlpha;
-            obj.AzimuthLineWidth = AzimuthDisplaySettings.LineWidth;
-            obj.AzimuthLineScale = AzimuthDisplaySettings.LineScale;
-            obj.AzimuthScaleDownFactor = AzimuthDisplaySettings.ScaleDownFactor;
-            obj.AzimuthColorMode = AzimuthDisplaySettings.ColorMode;
-            clear AzimuthDisplaySettings
+            AzimuthSettings_mat_file = load('AzimuthDisplaySettings.mat');
+            obj.AzimuthDisplaySettings = AzimuthSettings_mat_file.AzimuthDisplaySettings;
         end
         
         function UpdateScatterPlotSettings(obj)
-            load ScatterPlotSettings.mat ScatterPlotSettings
-            obj.ScatterPlotXVariable = ScatterPlotSettings.XVariable;
-            obj.ScatterPlotYVariable = ScatterPlotSettings.YVariable;
-            clear AzimuthDisplaySettings
-        end        
+            ScatterPlotSettings_mat_file = load('ScatterPlotSettings.mat');
+            obj.ScatterPlotSettings = ScatterPlotSettings_mat_file.ScatterPlotSettings;
+        end
+    
+        function AzimuthLineAlpha = get.AzimuthLineAlpha(obj)
+            AzimuthLineAlpha = obj.AzimuthDisplaySettings.LineAlpha;
+        end
+
+        function AzimuthLineWidth = get.AzimuthLineWidth(obj)
+            AzimuthLineWidth = obj.AzimuthDisplaySettings.LineWidth;
+        end
+
+        function AzimuthLineScale = get.AzimuthLineScale(obj)
+            AzimuthLineScale = obj.AzimuthDisplaySettings.LineScale;
+        end
+
+        function AzimuthScaleDownFactor = get.AzimuthScaleDownFactor(obj)
+            AzimuthScaleDownFactor = obj.AzimuthDisplaySettings.ScaleDownFactor;
+        end
+
+        function AzimuthColorMode = get.AzimuthColorMode(obj)
+            AzimuthColorMode = obj.AzimuthDisplaySettings.ColorMode;
+        end
+
+        function ScatterPlotXVariable = get.ScatterPlotXVariable(obj)
+            ScatterPlotXVariable = obj.ScatterPlotSettings.XVariable;
+        end
+
+        function ScatterPlotYVariable = get.ScatterPlotYVariable(obj)
+            ScatterPlotYVariable = obj.ScatterPlotSettings.YVariable;
+        end
+
+        function ScatterPlotVariablesLong = get.ScatterPlotVariablesLong(obj)
+            ScatterPlotVariablesLong = obj.ScatterPlotSettings.VariablesLong;
+        end
+
+        function ScatterPlotVariablesShort = get.ScatterPlotVariablesShort(obj)
+            ScatterPlotVariablesShort = obj.ScatterPlotSettings.VariablesShort;
+        end
+
     end
 end
 

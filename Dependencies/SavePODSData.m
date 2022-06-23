@@ -1,4 +1,4 @@
-function TableOut = SavePODSData(source,event)
+function TableOut = SavePODSData(source)
 
     PODSData = guidata(source);
     
@@ -10,18 +10,21 @@ function TableOut = SavePODSData(source,event)
                          'ObjectAvgOF',0,...
                          'SBRatio',0,...
                          'Area',0,...
-                         'Perimeter',0);
-    
+                         'Perimeter',0,...
+                         'SignalAvg',0,...
+                         'BGAvg',0,...
+                         'Circularity',0,...
+                         'Eccentricity',0,...
+                         'ConvexArea',0,...
+                         'MaxFeretDiameter',0,...
+                         'MinFeretDiameter',0,...
+                         'LabelName','');
+
+
     MasterIdx = 1;
-    AllOFPerGroup = {};
                
     for i = 1:PODSData.nGroups
-        
-        allgroupdata = [];
-        
         for j = 1:PODSData.Group(i).nReplicates
-            
-            
             for k = 1:PODSData.Group(i).Replicate(j).nObjects
                 PODSDataOut(MasterIdx).GroupIdx = i;
                 PODSDataOut(MasterIdx).GroupName = PODSData.Group(i).GroupName;
@@ -32,20 +35,18 @@ function TableOut = SavePODSData(source,event)
                 PODSDataOut(MasterIdx).SBRatio = PODSData.Group(i).Replicate(j).Object(k).SBRatio;
                 PODSDataOut(MasterIdx).Area =  PODSData.Group(i).Replicate(j).Object(k).Area;
                 PODSDataOut(MasterIdx).Perimeter =  PODSData.Group(i).Replicate(j).Object(k).Perimeter;
-                
+                PODSDataOut(MasterIdx).SignalAvg =  PODSData.Group(i).Replicate(j).Object(k).SignalAverage;
+                PODSDataOut(MasterIdx).BGAvg =  PODSData.Group(i).Replicate(j).Object(k).BGAverage;
+                PODSDataOut(MasterIdx).Circularity =  PODSData.Group(i).Replicate(j).Object(k).Circularity;
+                PODSDataOut(MasterIdx).Eccentricity =  PODSData.Group(i).Replicate(j).Object(k).Eccentricity;
+                PODSDataOut(MasterIdx).ConvexArea =  PODSData.Group(i).Replicate(j).Object(k).ConvexArea;
+                PODSDataOut(MasterIdx).MaxFeretDiameter =  PODSData.Group(i).Replicate(j).Object(k).MaxFeretDiameter;
+                PODSDataOut(MasterIdx).MinFeretDiameter =  PODSData.Group(i).Replicate(j).Object(k).MinFeretDiameter;
+                PODSDataOut(MasterIdx).LabelName =  PODSData.Group(i).Replicate(j).Object(k).LabelName;                
                 MasterIdx = MasterIdx+1;
-                
-                allgroupdata(1,end+1) = PODSData.Group(i).Replicate(j).Object(k).OFAvg;
-                
             end % end objects
         end % end images
-        
-        AllOFPerGroup{i} = allgroupdata;
-        clear allgroupdata
-        
     end % end groups
-    
-    save('AllOFPerGroup.mat','AllOFPerGroup');
     
     TableOut = struct2table(PODSDataOut);
     clear PODSDataOut
