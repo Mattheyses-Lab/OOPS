@@ -6,13 +6,13 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
     
     nLabels = length(PODSData.Settings.ObjectLabels);
     
-    axH.XTick = [1:1:nLabels];
+    axH.XTick = 1:1:nLabels;
 
     for ii = 1:nLabels
         axH.XTickLabel{ii} = [CurrentGroup.GroupName,' (',PODSData.Settings.ObjectLabels(ii).Name,')'];
     end
 
-    Var2Get = PODSData.Settings.SwarmChartYVariable;
+    Var2Get = PODSData.Settings.SwarmPlotYVariable;
     
     % cell array of Var2Get values, one cell per label
     LabelObjectData = CurrentGroup.GetObjectDataByLabel(Var2Get);
@@ -28,7 +28,7 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
     hSwarmPlot = [];
     MaxPerGroup = [];
     
-    LabelIdxs = [1:1:nLabels];
+    LabelIdxs = 1:1:nLabels;
 
     for i = 1:nPlots
         % Y data is just the vector of object values for selected variable
@@ -42,7 +42,7 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
                 error();
             end
             
-            switch PODSData.Settings.SwarmChartColorMode
+            switch PODSData.Settings.SwarmPlotColorMode
                 case 'Magnitude'
                 % color by value
                 hSwarmPlot(i) = swarmchart(axH,X{i},Y{i},150,Y{i},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);

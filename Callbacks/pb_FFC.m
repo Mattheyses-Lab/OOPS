@@ -1,4 +1,4 @@
-function data = pb_FFC(source,event)
+function data = pb_FFC(source,~)
     % get main data structure
     PODSData = guidata(source);
 
@@ -26,5 +26,5 @@ function data = pb_FFC(source,event)
     
     % update the log and tables
     UpdateLog3(source,['Flat-Field Correction Performed for ',num2str(length(PODSData.CurrentGroup.CurrentImageIndex)),' replicates'],'append');
-    UpdateTables(source);    
+    UpdateSummaryDisplay(source,{'Project','Group','Image'});    
 end

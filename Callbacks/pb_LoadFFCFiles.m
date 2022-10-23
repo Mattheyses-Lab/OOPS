@@ -23,9 +23,16 @@ function [] = pb_LoadFFCFiles(source,~)
 
             PODSData.Handles.fH.Visible = 'Off';
             
-            [cal_files, calPath, ~] = uigetfile('*.nd2',...
-                'Select .nd2 flat-field stack(s)',...
-                'MultiSelect','on',PODSData.Settings.LastDirectory);
+            try
+                [cal_files, calPath, ~] = uigetfile('*.nd2',...
+                    'Select .nd2 flat-field stack(s)',...
+                    'MultiSelect','on',PODSData.Settings.LastDirectory);
+            catch
+                [cal_files, calPath, ~] = uigetfile('*.nd2',...
+                    'Select .nd2 flat-field stack(s)',...
+                    'MultiSelect','on');
+            end
+
             PODSData.Handles.fH.Visible = 'On';
             figure(PODSData.Handles.fH);
 
@@ -85,7 +92,21 @@ function [] = pb_LoadFFCFiles(source,~)
             
             uiwait(PODSData.Handles.fH);
 
-            [cal_files, calPath, ~] = uigetfile('*.tif','Select .nd2 flat-field stack(s)','MultiSelect','on');
+            PODSData.Handles.fH.Visible = 'Off';
+
+            try
+                [cal_files, calPath, ~] = uigetfile('*.tif',...
+                    'Select .tif flat-field stack(s)',...
+                    'MultiSelect','on',PODSData.Settings.LastDirectory);
+            catch
+                [cal_files, calPath, ~] = uigetfile('*.tif',...
+                    'Select .tif flat-field stack(s)',...
+                    'MultiSelect','on');
+            end
+
+            PODSData.Handles.fH.Visible = 'On';
+
+            PODSData.Settings.LastDirectory = calPath;
 
             if(iscell(cal_files)==0)
                 if(cal_files==0)
@@ -144,6 +165,9 @@ function [] = pb_LoadFFCFiles(source,~)
     
     % update main data structure with new data
     cGroup.FFCData = FFCData;
+
+    % test below
+    cGroup.FFCLoaded = true;
     
     clear FFCData
     
@@ -156,7 +180,7 @@ function [] = pb_LoadFFCFiles(source,~)
     end
     
     UpdateImages(source);
-    UpdateTables(source);
+    UpdateSummaryDisplay(source);
     UpdateListBoxes(source);
     
 end

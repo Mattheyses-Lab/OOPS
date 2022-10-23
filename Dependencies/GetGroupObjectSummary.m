@@ -18,7 +18,9 @@ function TableOut = GetGroupObjectSummary(source)
                          'ConvexArea',0,...
                          'MaxFeretDiameter',0,...
                          'MinFeretDiameter',0,...
-                         'LabelName','');    
+                         'LabelName','',...
+                         'AzimuthAverage',0,...
+                         'AzimuthStd',0);
     
     CurrentGroup = PODSData.CurrentGroup;
 
@@ -46,6 +48,8 @@ function TableOut = GetGroupObjectSummary(source)
             PODSDataOut(MasterIdx).MaxFeretDiameter =  CurrentGroup.Replicate(j).Object(k).MaxFeretDiameter;
             PODSDataOut(MasterIdx).MinFeretDiameter =  CurrentGroup.Replicate(j).Object(k).MinFeretDiameter;
             PODSDataOut(MasterIdx).LabelName =  CurrentGroup.Replicate(j).Object(k).LabelName;
+            PODSDataOut(MasterIdx).AzimuthAverage =  CurrentGroup.Replicate(j).Object(k).AzimuthAverage;
+            PODSDataOut(MasterIdx).AzimuthStd =  CurrentGroup.Replicate(j).Object(k).AzimuthStd;
             
             MasterIdx = MasterIdx+1;
 

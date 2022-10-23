@@ -15,7 +15,7 @@ function NameOut = ExpandVariableName(NameIn)
         case 'MaxFeretDiameter'
             NameOut = 'Maximum Feret Diameter';
         case 'MinFeretDiameter'
-            NameOut = 'Minimum Feret Diameter'
+            NameOut = 'Minimum Feret Diameter';
         case 'MajorAxisLength'
             NameOut = 'Major Axis Length';
         case 'MinorAxisLength'
@@ -30,5 +30,11 @@ function NameOut = ExpandVariableName(NameIn)
             NameOut = 'Average Reference Channel Intensity';
         case 'IntegratedReferenceChannelIntensity'
             NameOut = 'Integrated Reference Channel Intensity';
+        case 'BGAverage'
+            NameOut = 'Average BG Intensity';
+        case 'AzimuthAverage'
+            NameOut = 'Average Azimuth';
+        case 'AzimuthStd'
+            NameOut = 'Azimuth Standard Deviation';
     end
 end

@@ -21,6 +21,7 @@ classdef PODSImage < handle
         % raw image stack - pol_rawdata(y/row,x/col,PolIdx)
         %   PolIdx: 1 = 0 deg | 2 = 45 deg | 3 = 90 deg | 4 = 135 deg
         pol_rawdata
+        % average intensity of the raw data
         RawPolAvg
         % flat-field corrected image stack - same indexing as raw
         pol_ffc
@@ -28,7 +29,7 @@ classdef PODSImage < handle
         Pol_ImAvg
         % pixel-normalized image stack - same indexing as raw
         norm
-        
+        % logical array of the pixels with intensity > 0 (should be true for all)
         r1
         
 %% Status Tracking        
@@ -84,6 +85,8 @@ classdef PODSImage < handle
         masked_OF_image double
         a double
         b double
+
+        PolarizationFactorImage double
         
 %% Output Values        
         
@@ -185,39 +188,37 @@ classdef PODSImage < handle
 
         % detects objects in one PODSImage
         function DetectObjects(obj)
-            
+            % start by deleting any currently existing objects
             obj.deleteObjects();
 
-            % call get method
+            % call dependent 'get' method
             props = obj.ObjectProperties;
 
             if isempty(props) % if no objects
-                return
+                return % then stop here
             else
                 % get default label from settings object
                 DefaultLabel = obj.Settings.ObjectLabels(1);
 
-                Boundaries = obj.ObjectBoundaries8;
                 for i = 1:length(props) % for each detected object
                    % create an instance of PODSObject
                    obj.Object(i) = PODSObject(props(i,1),...
                        obj,...
                        ['Object ',num2str(i)],...
                        i,...
-                       DefaultLabel,...
-                       Boundaries{i});
+                       DefaultLabel);
                 end
             end
             
+            % update some status tracking variables
             obj.ObjectDetectionDone = true;
+            obj.CurrentObjectIdx = 1;
+            obj.LocalSBDone = false;
             
         end % end of DetectObjects
         
         % delete seleted objects from one PODSImage
         function DeleteSelectedObjects(obj)
-            
-            %Selected = find([obj.Object.Selected]);
-            %NotSelected = find(~[obj.Object.Selected]);
             
             % get handles to all objects in this image
             AllObjects = obj.Object;
@@ -268,6 +269,7 @@ classdef PODSImage < handle
         function ClearSelection(obj)
             [obj.Object.Selected] = deal(false);
         end
+        
         
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
             nLabels = length(obj.Settings.ObjectLabels);
@@ -373,11 +375,18 @@ classdef PODSImage < handle
                         % DetectObjects() labels most of the BG pixels as objects
                     % update buffer and BG pixel lists
                     obj.Object(i).BufferIdxList = new_buffer;
-                    obj.Object(i).BGIdxList = new_BG;
+
+                    try
+                        obj.Object(i).BGIdxList = new_BG;
+                        obj.Object(i).BGAverage = mean(obj.RawPolAvg(obj.Object(i).BGIdxList));
+                    catch
+                        obj.Object(i).BGIdxList = [];
+                        obj.Object(i).BGAverage = NaN;
+                    end
 
                     % calculate signal and BG levels
                     obj.Object(i).SignalAverage = mean(obj.RawPolAvg(obj.Object(i).PixelIdxList));
-                    obj.Object(i).BGAverage = mean(obj.RawPolAvg(obj.Object(i).BGIdxList));
+%                     obj.Object(i).BGAverage = mean(obj.RawPolAvg(obj.Object(i).BGIdxList));
                     obj.Object(i).SBRatio = obj.Object(i).SignalAverage / obj.Object(i).BGAverage;
 
                     clear new_buffer new_BG
@@ -419,7 +428,47 @@ classdef PODSImage < handle
         function ObjectProperties = get.ObjectProperties(obj)
             % label matrix should be 4-connected, so ObjectProperties
             % should as well
-            ObjectProperties = regionprops(full(obj.L),full(obj.bw),'all');
+            %ObjectProperties = regionprops(full(obj.L),full(obj.bw),'all');
+            % properties from ObjectProps struct
+            ObjectProperties = regionprops(full(obj.L),full(obj.bw),...
+                {'Area',...
+                'BoundingBox',...
+                'Centroid',...
+                'Circularity',...
+                'ConvexArea',...
+                'ConvexHull',...
+                'ConvexImage',...
+                'Eccentricity',...
+                'Extrema',...
+                'FilledArea',...
+                'Image',...
+                'MajorAxisLength',...
+                'MinorAxisLength',...
+                'Orientation',...
+                'Perimeter',...
+                'PixelIdxList',...
+                'PixelList',...
+                'SubarrayIdx',...
+                'MaxFeretProperties',...
+                'MinFeretProperties'});
+
+            % get idxs to 'Image' and 'BoundingBox' fields
+            fnames = fieldnames(ObjectProperties);
+            % conver ObjectProperties struct to cell array
+            C = struct2cell(ObjectProperties).';
+            % get object images (using struct fieldnames to find idx to 'Image' column in cell array)
+            ObjectImages = C(:,ismember(fnames,'Image'));
+            % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
+            ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
+            % get boundaries from ObjectImages
+            B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes'),ObjectImages,'UniformOutput',0);
+            % add bounding box offsets to boundary coordinates from ObjectImages
+            % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
+            B = cellfun(@(b,box) bsxfun(@plus,b{1},box([2 1]) - 0.5),B,ObjectBBox,'UniformOutput',0);
+            % add object boundaries cell to props struct
+            ObjectProperties(end).BWBoundary = [];
+            [ObjectProperties(:).BWBoundary] = deal(B{:});
+
         end
 
         % get 4-connected object boundaries
@@ -430,7 +479,7 @@ classdef PODSImage < handle
         % get 8-connected object boundaries
         function ObjectBoundaries8 = get.ObjectBoundaries8(obj)
             ObjectBoundaries8 = bwboundaries(full(obj.bw),8,'noholes');
-        end        
+        end
 
         % get ObjectNames
         function ObjectNames = get.ObjectNames(obj)
@@ -443,6 +492,89 @@ classdef PODSImage < handle
             
         end
         
+        function [...
+                SelectedFaces,...
+                SelectedVertices,...
+                SelectedCData,...
+                UnselectedFaces,...
+                UnselectedVertices,...
+                UnselectedCData...
+                ] = getObjectPatchData(obj)
+
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+
+            % get list of unselected objects
+            Unselected = AllObjects(~[obj.Object.Selected]);
+            UnselectedVerticesMax = 0;
+            UnselectedVerticesSum = 0;
+
+            % get list of selected objects to delete (selected)
+            Selected = AllObjects([obj.Object.Selected]);
+            SelectedVerticesMax = 0;
+            SelectedVerticesSum = 0;
+
+            for cObject = obj.Object
+                nVertices = size(cObject.Boundary,1);
+                switch cObject.Selected
+                    case true
+                        SelectedVerticesSum = SelectedVerticesSum + nVertices;
+                        SelectedVerticesMax = max(SelectedVerticesMax,nVertices);
+                    case false
+                        UnselectedVerticesSum = UnselectedVerticesSum + nVertices;
+                        UnselectedVerticesMax = max(UnselectedVerticesMax,nVertices);
+                end
+            end
+
+            UnselectedFaces = nan(numel(Unselected),UnselectedVerticesMax);
+            UnselectedVertices = zeros(UnselectedVerticesSum+numel(Unselected),2);
+            UnselectedCData = zeros(UnselectedVerticesSum+numel(Unselected),3);
+            TotalUnselectedVertices = 0;
+            UnselectedCounter = 0;
+
+            SelectedFaces = nan(numel(Selected),SelectedVerticesMax);
+            SelectedVertices = zeros(SelectedVerticesSum+numel(Selected),2);
+            SelectedCData = zeros(SelectedVerticesSum+numel(Selected),3);
+            TotalSelectedVertices = 0;
+            SelectedCounter = 0;
+
+            for cObject = obj.Object
+                % get the boundary
+                thisObjectBoundary = cObject.Boundary;
+                % determine number of vertices
+                nvertices = size(thisObjectBoundary,1);
+                switch cObject.Selected
+                    case true
+                        % increment SelectedCounter
+                        SelectedCounter = SelectedCounter + 1;
+                        % obtain vertices idx
+                        SelectedVerticesIdx = (TotalSelectedVertices+1):(TotalSelectedVertices+nvertices);
+                        % add boundary coords to list of vertices
+                        SelectedVertices(SelectedVerticesIdx,:) = [thisObjectBoundary(:,2) thisObjectBoundary(:,1)];
+                        % add CData for each vertex
+                        SelectedCData(SelectedVerticesIdx,:) = zeros(numel(SelectedVerticesIdx),3)+cObject.Label.Color;
+                        % add vertex idxs to faces list
+                        SelectedFaces(SelectedCounter,1:nvertices) = SelectedVerticesIdx;
+                        % update total number of vertices
+                        TotalSelectedVertices = TotalSelectedVertices+nvertices;
+                    case false
+                        % increment UnselectedCounter
+                        UnselectedCounter = UnselectedCounter + 1;
+                        % obtain vertices idx
+                        UnselectedVerticesIdx = (TotalUnselectedVertices+1):(TotalUnselectedVertices+nvertices);
+                        % add boundary coords to list of vertices
+                        UnselectedVertices(UnselectedVerticesIdx,:) = [thisObjectBoundary(:,2) thisObjectBoundary(:,1)];
+                        % add CData for each vertex
+                        UnselectedCData(UnselectedVerticesIdx,:) = zeros(numel(UnselectedVerticesIdx),3)+cObject.Label.Color;
+                        % add vertex idxs to faces list
+                        UnselectedFaces(UnselectedCounter,1:nvertices) = UnselectedVerticesIdx;
+                        % update total number of vertices
+                        TotalUnselectedVertices = TotalUnselectedVertices+nvertices;
+                end
+            end
+        end
+
+
         % get nObjects
         function nObjects = get.nObjects(obj)
             if isvalid(obj.Object)
@@ -453,10 +585,14 @@ classdef PODSImage < handle
         end
 
         function deleteObjects(obj)
+            % collect and delete the objects in this image
             Objects = obj.Object;
             delete(Objects);
+            % clear the graphics placeholders
             clear Objects
+            % reinitialize the obj.Object vector
             obj.Object = [];
+            % delete again? CHECK THIS
             delete(obj.Object);
         end
         

@@ -1,4 +1,4 @@
-function [] = ZoomToCursor(source,event)
+function [] = ZoomToCursor(source,~)
 %% ZoomToCursor
 %   allows for dynamic zooming/panning in GUI axes
 %   all PODSGUI axes using ZoomToCursor will have a custom toolbar state
@@ -61,8 +61,9 @@ function [] = ZoomToCursor(source,event)
         % no cursor position label exists for these axes
     end
     
+    % check if ZoomToCursor button was pressed on or off
     switch source.Value
-        case 1
+        case 1 % on
             % set status as active
             Zoom.Active = true;
             % set current zoom button, obj that called the callback
@@ -102,7 +103,6 @@ function [] = ZoomToCursor(source,event)
             pbarOriginal = Zoom.StaticAxes.PlotBoxAspectRatio;
             tagOriginal = Zoom.StaticAxes.Tag;
             
-            
             Zoom.DynamicImage = findobj(Zoom.DynamicAxes,'Type','image');
             % placeholder image in the reference (static) axes
             Zoom.StaticImage = imshow(Zoom.DynamicImage.CData,'Parent',Zoom.StaticAxes);
@@ -117,9 +117,14 @@ function [] = ZoomToCursor(source,event)
             Zoom.XRange = diff(Zoom.DynamicAxes.XLim);
             Zoom.YRange = diff(Zoom.DynamicAxes.YLim);
             Zoom.ZRange = diff(Zoom.DynamicAxes.ZLim);
-            Zoom.XDist = 0.5*Zoom.XRange;
-            Zoom.YDist = 0.5*Zoom.YRange;
-            Zoom.ZDist = 0.5*Zoom.ZRange;
+%             Zoom.XDist = 0.5*Zoom.XRange;
+%             Zoom.YDist = 0.5*Zoom.YRange;
+%             Zoom.ZDist = 0.5*Zoom.ZRange;
+            Zoom.XDist = Zoom.pct*Zoom.XRange;
+            Zoom.YDist = Zoom.pct*Zoom.YRange;
+            Zoom.ZDist = Zoom.pct*Zoom.ZRange;
+
+
             Zoom.OldXLim = Zoom.DynamicAxes.XLim;
             Zoom.OldYLim = Zoom.DynamicAxes.YLim;
             Zoom.OldZLim = Zoom.DynamicAxes.ZLim;
@@ -132,7 +137,7 @@ function [] = ZoomToCursor(source,event)
             Zoom.DynamicImage.ButtonDownFcn = @ChangeZoomLevel;
             Zoom.DynamicImage.HitTest = 'On';
             
-        case 0
+        case 0 % off
             Zoom.Active = false;
             Handles.fH.WindowButtonMotionFcn = Zoom.OldWindowButtonMotionFcn;
             Zoom.DynamicImage.ButtonDownFcn = Zoom.OldImageButtonDownFcn;
@@ -154,14 +159,20 @@ function [] = ZoomToCursor(source,event)
                 error('Failed to delete static image');
             end            
 
+            % reset original axes limits
             Zoom.DynamicAxes.XLim = Zoom.OldXLim;
             Zoom.DynamicAxes.YLim = Zoom.OldYLim;
 
+%             %% TESTING BELOW - RESET ALPHA DATA
+%             Zoom.DynamicImage.AlphaData = 1;
+%             %% END TEST
+
+            % reset original zoom levels
             Zoom.XDist = 0.5*Zoom.XRange;
             Zoom.YDist = 0.5*Zoom.YRange;
             Zoom.ZDist = 0.5*Zoom.ZRange;
-            Zoom.ZoomLevelIdx = 4;
-            Zoom.pct = 0.5;
+            Zoom.ZoomLevelIdx = 6;
+            Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
     end  
     
     PODSData.Settings.Zoom = Zoom;
@@ -185,14 +196,21 @@ function [] = CursorMoving(source,~)
     y = posn(1,2);
     z = posn(1,3);
     
+%     % x and y are already in expressed in proper pixel coordinates
+%     x1 = min(max(1,x-0.5*Zoom.XDist),Zoom.XRange-Zoom.XDist) + 0.5;
+%     y1 = min(max(1,y-0.5*Zoom.YDist),Zoom.YRange-Zoom.YDist) + 0.5;
+%     z1 = min(max(1,z-0.5*Zoom.ZDist),Zoom.ZRange-Zoom.ZDist) + 0.5;
+
+    % 0 instead of one works better to be able to go over all pixel values
     % x and y are already in expressed in proper pixel coordinates
-    x1 = min(max(1,x-0.5*Zoom.XDist),Zoom.XRange-Zoom.XDist) + 0.5;
-    y1 = min(max(1,y-0.5*Zoom.YDist),Zoom.YRange-Zoom.YDist) + 0.5;
-    z1 = min(max(1,z-0.5*Zoom.ZDist),Zoom.ZRange-Zoom.ZDist) + 0.5;
+    x1 = min(max(0,x-0.5*Zoom.XDist),Zoom.XRange-Zoom.XDist) + 0.5;
+    y1 = min(max(0,y-0.5*Zoom.YDist),Zoom.YRange-Zoom.YDist) + 0.5;
+    z1 = min(max(0,z-0.5*Zoom.ZDist),Zoom.ZRange-Zoom.ZDist) + 0.5;
     x2 = x1 + Zoom.XDist;
     y2 = y1 + Zoom.YDist;
     z2 = z1 + Zoom.ZDist;
     
+    % old method, uncomment if lines below not working
     % if cursor is still within axes limits
     if x >= Zoom.OldXLim(1) && x <= Zoom.OldXLim(2) && ...
             y >= Zoom.OldYLim(1) && y <= Zoom.OldYLim(2) && ...
@@ -203,34 +221,47 @@ function [] = CursorMoving(source,~)
         realx = posn2(1,1);
         realy = posn2(1,2);
 
+        if ~Zoom.Freeze
+            DynamicAxes.XLim = [x1 x2];
+            DynamicAxes.YLim = [y1 y2];
+%             %% TESTING BELOW
+%             Zoom.DynamicImage.AlphaData = makeLogicalFilledCircleImage(...
+%                 realx,...
+%                 realy,...
+%                 0.1*(x2-x1),...
+%                 size(Zoom.DynamicImage.CData,2),...
+%                 size(Zoom.DynamicImage.CData,2)...
+%                 );
+%             drawnow
+%             %% END TEST
+        end
+
+
         try
             DynamicAxes.CursorPositionLabel.Text = [' (X,Y) = (',num2str(round(realx)),...
                 ',',num2str(round(realy)),') | Zoom: ',...
                 num2str(ZoomPct),'%',...
                 ' | Value: ',num2str(Zoom.StaticImage.CData(round(realy),round(realx)))];
         catch
-            blah = 0;
-            
-        end
-        
-        if ~Zoom.Freeze
-            DynamicAxes.XLim = [x1 x2];
-            DynamicAxes.YLim = [y1 y2];
+            blah = 0
         end
         
         PODSData.Handles.fH.Pointer = 'crosshair';
 
     else
 
+        PODSData.Handles.fH.Pointer = 'arrow';
+
         DynamicAxes.CursorPositionLabel.Text = sprintf('x = %3.0f;  y = %3.0f',0,0);
         
         if ~Zoom.Freeze
             DynamicAxes.XLim = Zoom.OldXLim;
             DynamicAxes.YLim = Zoom.OldYLim;
+%             %% TESTING BELOW
+%             Zoom.DynamicImage.AlphaData = 1;
+%             %% END TEST
         end
         
-        PODSData.Handles.fH.Pointer = 'arrow';
-
     end
 
     PODSData.Settings.Zoom = Zoom;
@@ -244,9 +275,9 @@ function [] = ChangeZoomLevel(source,event)
     switch PODSData.Handles.fH.SelectionType
         case 'normal'
             % click
-            % increases zoom level by 1
+            % increases zoom level until maximum is reached
             if Zoom.ZoomLevelIdx == 1
-                Zoom.ZoomLevelIdx = 7;
+                Zoom.ZoomLevelIdx = length(Zoom.ZoomLevels);
             else
                 Zoom.ZoomLevelIdx = Zoom.ZoomLevelIdx - 1;
             end
@@ -255,8 +286,8 @@ function [] = ChangeZoomLevel(source,event)
             
         case 'alt'
             % ctrl-click or right-click
-            % decreases zoom level by 1
-            if Zoom.ZoomLevelIdx == 7
+            % decreases zoom level until minimum (1X) is reached
+            if Zoom.ZoomLevelIdx == length(Zoom.ZoomLevels)
                 Zoom.ZoomLevelIdx = 1;
             else
                 Zoom.ZoomLevelIdx = Zoom.ZoomLevelIdx + 1;

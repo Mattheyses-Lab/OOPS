@@ -56,14 +56,36 @@ function [] = FindOrderFactor3(source,~)
         
         % order factor image exists for this replicate
         cReplicate(ii).OFDone = 1;
+
+
+%% TESTING POLARIZATION FACTOR
+
+        temp = zeros(size(cReplicate(ii).OF_image));
+
+        S1 = cReplicate(ii).pol_ffc(:,:,1) - cReplicate(ii).pol_ffc(:,:,3);
+        S2 = cReplicate(ii).pol_ffc(:,:,2) - cReplicate(ii).pol_ffc(:,:,4);
+
+        totalintensity = ...
+            cReplicate(ii).pol_ffc(:,:,1)...
+            +cReplicate(ii).pol_ffc(:,:,2)...
+            +cReplicate(ii).pol_ffc(:,:,3)...
+            +cReplicate(ii).pol_ffc(:,:,4);
+
+        S0 = 0.25.*totalintensity;
+
+        temp(cReplicate(ii).r1) = sqrt(S1(cReplicate(ii).r1).^2+S2(cReplicate(ii).r1).^2)./(2.*S0(cReplicate(ii).r1));
+
+        cReplicate(ii).PolarizationFactorImage(cReplicate(ii).r1) = temp(cReplicate(ii).r1);
+
+        clear temp
+
+%% TESTING POLARIZATION FACTOR
+
         
     end
 
     % update PODSData with new replicate data
     PODSData.Group(cGroupIndex).Replicate = cReplicate;
-    
-    % update gui with new PODSData
-    %guidata(source,PODSData);
     
     % change to the Order Factor 'tab' if not there already
     if ~strcmp(PODSData.Settings.CurrentTab,'Order Factor')
@@ -71,7 +93,7 @@ function [] = FindOrderFactor3(source,~)
     end    
     
     % Update GUI
-    UpdateTables(source);
+    UpdateSummaryDisplay(source);
     UpdateImages(source);
     UpdateLog3(source,'Done calculating Order Factor.','append');
 

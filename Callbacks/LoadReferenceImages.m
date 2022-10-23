@@ -19,16 +19,27 @@ switch InputFileType
         uiwait(PODSData.Handles.fH);
         % hide main window
         PODSData.Handles.fH.Visible = 'Off';
-        % get reference image files (single or multiple)
-        [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
-            'Select .nd2 reference images',...
-            'MultiSelect','on',...
-            PODSData.Settings.LastDirectory);
 
+        try
+            % get reference image files (single or multiple)
+            [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
+                'Select .nd2 reference images',...
+                'MultiSelect','on',...
+                PODSData.Settings.LastDirectory);
+        catch
+            % get reference image files (single or multiple)
+            [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
+                'Select .nd2 reference images',...
+                'MultiSelect','on');
+        end
+
+        % save recent directory
         PODSData.Settings.LastDirectory = PolPath;
 
         % show main window
         PODSData.Handles.fH.Visible = 'On';
+        % make it active
+        figure(PODSData.Handles.fH);
 
         if(iscell(Pol_files) == 0)
             if(Pol_files==0)
@@ -43,14 +54,17 @@ switch InputFileType
             n_Pol = 1;
         end
         
-        % Update Log Window
-        UpdateLog3(source,['Opening ' num2str(n_Pol) ' reference images...'],'append');
-        
         n = cGroup.nReplicates;
         
         if n~=n_Pol
-            error('Number of references images must match the number of polarization stacks...');
+            msg = 'Number of reference images must match the number of polarization stacks...';
+            uialert(PODSData.Handles.fH,msg,'Error');
+            return
         end
+
+        % Update Log Window
+        UpdateLog3(source,['Opening ' num2str(n_Pol) ' reference images...'],'append');
+        
         
         % for each image
         for i=1:n_Pol
@@ -74,7 +88,7 @@ switch InputFileType
                 end
             catch ME
                 report = getReport(ME);
-                uialert(PODSData.fH,report,'Error');
+                uialert(PODSData.Handles.fH,report,'Error');
                 return
             end
             
@@ -95,7 +109,7 @@ UpdateLog3(source,'Done.','append');
 PODSData.Handles.ShowReferenceImageAverageIntensity.Visible = 'On';
 
 UpdateImages(source);
-UpdateTables(source);
+UpdateSummaryDisplay(source);
 UpdateListBoxes(source);
 
 

@@ -16,6 +16,8 @@ classdef PODSGroup < handle
         
         % FFC info for group
         FFCData struct
+
+        FFCLoaded = false
         
         % output values
         %OFAvg double

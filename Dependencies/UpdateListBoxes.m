@@ -24,13 +24,14 @@ function UpdateListBoxes(source)
                     % enable/update object selection
                     PODSData.Handles.ObjectSelector.Enable = 1;
                     PODSData.Handles.ObjectSelector.Items = Replicate.ObjectNames;
-                    PODSData.Handles.ObjectSelector.ItemsData = [1:length(Replicate.ObjectNames)];
+                    PODSData.Handles.ObjectSelector.ItemsData = 1:length(Replicate.ObjectNames);
                     PODSData.Handles.ObjectSelector.Value = Replicate.CurrentObjectIdx;
+                    scroll(PODSData.Handles.ObjectSelector,PODSData.Handles.ObjectSelector.Value);
                 else
                     PODSData.Handles.ObjectSelector.Items = {'No objects identified for this group...'};
                 end
             % else, if there are no currently selected images
-            elseif length(Replicate) == 0
+            elseif isempty(Replicate)
                 % disable object selection listbox, instruct user to select image
                 PODSData.Handles.ObjectSelector.Items = {'Select an image...'};
                 PODSData.Handles.ObjectSelector.Enable = 0;

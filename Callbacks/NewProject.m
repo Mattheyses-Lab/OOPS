@@ -60,7 +60,8 @@
         fHSetGroupNames = uifigure('Name','Set Group Names',...
                                    'Menubar','none',...
                                    'Position',sz,...
-                                   'Color','Black');
+                                   'Color','Black',...
+                                   'Visible','Off');
         
         GroupNamesBox = gobjects(nGroups,1);
 
@@ -80,17 +81,19 @@
                                   'Text','Return to PODS',...
                                   'Position',[200 30 100 20],...
                                   'ButtonPushedFcn',@ReturnToPODS);
-                              
+
+
+        fHSetGroupNames.Visible = 'On';                      
         waitfor(fHSetGroupNames)                      
 
         % update main GUI with data
         PODSData.Handles.GroupListBox.Items = PODSData.GroupNames;
-        PODSData.Handles.GroupListBox.ItemsData = [1:PODSData.nGroups];
+        PODSData.Handles.GroupListBox.ItemsData = 1:PODSData.nGroups;
         %PODSData.GroupNames = GroupNames;
         PODSData.CurrentGroupIndex = 1;
         guidata(source,PODSData);
         UpdateLog3(source,['Started new project, "', PODSData.ProjectName,'", with ',num2str(PODSData.nGroups),' groups'],'append')
-        UpdateTables(source);
+        UpdateSummaryDisplay(source,{'Project','Group'});
         UpdateListBoxes(source);
         
 %% Nested callbacks for NewProject

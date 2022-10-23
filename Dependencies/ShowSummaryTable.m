@@ -11,8 +11,11 @@ function ShowSummaryTable(source,event)
     
     % uitable to hold data
     uit = uitable(SummaryFig,'data',T);
+
+    uit.Units = 'normalized';
+    uit.Position = [0 0 1 1];
     
     % maximize table size within figure window
-    uit.Position = SummaryFig.InnerPosition;
+    %uit.Position = SummaryFig.InnerPosition;
 
 end

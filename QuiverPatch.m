@@ -1,19 +1,10 @@
 function hPatch = QuiverPatch(hAx,X,Y,C,LineWidth,LineAlpha)
 
-nVertices = length(X)*2;
+% space filler colors for the lines we aren't going to draw
+filler = ones(length(X),3);
 
-Cnew = zeros(nVertices,3);
-
-LineCounter = 1;
-
-for i = 1:nVertices
-    if rem(i,2) % if is odd
-        Cnew(i,:) = C(LineCounter,:);
-        LineCounter = LineCounter+1;
-    else
-        Cnew(i,:) = [1 1 1];
-    end
-end
+% interleaved array where each odd row idx holds a line color to plot in the final patch
+Cnew = Interleave2DArrays(C,filler,'row');
 
 hPatch = patch(hAx,"XData",X,"YData",Y,"FaceVertexCData",Cnew,"EdgeColor","Flat");
 hPatch.HitTest = 'Off';

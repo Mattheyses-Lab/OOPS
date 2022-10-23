@@ -15,8 +15,8 @@ classdef PODSSettings < handle
             'OldYLim',[0 1],...
             'OldZLim',[0 1],...
             'pct',0.5,...
-            'ZoomLevels',[1/10 1/5 1/3 1/2 1/1.5 1/1.25 1],...
-            'ZoomLevelIdx',4,...
+            'ZoomLevels',[1/20 1/15 1/10 1/5 1/3 1/2 1/1.5 1/1.25 1],...
+            'ZoomLevelIdx',6,...
             'OldWindowButtonMotionFcn','',...
             'OldImageButtonDownFcn','',...
             'Active',false,...
@@ -29,8 +29,8 @@ classdef PODSSettings < handle
         InputFileType = '.nd2';
 
         LastDirectory = pwd;
-        
-        MaskType = 'MakeNew';
+
+        SummaryDisplayType = 'Project';
         
         % monitor tab switching
         CurrentTab = 'Files';
@@ -55,27 +55,20 @@ classdef PODSSettings < handle
         % colormaps settings
         Colormaps struct
         ColormapsSettings struct
-        % struct of all colormaps
-        %AllColormaps struct
+
         % currently selected colormaps for each image type
         IntensityColormap double
         OrderFactorColormap double
         ReferenceColormap double
         
-
         % Azimuth display settings
         AzimuthDisplaySettings struct
         
-        % SwarmChart settings
-        % how to group the data, by group, by custom label, or both
-        SwarmChartGroupingType = 'Label';
-        % y-axis variable to plot
-        SwarmChartYVariable = 'OFAvg';
-        % ID or Magnitude
-        SwarmChartColorMode = 'ID';
-        
         % ScatterPlot Settings
         ScatterPlotSettings struct
+
+        % SwarmPlot Settings
+        SwarmPlotSettings struct
         
         % Group Colors
         DefaultGroupColors cell
@@ -88,7 +81,13 @@ classdef PODSSettings < handle
         
         % default px size (um/px)
         PixelSize = 0.1083;
-        
+
+        % type of mask to generate and use for object detection
+        MaskType = 'Legacy';
+
+        % object box type ('Box' or 'Boundary')
+        ObjectBoxType = 'Box';
+
     end
 
     properties (Dependent = true)
@@ -106,6 +105,13 @@ classdef PODSSettings < handle
         ScatterPlotVariablesLong
         ScatterPlotVariablesShort
 
+        % SwarmPlot settings
+        SwarmPlotVariablesLong
+        SwarmPlotVariablesShort
+        SwarmPlotYVariable
+        SwarmPlotGroupingType
+        SwarmPlotColorMode
+
     end
     
     methods
@@ -115,7 +121,7 @@ classdef PODSSettings < handle
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
             % set up default object label (PODSLabel object)
-            obj.ObjectLabels(1) = PODSLabel('Default',[1 1 1],1);
+            obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],1);
             % get list of supported fonts
             FontList = listfonts();
             % check if 'Consolas' is in list of supported fonts
@@ -142,9 +148,9 @@ classdef PODSSettings < handle
             end
             
             try
-                obj.UpdateSwarmChartSettings();
+                obj.UpdateSwarmPlotSettings();
             catch
-                warning('Unable to load "SwarmChartSettings.mat"...');
+                warning('Unable to load "SwarmPlotSettings.mat"...');
             end
             
             try
@@ -180,12 +186,9 @@ classdef PODSSettings < handle
             obj.ReferenceColormap = obj.ColormapsSettings.Reference{3};
         end
 
-        function UpdateSwarmChartSettings(obj)
-            load SwarmChartSettings.mat SwarmChartSettings
-            obj.SwarmChartGroupingType = SwarmChartSettings.GroupingType;
-            obj.SwarmChartYVariable = SwarmChartSettings.YVariable;
-            obj.SwarmChartColorMode = SwarmChartSettings.ColorMode;
-            clear SwarmChartSettings
+        function UpdateSwarmPlotSettings(obj)
+            SwarmPlotSettings_mat_file = load('SwarmPlotSettings.mat');
+            obj.SwarmPlotSettings = SwarmPlotSettings_mat_file.SwarmPlotSettings;
         end
         
         function UpdateAzimuthDisplaySettings(obj)
@@ -233,6 +236,26 @@ classdef PODSSettings < handle
         function ScatterPlotVariablesShort = get.ScatterPlotVariablesShort(obj)
             ScatterPlotVariablesShort = obj.ScatterPlotSettings.VariablesShort;
         end
+
+        function SwarmPlotVariablesLong = get.SwarmPlotVariablesLong(obj)
+            SwarmPlotVariablesLong = obj.SwarmPlotSettings.VariablesLong;
+        end
+
+        function SwarmPlotVariablesShort = get.SwarmPlotVariablesShort(obj)
+            SwarmPlotVariablesShort = obj.SwarmPlotSettings.VariablesShort;
+        end
+
+        function SwarmPlotYVariable = get.SwarmPlotYVariable(obj)
+            SwarmPlotYVariable = obj.SwarmPlotSettings.YVariable;
+        end
+
+        function SwarmPlotColorMode = get.SwarmPlotColorMode(obj)
+            SwarmPlotColorMode = obj.SwarmPlotSettings.ColorMode;
+        end
+
+        function SwarmPlotGroupingType = get.SwarmPlotGroupingType(obj)
+            SwarmPlotGroupingType = obj.SwarmPlotSettings.GroupingType;
+        end        
 
     end
 end

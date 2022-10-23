@@ -8,7 +8,7 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
     
     nPlots = nLabels*nGroups;
     
-    axH.XTick = [1:1:nPlots];
+    axH.XTick = 1:1:nPlots;
 
     PlotIdx = 1;
     
@@ -19,7 +19,7 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
         end
     end
 
-    Var2Get = PODSData.Settings.SwarmChartYVariable;
+    Var2Get = PODSData.Settings.SwarmPlotYVariable;
     
     % cell array of Var2Get values, one row of cells per group, one column of cells per label
     LabelObjectData = PODSData.GetObjectDataByLabel(Var2Get);
@@ -47,7 +47,7 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
                     error();
                 end
                 
-                switch PODSData.Settings.SwarmChartColorMode
+                switch PODSData.Settings.SwarmPlotColorMode
                     case 'Magnitude'
                         % color by value
                         hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},150,Y{PlotIdx},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
@@ -89,8 +89,8 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
         axH.YLim = [0 UpperLim];
         axH.CLim = axH.YLim;
     catch
-       axH.YLim = [0 1];
-       axH.CLim = [0 1];
+        axH.YLim = [0 1];
+        axH.CLim = [0 1];
     end
     
     % set the JitterWidth of each plot

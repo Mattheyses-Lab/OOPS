@@ -10,7 +10,7 @@ PODSData = guidata(source);
 nPlots = PODSData.nGroups;
 
 % set axis ticks, one for each group, even those that won't be plotted
-axH.XTick = [1:1:PODSData.nGroups];
+axH.XTick = 1:1:PODSData.nGroups;
 
 %% Check which groups have OFAllDone true, get the object OF, add to plot
 for i = 1:nPlots
@@ -23,7 +23,7 @@ end
 % cell array to hold vectors of objectOF for each group
 GroupObjectData = cell(1,nPlots);
 
-Var2Plot = PODSData.Settings.SwarmChartYVariable;
+Var2Plot = PODSData.Settings.SwarmPlotYVariable;
 
 % get the data for each group
 for i = 1:nPlots
@@ -53,7 +53,7 @@ for i = 1:nPlots
             error();
         end
 
-        switch PODSData.Settings.SwarmChartColorMode
+        switch PODSData.Settings.SwarmPlotColorMode
             case 'Magnitude'
                 % color by value
                 hSwarmPlot(i) = swarmchart(axH,X{i},Y{i},150,Y{i},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
@@ -73,7 +73,7 @@ for i = 1:nPlots
     end
 end
 
-hold off
+hold off 
 
 axH.YTickMode = 'Auto';
 axH.YTickLabelMode = 'Auto';

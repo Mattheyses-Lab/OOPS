@@ -8,12 +8,12 @@ nImages = length(PODSData.CurrentImage);
 
 UpdateLog3(source,['Building mask(s) for ',num2str(nImages),' images...'],'append');
 
-MaskMode = 'Legacy8';
+MaskType = PODSData.Settings.MaskType;
 
 i = 1;
 
-switch MaskMode
-    % DO NOT EDIT - this is the original masking strategy
+switch MaskType
+    % DO NOT EDIT - this is the original masking strategy used in BJ Paper (Dean & Mattheyses, 2022)
     case 'Legacy'
         % main masking loop, iterates through each selected image
         for cImage = PODSData.CurrentImage
@@ -27,300 +27,47 @@ switch MaskMode
             cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
             % median filter BG-subtracted image
             cImage.EnhancedImg = medfilt2(cImage.BGSubtractedImg);
-
-            %% Intensity Distribution Histogram
-            % scale to 0-1
+            % scale so that max intensity is 1
             cImage.EnhancedImg = cImage.EnhancedImg./max(max(cImage.EnhancedImg));
-
             % initial threshold guess using graythresh()
             [cImage.level,~] = graythresh(cImage.EnhancedImg);
-
             %% Build mask
             nObjects = 500;
             notfirst = false;
             % Set the max nObjects to 500 by increasing the threshold until nObjects <= 500
             while nObjects >= 500
-
                 % on loop iterations 2:n, double the threshold until nObjects < 500
                 if notfirst
                     cImage.level = cImage.level*2;
                     UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
                 end
                 notfirst = true;
-
                 % binarize median-filtered image at level determined above
                 cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
-
                 % set 10 border px on all sides to 0, this is to speed up local BG
                 % detection later on
-                cImage.bw(1:10,1:end) = 0;
-                cImage.bw(1:end,1:10) = 0;
-                cImage.bw(cImage.Height-9:end,1:end) = 0;
-                cImage.bw(1:end,cImage.Width-9:end) = 0;
-
+                cImage.bw = ClearImageBorder(cImage.bw,10);
                 % remove small objects
                 CC = bwconncomp(full(cImage.bw),4);
                 S = regionprops(CC, 'Area');
                 L = labelmatrix(CC);
                 cImage.bw = sparse(ismember(L, find([S.Area] >= 10)));
                 clear CC S L
-
                 % generate new label matrix
                 cImage.L = sparse(bwlabel(full(cImage.bw),4));
-
                 % get nObjects from label matrix
                 nObjects = max(max(full(cImage.L)));
-
             end
+            
             % update log with masking output
             UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
             UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
-
-            % delete old objects for current replicate...
-            %cImage.deleteObjects();
-            % ...so we can detect the new ones (requires bw and L to be computed previously)
+            % detect objects from the mask
             cImage.DetectObjects();
-            % current object will be the first object by default
-            cImage.CurrentObjectIdx = 1;
             % indicates mask was generated automatically
             cImage.ThresholdAdjusted = 0;
             % a mask exists for this replicate
             cImage.MaskDone = 1;
-
-            cImage.LocalSBDone = false;
-
-            UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
-
-            % end main loop timer
-            toc
-
-            % increment loop counter
-            i = i+1;
-        end % end iteration through images
-    % variant of the Legacy strategy, but using 8-connected objects
-    case 'Legacy8'
-        % main masking loop, iterates through each selected image
-        for cImage = PODSData.CurrentImage
-            disp('Main masking loop (time elapsed per loop):')
-            tic
-            % update log with status of masking
-            UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
-            % use disk-shaped structuring element to calculate BG
-            cImage.BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
-            % subtract BG
-            cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
-            % median filter BG-subtracted image
-            cImage.EnhancedImg = medfilt2(cImage.BGSubtractedImg);
-
-            %% Intensity Distribution Histogram
-            % scale to 0-1
-            cImage.EnhancedImg = cImage.EnhancedImg./max(max(cImage.EnhancedImg));
-
-            % initial threshold guess using graythresh()
-            [cImage.level,~] = graythresh(cImage.EnhancedImg);
-
-            %% Build mask
-            nObjects = 500;
-            notfirst = false;
-            % Set the max nObjects to 500 by increasing the threshold until nObjects <= 500
-            while nObjects >= 500
-
-                % on loop iterations 2:n, double the threshold until nObjects < 500
-                if notfirst
-                    cImage.level = cImage.level*2;
-                    UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
-                end
-                notfirst = true;
-
-                % binarize median-filtered image at level determined above
-                cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
-
-                % set 10 border px on all sides to 0, this is to speed up local BG
-                % detection later on
-                cImage.bw(1:10,1:end) = 0;
-                cImage.bw(1:end,1:10) = 0;
-                cImage.bw(cImage.Height-9:end,1:end) = 0;
-                cImage.bw(1:end,cImage.Width-9:end) = 0;
-
-                % remove small objects
-                CC = bwconncomp(full(cImage.bw),4);
-                S = regionprops(CC, 'Area');
-                L = labelmatrix(CC);
-                cImage.bw = sparse(ismember(L, find([S.Area] >= 10)));
-                clear CC S L
-
-                % generate new label matrix
-                cImage.L = sparse(bwlabel(full(cImage.bw),8));
-
-                % get nObjects from label matrix
-                nObjects = max(max(full(cImage.L)));
-
-            end
-            % update log with masking output
-            UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
-            UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
-
-            % delete old objects for current replicate...
-            delete(cImage.Object);
-            % ...so we can detect the new ones (requires bw and L to be computed previously)
-            cImage.DetectObjects();
-            % current object will be the first object by default
-            cImage.CurrentObjectIdx = 1;
-            % indicates mask was generated automatically
-            cImage.ThresholdAdjusted = 0;
-            % a mask exists for this replicate
-            cImage.MaskDone = 1;
-
-            cImage.LocalSBDone = false;
-
-            UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
-
-            % end main loop timer
-            toc
-
-            % increment loop counter
-            i = i+1;
-        end % end iteration through images        
-    case 'Filament'
-        SE = strel('disk',2,0);
-        % main masking loop, iterates through each selected image
-        for cImage = PODSData.CurrentImage
-            disp('Main masking loop (time elapsed per loop):')
-            tic
-            % UPDATE LOG
-            UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
-            % MORPHOLOGICAL OPENING
-            cImage.BGImg = imopen(cImage.I,SE);
-            % SUBTRACT OPENED IMAGE
-            cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
-
-            cImage.EnhancedImg = imadjust(cImage.BGSubtractedImg);
-
-            % GUESS THRESHOLD WITH OTSU'S METHOD
-            [cImage.level,~] = graythresh(cImage.EnhancedImg);
-            % ADAPTIVE THRESHOLD
-            AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,0,...
-                'Statistic','gaussian',...
-                'NeighborhoodSize',3);
-
-            %% Build mask
-
-            % BINARIZE
-            cImage.bw = sparse(imbinarize(cImage.EnhancedImg,AdaptiveThreshLevel));
-
-            % CLEAR 10 PX BORDER
-            cImage.bw = ClearImageBorder(cImage.bw,10);
-
-            % FILTER OBJECTS WITH AREA < 100 PX
-            CC = bwconncomp(full(cImage.bw),4);
-            S = regionprops(CC, 'Area','Eccentricity','Circularity');
-            L = labelmatrix(CC);
-             cImage.bw = sparse(ismember(L, find([S.Area] >= 50 & ...
-                 [S.Eccentricity] > 0.9 & ...
-                 [S.Circularity] < 0.3)));
-            clear CC S L
-
-            cImage.bw = imdilate(full(cImage.bw),ones(3,3));
-            cImage.bw = imerode(full(cImage.bw),ones(3,3));
-
-            % BUILD 8-CONNECTED LABEL MATRIX
-            cImage.L = sparse(bwlabel(full(cImage.bw),8));
-
-            % update log with masking output
-            UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
-            UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
-
-            %% BUILD NEW OBJECTS
-            % delete old objects for current replicate...
-            delete(cImage.Object);
-            % ...so we can detect the new ones (requires bw and L to be computed previously)
-            cImage.DetectObjects();
-            % current object will be the first object by default
-            cImage.CurrentObjectIdx = 1;
-            % indicates mask was generated automatically
-            cImage.ThresholdAdjusted = 0;
-            % a mask exists for this replicate
-            cImage.MaskDone = 1;
-            % always has to be redone after object detection
-            cImage.LocalSBDone = false;
-            % update log
-            UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
-            % end main loop timer
-            toc
-            % increment loop counter
-            i = i+1;
-        end % end iteration through images
-    case 'New'
-        SE = strel('disk',2,0);
-        % main masking loop, iterates through each selected image
-        for cImage = PODSData.CurrentImage
-            disp('Main masking loop (time elapsed per loop):')
-            tic
-            % UPDATE LOG
-            UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
-
-            %% Enhance and find threshold
-
-            I = cImage.I;
-            % MORPHOLOGICAL OPENING
-            cImage.BGImg = imopen(I,SE);
-            % SUBTRACT OPENED IMAGE
-            cImage.BGSubtractedImg = I - cImage.BGImg;
-            % adjust contrast
-            cImage.EnhancedImg = imadjust(cImage.BGSubtractedImg);
-
-            % GUESS THRESHOLD WITH OTSU'S METHOD
-            [cImage.level,~] = graythresh(cImage.EnhancedImg);
-
-            %% Build mask
-
-            % BINARIZE
-            cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
-
-            % CLEAR 10 PX BORDER
-            cImage.bw = ClearImageBorder(cImage.bw,10);
-
-            %FILTER OBJECTS WITH AREA < 100 PX
-            CC = bwconncomp(full(cImage.bw),4);
-            S = regionprops(CC, 'Area','Eccentricity','Circularity');
-            L = labelmatrix(CC);
-             cImage.bw = sparse(ismember(L, find([S.Area] >= 50 & ...
-                 [S.Eccentricity] > 0.9 & ...
-                 [S.Circularity] < 0.5)));
-            clear CC S L           
-
-            cImage.bw = imdilate(full(cImage.bw),ones(3,3));
-            cImage.bw = imerode(full(cImage.bw),ones(3,3));
-
-            %FILTER OBJECTS WITH AREA < 100 PX
-            CC = bwconncomp(full(cImage.bw),4);
-            S = regionprops(CC, 'Area','Eccentricity','Circularity');
-            L = labelmatrix(CC);
-             cImage.bw = sparse(ismember(L, find([S.Area] >= 50 & ...
-                 [S.Eccentricity] > 0 & ...
-                 [S.Circularity] < 10)));
-            clear CC S L
-
-            % BUILD 8-CONNECTED LABEL MATRIX
-            cImage.L = sparse(bwlabel(full(cImage.bw),8));
-
-            % update log with masking output
-            UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
-            UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
-
-            %% BUILD NEW OBJECTS
-            % delete old objects for current replicate...
-            delete(cImage.Object);
-            % ...so we can detect the new ones (requires bw and L to be computed previously)
-            cImage.DetectObjects();
-            % current object will be the first object by default
-            cImage.CurrentObjectIdx = 1;
-            % indicates mask was generated automatically
-            cImage.ThresholdAdjusted = 0;
-            % a mask exists for this replicate
-            cImage.MaskDone = 1;
-            % always has to be redone after object detection
-            cImage.LocalSBDone = false;
             % update log
             UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
             % end main loop timer
@@ -338,37 +85,67 @@ switch MaskMode
             UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
 
             %% Enhance and find threshold
-
             I = cImage.I;
-
             % MORPHOLOGICAL OPENING
             cImage.BGImg = imopen(I,SE);
             % SUBTRACT OPENED IMAGE
             cImage.BGSubtractedImg = I - cImage.BGImg;
-            % adjust contrast
-            cImage.EnhancedImg = imadjust(cImage.BGSubtractedImg);
+            
+            cImage.EnhancedImg = medfilt2(cImage.EnhancedImg./max(max(cImage.EnhancedImg)));
 
-            % GUESS THRESHOLD WITH OTSU'S METHOD
-            [cImage.level,~] = graythresh(cImage.BGSubtractedImg);
-%             % ADAPTIVE THRESHOLD
-%             AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,0,...
-%                 'Statistic','gaussian',...
-%                 'NeighborhoodSize',3);
+%% test
 
+            I = cImage.I;
+%             I = imflatfield(imtophat(I,strel('disk',3,0)),30,'FilterSize',129);
+
+            C = maxhessiannorm(I,4);
+            I = fibermetric(I,4,'StructureSensitivity',0.5*C);
+            
+            % initialize super open image
+            I_superopen = zeros(size(I),'like',I);
+            % max opening with rotating line segment
+            % lower length will pick up smaller objects
+            for phi = 1:180
+                SEline = strel('line',40,phi);
+                I_superopen = max(I_superopen,imopen(I,SEline));
+            end
+
+            I = I_superopen;
+            cImage.EnhancedImg = I;
+
+            temp = ClearImageBorder(I,10);
 
             %% Detect edges
-            IEdges = edge(cImage.EnhancedImg,'zerocross',0);
+            IEdges = edge(temp,'zerocross',0);
+            % mask is the edge pixels
+            cImage.bw = sparse(IEdges);
 
-            %FILTER OBJECTS WITH AREA < 100 PX
-            CC = bwconncomp(full(IEdges),8);
-            S = regionprops(CC, 'FilledArea','Eccentricity','Circularity');
-            L = labelmatrix(CC);
-             cImage.bw = sparse(ismember(L, find([S.FilledArea] >= 100 & ...
-                 [S.Eccentricity] > 0 & ...
-                 [S.Circularity] < 10)));
-            clear CC S L
-
+%% uncomment below to fill in mask
             % BUILD 8-CONNECTED LABEL MATRIX
+            cImage.L = sparse(bwlabel(full(cImage.bw),8));
+            % fill in outlines and recreate mask
+            bwtemp = zeros(size(cImage.bw));
+            bwempty = zeros(size(cImage.bw));
+            props = regionprops(full(cImage.L),full(cImage.bw),...
+                {'FilledImage',...
+                'SubarrayIdx'});
+            for obj_idx = 1:max(max(full(cImage.L)))
+                bwempty(props(obj_idx).SubarrayIdx{:}) = props(obj_idx).FilledImage;
+                bwtemp = bwtemp | bwempty;
+                bwempty(:) = 0;
+            end
+
+            cImage.bw = sparse(bwtemp);
+%% end fill
+
+            % remove small objects one final time
+            CC = bwconncomp(full(cImage.bw),8);
+            S = regionprops(CC, 'Area','Eccentricity','Circularity');
+            L = labelmatrix(CC);
+            cImage.bw = sparse(ismember(L, find([S.Area] >= 5 & ...
+                [S.Eccentricity] > 0.5 & ...
+                [S.Circularity] < 0.5)));
+
             cImage.L = sparse(bwlabel(full(cImage.bw),8));
 
             % update log with masking output
@@ -380,14 +157,10 @@ switch MaskMode
             delete(cImage.Object);
             % ...so we can detect the new ones (requires bw and L to be computed previously)
             cImage.DetectObjects();
-            % current object will be the first object by default
-            cImage.CurrentObjectIdx = 1;
             % indicates mask was generated automatically
             cImage.ThresholdAdjusted = 0;
             % a mask exists for this replicate
             cImage.MaskDone = 1;
-            % always has to be redone after object detection
-            cImage.LocalSBDone = false;
             % update log
             UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
             % end main loop timer
@@ -395,7 +168,7 @@ switch MaskMode
             % increment loop counter
             i = i+1;
         end % end iteration through images
-    case 'Filamentv2'
+    case 'Filament' % BEST FILAMENT SO FAR %
         SE = strel('disk',2,0);
         % main masking loop, iterates through each selected image
         for cImage = PODSData.CurrentImage
@@ -405,23 +178,44 @@ switch MaskMode
             UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
 
             % the default neighborhood size
-            %nhoodsize = 2*floor(size(cImage.EnhancedImg)/16)+1;
+            nhoodsize = 2*floor(size(cImage.I)/16)+1;
 
             % MORPHOLOGICAL OPENING
             cImage.BGImg = imopen(cImage.I,SE);
             % SUBTRACT OPENED IMAGE
             cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
 
-            cImage.EnhancedImg = imadjust(cImage.BGSubtractedImg);
-            %cImage.EnhancedImg = cImage.BGSubtractedImg;
+            I = cImage.BGSubtractedImg;
+
+            cImage.EnhancedImg = Scale0To1(medfilt2(I));
+
+            I = cImage.EnhancedImg;
+
+            I = imflatfield(I,30,"FilterSize",129);
+
+            C = maxhessiannorm(I,6);
+            I = fibermetric(I,6,"ObjectPolarity","bright","StructureSensitivity",0.5*C);
+
+            % initialize super open image
+            I_superopen = zeros(size(I),'like',I);
+            % max opening with rotating line segment
+            % lower length will pick up smaller objects
+            for phi = 1:180
+                SEline = strel('line',40,phi);
+                I_superopen = max(I_superopen,imopen(I,SEline));
+            end
+
+            I = I_superopen;
+
+            cImage.EnhancedImg = imadjust(imflatfield(I,30,"FilterSize",nhoodsize));
 
             % GUESS THRESHOLD WITH OTSU'S METHOD
             [cImage.level,~] = graythresh(cImage.EnhancedImg);
             % ADAPTIVE THRESHOLD
 
-            AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,0.15,...
+            AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,cImage.level,...
                 'Statistic','gaussian',...
-                'NeighborhoodSize',3);
+                'NeighborhoodSize',nhoodsize);
 
             %% Build mask
 
@@ -431,58 +225,40 @@ switch MaskMode
             % CLEAR 10 PX BORDER
             cImage.bw = ClearImageBorder(cImage.bw,10);
 
-            % FILTER VERY SMALL OBJECTS
-            CC = bwconncomp(full(cImage.bw),4);
-            S = regionprops(CC, 'Area','Eccentricity','Circularity');
-            L = labelmatrix(CC);
-             cImage.bw = sparse(ismember(L, find([S.Area] >= 10 & ...
-                 [S.Eccentricity] > 0 & ...
-                 [S.Circularity] < 1)));
-            clear CC S L
-
-            %cImage.bw = imclose(full(cImage.bw),SE);
-            cImage.bw = imclose(full(cImage.bw),strel('disk',1,0));
-
-            % FILTER SLIGHTLY LARGER OBJECTS
-            CC = bwconncomp(full(cImage.bw),4);
-            S = regionprops(CC, 'Area','Eccentricity','Circularity');
-            L = labelmatrix(CC);
-             cImage.bw = sparse(ismember(L, find([S.Area] >= 50 & ...
-                 [S.Eccentricity] > 0.5 & ...
-                 [S.Circularity] < 0.5)));
-            clear CC S L
-
             BW = false(size(cImage.bw));
 
-
-            for k = 0:10:180
-                SEline = strel('line',10,k);
-                SEline2 = strel('line',20,k);
+            for k = 1:1:180
+                SEline = strel('line',20,k);
+                %SEline2 = strel('line',10,k);
                 BWtemp = imopen(full(cImage.bw),SEline);
                 % FILTER SLIGHTLY LARGER OBJECTS
                 CC = bwconncomp(BWtemp,4);
                 S = regionprops(CC, 'Area','Eccentricity','Circularity');
                 L = labelmatrix(CC);
-                BWtemp = sparse(ismember(L, find([S.Area] >= 50 & ...
-                     [S.Eccentricity] > 0.95 & ...
-                     [S.Circularity] < 0.3)));
-                BWtemp = imclose(full(BWtemp),SEline2);
+                BWtemp = sparse(ismember(L, find([S.Area] >= 40 & ...
+                     [S.Eccentricity] > 0.8 & ...
+                     [S.Circularity] < 0.5)));
+
+                %BWtemp = imclose(full(BWtemp),SEline2);
+
                 BW = BW+BWtemp;
             end
 
             cImage.bw = BW;
 
             % dilation followed by erosion
-            cImage.bw = imclose(full(cImage.bw),strel('disk',1,0));
+            %cImage.bw = imclose(full(cImage.bw),strel('disk',1,0));
 
             % CLEAR 10 PX BORDER
             cImage.bw = ClearImageBorder(cImage.bw,10);
 
             % remove small objects one final time
-            CC = bwconncomp(cImage.bw,4);
-            S = regionprops(CC, 'Area');
+            CC = bwconncomp(full(cImage.bw),4);
+            S = regionprops(CC, 'Area','Eccentricity','Circularity');
             L = labelmatrix(CC);
-            cImage.bw = sparse(ismember(L, find([S.Area] >= 50)));
+            cImage.bw = sparse(ismember(L, find([S.Area] >= 40 & ...
+                [S.Eccentricity] > 0.8 & ...
+                [S.Circularity] < 0.5)));
 
             % BUILD 8-CONNECTED LABEL MATRIX
             cImage.L = sparse(bwlabel(full(cImage.bw),8));
@@ -496,14 +272,10 @@ switch MaskMode
             delete(cImage.Object);
             % ...so we can detect the new ones (requires bw and L to be computed previously)
             cImage.DetectObjects();
-            % current object will be the first object by default
-            cImage.CurrentObjectIdx = 1;
             % indicates mask was generated automatically
             cImage.ThresholdAdjusted = 0;
             % a mask exists for this replicate
             cImage.MaskDone = 1;
-            % always has to be redone after object detection
-            cImage.LocalSBDone = false;
             % update log
             UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
             % end main loop timer
@@ -511,7 +283,124 @@ switch MaskMode
             % increment loop counter
             i = i+1;
         end % end iteration through images
+    case 'Intensity'
+        % main masking loop, iterates through each selected image
+        for cImage = PODSData.CurrentImage
+            disp('Main masking loop (time elapsed per loop):')
+            tic
+            % update log with status of masking
+            UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
+            % use disk-shaped structuring element to calculate BG
+            cImage.BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
+            % subtract BG
+            cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
+            % median filter BG-subtracted image
+            cImage.EnhancedImg = medfilt2(cImage.BGSubtractedImg);
 
+            %% Intensity Distribution Histogram
+            % scale to 0-1
+            cImage.EnhancedImg = cImage.EnhancedImg./max(max(cImage.EnhancedImg));
+
+            %%testing
+            cImage.EnhancedImg = cImage.I;
+
+            % initial threshold guess using graythresh()
+            [cImage.level,~] = graythresh(cImage.EnhancedImg);
+
+            % binarize median-filtered image at level determined above
+            cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
+
+            % set 10 border px on all sides to 0, this is to speed up local BG
+            % detection later on
+            cImage.bw(1:10,1:end) = 0;
+            cImage.bw(1:end,1:10) = 0;
+            cImage.bw(cImage.Height-9:end,1:end) = 0;
+            cImage.bw(1:end,cImage.Width-9:end) = 0;
+
+            % remove small objects
+            CC = bwconncomp(full(cImage.bw),4);
+            S = regionprops(CC, 'Area');
+            L = labelmatrix(CC);
+            cImage.bw = sparse(ismember(L, find([S.Area] >= 10)));
+            clear CC S L
+            % generate new label matrix
+            cImage.L = sparse(bwlabel(full(cImage.bw),4));
+
+            % update log with masking output
+            UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
+            UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
+
+            % delete old objects for current replicate...
+            %cImage.deleteObjects();
+            % ...so we can detect the new ones (requires bw and L to be computed previously)
+            cImage.DetectObjects();
+            % current object will be the first object by default
+            cImage.CurrentObjectIdx = 1;
+            % indicates mask was generated automatically
+            cImage.ThresholdAdjusted = 0;
+            % a mask exists for this replicate
+            cImage.MaskDone = 1;
+
+            UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
+
+            % end main loop timer
+            toc
+
+            % increment loop counter
+            i = i+1;
+        end % end iteration through images        
+    case 'Adaptive'
+        % main masking loop, iterates through each selected image
+        for cImage = PODSData.CurrentImage
+            disp('Main masking loop (time elapsed per loop):')
+            tic
+            % UPDATE LOG
+            UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
+
+            % use disk-shaped structuring element to calculate BG
+            cImage.BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
+            % subtract BG
+            cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
+            % median filter BG-subtracted image
+            cImage.EnhancedImg = medfilt2(cImage.BGSubtractedImg);
+
+            % GUESS THRESHOLD WITH OTSU'S METHOD
+            [cImage.level,~] = graythresh(cImage.EnhancedImg);
+
+            %% Build mask
+            cImage.bw = sparse(imbinarize(cImage.I,adaptthresh(cImage.I,cImage.level,'Statistic','Gaussian','NeighborhoodSize',3)));
+
+            % CLEAR 10 PX BORDER
+            cImage.bw = ClearImageBorder(cImage.bw,10);
+
+            % FILTER OBJECTS WITH AREA < 10 PX
+            CC = bwconncomp(full(cImage.bw),4);
+            S = regionprops(CC, 'Area');
+            L = labelmatrix(CC);
+            cImage.bw = sparse(ismember(L, find([S.Area] >=10)));
+            clear CC S L
+
+            % BUILD 4-CONNECTED LABEL MATRIX
+            cImage.L = sparse(bwlabel(full(cImage.bw),4));
+
+            % update log with masking output
+            UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
+            UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
+
+            %% BUILD NEW OBJECTS
+            % ...so we can detect the new ones (requires bw and L to be computed previously)
+            cImage.DetectObjects();
+            % indicates mask was generated automatically
+            cImage.ThresholdAdjusted = 0;
+            % a mask exists for this replicate
+            cImage.MaskDone = 1;
+            % update log
+            UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
+            % end main loop timer
+            toc
+            % increment loop counter
+            i = i+1;
+        end % end iteration through images
 end
 
 % invoke callback to change tab
@@ -520,7 +409,7 @@ if ~strcmp(PODSData.Settings.CurrentTab,'View/Adjust Mask')
 end
 
 UpdateLog3(source,'Done.','append');
-UpdateTables(source);
-UpdateImages(source);
+% UpdateSummaryDisplay(source);
+% UpdateImages(source);
     
 end

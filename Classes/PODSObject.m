@@ -35,7 +35,6 @@ classdef PODSObject < handle
         % coordinates to trace object boundary
         Boundary
         
-        
         MaxFFCAvgIntensity
         MeanFFCAvgIntensity
         MinFFCAvgIntensity
@@ -46,7 +45,7 @@ classdef PODSObject < handle
         % object px values for various outputs
         RawPixelValues
 %        OFPixelValues
-        AzimuthPixelValues
+%        AzimuthPixelValues
         AnisotropyPixelValues
         
         % Object 1, Object 2, etc...
@@ -78,29 +77,30 @@ classdef PODSObject < handle
         % Selection and labeling
         Label PODSLabel
         Selected = false
-        
 
     end % end properties
     
     properties(Dependent = true)
-        
+        % various output values, object properties, and object images that
+        % are too costly to store in memory, but quick to calculate if needed
+
+        % list of values, average, and standard dev. of object azimuths
+        AzimuthPixelValues
+        AzimuthAverage
+        AzimuthStd
+
+        % various object images
         OFSubImage 
-        
         PaddedOFSubImage
-        
         MaskedOFSubImage
-        
         PaddedFFCIntensitySubImage
-        
         PaddedMaskSubImage
         RestrictedPaddedMaskSubImage        
-        
         PaddedAnalysisChannelSubImage
-        
         PaddedColocNorm2MaxSubImage
+        PaddedAzimuthSubImage
         
         CentroidX
-        
         CentroidY
 
         % depends on selection status
@@ -126,7 +126,7 @@ classdef PODSObject < handle
     methods
         
         % constructor method
-        function obj = PODSObject(ObjectProps,ParentImage,Name,Idx,Label,Boundary)
+        function obj = PODSObject(ObjectProps,ParentImage,Name,Idx,Label)
             
             if isempty(ObjectProps)
                 return
@@ -135,7 +135,7 @@ classdef PODSObject < handle
             % Parent of PODSObject obj is the PODSImage obj that detected it
             obj.Parent = ParentImage;
 
-            % properties from ObjectProps struct
+            % properties from ObjectProps struct (from regionprops() using image mask)
             obj.Area = ObjectProps.Area;
             obj.BoundingBox = ObjectProps.BoundingBox;
             obj.Centroid = ObjectProps.Centroid;
@@ -157,10 +157,9 @@ classdef PODSObject < handle
             obj.MaxFeretDiameter = ObjectProps.MaxFeretDiameter;
             obj.MinFeretDiameter = ObjectProps.MinFeretDiameter;
 
-            obj.Boundary = Boundary;
-            
+            % calculated 8-connected boundary coordinates for ObjectBoxes
+            obj.Boundary = ObjectProps.BWBoundary;
 
-            
             % Name of object is "Object (Idx)"
             obj.Name = Name;
             
@@ -172,9 +171,20 @@ classdef PODSObject < handle
             
         end % end constructor method
 
+        % class destructor – simple, any reindexing will be handled by higher level classes (PODSImage, PODSGroup)
         function delete(obj)
             delete(obj);
         end
+
+        function InvertSelection(obj)
+            
+            NewSelectionStatus = ~[obj(:).Selected];
+            NewSelectionStatus = num2cell(NewSelectionStatus.');
+            [obj(:).Selected] = deal(NewSelectionStatus{:});
+
+        end
+
+        %% Dependent 'get' methods
 
         function OFAvg = get.OFAvg(obj)
             % average OF of all pixels identified by the mask
@@ -236,10 +246,37 @@ classdef PODSObject < handle
             end
         end        
 
+        function AzimuthPixelValues = get.AzimuthPixelValues(obj)
+            % list of Azimuth values for each object pixel
+            try
+                AzimuthPixelValues = obj.Parent.AzimuthImage(obj.PixelIdxList);
+            catch
+                AzimuthPixelValues = NaN;
+            end
+        end
+
+        function AzimuthAverage = get.AzimuthAverage(obj)
+            % list of Azimuth values for each object pixel
+            try
+                [~,AzimuthAverage] = getAzimuthAverageUsingDipoles(rad2deg(obj.AzimuthPixelValues));
+            catch
+                AzimuthAverage = NaN;
+            end
+        end
+
+        function AzimuthStd = get.AzimuthStd(obj)
+            % list of Azimuth values for each object pixel
+            try
+                AzimuthStd = getAzimuthStd(rad2deg(obj.AzimuthPixelValues));
+            catch
+                AzimuthStd = NaN;
+            end
+        end        
+
         function OFSubImage = get.OFSubImage(obj)
             OFImage = obj.Parent.OF_image;
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            dim = length(PaddedSubarrayIdx{1,1});
+            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
             OFSubImage = zeros(dim);
             OFSubImage(:) = OFImage(PaddedSubarrayIdx{:});
         end
@@ -247,7 +284,7 @@ classdef PODSObject < handle
         function PaddedOFSubImage = get.PaddedOFSubImage(obj)
             OFImage = obj.Parent.OF_image;
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            dim = length(PaddedSubarrayIdx{1,1});
+            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
             PaddedOFSubImage = zeros(dim);
             PaddedOFSubImage(:) = OFImage(PaddedSubarrayIdx{:});
         end        
@@ -258,14 +295,27 @@ classdef PODSObject < handle
             % masked
             MaskedOFSubImage(obj.Image) = OFImage(obj.PixelIdxList);
         end
+
+        function PaddedAzimuthSubImage = get.PaddedAzimuthSubImage(obj)
+            % get Azimuth image
+            AzimuthImage = obj.Parent.AzimuthImage;
+            % pad subarray and make square
+            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            % get size of subarray idx
+            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
+            % initialize new subimage
+            PaddedAzimuthSubImage = zeros(dim);
+            % extract elements from main image into subimage
+            PaddedAzimuthSubImage(:) = AzimuthImage(PaddedSubarrayIdx{:});
+        end
         
         function PaddedFFCIntensitySubImage = get.PaddedFFCIntensitySubImage(obj)
             % get FFCIntensity image
             FFCIntensityImage = obj.Parent.I;
             % pad subarray and make square
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            % get length of X Idxs
-            dim = length(PaddedSubarrayIdx{1,1});
+            % get size of subarray idx
+            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
             % initialize new subimage
             PaddedFFCIntensitySubImage = zeros(dim);
             % extract elements from main image into subimage
@@ -277,10 +327,10 @@ classdef PODSObject < handle
             MaskImg = obj.Parent.bw;
             % pad subarray and make square
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            % get length of X Idxs (same as Ys)
-            dim = length(PaddedSubarrayIdx{1,1});
+            % get size of subarray idx
+            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
             % initialize new subimage
-            PaddedMaskSubImage = zeros(dim);
+            PaddedMaskSubImage = false(dim);
             % extract elements from main image into subimage
             PaddedMaskSubImage(:) = MaskImg(PaddedSubarrayIdx{:});
         end
@@ -290,12 +340,12 @@ classdef PODSObject < handle
             FullSizedMaskImg = false(size(obj.Parent.bw));
             % set this object's pixels to on
             FullSizedMaskImg(obj.PixelIdxList) = true;
-            % pad subarray and make square
+            % pad subarray and make square (if possible)
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            % get length of X Idxs (same as Ys)
-            dim = length(PaddedSubarrayIdx{1,1});
+            % get size of subarray idx
+            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
             % initialize new subimage
-            RestrictedPaddedMaskSubImage = zeros(dim);
+            RestrictedPaddedMaskSubImage = false(dim);
             % extract elements from main image into subimage
             RestrictedPaddedMaskSubImage(:) = FullSizedMaskImg(PaddedSubarrayIdx{:});
         end        
@@ -303,7 +353,7 @@ classdef PODSObject < handle
         function PaddedAnalysisChannelSubImage = get.PaddedAnalysisChannelSubImage(obj)
             AnalysisChannelImage = obj.Parent.ColocImage;
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            dim = length(PaddedSubarrayIdx{1,1});
+            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
             PaddedAnalysisChannelSubImage = zeros(dim);
             PaddedAnalysisChannelSubImage(:) = AnalysisChannelImage(PaddedSubarrayIdx{:});
         end
@@ -311,7 +361,7 @@ classdef PODSObject < handle
         function PaddedColocNorm2MaxSubImage = get.PaddedColocNorm2MaxSubImage(obj)
             ColocNorm2MaxImage = obj.Parent.ColocNormToMax;
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            dim = length(PaddedSubarrayIdx{1,1});
+            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
             PaddedColocNorm2MaxSubImage = zeros(dim);
             PaddedColocNorm2MaxSubImage(:) = ColocNorm2MaxImage(PaddedSubarrayIdx{:});
         end
@@ -326,6 +376,14 @@ classdef PODSObject < handle
             end
         end
         
+        function CentroidX = get.CentroidX(obj)
+            CentroidX = obj.Centroid(1);
+        end
+
+        function CentroidY = get.CentroidY(obj)
+            CentroidY = obj.Centroid(2);
+        end        
+
     end % end methods
     
 

@@ -93,10 +93,10 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     
     
     MaxVal = max(CurveFitAvg);
-    MaxIdx = find(CurveFitAvg==MaxVal);
+    MaxIdx = find(CurveFitAvg==MaxVal,1);
     
     MinVal = min(CurveFitAvg);
-    MinIdx = find(CurveFitAvg==MinVal);
+    MinIdx = find(CurveFitAvg==MinVal,1);
     
     OrderFactorFit = MaxVal-MinVal;
     AzimuthRadians = xp(MaxIdx);

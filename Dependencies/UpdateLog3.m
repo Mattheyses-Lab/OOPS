@@ -31,8 +31,6 @@ function [] = UpdateLog3(source,msg,operation)
     
     %disp(['n lines in log window: ',num2str(length(PODSData.Handles.LogWindow.Value))]);
 
-    
-    
     scroll(PODSData.Handles.LogWindow,'bottom');
     
     drawnow    

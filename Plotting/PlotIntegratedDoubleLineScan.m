@@ -41,13 +41,6 @@ function LineScanAxes = PlotIntegratedDoubleLineScan(LineScanAxes,ScanLinePositi
 
     IntegratedLineScan1 = sum(cell2mat(LineScanYData(1:scanwidth)),1);
     IntegratedLineScan2 = sum(cell2mat(LineScanYData(scanwidth+1:end)),1);
-    
-    
-
-%     plot(LineScanAxes,umXData,Scale0To1(IntegratedLineScan1),'Color','Green','LineWidth',2);
-%     LineScanAxes.NextPlot = 'Add';
-%     plot(LineScanAxes,umXData,Scale0To1(IntegratedLineScan2),'Color','Magenta','LineWidth',2);
-%     LineScanAxes.NextPlot = 'Replace';
 
     set(0,'CurrentFigure',LineScanAxes.Parent);
     set(gcf,'CurrentAxes',LineScanAxes);
