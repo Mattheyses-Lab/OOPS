@@ -44,8 +44,6 @@ classdef PODSObject < handle
         
         % object px values for various outputs
         RawPixelValues
-%        OFPixelValues
-%        AzimuthPixelValues
         AnisotropyPixelValues
         
         % Object 1, Object 2, etc...
