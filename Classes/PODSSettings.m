@@ -147,7 +147,7 @@ classdef PODSSettings < handle
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
             % optimum font size
-            obj.DefaultFontSize = round(obj.ScreenSize(4)*.01);
+            obj.DefaultFontSize = round(obj.ScreenSize(4)*.0125);
             % set up default object label (PODSLabel object)
             obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],1);
             % get list of supported fonts

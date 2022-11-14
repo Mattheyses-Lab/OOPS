@@ -1683,7 +1683,7 @@ pause(0.5)
         PODSData.Handles.MainGrid.ColumnWidth = {'1x',SmallWidth,SmallWidth,SmallWidth,SmallWidth};
 
         % testing dynamic font size update
-        fontsize(PODSData.Handles.fH,round(PODSData.Handles.fH.OuterPosition(4)*.01),'pixels');
+        fontsize(PODSData.Handles.fH,round(PODSData.Handles.fH.OuterPosition(4)*.0125),'pixels');
         % end testing
         %drawnow limitrate
         drawnow
