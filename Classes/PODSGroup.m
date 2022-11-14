@@ -1,14 +1,18 @@
 classdef PODSGroup < handle
     % experimental groups class
     properties
+
+        % handle to the PODS project containing this group
+        Parent PODSProject
+
         % group info
         GroupName char        
 
         % replicates within group, no problem storing in memory (handle class)
         Replicate PODSImage
         
-        % this group's index (as child of PODSProject)
-        SelfGroupIndex
+%         % this group's index (as child of PODSProject)
+%         SelfGroupIndex
 
         % indexing group members (Replicate/PODSImage objects)
         CurrentImageIndex double
@@ -18,17 +22,18 @@ classdef PODSGroup < handle
         FFCData struct
 
         FFCLoaded = false
+        FPMFilesLoaded = false
         
-        % output values
-        %OFAvg double
-        OFMax double
-        OFMin double
-        FiltOFAvg double
+%         % output values
+%         %OFAvg double
+%         OFMax double
+%         OFMin double
+%         FiltOFAvg double
         
-        % status parameters
-        MaskAllDone = false
+%         % status parameters
+%         MaskAllDone = false
         
-        CoLocFilesLoaded = false
+%         CoLocFilesLoaded = false
         
         % store handle to the master GUI settings
         Settings PODSSettings
@@ -65,19 +70,102 @@ classdef PODSGroup < handle
         OFAvg double
         
         ColorString char
+
+        SelfIdx
     
     end
     
     methods
         
         % class constructor method
-        function obj = PODSGroup(GroupName,SelfGroupIndex,Settings)
+        function obj = PODSGroup(GroupName,Settings,Project)
             if nargin > 0
                 obj.GroupName = GroupName;
                 obj.Settings = Settings;
-                obj.SelfGroupIndex = SelfGroupIndex;
-                obj.Color = Settings.DefaultGroupColors{SelfGroupIndex};
+                obj.Parent = Project;
             end
+        end
+
+        % destructor
+        function delete(obj)
+            % first delete obj.Replicate
+            obj.deleteReplicates();
+            % then delete this group
+            delete(obj);
+        end
+        
+
+        function group = saveobj(obj)
+
+            disp('reached saveobj(Group)')
+
+            %group.Parent = [];
+            group.GroupName = obj.GroupName;
+            group.CurrentImageIndex = obj.CurrentImageIndex;
+            group.FFCData = obj.FFCData;
+            group.FFCLoaded = obj.FFCLoaded;
+            group.FPMFilesLoaded = obj.FPMFilesLoaded;
+            group.Color = obj.Color;
+            group.nReplicates = obj.nReplicates;
+
+            for i = 1:obj.nReplicates
+                disp('calling saveobj(Replicate)')
+%                 group.Replicate(i) = saveobj(obj.Replicate(i));
+                group.Replicate(i) = obj.Replicate(i).saveobj();
+            end
+
+        end
+
+        function SelfIdx = get.SelfIdx(obj)
+            SelfIdx = find(obj.Parent.Group==obj);
+        end
+
+        function deleteReplicates(obj)
+            % collect and delete the objects in this image
+            Replicates = obj.Replicate;
+            delete(Replicates);
+            % clear the placeholders
+            clear Replicates
+            % reinitialize the obj.Replicate vector
+            obj.Replicate = PODSImage.empty();
+%             % delete again? CHECK THIS
+%             delete(obj.Replicate);
+        end
+
+        % delete seleted images from one PODSGroup based on obj.
+        function DeleteSelectedImages(obj)
+            
+            % get handles to all images in this group
+            AllReplicates = obj.Replicate;
+
+            % initialize logical selection array to gather selected/unselected images
+            Selected = false(obj.nReplicates,1);
+
+            % set any elements to true if the corresponding images are selected
+            Selected(obj.CurrentImageIndex) = true;
+
+            % get list of 'good' objects (not selected)
+            Good = AllReplicates(~[Selected]);
+            
+            % get list of objects to delete (selected)
+            Bad = AllReplicates([Selected]);
+            
+            % replace image array of group with only the ones we wish to keep (not selected)
+            obj.Replicate = Good;
+
+            % in case current image idx is greater than the total # of images
+            if obj.CurrentImageIndex(1) > obj.nReplicates
+                % then select the last image in the list
+                obj.CurrentImageIndex = obj.nReplicates;
+            end
+            
+            % delete the bad PODSImage objects
+            % set their pixel idxs to 0 in the mask
+            for i = 1:length(Bad)
+                delete(Bad(i));
+            end
+            % clear Bad array
+            clear Bad
         end
             
         function nReplicates = get.nReplicates(obj)
@@ -90,7 +178,7 @@ classdef PODSGroup < handle
                 TotalObjects = TotalObjects + obj.Replicate(i).nObjects;
             end
         end
-        
+
         function DeleteSelectedObjects(obj)
             for i = 1:obj.nReplicates
                 obj.Replicate(i).DeleteSelectedObjects()
@@ -116,7 +204,11 @@ classdef PODSGroup < handle
         end  
         
         function CurrentImage = get.CurrentImage(obj)
-            CurrentImage = obj.Replicate(obj.CurrentImageIndex);
+            try
+                CurrentImage = obj.Replicate(obj.CurrentImageIndex);
+            catch
+                CurrentImage = PODSImage.empty();
+            end
         end
         
         function CurrentObject = get.CurrentObject(obj)
@@ -125,6 +217,7 @@ classdef PODSGroup < handle
         end
         
         function ColorString = get.ColorString(obj)
+%             ColorStringCell = colornames('MATLAB',obj.Color);
             ColorStringCell = colornames('MATLAB',obj.Color);
             ColorString = ColorStringCell{1};            
         end
@@ -199,6 +292,28 @@ classdef PODSGroup < handle
                     ObjectDataByLabel{ii} = [ObjectDataByLabel{ii} ReplicateObjectDataByLabel{ii}];
                 end
 
+            end
+
+        end
+
+    
+    end
+
+    methods (Static)
+
+        function obj = loadobj(group)
+
+            obj = PODSGroup(group.GroupName,PODSSettings.empty(),PODSProject.empty());
+
+            obj.CurrentImageIndex = group.CurrentImageIndex;
+            obj.FFCData = group.FFCData;
+            obj.FFCLoaded = group.FFCLoaded;
+            obj.FPMFilesLoaded = group.FPMFilesLoaded;
+            obj.Color = group.Color;
+
+            % load each replicate
+            for i = 1:group.nReplicates
+                obj.Replicate(i) = PODSImage.loadobj(group.Replicate(i));
             end
 
         end

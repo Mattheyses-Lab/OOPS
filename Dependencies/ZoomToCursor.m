@@ -133,14 +133,16 @@ function [] = ZoomToCursor(source,~)
             Zoom.OldImageButtonDownFcn = Zoom.DynamicImage.ButtonDownFcn;
 
             Handles.fH.Pointer = 'crosshair';
-            Handles.fH.WindowButtonMotionFcn = @CursorMoving;
-            Zoom.DynamicImage.ButtonDownFcn = @ChangeZoomLevel;
+            Handles.fH.WindowButtonMotionFcn = @(o,e) CursorMoving(o,PODSData);
+            Zoom.DynamicImage.ButtonDownFcn = @(o,e) ChangeZoomLevel(o,PODSData);
             Zoom.DynamicImage.HitTest = 'On';
             
         case 0 % off
             Zoom.Active = false;
             Handles.fH.WindowButtonMotionFcn = Zoom.OldWindowButtonMotionFcn;
             Zoom.DynamicImage.ButtonDownFcn = Zoom.OldImageButtonDownFcn;
+            Handles.fH.Pointer = 'arrow';
+            
             Zoom.DynamicImage.HitTest = 'Off';
             
             try
@@ -178,14 +180,13 @@ function [] = ZoomToCursor(source,~)
     PODSData.Settings.Zoom = Zoom;
     PODSData.Handles = Handles;
     
-    guidata(source,PODSData);    
+    %guidata(source,PODSData);    
 
 end
 
-function [] = CursorMoving(source,~)
+function [] = CursorMoving(~,PODSData)
 
-    PODSData = guidata(source);
-    fH = PODSData.Handles.fH;
+    %PODSData = guidata(source);
 
     Zoom = PODSData.Settings.Zoom;
     DynamicAxes = PODSData.Settings.Zoom.DynamicAxes;
@@ -210,7 +211,6 @@ function [] = CursorMoving(source,~)
     y2 = y1 + Zoom.YDist;
     z2 = z1 + Zoom.ZDist;
     
-    % old method, uncomment if lines below not working
     % if cursor is still within axes limits
     if x >= Zoom.OldXLim(1) && x <= Zoom.OldXLim(2) && ...
             y >= Zoom.OldYLim(1) && y <= Zoom.OldYLim(2) && ...
@@ -224,18 +224,7 @@ function [] = CursorMoving(source,~)
         if ~Zoom.Freeze
             DynamicAxes.XLim = [x1 x2];
             DynamicAxes.YLim = [y1 y2];
-%             %% TESTING BELOW
-%             Zoom.DynamicImage.AlphaData = makeLogicalFilledCircleImage(...
-%                 realx,...
-%                 realy,...
-%                 0.1*(x2-x1),...
-%                 size(Zoom.DynamicImage.CData,2),...
-%                 size(Zoom.DynamicImage.CData,2)...
-%                 );
-%             drawnow
-%             %% END TEST
         end
-
 
         try
             DynamicAxes.CursorPositionLabel.Text = [' (X,Y) = (',num2str(round(realx)),...
@@ -243,7 +232,7 @@ function [] = CursorMoving(source,~)
                 num2str(ZoomPct),'%',...
                 ' | Value: ',num2str(Zoom.StaticImage.CData(round(realy),round(realx)))];
         catch
-            blah = 0
+            disp('Warning: Error updating cursor position label')
         end
         
         PODSData.Handles.fH.Pointer = 'crosshair';
@@ -257,18 +246,17 @@ function [] = CursorMoving(source,~)
         if ~Zoom.Freeze
             DynamicAxes.XLim = Zoom.OldXLim;
             DynamicAxes.YLim = Zoom.OldYLim;
-%             %% TESTING BELOW
-%             Zoom.DynamicImage.AlphaData = 1;
-%             %% END TEST
         end
         
     end
 
     PODSData.Settings.Zoom = Zoom;
+
+    %drawnow
 end
 
-function [] = ChangeZoomLevel(source,event)
-    PODSData = guidata(source);
+function [] = ChangeZoomLevel(source,PODSData)
+    %PODSData = guidata(source);
     
     Zoom = PODSData.Settings.Zoom;
 
@@ -317,7 +305,7 @@ function [] = ChangeZoomLevel(source,event)
     PODSData.Settings.Zoom = Zoom;   
     
      if ~strcmp(PODSData.Handles.fH.SelectionType,'extend')
-         CursorMoving(source,event);
+         CursorMoving(source,PODSData);
      end
 end
 

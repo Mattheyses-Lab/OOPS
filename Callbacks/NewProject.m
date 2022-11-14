@@ -86,11 +86,27 @@
         fHSetGroupNames.Visible = 'On';                      
         waitfor(fHSetGroupNames)                      
 
-        % update main GUI with data
-        PODSData.Handles.GroupListBox.Items = PODSData.GroupNames;
-        PODSData.Handles.GroupListBox.ItemsData = 1:PODSData.nGroups;
-        %PODSData.GroupNames = GroupNames;
+%         % update main GUI with data
+%         PODSData.Handles.GroupListBox.Items = PODSData.GroupNames;
+%         PODSData.Handles.GroupListBox.ItemsData = 1:PODSData.nGroups;
         PODSData.CurrentGroupIndex = 1;
+
+        PODSData.Handles.GroupNodes = gobjects(PODSData.nGroups,1);
+        for GroupIdx = 1:PODSData.nGroups
+            cGroup = PODSData.Group(GroupIdx);
+            PODSData.Handles.GroupNodes(GroupIdx) = uitreenode(PODSData.Handles.GroupTree,...
+                'Text',cGroup.GroupName,...
+                'NodeData',cGroup,...
+                'Icon',makeRGBColorSquare(cGroup.Color,10));
+            PODSData.Handles.GroupNodes(GroupIdx).ContextMenu = PODSData.Handles.GroupContextMenu;
+%             tempstyle = uistyle(...
+%                 'BackgroundColor','White',...
+%                 'FontColor','Black',...
+%                 'FontWeight','bold'...
+%                 );
+%             addStyle(PODSData.Handles.GroupTree,tempstyle,'node',PODSData.Handles.GroupNodes(GroupIdx));
+        end
+        
         guidata(source,PODSData);
         UpdateLog3(source,['Started new project, "', PODSData.ProjectName,'", with ',num2str(PODSData.nGroups),' groups'],'append')
         UpdateSummaryDisplay(source,{'Project','Group'});
@@ -108,8 +124,7 @@
         %% Set names and return to Main Window
         function [] = ReturnToPODS(~,~)
             for I = 1:nGroups
-                %PODSData.Group(I,J) = PODSGroup(GroupNamesBox(I).Value,ChannelNamesBox(J).Value,J,PODSData.Settings,I);
-                PODSData.MakeNewGroup(GroupNamesBox(I).Value,I);
+                PODSData.AddNewGroup(GroupNamesBox(I).Value);
             end
             delete(fHSetGroupNames)
         end   

@@ -36,5 +36,9 @@ function NameOut = ExpandVariableName(NameIn)
             NameOut = 'Average Azimuth';
         case 'AzimuthStd'
             NameOut = 'Azimuth Standard Deviation';
+        case 'Orientation'
+            NameOut = 'Orientation';
+        otherwise
+            NameOut = NameIn;
     end
 end

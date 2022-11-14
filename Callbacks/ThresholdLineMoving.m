@@ -7,7 +7,7 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
     rows = MainReplicate.Height;
     cols = MainReplicate.Width;
 
-    switch PODSData.Settings.MaskType
+    switch PODSData.Settings.MaskName
         case 'Legacy'
             IM = MainReplicate.EnhancedImg;
             IM = IM./max(max(IM));
@@ -60,10 +60,7 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
             bw = imbinarize(IM,adaptthresh(IM,ThresholdLevel,"NeighborhoodSize",3,"Statistic","gaussian"));
 
             % clear 10 px around image borders
-            bw(1:10,1:end) = 0;
-            bw(1:end,1:10) = 0;
-            bw(rows-9:end,1:end) = 0;
-            bw(1:end,cols-9:end) = 0;
+            bw = ClearImageBorder(bw,10);
 
             % remove objects < 10 px
             CC = bwconncomp(bw,4);
@@ -77,8 +74,8 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
             MainReplicate.ObjectDetectionDone = false;
             % update mask display
             PODSData.Handles.MaskImgH.CData = bw;
-
-
+        otherwise
+            return
     end
 
     UpdateSummaryDisplay(source,{'Group','Image'});

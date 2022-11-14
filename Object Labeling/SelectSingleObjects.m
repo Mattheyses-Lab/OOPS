@@ -64,7 +64,7 @@ function SelectSingleObjects(source,~)
     if strcmp(PODSData.Handles.fH.SelectionType,'extend')
         CurrentImage.CurrentObjectIdx = ObjIdx;
         UpdateSummaryDisplay(hAx,{'Object'});
-        UpdateListBoxes(hAx);
+        UpdateObjectListBox(hAx);
     end
 
 

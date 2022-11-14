@@ -35,46 +35,24 @@ classdef PODSObject < handle
         % coordinates to trace object boundary
         Boundary
         
-        MaxFFCAvgIntensity
-        MeanFFCAvgIntensity
-        MinFFCAvgIntensity
-        
-        % linear indices for local BG region
-        BGPixelIdxList
-        
-        % object px values for various outputs
-        RawPixelValues
-        AnisotropyPixelValues
-        
-        % Object 1, Object 2, etc...
-        Name
-        
-        % Idx at time of generation
-        OriginalIdx
-        
         % name of parent group
         GroupName
         
-        % perimeters
-        Perimeter8Conn
-        XAdjust
-        YAdjust
-        LineGroup
-        
-        % S:B properties
+        % S/B properties
         BGIdxList
         BufferIdxList
         SignalAverage
         BGAverage
         SBRatio
         
-        % Colocalization properties
-        AvgColocIntensity
-        ROIPearsons
-        
         % Selection and labeling
         Label PODSLabel
         Selected = false
+
+        % object azimuth stats
+        % (currently somewhat slow to calculate, so store them in memory)
+        AzimuthAverage
+        AzimuthStd
 
     end % end properties
     
@@ -84,8 +62,6 @@ classdef PODSObject < handle
 
         % list of values, average, and standard dev. of object azimuths
         AzimuthPixelValues
-        AzimuthAverage
-        AzimuthStd
 
         % various object images
         OFSubImage 
@@ -118,20 +94,30 @@ classdef PODSObject < handle
         % Reference channel properties
         AvgReferenceChannelIntensity
         IntegratedReferenceChannelIntensity
+
+        % index of this object in its parent 'Object' property
+        SelfIdx
+
+        % object name, based on SelfIdx
+        Name
         
     end
 
     methods
         
         % constructor method
-        function obj = PODSObject(ObjectProps,ParentImage,Name,Idx,Label)
+        function obj = PODSObject(ObjectProps,ParentImage,Label)
             
             if isempty(ObjectProps)
                 return
             end
 
-            % Parent of PODSObject obj is the PODSImage obj that detected it
-            obj.Parent = ParentImage;
+            if ~isempty(ParentImage)
+                % Parent of PODSObject obj is the PODSImage obj that detected it
+                obj.Parent = ParentImage;
+            else
+                obj.Parent = PODSImage.empty();
+            end
 
             % properties from ObjectProps struct (from regionprops() using image mask)
             obj.Area = ObjectProps.Area;
@@ -157,16 +143,10 @@ classdef PODSObject < handle
 
             % calculated 8-connected boundary coordinates for ObjectBoxes
             obj.Boundary = ObjectProps.BWBoundary;
-
-            % Name of object is "Object (Idx)"
-            obj.Name = Name;
-            
-            % original idx at time of creation
-            obj.OriginalIdx = Idx;
             
             % set default object label
             obj.Label = Label;
-            
+
         end % end constructor method
 
         % class destructor – simple, any reindexing will be handled by higher level classes (PODSImage, PODSGroup)
@@ -174,15 +154,74 @@ classdef PODSObject < handle
             delete(obj);
         end
 
-        function InvertSelection(obj)
-            
-            NewSelectionStatus = ~[obj(:).Selected];
-            NewSelectionStatus = num2cell(NewSelectionStatus.');
-            [obj(:).Selected] = deal(NewSelectionStatus{:});
+        function object = saveobj(obj)
+
+            object.Area = obj.Area;
+            object.BoundingBox = obj.BoundingBox;
+            object.Centroid = obj.Centroid;
+            object.Circularity = obj.Circularity;
+            object.ConvexArea = obj.ConvexArea;
+            object.ConvexHull = obj.ConvexHull;
+            object.ConvexImage = obj.ConvexImage;
+            object.Eccentricity = obj.Eccentricity;
+            object.Extrema = obj.Extrema;
+            object.FilledArea = obj.FilledArea;
+            object.Image = obj.Image;
+            object.MajorAxisLength = obj.MajorAxisLength;
+            object.MinorAxisLength = obj.MinorAxisLength;
+            object.Orientation = obj.Orientation;
+            object.Perimeter = obj.Perimeter;
+            object.MaxFeretDiameter = obj.MaxFeretDiameter;
+            object.MinFeretDiameter = obj.MinFeretDiameter;
+
+            % linear pixel indices to object pixels in full-sized image
+            object.PixelIdxList = obj.PixelIdxList;
+
+            % pixel indices
+            object.PixelList = obj.PixelList;
+
+            % index to the subimage such that L(idx{:}) extracts the elements
+            object.SubarrayIdx = obj.SubarrayIdx;
+
+            % coordinates to trace object boundary
+            object.Boundary = obj.Boundary;
+
+            % name of parent group
+            object.GroupName = obj.GroupName;
+
+            % S:B properties
+            object.BGIdxList = obj.BGIdxList;
+            object.BufferIdxList = obj.BufferIdxList;
+            object.SignalAverage = obj.SignalAverage;
+            object.BGAverage = obj.BGAverage;
+            object.SBRatio = obj.SBRatio;
+
+            % Selection and labeling
+            object.Label = obj.Label;
+            object.Selected = obj.Selected;
+
+            % object azimuth stats
+            % (currently somewhat slow to calculate, so store them in memory)
+            object.AzimuthAverage = obj.AzimuthAverage;
+            object.AzimuthStd = obj.AzimuthStd;
 
         end
 
+        function SelfIdx = get.SelfIdx(obj)
+            SelfIdx = find(obj.Parent.Object==obj);
+        end
+
+        function InvertSelection(obj)
+            NewSelectionStatus = ~[obj(:).Selected];
+            NewSelectionStatus = num2cell(NewSelectionStatus.');
+            [obj(:).Selected] = deal(NewSelectionStatus{:});
+        end
+
         %% Dependent 'get' methods
+
+        function Name = get.Name(obj)
+            Name = ['Object ',num2str(obj.SelfIdx)];
+        end
 
         function OFAvg = get.OFAvg(obj)
             % average OF of all pixels identified by the mask
@@ -252,24 +291,7 @@ classdef PODSObject < handle
                 AzimuthPixelValues = NaN;
             end
         end
-
-        function AzimuthAverage = get.AzimuthAverage(obj)
-            % list of Azimuth values for each object pixel
-            try
-                [~,AzimuthAverage] = getAzimuthAverageUsingDipoles(rad2deg(obj.AzimuthPixelValues));
-            catch
-                AzimuthAverage = NaN;
-            end
-        end
-
-        function AzimuthStd = get.AzimuthStd(obj)
-            % list of Azimuth values for each object pixel
-            try
-                AzimuthStd = getAzimuthStd(rad2deg(obj.AzimuthPixelValues));
-            catch
-                AzimuthStd = NaN;
-            end
-        end        
+      
 
         function OFSubImage = get.OFSubImage(obj)
             OFImage = obj.Parent.OF_image;
@@ -384,5 +406,53 @@ classdef PODSObject < handle
 
     end % end methods
     
+    methods (Static)
+        function obj = loadobj(object)
+
+            % build ObjectProps struct to call PODSObject constructor
+            ObjectProps.Area = object.Area;
+            ObjectProps.BoundingBox = object.BoundingBox;
+            ObjectProps.Centroid = object.Centroid;
+            ObjectProps.Circularity = object.Circularity;
+            ObjectProps.ConvexArea = object.ConvexArea;
+            ObjectProps.ConvexHull = object.ConvexHull;
+            ObjectProps.ConvexImage = object.ConvexImage;
+            ObjectProps.Eccentricity = object.Eccentricity;
+            ObjectProps.Extrema = object.Extrema;
+            ObjectProps.FilledArea = object.FilledArea;
+            ObjectProps.Image = object.Image;
+            ObjectProps.MajorAxisLength = object.MajorAxisLength;
+            ObjectProps.MinorAxisLength = object.MinorAxisLength;
+            ObjectProps.Orientation = object.Orientation;
+            ObjectProps.Perimeter = object.Perimeter;
+            ObjectProps.MaxFeretDiameter = object.MaxFeretDiameter;
+            ObjectProps.MinFeretDiameter = object.MinFeretDiameter;
+
+            ObjectProps.BWBoundary = object.Boundary;
+
+            ObjectProps.PixelIdxList = object.PixelIdxList;
+            ObjectProps.PixelList = object.PixelList;
+            ObjectProps.SubarrayIdx = object.SubarrayIdx;
+
+            % get the object label (PODSLabel)
+            ObjectLabel = object.Label;
+
+            % create new instance of PODSObject
+            obj = PODSObject(ObjectProps,PODSImage.empty(),ObjectLabel);
+
+            obj.GroupName = object.GroupName;
+
+            obj.BGIdxList = object.BGIdxList;
+            obj.BufferIdxList = object.BufferIdxList;
+            obj.SignalAverage = object.SignalAverage;
+            obj.BGAverage = object.BGAverage;
+            obj.SBRatio = object.SBRatio;
+
+            obj.Selected = object.Selected;
+
+            obj.AzimuthAverage = object.AzimuthAverage;
+            obj.AzimuthStd = object.AzimuthStd;
+        end
+    end
 
 end % end classdef

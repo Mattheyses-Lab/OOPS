@@ -35,12 +35,14 @@ classdef PODSImage < handle
 %% Status Tracking        
         % status parameters - false by default as we haven't started yet
         FilesLoaded = false
+
         FFCDone = false
         MaskDone = false
         OFDone = false
         ObjectDetectionDone = false
         LocalSBDone = false
-        ColocFilesLoaded = false
+        ObjectAzimuthDone = false
+
         ReferenceImageLoaded = false
         
 %% Masking            
@@ -60,6 +62,8 @@ classdef PODSImage < handle
         BGImg double
         BGSubtractedImg double
         EnhancedImg double
+
+        MaskName char
         
         % mask threshold adjustment (for display purposes)
         IntensityBinCenters
@@ -75,7 +79,6 @@ classdef PODSImage < handle
         ReferenceImageEnhanced double
         
 %%
-
         AzimuthLineData double
         
 %% Output Images
@@ -86,7 +89,7 @@ classdef PODSImage < handle
         a double
         b double
 
-        PolarizationFactorImage double
+        %PolarizationFactorImage double
         
 %% Output Values        
         
@@ -99,7 +102,6 @@ classdef PODSImage < handle
         OFFiltered double
         
 %%
-
         PrimaryIntensityDisplayLimits = [0 1];
         ReferenceIntensityDisplayLimits = [0 1];
         
@@ -144,7 +146,9 @@ classdef PODSImage < handle
         OFAvg double
         OFMax double
         OFMin double
-        OFList double        
+        OFList double
+
+        SelfIdx
     end
     
     methods
@@ -152,7 +156,12 @@ classdef PODSImage < handle
         % class constructor
         function obj = PODSImage(Group)
             obj.Parent = Group;
-            obj.Settings = Group.Settings;
+
+            if ~isempty(obj.Parent)
+                obj.Settings = Group.Settings;
+            else
+                obj.Settings = PODSSettings.empty();
+            end
             
             % image name (minus path and file extension)
             obj.pol_shortname = '';
@@ -172,6 +181,88 @@ classdef PODSImage < handle
             obj.CurrentObjectIdx = 0;
         end
         
+        % destructor method
+        function delete(obj)
+            % delete obj.Object first
+            obj.deleteObjects();
+            % then delete this object
+            delete(obj);
+        end
+
+        function replicate = saveobj(obj)
+
+            replicate.filename = obj.filename;
+            replicate.pol_shortname = obj.pol_shortname;
+            replicate.pol_fullname = obj.pol_fullname;
+            replicate.Width = obj.Width;
+            replicate.Height = obj.Height;
+
+            replicate.pol_rawdata = obj.pol_rawdata;
+            replicate.RawPolAvg = obj.RawPolAvg;
+            replicate.pol_ffc = obj.pol_ffc;
+            replicate.Pol_ImAvg = obj.Pol_ImAvg;
+            replicate.norm = obj.norm;
+            replicate.r1 = obj.r1;
+
+            replicate.FilesLoaded = obj.FilesLoaded;
+            replicate.FFCDone = obj.FFCDone;
+            replicate.MaskDone = obj.MaskDone;
+            replicate.OFDone = obj.OFDone;
+            replicate.ObjectDetectionDone = obj.ObjectDetectionDone;
+            replicate.LocalSBDone = obj.LocalSBDone;
+            replicate.ObjectAzimuthDone = obj.ObjectAzimuthDone;
+            replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
+
+            replicate.bw = obj.bw;
+            replicate.bwFiltered = obj.bwFiltered;
+
+            replicate.L = obj.L;
+
+            replicate.ThresholdAdjusted = obj.ThresholdAdjusted; 
+            replicate.level = obj.level;
+
+            replicate.I = obj.I;
+            replicate.BGImg = obj.BGImg;
+            replicate.BGSubtractedImg = obj.BGSubtractedImg;
+            replicate.EnhancedImg = obj.EnhancedImg;
+
+            replicate.MaskName = obj.MaskName;
+
+            replicate.IntensityBinCenters = obj.IntensityBinCenters;
+            replicate.IntensityHistPlot = obj.IntensityHistPlot;
+
+            replicate.AzimuthImage = obj.AzimuthImage;
+            replicate.OF_image = obj.OF_image;
+            replicate.masked_OF_image = obj.masked_OF_image;
+            replicate.a = obj.a;
+            replicate.b = obj.b;
+
+            replicate.SBAvg = obj.SBAvg;
+
+            replicate.SBCutoff = obj.SBCutoff;
+            replicate.OFFiltered = obj.OFFiltered;
+
+            replicate.PrimaryIntensityDisplayLimits = obj.PrimaryIntensityDisplayLimits;
+            replicate.ReferenceIntensityDisplayLimits = obj.ReferenceIntensityDisplayLimits;
+
+            replicate.nObjects = obj.nObjects;
+
+            replicate.ObjectProps = obj.ObjectProperties;
+
+            replicate.CurrentObjectIdx = obj.CurrentObjectIdx;
+
+            for i = 1:obj.nObjects
+                %replicate.Object(i) = saveobj(obj.Object(i));
+                replicate.Object(i) = obj.Object(i).saveobj();
+            end
+
+
+        end
+
+        function SelfIdx = get.SelfIdx(obj)
+            SelfIdx = find(obj.Parent.Replicate==obj);
+        end
+
         % performs flat field correction for 1 PODSImage
         function FlatFieldCorrection(obj)
             % divide each raw data image by the corresponding flatfield image
@@ -204,8 +295,6 @@ classdef PODSImage < handle
                    % create an instance of PODSObject
                    obj.Object(i) = PODSObject(props(i,1),...
                        obj,...
-                       ['Object ',num2str(i)],...
-                       i,...
                        DefaultLabel);
                 end
             end
@@ -214,6 +303,7 @@ classdef PODSImage < handle
             obj.ObjectDetectionDone = true;
             obj.CurrentObjectIdx = 1;
             obj.LocalSBDone = false;
+            obj.ObjectAzimuthDone = false;
             
         end % end of DetectObjects
         
@@ -231,12 +321,6 @@ classdef PODSImage < handle
             
             % replace object array of image with only the ones we wish to keep (not selected)
             obj.Object = Good;
-            
-            for i = 1:length(obj.Object)
-                % reset the object indices
-                obj.Object(i).OriginalIdx = i;
-                obj.Object(i).Name = ['Object ',num2str(i)];
-            end
             
             % in case current object is greater than the total # of objects
             if obj.CurrentObjectIdx > obj.nObjects
@@ -269,7 +353,6 @@ classdef PODSImage < handle
         function ClearSelection(obj)
             [obj.Object.Selected] = deal(false);
         end
-        
         
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
             nLabels = length(obj.Settings.ObjectLabels);
@@ -401,6 +484,29 @@ classdef PODSImage < handle
             
         end
         
+        function ComputeObjectAzimuthStats(obj)
+            % only run if OF calculated and objects detected
+            if obj.ObjectDetectionDone && obj.OFDone
+                for i = 1:obj.nObjects
+                    cObject = obj.Object(i);
+                    % get object azimuth avg values
+                    try
+                        [~,cObject.AzimuthAverage] = getAzimuthAverageUsingDipoles(rad2deg(cObject.AzimuthPixelValues));
+                    catch
+                        cObject.AzimuthAverage = NaN;
+                    end
+
+                    % get object azimuth std values
+                    try
+                        cObject.AzimuthStd = getAzimuthStd(rad2deg(cObject.AzimuthPixelValues));
+                    catch
+                        cObject.AzimuthStd = NaN;
+                    end
+                end
+                obj.ObjectAzimuthDone = true;
+            end
+        end
+
         function Dimensions = get.Dimensions(obj)
             
             Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
@@ -574,7 +680,6 @@ classdef PODSImage < handle
             end
         end
 
-
         % get nObjects
         function nObjects = get.nObjects(obj)
             if isvalid(obj.Object)
@@ -588,7 +693,7 @@ classdef PODSImage < handle
             % collect and delete the objects in this image
             Objects = obj.Object;
             delete(Objects);
-            % clear the graphics placeholders
+            % clear the placeholders
             clear Objects
             % reinitialize the obj.Object vector
             obj.Object = [];
@@ -646,5 +751,74 @@ classdef PODSImage < handle
             end
         end
 
+    end
+
+    methods (Static)
+        function obj = loadobj(replicate)
+
+            obj = PODSImage(PODSGroup.empty());
+
+            obj.filename = replicate.filename;
+            obj.pol_shortname = replicate.pol_shortname;
+            obj.pol_fullname = replicate.pol_fullname;
+            obj.Width = replicate.Width;
+            obj.Height = replicate.Height;
+
+            obj.pol_rawdata = replicate.pol_rawdata;
+            obj.RawPolAvg = replicate.RawPolAvg;
+            obj.pol_ffc = replicate.pol_ffc;
+            obj.Pol_ImAvg = replicate.Pol_ImAvg;
+            obj.norm = replicate.norm;
+            obj.r1 = replicate.r1;
+
+            obj.FilesLoaded = replicate.FilesLoaded;
+            obj.FFCDone = replicate.FFCDone;
+            obj.MaskDone = replicate.MaskDone;
+            obj.OFDone = replicate.OFDone;
+            obj.ObjectDetectionDone = replicate.ObjectDetectionDone;
+            obj.LocalSBDone = replicate.LocalSBDone;
+            obj.ObjectAzimuthDone = replicate.ObjectAzimuthDone;
+            obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;
+
+            obj.bw = replicate.bw;
+            obj.bwFiltered = replicate.bwFiltered;
+
+            obj.L = replicate.L;
+
+            obj.ThresholdAdjusted = replicate.ThresholdAdjusted; 
+            obj.level = replicate.level;
+
+            obj.I = replicate.I;
+            obj.BGImg = replicate.BGImg;
+            obj.BGSubtractedImg = replicate.BGSubtractedImg;
+            obj.EnhancedImg = replicate.EnhancedImg;
+
+            obj.MaskName = replicate.MaskName;
+
+            obj.IntensityBinCenters = replicate.IntensityBinCenters;
+            obj.IntensityHistPlot = replicate.IntensityHistPlot;
+
+            obj.AzimuthImage = replicate.AzimuthImage;
+            obj.OF_image = replicate.OF_image;
+            obj.masked_OF_image = replicate.masked_OF_image;
+            obj.a = replicate.a;
+            obj.b = replicate.b;
+
+            obj.SBAvg = replicate.SBAvg;
+
+            obj.SBCutoff = replicate.SBCutoff;
+            obj.OFFiltered = replicate.OFFiltered;
+
+            obj.PrimaryIntensityDisplayLimits = replicate.PrimaryIntensityDisplayLimits;
+            obj.ReferenceIntensityDisplayLimits = replicate.ReferenceIntensityDisplayLimits;
+
+            obj.CurrentObjectIdx = replicate.CurrentObjectIdx;
+
+            for i = 1:length(replicate.ObjectProps) % for each detected object
+                % create an instance of PODSObject
+                obj.Object(i) = PODSObject.loadobj(replicate.Object(i));
+                obj.Object(i).Parent = obj;
+            end
+        end
     end
 end

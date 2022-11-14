@@ -16,24 +16,12 @@ function SelectObjectRectangles(source,~)
     if strcmp(PODSData.Handles.fH.SelectionType,'extend')
         CurrentImage.CurrentObjectIdx = ObjIdx;
         UpdateSummaryDisplay(hAx,{'Object'});
-        UpdateListBoxes(hAx);
+        UpdateObjectListBox(hAx);
     else
         CurrentImage.Object(ObjIdx).InvertSelection();
         PODSData.Handles.ObjectBoxes(ObjIdx,1).LineWidth = CurrentImage.Object(ObjIdx).SelectionBoxLineWidth;
         PODSData.Handles.ObjectBoxes(ObjIdx,2).LineWidth = CurrentImage.Object(ObjIdx).SelectionBoxLineWidth;
     end
-
-%     % invert selection status of clicked object
-%     switch CurrentImage.Object(ObjIdx).Selected
-%         case true
-%             CurrentImage.Object(ObjIdx).Selected = false;
-%             PODSData.Handles.ObjectBoxes(ObjIdx,1).LineWidth = 1;
-%             PODSData.Handles.ObjectBoxes(ObjIdx,2).LineWidth = 1;
-%         case false
-%             CurrentImage.Object(ObjIdx).Selected = true;
-%             PODSData.Handles.ObjectBoxes(ObjIdx,1).LineWidth = 2;
-%             PODSData.Handles.ObjectBoxes(ObjIdx,2).LineWidth = 2;
-%     end
 
 
 

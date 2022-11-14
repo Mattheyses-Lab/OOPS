@@ -20,6 +20,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
         TickColor = [0 0 0];
         LabelColor = [1 1 1];
         LabelBGColor = 'none';
+        FontSize = 12;
     end
 
     properties (SetObservable = true)
@@ -35,9 +36,9 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
     end
     
     properties (Access = private, Transient, NonCopyable)
+        Grid matlab.ui.container.GridLayout
         RangeAxes matlab.ui.control.UIAxes
         Knob SliderKnob
-        KnobLabel matlab.graphics.primitive.Text
         KnobListener1
         KnobListener2
         LimitsListener
@@ -52,38 +53,33 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
     methods (Access=protected)
         function setup(obj)
             
-            obj.Interruptible = 'Off';
-            obj.BusyAction = 'Cancel';
+            obj.Interruptible = 'off';
+            obj.BusyAction = 'cancel';
             obj.Units = 'Normalized';
+
+            obj.Grid = uigridlayout(obj,[1,1],'BackgroundColor','Black');
             
             % Container for lines
-            obj.RangeAxes = uiaxes(obj,'Units','Normalized',...
-                'Position',[0.05 0.05 0.9 0.9],...
+            obj.RangeAxes = uiaxes(obj.Grid,...
                 'YLim',[0 1],...
                 'XLim',obj.Limits,...
                 'XTickLabelMode','Auto',...
                 'YTick',[],...
-                'Color','None',...
+                'Color','none',...
                 'XAxisLocation','origin',...
                 'XColor',obj.TickColor,...
                 'YColor','None',...
                 'TickLength',[0 0],...
-                'TickDir','Both',...
+                'TickDir','out',...
                 'Clipping','Off',...
                 'TitleFontSizeMultiplier',1);
 
+            obj.RangeAxes.Title.String = obj.Title;
+            obj.RangeAxes.Title.Color = 'white';
+            obj.RangeAxes.Title.Editing = "off";
+
             obj.RangeAxes.Toolbar = axtoolbar(obj.RangeAxes,{});
             disableDefaultInteractivity(obj.RangeAxes);
-
-            obj.RangeAxes.Title.String = obj.Title;
-%             obj.RangeAxes.Title.FontSize = 15;
-            obj.RangeAxes.Title.HorizontalAlignment = 'Center';
-            obj.RangeAxes.Title.VerticalAlignment = 'Top';
-            obj.RangeAxes.Title.Color = obj.TitleColor;
-            obj.RangeAxes.Title.BackgroundColor = 'none';
-            obj.RangeAxes.Title.Units = 'Normalized';
-            obj.RangeAxes.Title.Position = [0.5,0.8,0];
-            obj.RangeAxes.Title.HitTest = 'Off';
             
             obj.Knob(1) = SliderKnob(obj.RangeAxes,...
                 obj.Limits(1),...
@@ -129,23 +125,6 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 obj.RangeAxes.Children(4);...
                 obj.RangeAxes.Children(1);...
                 obj.RangeAxes.Children(2)];
-            
-            obj.KnobLabel(1) = text(obj.RangeAxes,...
-                obj.Limits(1)-0.01,...
-                obj.YDist+0.15,...
-                num2str(obj.Limits(1)),...
-                'VerticalAlignment','Bottom',...
-                'HorizontalAlignment','Right',...
-                'HitTest','Off',...
-                'Margin',1);
-            obj.KnobLabel(2) = text(obj.RangeAxes,...
-                obj.Limits(2)+0.015,...
-                obj.YDist+0.1,...
-                num2str(obj.Limits(2)),...
-                'VerticalAlignment','Bottom',...
-                'HorizontalAlignment','Left',...
-                'HitTest','Off',...
-                'Margin',1);
 
             obj.LimitsListener = addlistener(...
                 obj,'Limits',...
@@ -153,31 +132,37 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
         end
         
         function update(obj)
+            %disp('updating range slider')
             if obj.StartUp
                 obj.RangeAxes.XLim = obj.Limits;
+                obj.RangeAxes.FontSize = obj.FontSize;
+
                 obj.Knob(1).Color = obj.Knob1Color;
                 obj.Knob(1).EdgeColor = obj.Knob1EdgeColor;
                 obj.Knob(1).YPosition = obj.YDist;
-                obj.KnobLabel(1).Position(2) = obj.YDist+0.15;
-                obj.KnobLabel(1).Color = obj.LabelColor;
-                obj.KnobLabel(1).BackgroundColor = obj.LabelBGColor;
+
                 obj.Knob(2).Color = obj.Knob2Color;
                 obj.Knob(2).EdgeColor = obj.Knob2EdgeColor;
                 obj.Knob(2).YPosition = obj.YDist;
-                obj.KnobLabel(2).Position(2) = obj.YDist+0.15;
-                obj.KnobLabel(2).Color = obj.LabelColor;
-                obj.KnobLabel(2).BackgroundColor = obj.LabelBGColor;
+
                 obj.MidLine.Color = obj.MidLineColor;
                 obj.MidLine.XData = obj.Limits;
                 obj.MidLine.YData = [obj.YDist obj.YDist];
+
                 obj.RangeLine.Color = obj.RangeColor;
                 obj.RangeLine.YData = [obj.YDist obj.YDist];
-                obj.RangeAxes.Title.String = obj.Title;
-                obj.RangeAxes.Title.Color = obj.TitleColor;
+
                 obj.RangeAxes.XColor = obj.TickColor;
+
+                %%
+                obj.RangeAxes.Title.String = [obj.Title,' (',num2str(obj.Value(1)),' - ',num2str(obj.Value(2)),')'];
+                obj.RangeAxes.Title.Color = obj.TitleColor;
+                %%
+
+                obj.Grid.BackgroundColor = obj.BackgroundColor;
+
                 %obj.StartUp = false;
             end
-            %disp('Updating slider');
         end
         
     end
@@ -203,13 +188,11 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             end
             
             function HandleKnob1ValueChanged(obj)
-                %obj.Value(1) = obj.Knob(1).Value;
                 % Execute the event listeners and the ValueChangedFcn callback property
                 notify(obj,'ValueChanged');
             end
             
             function HandleKnob2ValueChanged(obj)
-                %obj.Value(2) = obj.Knob(2).Value;
                 % Execute the event listeners and the ValueChangedFcn callback property
                 notify(obj,'ValueChanged');
             end
@@ -228,11 +211,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             
             function set.Value(obj,val)
                 obj.Knob(1).Value = val(1);
-                obj.KnobLabel(1).Position(1) = val(1)-0.01;
-                obj.KnobLabel(1).String = num2str(round(val(1),2));
                 obj.Knob(2).Value = val(2);
-                obj.KnobLabel(2).Position(1) = val(2)+0.01;
-                obj.KnobLabel(2).String = num2str(round(val(2),2));
                 obj.RangeLine.XData = val;
             end
 

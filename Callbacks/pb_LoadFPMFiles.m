@@ -68,16 +68,16 @@ function [] = pb_LoadFPMFiles(source,~)
                 else
                     cGroup.Replicate(i+n).filename = Pol_files;
                 end
-                
+
                 temp = strsplit(cGroup.Replicate(i+n).filename,'.');
                 cGroup.Replicate(i+n).pol_shortname = temp{1};
                 cGroup.Replicate(i+n).pol_fullname = [PolPath cGroup.Replicate(i+n).filename];
                 temp = bfopen(char(cGroup.Replicate(i+n).pol_fullname));
                 temp2 = temp{1,1};
-                
+
                 cGroup.Replicate(i+n).Height = size(temp2{1,1},1);
                 cGroup.Replicate(i+n).Width = size(temp2{1,1},2);
-                
+
                 UpdateLog3(source,['Dimensions of '...
                     char(cGroup.Replicate(i+n).pol_shortname)...
                     ' are '...
@@ -189,6 +189,8 @@ function [] = pb_LoadFPMFiles(source,~)
             end
             
     end
+
+    cGroup.FPMFilesLoaded = true;
     
     % update log to indicate completion
     UpdateLog3(source,'Done.','append');
@@ -205,6 +207,8 @@ function [] = pb_LoadFPMFiles(source,~)
         FFCData.Height = PODSData.CurrentImage.Height;
         FFCData.Width = PODSData.CurrentImage.Width;
         cGroup.FFCData = FFCData;
+        % update log to indicate completion
+        UpdateLog3(source,'Done.','append');
     end
     
     % if 'Files' isn't the current 'tab', switch to it
@@ -212,7 +216,8 @@ function [] = pb_LoadFPMFiles(source,~)
         feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
     end
     
-    UpdateListBoxes(source);
+    %UpdateListBoxes(source);
+    UpdateImageTree(source);
     UpdateImages(source);
     UpdateSummaryDisplay(source);
     

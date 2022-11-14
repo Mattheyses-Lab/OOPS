@@ -30,6 +30,9 @@ classdef PODSSettings < handle
 
         LastDirectory = pwd;
 
+        % path to main code file directory (path with PODSv2.m)
+        MainPath char
+
         SummaryDisplayType = 'Project';
         
         % monitor tab switching
@@ -41,7 +44,16 @@ classdef PODSSettings < handle
         
         % size of the display (to set main window Position)
         ScreenSize
-        
+
+        % optimized font size (px) based on size of display
+        DefaultFontSize
+
+        % themes and colors for GUI display
+        GUITheme = 'Dark';
+        GUIBackgroundColor = 'Black';
+        GUIForegroundColor = 'White';
+        GUIHighlightColor = 'White';
+
         % sturcturing element for masking
         SEShape = 'disk';
         SESize = 3;
@@ -57,9 +69,11 @@ classdef PODSSettings < handle
         ColormapsSettings struct
 
         % currently selected colormaps for each image type
+        % must be 256x3 double with values in the range [0 1]
         IntensityColormap double
         OrderFactorColormap double
         ReferenceColormap double
+        AzimuthColormap double
         
         % Azimuth display settings
         AzimuthDisplaySettings struct
@@ -83,8 +97,16 @@ classdef PODSSettings < handle
         PixelSize = 0.1083;
 
         % type of mask to generate and use for object detection
-        MaskType = 'Legacy';
+        % Default, CustomScheme, or CustomUpload
+        MaskType = 'Default';
 
+        % various names
+        MaskName = 'Legacy';
+        
+        % custom mask schemes
+        SchemeNames cell
+        SchemePaths cell
+        
         % object box type ('Box' or 'Boundary')
         ObjectBoxType = 'Box';
 
@@ -112,6 +134,10 @@ classdef PODSSettings < handle
         SwarmPlotGroupingType
         SwarmPlotColorMode
 
+        % helper variable for dynamic thresh slider functionality
+        ManualThreshEnabled
+        ThreshStatisticName
+        ThreshPanelTitle
     end
     
     methods
@@ -120,6 +146,8 @@ classdef PODSSettings < handle
         function obj = PODSSettings()
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
+            % optimum font size
+            obj.DefaultFontSize = round(obj.ScreenSize(4)*.01);
             % set up default object label (PODSLabel object)
             obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],1);
             % get list of supported fonts
@@ -129,7 +157,17 @@ classdef PODSSettings < handle
                 obj.DefaultFont = 'Consolas';   % if so, make it default
             else
                 obj.DefaultFont = 'Courier New';  % otherwise, use 'Courier New'
-            end            
+            end
+
+            if ismac
+                % get the path to this .m file (two levels below the directory we want)
+                CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+                % get the "MainPath" (path to main gui driver)
+                obj.MainPath = strjoin(CurrentPathSplit(1:end-2),'/');
+            elseif ispc
+                CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+                obj.MainPath = strjoin(CurrentPathSplit(1:end-2),'\');
+            end
 
             try
                 Colormaps_mat_file = load('Colormaps.mat');
@@ -175,7 +213,31 @@ classdef PODSSettings < handle
             catch
                 warning('Unable to load "DefaultColors.mat"...')
             end
+
+            try 
+                obj.LoadCustomMaskSchemes();
+            catch
+                warning('Unable to load custom mask schemes...')
+            end
             
+        end
+
+        function LoadCustomMaskSchemes(obj)
+            if ismac
+                SchemeFilesList = dir(fullfile([obj.MainPath,'/CustomMasks/Schemes'],'*.mat'));
+            elseif ispc
+                SchemeFilesList = dir(fullfile([obj.MainPath,'\CustomMasks\Schemes'],'*.mat'));
+            end
+
+            for i = 1:numel(SchemeFilesList);
+                SplitName = strsplit(SchemeFilesList(i).name,'.');
+                obj.SchemeNames{i} = SplitName{1};
+                if ismac
+                    obj.SchemePaths{i} = [SchemeFilesList(i).folder,'/',SchemeFilesList(i).name];
+                elseif ispc
+                    obj.SchemePaths{i} = [SchemeFilesList(i).folder,'\',SchemeFilesList(i).name];
+                end
+            end
         end
         
         function UpdateColormapsSettings(obj)
@@ -184,6 +246,7 @@ classdef PODSSettings < handle
             obj.IntensityColormap = obj.ColormapsSettings.Intensity{3};
             obj.OrderFactorColormap = obj.ColormapsSettings.OrderFactor{3};
             obj.ReferenceColormap = obj.ColormapsSettings.Reference{3};
+            obj.AzimuthColormap = obj.ColormapsSettings.Azimuth{3};
         end
 
         function UpdateSwarmPlotSettings(obj)
@@ -255,6 +318,60 @@ classdef PODSSettings < handle
 
         function SwarmPlotGroupingType = get.SwarmPlotGroupingType(obj)
             SwarmPlotGroupingType = obj.SwarmPlotSettings.GroupingType;
+        end
+
+        function ManualThreshEnabled = get.ManualThreshEnabled(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ManualThreshEnabled = true;
+                        case 'Adaptive'
+                            ManualThreshEnabled = true;
+                        case 'Intensity'
+                            ManualThreshEnabled = true;
+                        otherwise
+                            ManualThreshEnabled = false;
+                    end
+                case 'CustomScheme'
+                    ManualThreshEnabled = false;
+            end
+        end
+
+        function ThreshStatisticName = get.ThreshStatisticName(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ThreshStatisticName = 'Threshold';
+                        case 'Adaptive'
+                            ThreshStatisticName = 'Adaptive mask sensitivity';
+                        case 'Intensity'
+                            ThreshStatisticName = 'Threshold';
+                        otherwise
+                            ThreshStatisticName = false;
+                    end
+                case 'CustomScheme'
+                    ThreshStatisticName = '';
+            end
+        end  
+
+        function ThreshPanelTitle = get.ThreshPanelTitle(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ThreshPanelTitle = 'Adjust Otsu threshold';
+                        case 'Adaptive'
+                            ThreshPanelTitle = 'Adjust adaptive mask sensitivity';
+                        case 'Intensity'
+                            ThreshPanelTitle = 'Adjust intensity threshold';
+                        otherwise
+                            ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
+                    end
+                case 'CustomScheme'
+                    ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
+            end
         end        
 
     end

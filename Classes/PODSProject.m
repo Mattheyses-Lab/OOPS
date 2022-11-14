@@ -12,8 +12,6 @@ classdef PODSProject < handle
         % indexing group members
         CurrentGroupIndex uint8
         
-        %CurrentChannelIndex uint8
-        
         % handles to all gui objects
         Handles struct       
         
@@ -24,9 +22,7 @@ classdef PODSProject < handle
     
     properties (Dependent = true)  
         nGroups double % depends on the size of dim 1 of Group
-%        nChannels double % depends on the size of dim 2 of Group
-        
-        CurrentGroup PODSGroup % depends on user selection
+        CurrentGroup PODSGroup
         CurrentImage PODSImage
         CurrentObject PODSObject
 
@@ -37,25 +33,78 @@ classdef PODSProject < handle
          
          function obj = PODSProject()
              obj.Settings = PODSSettings;
-             %obj.CurrentChannelIndex = 1;
+         end
+
+         function proj = saveobj(obj)
+
+            proj.ProjectName = obj.ProjectName;
+            proj.Settings = obj.Settings;
+            proj.CurrentGroupIndex = obj.CurrentGroupIndex;
+            proj.Handles = [];
+
+            if obj.nGroups==0
+                proj.Group = [];
+            else
+                for i = 1:obj.nGroups
+                    disp('calling saveobj(Group)')
+                    %proj.Group(i) = saveobj(obj.Group(i));
+                    proj.Group(i) = obj.Group(i).saveobj();
+                end
+            end
+
+            %return
+
          end
          
-         function MakeNewGroup(obj,GroupName,GroupIndex)
-             obj.Group(GroupIndex,1) = PODSGroup(GroupName,GroupIndex,obj.Settings);
+
+         function AddNewGroup(obj,GroupName)
+            NewColor = obj.getUniqueGroupColor();
+            obj.Group(end+1,1) = PODSGroup(GroupName,obj.Settings,obj);
+            %obj.Group(end).Color = obj.Settings.DefaultGroupColors{obj.Group(end).SelfIdx};
+            obj.Group(end).Color = NewColor;
+         end
+
+         function NewColor = getUniqueGroupColor(obj)
+             if obj.nGroups>0
+                 CurrentColors = zeros(obj.nGroups,3);
+                 for i = 1:obj.nGroups
+                     CurrentColors(i,:) = obj.Group(i).Color;
+                 end
+                 NewColor = distinguishable_colors(1,CurrentColors);
+             else
+                 NewColor = distinguishable_colors(1);
+             end
+         end
+
+         function DeleteGroup(obj,Group)
+            Group2Delete = Group;
+            GroupIdx = Group2Delete.SelfIdx;
+            if GroupIdx == 1
+                if obj.nGroups > 1
+                    obj.Group = obj.Group(2:end);
+                else
+                    obj.Group = PODSGroup.empty();
+                end
+            elseif GroupIdx == obj.nGroups
+                obj.Group = obj.Group(1:end-1);
+            else
+                obj.Group = [obj.Group(1:GroupIdx-1);obj.Group(GroupIdx+1:end)];
+            end
+            delete(Group2Delete);
+            if obj.CurrentGroupIndex>obj.nGroups
+                obj.CurrentGroupIndex = obj.nGroups;
+            end
          end
 
          function GroupNames = get.GroupNames(obj)
-
-            GroupNames = cell(obj.nGroups,1);
-
-              for i = 1:obj.nGroups
-                  GroupNames{i} = obj.Group(i).GroupName;
-              end
-
+             GroupNames = cell(obj.nGroups,1);
+             for i = 1:obj.nGroups
+                 GroupNames{i} = obj.Group(i).GroupName;
+             end
          end
 
          function nGroups = get.nGroups(obj)
-             nGroups = size(obj.Group,1); % each row of Group is separate group of replicates
+             nGroups = numel(obj.Group);
          end
 
          function CurrentGroup = get.CurrentGroup(obj)
@@ -89,6 +138,29 @@ classdef PODSProject < handle
 
         end
 
+     end
+
+     methods (Static)
+         function obj = loadobj(proj)
+            obj = PODSProject();
+
+            obj.ProjectName = proj.ProjectName;
+            obj.Settings = proj.Settings;
+            obj.CurrentGroupIndex = proj.CurrentGroupIndex;
+            obj.Handles = proj.Handles;
+
+            % load each group (calls loadobj() of PODSGroup)
+            for i = 1:length(proj.Group)
+                obj.Group(i) = PODSGroup.loadobj(proj.Group(i));
+                obj.Group(i).Parent = obj;
+                obj.Group(i).Settings = obj.Settings;
+
+                for ii = 1:obj.Group(i).nReplicates
+                    obj.Group(i).Replicate(ii).Settings = obj.Settings;
+                    obj.Group(i).Replicate(ii).Parent = obj.Group(i);
+                end
+            end
+         end
      end
      
 end

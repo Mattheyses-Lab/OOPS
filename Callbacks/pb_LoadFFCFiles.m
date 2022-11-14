@@ -170,9 +170,6 @@ function [] = pb_LoadFFCFiles(source,~)
     cGroup.FFCLoaded = true;
     
     clear FFCData
-    
-    % update gui with new PODSData
-    guidata(source,PODSData);
 
     % if files tab is not current, invoke the callback we need to get there
     if ~strcmp(PODSData.Settings.CurrentTab,'Files')
