@@ -20,6 +20,7 @@ function UpdateImageTree(source)
     else
         % make sure tree contains no nodes
         delete(PODSData.Handles.ImageTree.Children);
+        UpdateObjectListBox(source);
     end
 
 

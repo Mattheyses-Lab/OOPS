@@ -151,7 +151,7 @@ PODSData.Handles.hObjectsMenu = uimenu(PODSData.Handles.fH,'Text','Objects');
 PODSData.Handles.hDeleteSelectedObjects = uimenu(PODSData.Handles.hObjectsMenu,'Text','Delete Selected Objects','MenuSelectedFcn',@mbDeleteSelectedObjects);
 PODSData.Handles.hLabelSelectedObjects = uimenu(PODSData.Handles.hObjectsMenu,'Text','Label Selected Objects','MenuSelectedFcn',@mbLabelSelectedObjects);
 PODSData.Handles.hClearSelection = uimenu(PODSData.Handles.hObjectsMenu,'Text','Clear Selection','MenuSelectedFcn',@mbClearSelection);
-
+PODSData.Handles.hkMeansClustering = uimenu(PODSData.Handles.hObjectsMenu,'Text','Label Objects with k-means Clustering','MenuSelectedFcn',@mbObjectkmeansClustering);
 %% draw the menu bar objects and pause for more predictable performance
 drawnow
 pause(0.5)
@@ -174,9 +174,15 @@ sheight = swidth;
 % main grid for managing layout
 PODSData.Handles.MainGrid = uigridlayout(PODSData.Handles.fH,[4,5]);
 PODSData.Handles.MainGrid.BackgroundColor = [0 0 0];
-PODSData.Handles.MainGrid.RowSpacing = 5;
-PODSData.Handles.MainGrid.ColumnSpacing = 5;
-PODSData.Handles.MainGrid.RowHeight = {'0.5x',swidth,swidth,'0.3x'};
+% PODSData.Handles.MainGrid.RowSpacing = 5;
+% PODSData.Handles.MainGrid.ColumnSpacing = 5;
+%PODSData.Handles.MainGrid.RowHeight = {'0.5x',swidth,swidth,'0.3x'};
+% testing below
+PODSData.Handles.MainGrid.RowHeight = {'1x',swidth,swidth,'1x'};
+PODSData.Handles.MainGrid.RowSpacing = 0;
+PODSData.Handles.MainGrid.ColumnSpacing = 0;
+PODSData.Handles.MainGrid.Padding = [0 0 0 0];
+% end testing
 PODSData.Handles.MainGrid.ColumnWidth = {'1x',sheight,sheight,sheight,sheight};
 
 %% CHECKPOINT
@@ -187,8 +193,7 @@ disp('Setting up non-image panels...')
 
 % panel to hold app info selector
 PODSData.Handles.AppInfoSelectorPanel = uipanel(PODSData.Handles.MainGrid,...
-    'Visible','Off',...
-    'AutoResizeChildren','Off');
+    'Visible','Off');
 PODSData.Handles.AppInfoSelectorPanel.Title = 'Summary Display Type';
 PODSData.Handles.AppInfoSelectorPanel.Layout.Row = 1;
 PODSData.Handles.AppInfoSelectorPanel.Layout.Column = 1;
@@ -213,9 +218,7 @@ PODSData.Handles.AppInfoSelector = uilistbox('parent',PODSData.Handles.AppInfoSe
 
 % panel to show project summary
 PODSData.Handles.AppInfoPanel = uipanel(PODSData.Handles.MainGrid,...
-    'Visible','Off',...
-    'AutoResizeChildren','Off',...
-    'Scrollable','On');
+    'Visible','Off');
 PODSData.Handles.AppInfoPanel.Title = 'Project Summary';
 PODSData.Handles.AppInfoPanel.Layout.Row = 2;
 PODSData.Handles.AppInfoPanel.Layout.Column = 1;
@@ -223,8 +226,7 @@ PODSData.Handles.AppInfoPanel.Layout.Column = 1;
 %% set up main settings panel
 
 PODSData.Handles.SettingsPanel = uipanel(PODSData.Handles.MainGrid,...
-    'Visible','Off',...
-    'AutoResizeChildren','Off');
+    'Visible','Off');
 PODSData.Handles.SettingsPanel.Layout.Row = 3;
 PODSData.Handles.SettingsPanel.Layout.Column = 1;
 PODSData.Handles.SettingsPanel.Title = 'Display Settings';
@@ -272,7 +274,8 @@ PODSData.Handles.ColormapsImageTypeSelector = uilistbox(PODSData.Handles.Colorma
     'ValueChangedFcn',@ImageTypeSelectionChanged,...
     'FontName',PODSData.Settings.DefaultFont);
     
-PODSData.Handles.ColormapsPanel = uipanel(PODSData.Handles.ColormapsSettingsGrid,'Title','Colormaps',...
+PODSData.Handles.ColormapsPanel = uipanel(PODSData.Handles.ColormapsSettingsGrid,...
+    'Title','Colormaps',...
     'FontName',PODSData.Settings.DefaultFont);
 
 PODSData.Handles.ColormapsSettingsGrid3 = uigridlayout(PODSData.Handles.ColormapsPanel,[1,1]);
@@ -408,7 +411,8 @@ PODSData.Handles.ScatterPlotSettingsGrid.RowHeight = {20,'1x','1x'};
 PODSData.Handles.ScatterPlotSettingsGrid.ColumnWidth = {'1x'};
 
 % setting up x-axis variable selection
-PODSData.Handles.ScatterPlotXVarListBoxPanel = uipanel(PODSData.Handles.ScatterPlotSettingsGrid,'Title','X-axis Variable');
+PODSData.Handles.ScatterPlotXVarListBoxPanel = uipanel(PODSData.Handles.ScatterPlotSettingsGrid,...
+    'Title','X-axis Variable');
 PODSData.Handles.ScatterPlotXVarListBoxPanel.Layout.Row = 2;
 PODSData.Handles.ScatterPlotXVarListBoxPanel.Layout.Column = 1;
 
@@ -424,7 +428,8 @@ PODSData.Handles.ScatterPlotXVarSelectBox = uilistbox(PODSData.Handles.ScatterPl
     'FontName',PODSData.Settings.DefaultFont);
 
 % setting up y-axis variable selection
-PODSData.Handles.ScatterPlotYVarListBoxPanel = uipanel(PODSData.Handles.ScatterPlotSettingsGrid,'Title','Y-axis Variable');
+PODSData.Handles.ScatterPlotYVarListBoxPanel = uipanel(PODSData.Handles.ScatterPlotSettingsGrid,...
+    'Title','Y-axis Variable');
 PODSData.Handles.ScatterPlotYVarListBoxPanel.Layout.Row = 3;
 PODSData.Handles.ScatterPlotYVarListBoxPanel.Layout.Column = 1;
 
@@ -451,7 +456,8 @@ PODSData.Handles.SwarmPlotSettingsGrid.RowHeight = {20,'1x',20,20};
 PODSData.Handles.SwarmPlotSettingsGrid.ColumnWidth = {'fit','1x'};
 
 % setting up x-axis variable selection
-PODSData.Handles.SwarmPlotYVarListBoxPanel = uipanel(PODSData.Handles.SwarmPlotSettingsGrid,'Title','Y-axis Variable');
+PODSData.Handles.SwarmPlotYVarListBoxPanel = uipanel(PODSData.Handles.SwarmPlotSettingsGrid,...
+    'Title','Y-axis Variable');
 PODSData.Handles.SwarmPlotYVarListBoxPanel.Layout.Row = 2;
 PODSData.Handles.SwarmPlotYVarListBoxPanel.Layout.Column = [1 2];
 
@@ -508,14 +514,13 @@ pause(0.05)
 
 PODSData.Handles.ImageOperationsGrid = uigridlayout(PODSData.Handles.MainGrid,[1,2],'BackgroundColor',[0 0 0],'Padding',[0 0 0 0]);
 PODSData.Handles.ImageOperationsGrid.ColumnWidth = {'0.25x','0.75x'};
-PODSData.Handles.ImageOperationsGrid.ColumnSpacing = 5;
+PODSData.Handles.ImageOperationsGrid.ColumnSpacing = 0;
 PODSData.Handles.ImageOperationsGrid.Layout.Row = 1;
 PODSData.Handles.ImageOperationsGrid.Layout.Column = [4 5];
 
 % panel to hold img operations listbox grid
 PODSData.Handles.ImageOperationsSelectorPanel = uipanel(PODSData.Handles.ImageOperationsGrid,...
-    'Visible','Off',...
-    'AutoResizeChildren','Off');
+    'Visible','Off');
 PODSData.Handles.ImageOperationsSelectorPanel.Title = 'Image Operations';
 PODSData.Handles.ImageOperationsSelectorPanel.Layout.Column = 1;
 
@@ -537,16 +542,14 @@ PODSData.Handles.ImageOperationsSelector = uilistbox('parent',PODSData.Handles.I
     'ValueChangedFcn',@ChangeImageOperation);
 
 PODSData.Handles.ImageOperationsPanel = uipanel(PODSData.Handles.ImageOperationsGrid,...
-    'Visible','Off',...
-    'AutoResizeChildren','Off');
+    'Visible','Off');
 PODSData.Handles.ImageOperationsPanel.Layout.Column = 2;
 PODSData.Handles.ImageOperationsPanel.Title = PODSData.Settings.ThreshPanelTitle;
 
 %% LogPanel
 % panel to display log messages (updates user on running/completed processes)
 PODSData.Handles.LogPanel = uipanel(PODSData.Handles.MainGrid,...
-    'Visible','Off',...
-    'AutoResizeChildren','Off');
+    'Visible','Off');
 PODSData.Handles.LogPanel.Title = 'Log Window';
 PODSData.Handles.LogPanel.Layout.Row = 4;
 PODSData.Handles.LogPanel.Layout.Column = [1 5];
@@ -573,12 +576,14 @@ end
 
 %% Large Image Panels
 % first one (lefthand panel)
-PODSData.Handles.ImgPanel1 = uipanel(PODSData.Handles.MainGrid,'Visible','Off');
+PODSData.Handles.ImgPanel1 = uipanel(PODSData.Handles.MainGrid,...
+    'Visible','Off');
 PODSData.Handles.ImgPanel1.Layout.Row = [2 3];
 PODSData.Handles.ImgPanel1.Layout.Column = [2 3];
 
 % second one (righthand panel)
-PODSData.Handles.ImgPanel2 = uipanel(PODSData.Handles.MainGrid,'Visible','Off');
+PODSData.Handles.ImgPanel2 = uipanel(PODSData.Handles.MainGrid,...
+    'Visible','Off');
 PODSData.Handles.ImgPanel2.Layout.Row = [2 3];
 PODSData.Handles.ImgPanel2.Layout.Column = [4 5];
 
@@ -597,18 +602,22 @@ pause(0.5)
 
 disp('Setting up selection listboxes...')
 
-%% Selection panels (selection boxes for group/image/objects)
+%% Selection panels (selection listboxes/trees for group/image/objects)
 
-PODSData.Handles.SelectorGrid = uigridlayout(PODSData.Handles.MainGrid,[1,3],'BackgroundColor',[0 0 0],'Padding',[0 0 0 0]);
+PODSData.Handles.SelectorGrid = uigridlayout(PODSData.Handles.MainGrid,[1,3],...
+    'BackgroundColor',[0 0 0],...
+    'Padding',[0 0 0 0]);
 PODSData.Handles.SelectorGrid.Layout.Row = 1;
 PODSData.Handles.SelectorGrid.Layout.Column = [2 3];
 PODSData.Handles.SelectorGrid.ColumnWidth = {'0.25x','0.5x','0.25x'};
-PODSData.Handles.SelectorGrid.ColumnSpacing = 5;
+PODSData.Handles.SelectorGrid.ColumnSpacing = 0;
 
 % group selector (uitree)
-PODSData.Handles.GroupSelectorPanel = uipanel(PODSData.Handles.SelectorGrid,'Title','Group Selection','Visible','Off');
-PODSData.Handles.GroupSelectorPanelGrid = uigridlayout(PODSData.Handles.GroupSelectorPanel,[1,1],'Padding',[0 0 0 0]);
-
+PODSData.Handles.GroupSelectorPanel = uipanel(PODSData.Handles.SelectorGrid,...
+    'Title','Group Selection',...
+    'Visible','Off');
+PODSData.Handles.GroupSelectorPanelGrid = uigridlayout(PODSData.Handles.GroupSelectorPanel,[1,1],...
+    'Padding',[0 0 0 0]);
 PODSData.Handles.GroupTree = uitree(PODSData.Handles.GroupSelectorPanelGrid,...
     'SelectionChangedFcn',@GroupSelectionChanged,...
     'NodeTextChangedFcn',@GroupTreeNodeTextChanged,...
@@ -616,22 +625,23 @@ PODSData.Handles.GroupTree = uitree(PODSData.Handles.GroupSelectorPanelGrid,...
     'FontWeight','bold',...
     'Interruptible','off',...
     'Editable','on');
-
 PODSData.Handles.GroupTree.Layout.Row = 1;
 PODSData.Handles.GroupTree.Layout.Column = 1;
-
+% context menu for the entire group tree
 PODSData.Handles.GroupTreeContextMenu = uicontextmenu(PODSData.Handles.fH);
 PODSData.Handles.GroupTreeContextMenu_New = uimenu(PODSData.Handles.GroupTreeContextMenu,'Text','New group','MenuSelectedFcn',@AddNewGroup);
 PODSData.Handles.GroupTree.ContextMenu = PODSData.Handles.GroupTreeContextMenu;
-
+% context menu for individual groups
 PODSData.Handles.GroupContextMenu = uicontextmenu(PODSData.Handles.fH);
 PODSData.Handles.GroupContextMenu_Delete = uimenu(PODSData.Handles.GroupContextMenu,'Text','Delete group','MenuSelectedFcn',{@DeleteGroup,PODSData.Handles.fH});
 PODSData.Handles.GroupContextMenu_ChangeColor = uimenu(PODSData.Handles.GroupContextMenu,'Text','Change color','MenuSelectedFcn',{@EditGroupColor,PODSData.Handles.fH});
 
 % image selector (uitree)
-PODSData.Handles.ImageSelectorPanel = uipanel(PODSData.Handles.SelectorGrid,'Title','Image Selection','Visible','Off');
-PODSData.Handles.ImageSelectorPanelGrid = uigridlayout(PODSData.Handles.ImageSelectorPanel,[1,1],'Padding',[0 0 0 0]);
-
+PODSData.Handles.ImageSelectorPanel = uipanel(PODSData.Handles.SelectorGrid,...
+    'Title','Image Selection',...
+    'Visible','Off');
+PODSData.Handles.ImageSelectorPanelGrid = uigridlayout(PODSData.Handles.ImageSelectorPanel,[1,1],...
+    'Padding',[0 0 0 0]);
 PODSData.Handles.ImageTree = uitree(PODSData.Handles.ImageSelectorPanelGrid,...
     'SelectionChangedFcn',@ImageSelectionChanged,...
     'FontName',PODSData.Settings.DefaultFont,...
@@ -639,17 +649,22 @@ PODSData.Handles.ImageTree = uitree(PODSData.Handles.ImageSelectorPanelGrid,...
     'Multiselect','on',...
     'Enable','on',...
     'Interruptible','off');
-
 PODSData.Handles.ImageTree.Layout.Row = 1;
 PODSData.Handles.ImageTree.Layout.Column = 1;
-
+% context menu for individual image nodes
 PODSData.Handles.ImageContextMenu = uicontextmenu(PODSData.Handles.fH);
-PODSData.Handles.ImageContextMenu_Delete = uimenu(PODSData.Handles.ImageContextMenu,'Text','Delete selected','MenuSelectedFcn',{@DeleteImage,PODSData.Handles.fH});
+PODSData.Handles.ImageContextMenu_Delete = uimenu(PODSData.Handles.ImageContextMenu,...
+    'Text','Delete selected',...
+    'MenuSelectedFcn',{@DeleteImage,PODSData.Handles.fH});
 
-% object selector
-PODSData.Handles.ObjectSelectorPanel = uipanel(PODSData.Handles.SelectorGrid,'Title','Object Selection','Visible','Off');
-PODSData.Handles.ObjectSelectorPanelGrid = uigridlayout(PODSData.Handles.ObjectSelectorPanel,[1,1],'Padding',[0 0 0 0]);
-PODSData.Handles.ObjectSelector = uilistbox('parent',PODSData.Handles.ObjectSelectorPanelGrid,...
+% object selector (listbox, will replace with tree, but too slow for now)
+PODSData.Handles.ObjectSelectorPanel = uipanel(PODSData.Handles.SelectorGrid,...
+    'Title','Object Selection',...
+    'Visible','Off');
+PODSData.Handles.ObjectSelectorPanelGrid = uigridlayout(PODSData.Handles.ObjectSelectorPanel,[1,1],...
+    'Padding',[0 0 0 0]);
+PODSData.Handles.ObjectSelector = uilistbox(...
+    'parent',PODSData.Handles.ObjectSelectorPanelGrid,...
     'Visible','Off',...
     'enable','on',...
     'tag','ObjectListBox',...
@@ -672,7 +687,6 @@ disp('Setting up thresholding histogram/slider...')
 PODSData.Handles.ThreshSliderGrid = uigridlayout(PODSData.Handles.ImageOperationsPanel,[1,1],...
     'Padding',[0 0 0 0],...
     'BackgroundColor','Black');
-
 % axes to show intensity histogram
 PODSData.Handles.ThreshAxH = uiaxes(PODSData.Handles.ThreshSliderGrid,...
     'Color','Black',...
@@ -727,7 +741,6 @@ PODSData.Handles.IntensitySlidersGrid = uigridlayout(PODSData.Handles.ImageOpera
     'BackgroundColor',[0 0 0],...
     'Padding',[5 5 5 5],...
     'Visible','Off');
-
 PODSData.Handles.IntensitySlidersGrid.RowSpacing = 0;
 PODSData.Handles.IntensitySlidersGrid.RowHeight = {'1x','1x'};
 
@@ -774,7 +787,9 @@ PODSData.Handles.ReferenceIntensitySlider.ValueChangedFcn = @AdjustReferenceChan
 disp('Setting up log window...')
 
 %% Log Window
-PODSData.Handles.LogWindowGrid = uigridlayout(PODSData.Handles.LogPanel,[1,1],'BackgroundColor',[0 0 0],'Padding',[0 0 0 0]);
+PODSData.Handles.LogWindowGrid = uigridlayout(PODSData.Handles.LogPanel,[1,1],...
+    'BackgroundColor',[0 0 0],...
+    'Padding',[0 0 0 0]);
 PODSData.Handles.LogWindow = uitextarea(PODSData.Handles.LogWindowGrid,...
     'HorizontalAlignment','left',...
     'enable','on',...
@@ -792,7 +807,9 @@ disp('Setting up summary table...')
 
 %% Summary table for current group/image/object
 
-PODSData.Handles.ProjectDataTableGrid = uigridlayout(PODSData.Handles.AppInfoPanel,[1,1],'BackgroundColor',[0 0 0],'Padding',[10 10 10 10]);
+PODSData.Handles.ProjectDataTableGrid = uigridlayout(PODSData.Handles.AppInfoPanel,[1,1],...
+    'BackgroundColor',[0 0 0],...
+    'Padding',[10 10 10 10]);
 %PODSData.Handles.ProjectDataTableGrid.RowHeight = {'fit','1x'}
 PODSData.Handles.ProjectDataTable = uilabel(PODSData.Handles.ProjectDataTableGrid,...
     'tag','ProjectDataTable',...
@@ -844,8 +861,6 @@ for k = 1:4
     
     disableDefaultInteractivity(PODSData.Handles.FFCAxH(k));
 end
-
-%PODSData.Handles.AllSmallAxes = PODSData.Handles.FFCAxH;
 
     %% RAW INTENSITY IMAGES
 for k = 1:4
@@ -906,73 +921,6 @@ for k = 1:4
     PODSData.Handles.PolFFCImgH(k).Visible = 'Off';
     PODSData.Handles.PolFFCImgH(k).HitTest = 'Off';
 end
-
-    %% MASKING STEPS
-% for k = 1:4
-%     switch k
-%         case 1
-%             PODSData.Handles.MStepsAxH(k) = uiaxes('Parent',PODSData.Handles.SmallPanels(1,1),...
-%                 'Units','Normalized',...
-%                 'InnerPosition',[0 0 1 1],...
-%                 'Tag','MStepsIntensity',...
-%                 'XTick',[],...
-%                 'YTick',[]);
-%             image_title = 'Average Intensity';
-%             image_tag = 'MStepsIntensityImage';
-%         case 2
-%             PODSData.Handles.MStepsAxH(k) = uiaxes('Parent',PODSData.Handles.SmallPanels(1,2),...
-%                 'Units','Normalized',...
-%                 'InnerPosition',[0 0 1 1],...
-%                 'Tag','MStepsBackground',...
-%                 'XTick',[],...
-%                 'YTick',[]);
-%             image_title = 'Background';
-%             image_tag = 'MStepsBackgroundImage';
-%         case 3
-%             PODSData.Handles.MStepsAxH(k) = uiaxes('Parent',PODSData.Handles.SmallPanels(2,1),...
-%                 'Units','Normalized',...
-%                 'InnerPosition',[0 0 1 1],...
-%                 'Tag','MStepsBGSubtracted',...
-%                 'XTick',[],...
-%                 'YTick',[]);
-%             image_title = 'Background Subtracted';
-%             image_tag = 'MStepsBGSubtractedImage';
-%         case 4
-%             PODSData.Handles.MStepsAxH(k) = uiaxes('Parent',PODSData.Handles.SmallPanels(2,2),...
-%                 'Units','Normalized',...
-%                 'InnerPosition',[0 0 1 1],...
-%                 'Tag','MStepsMedianFiltered',...
-%                 'XTick',[],...
-%                 'YTick',[]);
-%             image_title = 'Enhanced';
-%             image_tag = 'MStepsEnhancedImage';
-%     end
-%     
-%     % save original values
-%     pbarOriginal = PODSData.Handles.MStepsAxH(k).PlotBoxAspectRatio;
-%     tagOriginal = PODSData.Handles.MStepsAxH(k).Tag;
-%     % place placeholder image on axis
-%     PODSData.Handles.MStepsImgH(k) = imshow(full(emptyimage),'Parent',PODSData.Handles.MStepsAxH(k));
-%     % set a tag so our callback functions can find the image
-%     set(PODSData.Handles.MStepsImgH(k),'Tag',image_tag);
-%     
-%     % restore original values after imshow() call
-%     PODSData.Handles.MStepsAxH(k) = restore_axis_defaults(PODSData.Handles.MStepsAxH(k),pbarOriginal,tagOriginal);
-%     clear pbarOriginal tagOriginal
-%     
-%     % set axis title
-%     PODSData.Handles.MStepsAxH(k) = SetAxisTitle(PODSData.Handles.MStepsAxH(k),image_title);
-%     
-%     PODSData.Handles.MStepsAxH(k).Colormap = PODSData.Settings.IntensityColormap;
-%     PODSData.Handles.MStepsAxH(k).Toolbar.Visible = 'Off';
-%     PODSData.Handles.MStepsAxH(k).Title.Visible = 'Off';
-%     PODSData.Handles.MStepsAxH(k).HitTest = 'Off';
-%     disableDefaultInteractivity(PODSData.Handles.MStepsAxH(k));
-%     
-%     PODSData.Handles.MStepsImgH(k).Visible = 'Off';
-% 
-%     %PODSData.Handles.AllSmallAxes(end+1) = PODSData.Handles.MStepsAxH(k);
-% end
 
 %% CHECKPOINT
 
@@ -1167,7 +1115,6 @@ disp('Setting up large image axes...')
     % change active axis so we can make custom colorbar/colormap
     %axes(PODSData.Handles.AzimuthAxH)
     tempmap = hsv;
-    %colormap(gca,vertcat(tempmap,tempmap));
     
     PODSData.Handles.AzimuthAxH.Colormap = vertcat(tempmap,tempmap);
     % custom colormap/colorbar
@@ -1396,7 +1343,7 @@ set(PODSData.Handles.ObjectSelector,'Visible','On');
 
 % testing below
 % set uipanel linewidth
-set(findobj(PODSData.Handles.fH,'type','uipanel'),'BorderWidth',2);
+set(findobj(PODSData.Handles.fH,'type','uipanel'),'BorderWidth',0.5);
 % end testing
 
 % initialize some graphics placeholder objects
@@ -1415,7 +1362,7 @@ guidata(PODSData.Handles.fH,PODSData)
 % set figure to visible to draw containers
 PODSData.Handles.fH.Visible = 'On';
 % set optimum font size for display
-fontsize(PODSData.Handles.fH,PODSData.Settings.DefaultFontSize,'pixels');
+%fontsize(PODSData.Handles.fH,PODSData.Settings.DefaultFontSize,'pixels');
 
 drawnow
 pause(0.5)
@@ -1437,13 +1384,12 @@ pause(0.5)
 
     function DeleteGroup(source,event,fH)
         SelectedNode = fH.CurrentObject;
-        %cGroup = PODSData.Group(SelectedNode.NodeData);
         cGroup = SelectedNode.NodeData;
         UpdateLog3(fH,['Deleting [Group:',cGroup.GroupName,']...'],'append');
         delete(SelectedNode)
         PODSData.DeleteGroup(cGroup)
-        %PODSData.Handles.GroupNodes = PODSData.Handles.GroupTree.Children(end:1);
-        UpdateObjectListBox(source);
+        UpdateImageTree(source);
+        UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});        
         UpdateLog3(fH,'Done.','append');
     end
 
@@ -1455,6 +1401,7 @@ pause(0.5)
             'NodeData',NewGroup,...
             'Icon',makeRGBColorSquare(NewGroup.Color,5));
         newNode.ContextMenu = PODSData.Handles.GroupContextMenu;
+        UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});
     end
 
     function EditGroupColor(source,event,fH)
@@ -1480,7 +1427,6 @@ pause(0.5)
         UpdateImageTree(source);
         UpdateImages(source);
         UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});
-        %UpdateObjectListBox(source);
         UpdateLog3(fH,'Done.','append');
     end
 
@@ -1679,12 +1625,12 @@ pause(0.5)
         disp('Figure Window Size Changed...');
         SmallWidth = round((source.InnerPosition(3)*0.38)/2);
         % update grid size to maatch new image sizes
-        PODSData.Handles.MainGrid.RowHeight = {'0.5x',SmallWidth,SmallWidth,'0.3x'};
+        PODSData.Handles.MainGrid.RowHeight = {'1x',SmallWidth,SmallWidth,'1x'};
         PODSData.Handles.MainGrid.ColumnWidth = {'1x',SmallWidth,SmallWidth,SmallWidth,SmallWidth};
 
         % testing dynamic font size update
-        fontsize(PODSData.Handles.fH,round(PODSData.Handles.fH.OuterPosition(4)*.0125),'pixels');
-        % end testing
+        %fontsize(PODSData.Handles.fH,round(PODSData.Handles.fH.OuterPosition(4)*.0125),'pixels');
+
         %drawnow limitrate
         drawnow
     end
@@ -1929,6 +1875,134 @@ pause(0.5)
         UpdateSummaryDisplay(source);
     end
 
+    function mbObjectkmeansClustering(source,~)
+
+        % get the object data table
+        T = SavePODSData(source);
+
+% All object properties
+%         ObjectData = T{:,[...
+%             "ObjectAvgOF",...
+%             "ObjectAvgAzimuth",...
+%             "ObjectAzimuthStd",...
+%             "SBRatio",...
+%             "SignalAvg",...
+%             "BGAvg",...
+%             "Area",...
+%             "Perimeter",...
+%             "Eccentricity",...
+%             "Circularity",...
+%             "ConvexArea",...
+%             "MajorAxisLength",...
+%             "MinorAxisLength",...
+%             "MaxFeretDiameter",...
+%             "MinFeretDiameter"...
+%             ]};
+% 
+%         VariablesList = {...
+%             "ObjectAvgOF",...
+%             "ObjectAvgAzimuth",...
+%             "ObjectAzimuthStd",...
+%             "SBRatio",...
+%             "SignalAvg",...
+%             "BGAvg",...
+%             "Area",...
+%             "Perimeter",...
+%             "Eccentricity",...
+%             "Circularity",...
+%             "ConvexArea",...
+%             "MajorAxisLength",...
+%             "MinorAxisLength",...
+%             "MaxFeretDiameter",...
+%             "MinFeretDiameter"...
+%             };
+% end all object properties
+
+%         % subset of properties
+%         ObjectData = T{:,[...
+%             "SBRatio",...
+%             "Area",...
+%             "Perimeter",...
+%             "Eccentricity",...
+%             "Circularity",...
+%             "ConvexArea",...
+%             "MajorAxisLength",...
+%             "MinorAxisLength",...
+%             "MaxFeretDiameter",...
+%             "MinFeretDiameter"...
+%             ]};
+% 
+%         VariablesList = {...
+%             "SBRatio",...
+%             "Area",...
+%             "Perimeter",...
+%             "Eccentricity",...
+%             "Circularity",...
+%             "ConvexArea",...
+%             "MajorAxisLength",...
+%             "MinorAxisLength",...
+%             "MaxFeretDiameter",...
+%             "MinFeretDiameter"...
+%             };
+        
+        ObjectData = T{:,[...
+            "Area",...
+            "Perimeter",...
+            "Eccentricity",...
+            "Circularity",...
+            "ConvexArea",...
+            "MajorAxisLength",...
+            "MinorAxisLength",...
+            "MaxFeretDiameter",...
+            "MinFeretDiameter"...
+            ]};
+
+        VariablesList = {...
+            "Area",...
+            "Perimeter",...
+            "Eccentricity",...
+            "Circularity",...
+            "ConvexArea",...
+            "MajorAxisLength",...
+            "MinorAxisLength",...
+            "MaxFeretDiameter",...
+            "MinFeretDiameter"...
+            };
+
+        nClusters = 5;
+        nRepeats = 10;
+
+        ClusterIdxs = PODSObjectClustering(ObjectData,nClusters,nRepeats,VariablesList,[3,4,6]);
+
+        % reset (clear) the existing labels
+        PODSData.Settings.ObjectLabels = PODSLabel.empty();
+        % find set of colors (n = nClusters) distinguishable from both black and white 
+        BGcolors = [0 0 0;1 1 1];
+        LabelColors = distinguishable_colors(nClusters+1,BGcolors);
+        % create the new cluster labels
+        for idx = 1:nClusters
+            PODSData.Settings.ObjectLabels(idx) = PODSLabel(['Cluster #',num2str(idx)],LabelColors(idx,:),idx);
+        end
+        % add one additional label in case custering fails (NaNs in the clustering data -> NaNs in ClusterIdxs)
+        PODSData.Settings.ObjectLabels(end+1) = PODSLabel(['Clustering failed'],LabelColors(end,:),nClusters+1);
+
+        % use the kmeans clustering output to label each object with its cluster
+        ObjCounter = 1;
+        for g_idx = 1:PODSData.nGroups
+            for i_idx = 1:PODSData.Group(g_idx).nReplicates
+                for o_idx = 1:PODSData.Group(g_idx).Replicate(i_idx).nObjects
+                    try
+                        PODSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label = PODSData.Settings.ObjectLabels(ClusterIdxs(ObjCounter));
+                        ObjCounter = ObjCounter+1;
+                    catch
+                        PODSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label = PODSData.Settings.ObjectLabels(end);
+                        ObjCounter = ObjCounter+1;
+                    end
+                end
+            end
+        end
+
+    end
 %% Changing file input settings
 
     function [] = ChangeInputFileType(source,~)
@@ -2299,7 +2373,7 @@ pause(0.5)
         % set figure visibility to off
         PODSData.Handles.fH.Visible = 'Off';
         % open file selection window
-        [filename,path] = uigetfile('*.mat','Set directory and filename',PODSData.Settings.LastDirectory);
+        [filename,path] = uigetfile('*.mat','Choose saved PODS Project',PODSData.Settings.LastDirectory);
         % turn figure visibility back on
         PODSData.Handles.fH.Visible = 'On';
         % return focus to main figure window
@@ -2323,7 +2397,11 @@ pause(0.5)
         % attempt to load the selected file
         try
             load([path,filename],'SavedPODSData');
+            if isa(SavedPODSData,'struct')
+                SavedPODSData = PODSProject.loadobj(SavedPODSData);
+            end
         catch
+            PODSData.Handles.fH.Pointer = OldPointer;
             uialert(PODSData.Handles.fH,'Unable to load project','Error')
             return
         end
@@ -2378,14 +2456,25 @@ pause(0.5)
             return
         end
 
+        % store old pointer
+        OldPointer = PODSData.Handles.fH.Pointer;
+        % set new watch pointer while we save
+        PODSData.Handles.fH.Pointer = 'watch';
+        % update log
         UpdateLog3(source,'Saving project...','append');
 
-        % copy the handle to PODSData into a new variable, SavedPODSData
-        SavedPODSData = PODSData;
+%         % copy the handle to PODSData into a new variable, SavedPODSData
+%         SavedPODSData = PODSData;
+
+        SavedPODSData = PODSData.saveobj();
 
         % save project, v7.3 .mat file type in case > 2 GB
         save([path,filename],'SavedPODSData','-v7.3');
+        % restor old pointer
+        PODSData.Handles.fH.Pointer = OldPointer;
 
+        
+        % update log to indicate successful save
         UpdateLog3(source,['Successfully saved project:',path,filename],'append');
 
     end

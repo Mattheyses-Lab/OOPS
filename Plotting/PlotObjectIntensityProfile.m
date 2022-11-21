@@ -7,11 +7,12 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     
     DefaultAxColor = axH.Color;
     
-    xp = 0:pi/1000:pi;
+    %xp = 0:pi/1000:pi;
+    xp = linspace(0,pi,181);
 
     CurveFit = cell(1,nPixels);
 
-    for i = 1:nPixels
+    parfor i = 1:nPixels
         
         y = zeros(1,4);
         y(1:4) = Y(RowIndices(i),ColIndices(i),:);
@@ -59,12 +60,37 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     
     % initialize vector to sum up fits
     CurveFitSum = zeros(size(CurveFit{1}));
+
+    % set the current axes
     set(gcf,'CurrentAxes',axH);
     
+%     for i = 1:nPixels
+%         CurveFitSum = CurveFitSum+CurveFitsNormalized{i};
+%         % plot the fit line
+%         plot(axH,xp,CurveFitsNormalized{i},'Color','#A9A9A9','LineWidth',1,'HitTest','Off','LineStyle',':')
+%         %axH.NextPlot = 'Add';
+%         hold on
+%         % find the max of each curve and draw a vertical line at x where f(x) = YMax
+%         % to show the phase
+%         MaxVal = max(CurveFitsNormalized{i});
+%         % 2nd argument of find() set to 1 just in case MaxIdx is exactly
+%         % 0, which would make make MaxIdx also = pi
+%         MaxIdx = find(CurveFitsNormalized{i} == MaxVal,1);
+%         line(axH,[xp(MaxIdx),xp(MaxIdx)],[0,MaxVal],'LineStyle',':','LineWidth',1,'HitTest','Off');
+%     end
+    polX_combined = [];
+    polY_combined = [];
+
+    azX_combined = [];
+    azY_combined = [];
+
     for i = 1:nPixels
         CurveFitSum = CurveFitSum+CurveFitsNormalized{i};
         % plot the fit line
-        plot(axH,xp,CurveFitsNormalized{i},'Color','#A9A9A9','LineWidth',1,'HitTest','Off','LineStyle',':')
+        polX_combined = [polX_combined,NaN,xp];
+        polY_combined = [polY_combined,NaN,CurveFitsNormalized{i}];
+
+        %plot(axH,xp,CurveFitsNormalized{i},'Color','#A9A9A9','LineWidth',1,'HitTest','Off','LineStyle',':')
         %axH.NextPlot = 'Add';
         hold on
         % find the max of each curve and draw a vertical line at x where f(x) = YMax
@@ -73,8 +99,12 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
         % 2nd argument of find() set to 1 just in case MaxIdx is exactly
         % 0, which would make make MaxIdx also = pi
         MaxIdx = find(CurveFitsNormalized{i} == MaxVal,1);
-        line(axH,[xp(MaxIdx),xp(MaxIdx)],[0,MaxVal],'LineStyle',':','LineWidth',1,'HitTest','Off');
+        azX_combined = [azX_combined,NaN,xp(MaxIdx),xp(MaxIdx)];
+        azY_combined = [azY_combined,NaN,0,MaxVal];
+        %line(axH,[xp(MaxIdx),xp(MaxIdx)],[0,MaxVal],'LineStyle',':','LineWidth',1,'HitTest','Off');
     end
+    line(axH,azX_combined,azY_combined,'LineStyle',':','LineWidth',1,'HitTest','Off');
+    plot(axH,polX_combined,polY_combined,'Color','#A9A9A9','LineWidth',1,'HitTest','Off','LineStyle',':')
 
     CurveFitAvg = CurveFitSum./nPixels;
 %%
@@ -87,10 +117,8 @@ function axH = PlotObjectIntensityProfile(x,Y,Mask,axH)
     YLowerLim = MinY-PctBuffer;
     YUpperLim = MaxY+PctBuffer;
 
-
     % plot the average fit
     plot(axH,xp,CurveFitAvg,'LineWidth',4,'Color','Yellow');
-    
     
     MaxVal = max(CurveFitAvg);
     MaxIdx = find(CurveFitAvg==MaxVal,1);

@@ -639,6 +639,11 @@ function [] = UpdateImages(source)
                 PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = PODSData.Handles.ObjectPolFFCAxH.YLim;
             catch
                 disp('Warning: Error displaying object azimuth sticks');
+                % because setting the axes limits will change lim mode to 'manual', we need to set the limits
+                % if the sticks don't display properly in the try statement above. Otherwise, the limits of 
+                % the axes could be larger than the CData of the image object it holds
+                PODSData.Handles.ObjectAzimuthOverlayAxH.XLim = PODSData.Handles.ObjectPolFFCAxH.XLim;
+                PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = PODSData.Handles.ObjectPolFFCAxH.YLim;
             end
 
             try
@@ -655,6 +660,7 @@ function [] = UpdateImages(source)
                     PaddedObjNormIntensity(:,:,4)];
             catch
                 disp('Warning: Error displaying stack-normalized object intensity')
+                PODSData.Handles.ObjectNormIntStackImgH.CData = repmat(EmptyImage,1,4);
             end
 
             drawnow
@@ -662,10 +668,15 @@ function [] = UpdateImages(source)
     end
 
     function UpdateSliders()
-        % only update the sliders if the intensity display setting is active
-        if strcmp(PODSData.Settings.CurrentImageOperation,'Intensity Display')
-            PODSData.Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
-            PODSData.Handles.ReferenceIntensitySlider.Value = cImage.ReferenceIntensityDisplayLimits;
+        try
+            % only update the sliders if the intensity display setting is active
+            if strcmp(PODSData.Settings.CurrentImageOperation,'Intensity Display')
+                PODSData.Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
+                PODSData.Handles.ReferenceIntensitySlider.Value = cImage.ReferenceIntensityDisplayLimits;
+            end
+        catch
+            PODSData.Handles.PrimaryIntensitySlider.Value = [0 1];
+            PODSData.Handles.ReferenceIntensitySlider.Value = [0 1];
         end
     end
 

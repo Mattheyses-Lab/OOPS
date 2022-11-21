@@ -99,18 +99,13 @@
                 'NodeData',cGroup,...
                 'Icon',makeRGBColorSquare(cGroup.Color,10));
             PODSData.Handles.GroupNodes(GroupIdx).ContextMenu = PODSData.Handles.GroupContextMenu;
-%             tempstyle = uistyle(...
-%                 'BackgroundColor','White',...
-%                 'FontColor','Black',...
-%                 'FontWeight','bold'...
-%                 );
-%             addStyle(PODSData.Handles.GroupTree,tempstyle,'node',PODSData.Handles.GroupNodes(GroupIdx));
         end
         
         guidata(source,PODSData);
         UpdateLog3(source,['Started new project, "', PODSData.ProjectName,'", with ',num2str(PODSData.nGroups),' groups'],'append')
         UpdateSummaryDisplay(source,{'Project','Group'});
-        UpdateListBoxes(source);
+        UpdateGroupTree(source);
+        UpdateImageTree(source);
         
 %% Nested callbacks for NewProject
 

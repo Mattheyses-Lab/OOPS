@@ -39,7 +39,7 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
         try
             % throw error if we have any NaNs
             if any(isnan(Y{i}))
-                error();
+                error("Object data missing");
             end
             
             switch PODSData.Settings.SwarmPlotColorMode
@@ -56,9 +56,17 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
         
             MaxPerGroup(i) = max(Y{i});
             hold on
-        catch
-            UpdateLog3(source,['ERROR: Unable to find objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
-            MaxPerGroup(i) = NaN;
+        catch me
+            switch me.message
+                case "Object data missing"
+                    UpdateLog3(source,['ERROR: ',ExpandVariableName(Var2Get),' data missing or incomplete for objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
+                    MaxPerGroup(i) = NaN;
+                otherwise
+                    UpdateLog3(source,['ERROR: Unable to find objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
+                    MaxPerGroup(i) = NaN;
+            end
+            
+
         end
         
     end
