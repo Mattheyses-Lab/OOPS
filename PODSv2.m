@@ -1363,6 +1363,8 @@ guidata(PODSData.Handles.fH,PODSData)
 PODSData.Handles.fH.Visible = 'On';
 % set optimum font size for display
 fontsize(PODSData.Handles.fH,PODSData.Settings.DefaultFontSize,'pixels');
+% update GUI display colors
+UpdateGUITheme();
 
 drawnow
 pause(0.5)
