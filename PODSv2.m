@@ -1362,7 +1362,7 @@ guidata(PODSData.Handles.fH,PODSData)
 % set figure to visible to draw containers
 PODSData.Handles.fH.Visible = 'On';
 % set optimum font size for display
-%fontsize(PODSData.Handles.fH,PODSData.Settings.DefaultFontSize,'pixels');
+fontsize(PODSData.Handles.fH,PODSData.Settings.DefaultFontSize,'pixels');
 
 drawnow
 pause(0.5)

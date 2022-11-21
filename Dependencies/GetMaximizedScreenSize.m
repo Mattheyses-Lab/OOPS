@@ -5,6 +5,7 @@ function ScreenSize = GetMaximizedScreenSize(WithMenu)
     % create a temporary figure set to fill the entire usable screen
     % keep invisible so it doesn't flash
     TempFig = uifigure('Visible','Off','Units','Normalized','Position',[0 0 1 1]);
+    TempFig.WindowState = 'Maximized';
     % draw it
     drawnow
     % give time for drawnow
