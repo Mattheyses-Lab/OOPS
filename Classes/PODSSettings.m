@@ -49,10 +49,10 @@ classdef PODSSettings < handle
         DefaultFontSize
 
         % themes and colors for GUI display
-        GUITheme = 'Dark';
-        GUIBackgroundColor = 'Black';
+        GUITheme = 'Dark2';
+        GUIBackgroundColor = '#0E1117';
         GUIForegroundColor = 'White';
-        GUIHighlightColor = 'White';
+        GUIHighlightColor = '#999999';
 
         % sturcturing element for masking
         SEShape = 'disk';

@@ -92,7 +92,8 @@ PODSData.Handles.hGUI = uimenu(PODSData.Handles.hOptionsMenu,'Text','GUI');
 % GUI theme option
 PODSData.Handles.hGUITheme = uimenu(PODSData.Handles.hGUI,'Text','Theme');
 % options for GUI theme
-PODSData.Handles.hGUITheme_Dark = uimenu(PODSData.Handles.hGUITheme,'Text','Dark','Checked','on','Callback',@ChangeGUITheme);
+PODSData.Handles.hGUITheme_Dark = uimenu(PODSData.Handles.hGUITheme,'Text','Dark','Checked','off','Callback',@ChangeGUITheme);
+PODSData.Handles.hGUITheme_Dark2 = uimenu(PODSData.Handles.hGUITheme,'Text','Dark2','Checked','on','Callback',@ChangeGUITheme);
 PODSData.Handles.hGUITheme_Light = uimenu(PODSData.Handles.hGUITheme,'Text','Light','Checked','off','Callback',@ChangeGUITheme);
 PODSData.Handles.hGUITheme_Royal = uimenu(PODSData.Handles.hGUITheme,'Text','Royal','Checked','off','Callback',@ChangeGUITheme);
 % GUI colors options
@@ -2209,6 +2210,10 @@ pause(0.5)
                 PODSData.Settings.GUIBackgroundColor = 'Black';
                 PODSData.Settings.GUIForegroundColor = 'White';
                 PODSData.Settings.GUIHighlightColor = 'White';
+            case 'Dark2'
+                PODSData.Settings.GUIBackgroundColor = '#0E1117';
+                PODSData.Settings.GUIForegroundColor = 'White';
+                PODSData.Settings.GUIHighlightColor = '#999999';
             case 'Light'
                 PODSData.Settings.GUIBackgroundColor = 'White';
                 PODSData.Settings.GUIForegroundColor = 'Black';

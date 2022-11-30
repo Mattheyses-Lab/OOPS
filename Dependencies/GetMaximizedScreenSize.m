@@ -17,7 +17,7 @@ function ScreenSize = GetMaximizedScreenSize(WithMenu)
         % draw it
         drawnow
         % give time for drawnow
-        pause(0.1)
+        pause(0.5)
     end
     % change units to pixels
     TempFig.Units = 'Pixels';
