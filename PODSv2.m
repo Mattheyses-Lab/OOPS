@@ -10,10 +10,15 @@ end
 % this object will hold ALL project data and GUI settings
 PODSData = PODSProject;
 
-
 %% TESTING BELOW
+if ismac
+    SplashIconPath = fullfile([PODSData.Settings.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
+elseif ispc
+    SplashIconPath = fullfile([PODSData.Settings.MainPath,'\SplashScreenIcon\AppSplashScreen.png']);
+end
+SplashScreenIcon = java.awt.Toolkit.getDefaultToolkit.createImage(SplashIconPath);
 %% Create splash screen
-SplashImage = PODSData.Settings.SplashScreenIcon;
+SplashImage = SplashScreenIcon;
 Splash = javax.swing.JWindow;
 icon = javax.swing.ImageIcon(SplashImage);
 label = javax.swing.JLabel(icon);
@@ -1430,8 +1435,13 @@ fontsize(PODSData.Handles.fH,PODSData.Settings.DefaultFontSize,'pixels');
 UpdateGUITheme();
 
 %% TESTING BELOW
-% delete the splash screen
+% delete the splash screen and clear out java components so we don't run into issues when saving
 Splash.dispose();
+clear Splash
+clear label
+clear icon
+clear SplashImage
+clear SplashScreenIcon
 %% END TESTING
 
 disp('Opening...')
@@ -2579,12 +2589,13 @@ pause(0.5)
         % update view and display with newly loaded project
         UpdateGroupTree(source);
         UpdateImageTree(source);
+        UpdateLabelTree(source);
         UpdateSummaryDisplay(source);
         UpdateImageOperationDisplay();
         % update current tab using uimenu object as the source
         TabSelection(Menu2Pass);
         UpdateImages(source);
-
+        
         % restor old pointer
         PODSData.Handles.fH.Pointer = OldPointer;
 

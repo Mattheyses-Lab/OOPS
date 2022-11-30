@@ -213,7 +213,6 @@ classdef PODSObject < handle
             object.Selected = obj.Selected;
 
             % object azimuth stats
-            % (currently somewhat slow to calculate, so store them in memory)
             object.AzimuthAverage = obj.AzimuthAverage;
             object.AzimuthStd = obj.AzimuthStd;
 
@@ -438,6 +437,10 @@ classdef PODSObject < handle
             ObjectProps.ConvexImage = object.ConvexImage;
             ObjectProps.Eccentricity = object.Eccentricity;
             ObjectProps.Extrema = object.Extrema;
+
+            ObjectProps.EquivDiameter = object.EquivDiameter;
+            ObjectProps.Extent = object.Extent;
+
             ObjectProps.FilledArea = object.FilledArea;
             ObjectProps.Image = object.Image;
             ObjectProps.MajorAxisLength = object.MajorAxisLength;
@@ -446,6 +449,9 @@ classdef PODSObject < handle
             ObjectProps.Perimeter = object.Perimeter;
             ObjectProps.MaxFeretDiameter = object.MaxFeretDiameter;
             ObjectProps.MinFeretDiameter = object.MinFeretDiameter;
+
+            ObjectProps.Solidity = object.Solidity;
+
 
             ObjectProps.BWBoundary = object.Boundary;
 

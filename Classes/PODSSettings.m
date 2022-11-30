@@ -110,9 +110,6 @@ classdef PODSSettings < handle
         % object box type ('Box' or 'Boundary')
         ObjectBoxType = 'Box';
 
-        % splash screen settings
-        SplashScreenIcon
-
     end
 
     properties (Dependent = true)
@@ -145,6 +142,7 @@ classdef PODSSettings < handle
         % for adding/deleting/adjusting labels
         nLabels
         LabelColors
+
     end
     
     methods
@@ -174,13 +172,6 @@ classdef PODSSettings < handle
             elseif ispc
                 CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
                 obj.MainPath = strjoin(CurrentPathSplit(1:end-2),'\');
-            end
-
-            % try and get the java image for our splash screen
-            try
-                obj.getSplashScreenIcon();
-            catch
-                warning('Unable to fetch splash screen icon...');
             end
 
 
@@ -235,15 +226,6 @@ classdef PODSSettings < handle
                 warning('Unable to load custom mask schemes...')
             end
             
-        end
-
-        function getSplashScreenIcon(obj)
-            if ismac
-                SplashIconPath = fullfile([obj.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
-            elseif ispc
-                SplashIconPath = fullfile([obj.MainPath,'\SplashScreenIcon\AppSplashScreen.png']);
-            end
-            obj.SplashScreenIcon = java.awt.Toolkit.getDefaultToolkit.createImage(SplashIconPath);
         end
 
         function LoadCustomMaskSchemes(obj)
