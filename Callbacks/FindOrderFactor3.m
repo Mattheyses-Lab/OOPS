@@ -42,11 +42,11 @@ function [] = FindOrderFactor3(source,~)
         % !WARNING! Output is in radians! Counterclockwise with respect to the horizontal direction in the image
         cReplicate(ii).AzimuthImage(cReplicate(ii).r1) = (1/2).*atan2(cReplicate(ii).b(cReplicate(ii).r1),cReplicate(ii).a(cReplicate(ii).r1));
 
-        %apply mask to order factor image
-        temp = zeros(size(cReplicate(ii).OF_image));  
-        temp(cReplicate(ii).bw) = cReplicate(ii).OF_image(cReplicate(ii).bw);
-        cReplicate(ii).masked_OF_image = sparse(temp);
-        clear temp
+%         %apply mask to order factor image
+%         temp = zeros(size(cReplicate(ii).OF_image));  
+%         temp(cReplicate(ii).bw) = cReplicate(ii).OF_image(cReplicate(ii).bw);
+%         cReplicate(ii).masked_OF_image = sparse(temp);
+%         clear temp
         
         logmsg = [chartab,chartab,'Image-Average Order Factor: ', num2str(cReplicate(ii).OFAvg),... 
                   chartab,chartab,chartab,'Max: ', num2str(cReplicate(ii).OFMax),...

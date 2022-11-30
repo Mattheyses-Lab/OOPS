@@ -110,6 +110,9 @@ classdef PODSSettings < handle
         % object box type ('Box' or 'Boundary')
         ObjectBoxType = 'Box';
 
+        % splash screen settings
+        SplashScreenIcon
+
     end
 
     properties (Dependent = true)
@@ -138,6 +141,10 @@ classdef PODSSettings < handle
         ManualThreshEnabled
         ThreshStatisticName
         ThreshPanelTitle
+
+        % for adding/deleting/adjusting labels
+        nLabels
+        LabelColors
     end
     
     methods
@@ -149,7 +156,7 @@ classdef PODSSettings < handle
             % optimum font size
             obj.DefaultFontSize = round(obj.ScreenSize(4)*.009);
             % set up default object label (PODSLabel object)
-            obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],1);
+            obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],obj);
             % get list of supported fonts
             FontList = listfonts();
             % check if 'Consolas' is in list of supported fonts
@@ -168,6 +175,14 @@ classdef PODSSettings < handle
                 CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
                 obj.MainPath = strjoin(CurrentPathSplit(1:end-2),'\');
             end
+
+            % try and get the java image for our splash screen
+            try
+                obj.getSplashScreenIcon();
+            catch
+                warning('Unable to fetch splash screen icon...');
+            end
+
 
             try
                 Colormaps_mat_file = load('Colormaps.mat');
@@ -222,6 +237,15 @@ classdef PODSSettings < handle
             
         end
 
+        function getSplashScreenIcon(obj)
+            if ismac
+                SplashIconPath = fullfile([obj.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
+            elseif ispc
+                SplashIconPath = fullfile([obj.MainPath,'\SplashScreenIcon\AppSplashScreen.png']);
+            end
+            obj.SplashScreenIcon = java.awt.Toolkit.getDefaultToolkit.createImage(SplashIconPath);
+        end
+
         function LoadCustomMaskSchemes(obj)
             if ismac
                 SchemeFilesList = dir(fullfile([obj.MainPath,'/CustomMasks/Schemes'],'*.mat'));
@@ -264,6 +288,36 @@ classdef PODSSettings < handle
             obj.ScatterPlotSettings = ScatterPlotSettings_mat_file.ScatterPlotSettings;
         end
     
+        function AddNewObjectLabel(obj,LabelName,LabelColor)
+            if isempty(LabelColor)
+                BGColors = [0 0 0;1 1 1];
+                LabelColor = distinguishable_colors(1,[obj.LabelColors;BGColors]);
+            end
+
+            if isempty(LabelName)
+                LabelName = ['Untitled Label ',num2str(obj.nLabels+1)];
+            end
+
+            obj.ObjectLabels(end+1,1) = PODSLabel(LabelName,LabelColor,obj);
+        end
+
+         function DeleteObjectLabel(obj,Label)
+            Label2Delete = Label;
+            LabelIdx = find(obj.ObjectLabels==Label2Delete)
+            if LabelIdx == 1
+                if obj.nLabels > 1
+                    obj.ObjectLabels = obj.ObjectLabels(2:end);
+                else
+                    obj.ObjectLabels = PODSLabel.empty();
+                end
+            elseif LabelIdx == obj.nLabels
+                obj.ObjectLabels = obj.ObjectLabels(1:end-1);
+            else
+                obj.ObjectLabels = [obj.ObjectLabels(1:LabelIdx-1);obj.ObjectLabels(LabelIdx+1:end)];
+            end
+            delete(Label2Delete);
+         end
+
         function AzimuthLineAlpha = get.AzimuthLineAlpha(obj)
             AzimuthLineAlpha = obj.AzimuthDisplaySettings.LineAlpha;
         end
@@ -373,6 +427,21 @@ classdef PODSSettings < handle
                     ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
             end
         end        
+
+
+        function nLabels = get.nLabels(obj)
+            % find number of unique object labels
+            nLabels = numel(obj.ObjectLabels);
+        end
+
+        function LabelColors = get.LabelColors(obj)
+            % initialize label colors array
+            LabelColors = zeros(obj.nLabels,3);
+            % add the colors from each label
+            for i = 1:obj.nLabels
+                LabelColors(i,:) = obj.ObjectLabels(i).Color;
+            end
+        end
 
     end
 end

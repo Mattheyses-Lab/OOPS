@@ -1,7 +1,15 @@
 function UpdateImageTree(source)
 
     PODSData = guidata(source);
-    CurrentGroup = PODSData.CurrentGroup;
+
+    if PODSData.nGroups >= 1
+        CurrentGroup = PODSData.CurrentGroup;
+    else
+        % make sure tree contains no nodes
+        delete(PODSData.Handles.ImageTree.Children);
+        UpdateObjectListBox(source);
+        return
+    end
     
     % if we have at least one replicate
     if CurrentGroup.nReplicates >= 1
@@ -22,6 +30,5 @@ function UpdateImageTree(source)
         delete(PODSData.Handles.ImageTree.Children);
         UpdateObjectListBox(source);
     end
-
 
 end

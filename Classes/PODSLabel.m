@@ -1,10 +1,10 @@
-classdef PODSLabel < dynamicprops
+classdef PODSLabel < handle
 % simple class used for labeling objects
     
     properties
         Name char
         Color double
-        LabelNumber char
+        Settings PODSSettings
     end
     
     properties(Dependent = true)
@@ -12,15 +12,17 @@ classdef PODSLabel < dynamicprops
         NameAndColor
 
         ColorString
+
+        SelfIdx
         
     end
     
     methods
         
-        function obj = PODSLabel(Name,Color,LabelIdx)
+        function obj = PODSLabel(Name,Color,Settings)
             obj.Name = Name;
             obj.Color = Color;
-            obj.LabelNumber = num2str(LabelIdx);
+            obj.Settings = Settings;
         end
         
         function NameAndColor = get.NameAndColor(obj)
@@ -30,6 +32,10 @@ classdef PODSLabel < dynamicprops
         function ColorString = get.ColorString(obj)
             ColorStringCell = colornames('MATLAB',obj.Color);
             ColorString = ColorStringCell{1};
+        end
+
+        function SelfIdx = get.SelfIdx(obj)
+            SelfIdx = find(obj.Settings.ObjectLabels==obj);
         end
 
     end

@@ -13,6 +13,8 @@ classdef PODSObject < handle
         ConvexHull
         ConvexImage
         Eccentricity
+        EquivDiameter
+        Extent
         Extrema
         FilledArea
         Image
@@ -20,6 +22,7 @@ classdef PODSObject < handle
         MinorAxisLength
         Orientation
         Perimeter
+        Solidity
         MaxFeretDiameter
         MinFeretDiameter
         
@@ -100,6 +103,9 @@ classdef PODSObject < handle
 
         % object name, based on SelfIdx
         Name
+
+        % simplified boundary (may store in memory if becomes useful)
+        SimplifiedBoundary
         
     end
 
@@ -129,6 +135,8 @@ classdef PODSObject < handle
             obj.ConvexImage = ObjectProps.ConvexImage;
             obj.Eccentricity = ObjectProps.Eccentricity;
             obj.Extrema = ObjectProps.Extrema;
+            obj.EquivDiameter = ObjectProps.EquivDiameter;
+            obj.Extent = ObjectProps.Extent;
             obj.FilledArea = ObjectProps.FilledArea;
             obj.Image = ObjectProps.Image;
             obj.MajorAxisLength = ObjectProps.MajorAxisLength;
@@ -138,6 +146,7 @@ classdef PODSObject < handle
             obj.PixelIdxList = ObjectProps.PixelIdxList;
             obj.PixelList = ObjectProps.PixelList;
             obj.SubarrayIdx = ObjectProps.SubarrayIdx;
+            obj.Solidity = ObjectProps.Solidity;
             obj.MaxFeretDiameter = ObjectProps.MaxFeretDiameter;
             obj.MinFeretDiameter = ObjectProps.MinFeretDiameter;
 
@@ -164,6 +173,8 @@ classdef PODSObject < handle
             object.ConvexHull = obj.ConvexHull;
             object.ConvexImage = obj.ConvexImage;
             object.Eccentricity = obj.Eccentricity;
+            object.EquivDiameter = obj.EquivDiameter;
+            object.Extent = obj.Extent;
             object.Extrema = obj.Extrema;
             object.FilledArea = obj.FilledArea;
             object.Image = obj.Image;
@@ -171,6 +182,7 @@ classdef PODSObject < handle
             object.MinorAxisLength = obj.MinorAxisLength;
             object.Orientation = obj.Orientation;
             object.Perimeter = obj.Perimeter;
+            object.Solidity = obj.Solidity;
             object.MaxFeretDiameter = obj.MaxFeretDiameter;
             object.MinFeretDiameter = obj.MinFeretDiameter;
 
@@ -223,6 +235,13 @@ classdef PODSObject < handle
             Name = ['Object ',num2str(obj.SelfIdx)];
         end
 
+        function SimplifiedBoundary = get.SimplifiedBoundary(obj)
+            x = obj.Boundary(:,2);
+            y = obj.Boundary(:,1);
+            temp_poly = polyshape(x,y,"Simplify",false,"KeepCollinearPoints",false);
+            SimplifiedBoundary = [temp_poly.Vertices(:,2) temp_poly.Vertices(:,1)];
+        end
+
         function OFAvg = get.OFAvg(obj)
             % average OF of all pixels identified by the mask
             try
@@ -267,7 +286,7 @@ classdef PODSObject < handle
         end        
         
         function LabelIdx = get.LabelIdx(obj)
-            LabelIdx = str2double(obj.Label.LabelNumber);
+            LabelIdx = obj.Label.SelfIdx;
         end
         
         function LabelName = get.LabelName(obj)

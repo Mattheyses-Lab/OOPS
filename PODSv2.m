@@ -10,6 +10,27 @@ end
 % this object will hold ALL project data and GUI settings
 PODSData = PODSProject;
 
+
+%% TESTING BELOW
+%% Create splash screen
+SplashImage = PODSData.Settings.SplashScreenIcon;
+Splash = javax.swing.JWindow;
+icon = javax.swing.ImageIcon(SplashImage);
+label = javax.swing.JLabel(icon);
+Splash.getContentPane.add(label);
+Splash.setAlwaysOnTop(true);
+Splash.pack;
+%% set the splash image to the center of the screen
+screenSize = Splash.getToolkit.getScreenSize;
+screenHeight = screenSize.height;
+screenWidth = screenSize.width;
+% get the actual splashImage size
+imgHeight = icon.getIconHeight;
+imgWidth = icon.getIconWidth;
+Splash.setLocation((screenWidth-imgWidth)/2,(screenHeight-imgHeight)/2);
+Splash.show % show the splash screen
+%% END TESTING
+
 PODSData.Handles = struct();
 
 % create the uifigure (main gui window)
@@ -34,6 +55,9 @@ set(gcf,'defaultUipanelAutoResizeChildren','Off');
 % text properties
 set(gcf,'defaultTextFontName',PODSData.Settings.DefaultFont);
 set(gcf,'defaultTextFontWeight','bold');
+
+% turn off any warning that do not adversely affect computation
+warning('off','MATLAB:polyshape:repairedBySimplify');
 
 %% CHECKPOINT
 
@@ -253,8 +277,8 @@ PODSData.Handles.ColormapsSettingsGrid.RowHeight = {20,'fit','1x',30};
 PODSData.Handles.ColormapsSettingsGrid.ColumnWidth = {'1x'};
     
 PODSData.Handles.SettingsDropDown = uidropdown(PODSData.Handles.ColormapsSettingsGrid,...
-    'Items',{'Colormaps','Azimuth Display','Scatter Plot','Swarm Plot'},...
-    'ItemsData',{'ColormapsSettings','AzimuthDisplaySettings','ScatterPlotSettings','SwarmPlotSettings'},...
+    'Items',{'Colormaps','Azimuth Display','Scatter Plot','Swarm Plot','Label'},...
+    'ItemsData',{'ColormapsSettings','AzimuthDisplaySettings','ScatterPlotSettings','SwarmPlotSettings','LabelSettings'},...
     'Value','ColormapsSettings',...
     'ValueChangedFcn',@ChangeSettingsType,...
     'FontName',PODSData.Settings.DefaultFont);
@@ -506,6 +530,47 @@ PODSData.Handles.SwarmPlotColorModeDropdown = uidropdown('Parent',PODSData.Handl
 PODSData.Handles.SwarmPlotColorModeDropdown.Layout.Row = 4;
 PODSData.Handles.SwarmPlotColorModeDropdown.Layout.Column = 2;
 
+%% Label settings
+
+PODSData.Handles.LabelSettingsGrid = uigridlayout(PODSData.Handles.SettingsPanel,[2,1],...
+    'BackgroundColor','Black',...
+    'Visible','Off');
+PODSData.Handles.LabelSettingsGrid.Padding = [5 5 5 5];
+PODSData.Handles.LabelSettingsGrid.RowSpacing = 5;
+PODSData.Handles.LabelSettingsGrid.ColumnSpacing = 5;
+PODSData.Handles.LabelSettingsGrid.RowHeight = {20,'fit'};
+PODSData.Handles.LabelSettingsGrid.ColumnWidth = {'1x'};
+
+% setting up x-axis variable selection
+PODSData.Handles.LabelListBoxPanel = uipanel(PODSData.Handles.LabelSettingsGrid,...
+    'Title','Object labels');
+PODSData.Handles.LabelListBoxPanel.Layout.Row = 2;
+PODSData.Handles.LabelListBoxPanel.Layout.Column = 1;
+
+PODSData.Handles.LabelGrid = uigridlayout(PODSData.Handles.LabelListBoxPanel,[1,1]);
+PODSData.Handles.LabelGrid.Padding = [0 0 0 0];
+
+PODSData.Handles.LabelTree = uitree(PODSData.Handles.LabelGrid,...
+    'NodeTextChangedFcn',@LabelTreeNodeTextChanged,...
+    'FontName',PODSData.Settings.DefaultFont,...
+    'FontWeight','bold',...
+    'Interruptible','off',...
+    'Editable','on');
+
+% context menu for individual labels
+PODSData.Handles.LabelContextMenu = uicontextmenu(PODSData.Handles.fH);
+PODSData.Handles.LabelContextMenu_Delete = uimenu(PODSData.Handles.LabelContextMenu,'Text','Delete label','MenuSelectedFcn',{@DeleteLabel,PODSData.Handles.fH});
+PODSData.Handles.LabelContextMenu_ChangeColor = uimenu(PODSData.Handles.LabelContextMenu,'Text','Change color','MenuSelectedFcn',{@EditLabelColor,PODSData.Handles.fH});
+PODSData.Handles.LabelContextMenu_AddNewLabel = uimenu(PODSData.Handles.LabelContextMenu,'Text','New label','MenuSelectedFcn',@AddNewLabel);
+
+uitreenode(PODSData.Handles.LabelTree,...
+    'Text',PODSData.Settings.ObjectLabels(1).Name,...
+    'NodeData',PODSData.Settings.ObjectLabels(1),...
+    'ContextMenu',PODSData.Handles.LabelContextMenu,...
+    'Icon',makeRGBColorSquare(PODSData.Settings.ObjectLabels(1).Color,10));
+
+
+
 % draw the current figure to update final container sizes
 drawnow
 pause(0.05)
@@ -590,9 +655,7 @@ PODSData.Handles.ImgPanel2.Layout.Column = [4 5];
 % add these to an array so we can change their settings simultaneously
 PODSData.Handles.LargePanels = [PODSData.Handles.ImgPanel1,PODSData.Handles.ImgPanel2];
 
-%% CHECKPOINT
 
-disp('Drawing the panels...')
 
 %% draw all the panels and pause briefly for more predictable performance
 drawnow
@@ -1016,7 +1079,8 @@ disp('Setting up large image axes...')
         'HitTest','Off',...
         'FontName',PODSData.Settings.DefaultFont);
     
-    disableDefaultInteractivity(PODSData.Handles.SwarmPlotAxH);
+    %disableDefaultInteractivity(PODSData.Handles.SwarmPlotAxH);
+    PODSData.Handles.SwarmPlotAxH.Interactions = [dataTipInteraction];
     % set axis title
     PODSData.Handles.SwarmPlotAxH = SetAxisTitle(PODSData.Handles.SwarmPlotAxH,'Object OF (per group)');
     
@@ -1343,7 +1407,7 @@ set(PODSData.Handles.ObjectSelector,'Visible','On');
 
 % testing below
 % set uipanel linewidth
-set(findobj(PODSData.Handles.fH,'type','uipanel'),'BorderWidth',0.5);
+set(findobj(PODSData.Handles.fH,'type','uipanel'),'BorderWidth',1);
 % end testing
 
 % initialize some graphics placeholder objects
@@ -1359,25 +1423,32 @@ PODSData.Handles.ObjectAzimuthLines = gobjects(1,1);
 % add PODSData to the gui using guidata
 % (this is how we will retain access to the data across different functions)
 guidata(PODSData.Handles.fH,PODSData)
-% set figure to visible to draw containers
-PODSData.Handles.fH.Visible = 'On';
 % set optimum font size for display
 fontsize(PODSData.Handles.fH,PODSData.Settings.DefaultFontSize,'pixels');
 % update GUI display colors
 UpdateGUITheme();
 
+%% TESTING BELOW
+% delete the splash screen
+Splash.dispose();
+%% END TESTING
+
+disp('Opening...')
+
+% set figure to visible to draw containers
+PODSData.Handles.fH.Visible = 'On';
+
 drawnow
 pause(0.5)
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% NESTED FUNCTIONS - VARIOUS GUI CALLBACKS AND ACCESSORY FUNCTIONS
 
 %% Context menu callbacks
-%% TESTING
-%     function EditGroupName(source,event)
-%         source.Editable = 'On';
-%     end
+%% Group uitree callbacks
 
     function GroupTreeNodeTextChanged(source,event)
         event.Node.NodeData.GroupName = event.Node.Text;
@@ -1416,6 +1487,8 @@ pause(0.5)
             UpdateImages(source);
         end
     end
+
+%% Image uitree callbacks
 
     function DeleteImage(source,event,fH)
 
@@ -1621,6 +1694,76 @@ pause(0.5)
         PODSData.Settings.UpdateColormapsSettings();
     end
 
+%% Labels settings
+
+    function LabelTreeNodeTextChanged(source,event)
+        event.Node.NodeData.Name = event.Node.Text;
+    end
+
+    function DeleteLabel(source,event,fH)
+        if numel(PODSData.Settings.ObjectLabels)==1
+            uialert(PODSData.Handles.fH,'There must be at least one object label','Error');
+            return
+        end
+
+        SelectedNode = fH.CurrentObject;
+        cLabel = SelectedNode.NodeData;
+        UpdateLog3(fH,['Deleting [Label:',cLabel.Name,']...'],'append');
+        delete(SelectedNode)
+        % before deleting the label, we need to check for any unlabeled objects
+        ObjectsWithOldLabel = PODSData.getObjectsByLabel(cLabel);
+        % delete the old label
+        PODSData.Settings.DeleteObjectLabel(cLabel);
+        % add new label to the now unlabeled objects, if necessary
+        if ~isempty(ObjectsWithOldLabel)
+            UpdateLog3(fH,[num2str(numel(ObjectsWithOldLabel)),' objects affected. Reassigning default label...'],'append');
+            % empty label object
+            DefaultLabel = PODSLabel.empty();
+            % chack if the default label exists
+            for LabelIdx = 1:numel(PODSData.Settings.ObjectLabels)
+                Label = PODSData.Settings.ObjectLabels(LabelIdx);
+                if strcmp(Label.Name,'Default')
+                    DefaultLabel = Label;
+                    break
+                end
+            end
+            % if default label not found...
+            if isempty(DefaultLabel)
+                % create a new default label
+                PODSData.Settings.AddNewObjectLabel(...
+                    'Default',...
+                    distinguishable_colors(1,PODSData.Settings.LabelColors));
+                DefaultLabel = PODSData.Settings.ObjectLabels(end);
+            end
+            % add the new label to each of the unlabeled objects
+            [ObjectsWithOldLabel(:).Label] = deal(DefaultLabel);
+        end
+        UpdateLabelTree(source);
+        UpdateLog3(fH,'Done.','append');
+    end
+
+    function AddNewLabel(source,event)
+        PODSData.Settings.AddNewObjectLabel([],[]);
+        NewLabel = PODSData.Settings.ObjectLabels(end);
+        newNode = uitreenode(PODSData.Handles.LabelTree,...
+            'Text',NewLabel.Name,...
+            'NodeData',NewLabel,...
+            'Icon',makeRGBColorSquare(NewLabel.Color,5));
+        newNode.ContextMenu = PODSData.Handles.LabelContextMenu;
+    end
+
+    function EditLabelColor(source,event,fH)
+        SelectedNode = fH.CurrentObject;
+        cLabel = SelectedNode.NodeData;
+        cLabel.Color = uisetcolor();
+        figure(fH);
+        SelectedNode.Icon = makeRGBColorSquare(cLabel.Color,1);
+        if strcmp(PODSData.Settings.CurrentTab,'Plots')
+            UpdateImages(source);
+        end
+    end
+
+
 %% Callbacks controlling dynamic resizing of GUI containers
 
     function [] = ResetContainerSizes(source,~)
@@ -1723,6 +1866,7 @@ pause(0.5)
                 addApplyMaskToolbarBtn;
                 addLineScanToolbarBtn;
                 addExportAxesToolbarBtn;
+                addShowAsOverlayToolbarBtn;
             case 'AverageIntensity'
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
@@ -1756,6 +1900,7 @@ pause(0.5)
             btn.Icon = 'MagnifyingGlassBlackAndYellow.png';
             btn.ValueChangedFcn = @ZoomToCursor;
             btn.Tag = ['ZoomToCursor',axH.Tag];
+            btn.Tooltip = 'Zoom to cursor';
             PODSData.Handles.(btn.Tag) = btn;            
         end
         
@@ -1764,6 +1909,7 @@ pause(0.5)
             btn.Icon = 'MaskIcon.png';
             btn.ValueChangedFcn = @tbApplyMaskStateChanged;
             btn.Tag = ['ApplyMask',axH.Tag];
+            btn.Tooltip = 'Apply mask';
             PODSData.Handles.(btn.Tag) = btn;
         end
         
@@ -1772,6 +1918,7 @@ pause(0.5)
             btn.Icon = 'ShowSelectionIcon.png';
             btn.ValueChangedFcn = @tbShowSelectionStateChanged;
             btn.Tag = ['ShowSelection',axH.Tag];
+            btn.Tooltip = 'Show objects';
             PODSData.Handles.(btn.Tag) = btn;
         end
         
@@ -1780,6 +1927,7 @@ pause(0.5)
             btn.Icon = 'RectangularROIIcon.png';
             btn.ButtonPushedFcn = @tbRectangularROI;
             btn.Tag = ['RectangularROI',axH.Tag];
+            btn.Tooltip = 'Select objects (rectangle)';
             PODSData.Handles.(btn.Tag) = btn;
         end
 
@@ -1788,6 +1936,7 @@ pause(0.5)
             btn.Icon = 'LassoToolIcon.png';
             btn.ButtonPushedFcn = @tbLassoROI;
             btn.Tag = ['LassoROI',axH.Tag];
+            btn.Tooltip = 'Select objects (lasso)';
             PODSData.Handles.(btn.Tag) = btn;
         end        
         
@@ -1796,6 +1945,7 @@ pause(0.5)
             btn.Icon = 'ShowReferenceImageIcon.png';
             btn.ValueChangedFcn = @tbShowReferenceImageStateChanged;
             btn.Tag = ['ShowReferenceImage',axH.Tag];
+            btn.Tooltip = 'Show reference image';
             PODSData.Handles.(btn.Tag) = btn;
         end
 
@@ -1804,6 +1954,7 @@ pause(0.5)
             btn.Icon = 'ShowReferenceImageIcon.png';
             btn.ValueChangedFcn = @tbShowAsOverlayStateChanged;
             btn.Tag = ['ShowAsOverlay',axH.Tag];
+            btn.Tooltip = 'Intensity overlay';
             PODSData.Handles.(btn.Tag) = btn;
         end
         
@@ -1812,6 +1963,7 @@ pause(0.5)
             btn.Icon = 'LineScanIcon.png';
             btn.ButtonPushedFcn = @tbLineScan;
             btn.Tag = ['LineScan',axH.Tag];
+            btn.Tooltip = 'Integrated linescan';
             PODSData.Handles.(btn.Tag) = btn;
         end
 
@@ -1820,6 +1972,7 @@ pause(0.5)
             btn.Icon = 'ExportAxesIcon.png';
             btn.ButtonPushedFcn = @tbExportAxes;
             btn.Tag = ['ExportAxes',axH.Tag];
+            btn.Tooltip = 'Export image';
             PODSData.Handles.(btn.Tag) = btn;
         end
         
@@ -1882,7 +2035,7 @@ pause(0.5)
         % get the object data table
         T = SavePODSData(source);
 
-% All object properties
+%% All object properties
 %         ObjectData = T{:,[...
 %             "ObjectAvgOF",...
 %             "ObjectAvgAzimuth",...
@@ -1918,64 +2071,82 @@ pause(0.5)
 %             "MaxFeretDiameter",...
 %             "MinFeretDiameter"...
 %             };
-% end all object properties
+%% end all object properties
 
-        ObjectData = T{:,[...
-            "SBRatio",...
-            "Area",...
-            "Perimeter",...
-            "Eccentricity",...
-            "ConvexArea",...
-            "MajorAxisLength",...
-            "MinorAxisLength",...
-            "MaxFeretDiameter",...
-            "MinFeretDiameter"...
-            ]};
+        VarLongList = PODSData.Settings.SwarmPlotVariablesLong;
+        VarShortList = PODSData.Settings.SwarmPlotVariablesShort;
 
-        VariablesList = {...
-            "SBRatio",...
-            "Area",...
-            "Perimeter",...
-            "Eccentricity",...
-            "ConvexArea",...
-            "MajorAxisLength",...
-            "MinorAxisLength",...
-            "MaxFeretDiameter",...
-            "MinFeretDiameter"...
-            };
+        ClusterSettings = GetClusterSettings(VarShortList);
 
-        nClusters = 3;
+        ObjectData = T{:,string(ClusterSettings.VarList)};
+
+        VariablesList = ClusterSettings.VarList;
+
+        nClusters = ClusterSettings.nClusters;
+
+        nClustersMode = ClusterSettings.nClustersMode;
+
+        Criterion = ClusterSettings.Criterion;
+
         nRepeats = 10;
 
-        ClusterIdxs = PODSObjectClustering(ObjectData,nClusters,nRepeats,VariablesList,[1,2,3]);
+        [ClusterIdxs,OptimalK] = PODSObjectClustering(ObjectData,...
+            nClusters,...
+            nRepeats,...
+            VariablesList,...
+            [1,1,1],...
+            nClustersMode,...
+            Criterion);
+
+        nClusters = OptimalK;
 
         % reset (clear) the existing labels
         PODSData.Settings.ObjectLabels = PODSLabel.empty();
         % find set of colors (n = nClusters) distinguishable from both black and white 
         BGcolors = [0 0 0;1 1 1];
-        LabelColors = distinguishable_colors(nClusters+1,BGcolors);
+        LabelColors = distinguishable_colors(nClusters,BGcolors);
         % create the new cluster labels
         for idx = 1:nClusters
-            PODSData.Settings.ObjectLabels(idx) = PODSLabel(['Cluster #',num2str(idx)],LabelColors(idx,:),idx);
+            PODSData.Settings.ObjectLabels(idx,1) = PODSLabel(['Cluster #',num2str(idx)],LabelColors(idx,:),PODSData.Settings);
         end
-        % add one additional label in case custering fails (NaNs in the clustering data -> NaNs in ClusterIdxs)
-        PODSData.Settings.ObjectLabels(end+1) = PODSLabel(['Clustering failed'],LabelColors(end,:),nClusters+1);
 
-        % use the kmeans clustering output to label each object with its cluster
+        if any(isnan(ClusterIdxs))
+            % add one additional label in case custering fails (NaNs in the clustering data -> NaNs in ClusterIdxs)
+            PODSData.Settings.ObjectLabels(end+1,1) = PODSLabel(['Clustering failed'],distinguishable_colors(1,[LabelColors;BGColors]),PODSData.Settings);
+        end
+
+        % Testing below
+        PieChartData = cell(PODSData.nGroups,1);
+        for g_idx = 1:PODSData.nGroups
+            PieChartData{g_idx,1} = {};
+        end
+        % end testing
+
+        % use the k-means clustering output to label each object with its cluster
         ObjCounter = 1;
         for g_idx = 1:PODSData.nGroups
             for i_idx = 1:PODSData.Group(g_idx).nReplicates
                 for o_idx = 1:PODSData.Group(g_idx).Replicate(i_idx).nObjects
                     try
                         PODSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label = PODSData.Settings.ObjectLabels(ClusterIdxs(ObjCounter));
+                        PieChartData{g_idx,1}{end+1} = PODSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label.Name;
                         ObjCounter = ObjCounter+1;
                     catch
                         PODSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label = PODSData.Settings.ObjectLabels(end);
+                        PieChartData{g_idx,1}{end+1} = PODSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label.Name;
                         ObjCounter = ObjCounter+1;
                     end
                 end
             end
         end
+
+        for g_idx = 1:PODSData.nGroups
+            figure('Name','Cluster proportion');
+            pie(categorical(PieChartData{g_idx,1}));
+            title(['Group ',num2str(g_idx)]);
+        end
+
+        UpdateLabelTree(source);
 
     end
 %% Changing file input settings
@@ -2020,6 +2191,7 @@ pause(0.5)
 
         % only update summary overview if 'Project' is selected
         UpdateSummaryDisplay(source,{'Project'});
+        UpdateImages(source);
     end
 
 %% changing GUI theme (dark or light)
@@ -2065,6 +2237,12 @@ pause(0.5)
         set(findobj(PODSData.Handles.fH,'type','axes'),'Color',GUIBackgroundColor);
         set(findobj(PODSData.Handles.fH,'type','uilabel'),'FontColor',GUIForegroundColor);
         set(findobj(PODSData.Handles.fH,'type','uilabel'),'BackgroundColor',GUIBackgroundColor);
+
+        set(findobj(PODSData.Handles.fH,'type','uilistbox'),'BackgroundColor',GUIBackgroundColor);
+        set(findobj(PODSData.Handles.fH,'type','uilistbox'),'FontColor',GUIForegroundColor);
+
+        set(findobj(PODSData.Handles.fH,'type','uitree'),'BackgroundColor',GUIBackgroundColor);
+        set(findobj(PODSData.Handles.fH,'type','uitree'),'FontColor',GUIForegroundColor);
 
         PODSData.Handles.ScatterPlotAxH.YAxis.Label.Color = GUIForegroundColor;
         PODSData.Handles.ScatterPlotAxH.XAxis.Label.Color = GUIForegroundColor;
@@ -2287,18 +2465,18 @@ pause(0.5)
             UpdateLog3(source,['    ',cImage.pol_shortname,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
             % detect local S/B for one image
             cImage.FindLocalSB();
-            % preallocate filtered mask and OF image
-            cImage.bwFiltered = zeros(size(cImage.bw));
-            cImage.OFFiltered = zeros(size(cImage.OF_image));
-            % fill filtered mask and OF images according to local S/B cutoff level
-            if cImage.nObjects > 0
-                for ii = 1:length(cImage.Object)
-                    if cImage.Object(ii).SBRatio >= cImage.SBCutoff
-                        cImage.bwFiltered(cImage.Object(ii).PixelIdxList) = 1;
-                    end
-                    cImage.OFFiltered(cImage.bwFiltered) = cImage.OF_image(cImage.bwFiltered);
-                end
-            end
+%             % preallocate filtered mask and OF image
+%             cImage.bwFiltered = zeros(size(cImage.bw));
+%             cImage.OFFiltered = zeros(size(cImage.OF_image));
+%             % fill filtered mask and OF images according to local S/B cutoff level
+%             if cImage.nObjects > 0
+%                 for ii = 1:length(cImage.Object)
+%                     if cImage.Object(ii).SBRatio >= cImage.SBCutoff
+%                         cImage.bwFiltered(cImage.Object(ii).PixelIdxList) = 1;
+%                     end
+%                     cImage.OFFiltered(cImage.bwFiltered) = cImage.OF_image(cImage.bwFiltered);
+%                 end
+%             end
             % log update to indicate we are done with this image
             UpdateLog3(source,['        Local S/B detected for ',num2str(cImage.nObjects),' objects...'],'append');
             % increment counter
@@ -2441,11 +2619,16 @@ pause(0.5)
 %         % copy the handle to PODSData into a new variable, SavedPODSData
 %         SavedPODSData = PODSData;
 
+        tic
         SavedPODSData = PODSData.saveobj();
 
+        disp('Saving data struct...')
         % save project, v7.3 .mat file type in case > 2 GB
         save([path,filename],'SavedPODSData','-v7.3');
-        % restor old pointer
+        % display how long it took to save the data
+        timeElapsed = toc;
+        disp(['Total time elapsed: ',num2str(timeElapsed)])
+        % restore old pointer
         PODSData.Handles.fH.Pointer = OldPointer;
 
         
@@ -2706,9 +2889,9 @@ pause(0.5)
         save([SaveLocation,'_AvgOFPerImage','.mat'],'-struct','S');
         clear S
         
-        % create a struct with dynamic field name for unambiguous naming of the saved variable
-        S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_AvgFilteredOFPerImage'])) = full([CurrentGroup.Replicate(:).FiltOFAvg]');
-        save([SaveLocation,'_AvgFilteredOFPerImage','.mat'],'-struct','S');
+%         % create a struct with dynamic field name for unambiguous naming of the saved variable
+%         S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_AvgFilteredOFPerImage'])) = full([CurrentGroup.Replicate(:).FiltOFAvg]');
+%         save([SaveLocation,'_AvgFilteredOFPerImage','.mat'],'-struct','S');
         
         UpdateLog3(source,['Done saving data for Group:',CurrentGroup.GroupName],'append');
         

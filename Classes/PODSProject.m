@@ -53,10 +53,8 @@ classdef PODSProject < handle
             end
 
             %return
-
          end
          
-
          function AddNewGroup(obj,GroupName)
             NewColor = obj.getUniqueGroupColor();
             obj.Group(end+1,1) = PODSGroup(GroupName,obj.Settings,obj);
@@ -73,6 +71,21 @@ classdef PODSProject < handle
                  NewColor = distinguishable_colors(1,CurrentColors);
              else
                  NewColor = distinguishable_colors(1);
+             end
+         end
+
+         function Objects = getObjectsByLabel(obj,Label)
+             ObjsFound = 0;
+             Objects = PODSObject.empty();
+             if obj.nGroups >= 1
+                for i = 1:obj.nGroups
+                    TotalObjsCounted = numel(Objects);
+                    tempObjects = obj.Group(i).getObjectsByLabel(Label);
+                    ObjsFound = numel(tempObjects);
+                    Objects(TotalObjsCounted+1:TotalObjsCounted+ObjsFound,1) = tempObjects;
+                end
+             else
+                Objects = [];
              end
          end
 
@@ -108,7 +121,11 @@ classdef PODSProject < handle
          end
 
          function CurrentGroup = get.CurrentGroup(obj)
-             CurrentGroup = obj.Group(obj.CurrentGroupIndex);
+             try
+                CurrentGroup = obj.Group(obj.CurrentGroupIndex);
+             catch
+                 CurrentGroup = PODSGroup.empty();
+             end
          end  
          
          function CurrentImage = get.CurrentImage(obj)

@@ -48,7 +48,7 @@ classdef PODSImage < handle
 %% Masking            
         % masks
         bw logical
-        bwFiltered logical
+        %bwFiltered logical
         
         % label matrices
         L
@@ -59,8 +59,8 @@ classdef PODSImage < handle
         
         % masking steps
         I double
-        BGImg double
-        BGSubtractedImg double
+%         BGImg double
+%         BGSubtractedImg double
         EnhancedImg double
 
         MaskName char
@@ -85,7 +85,7 @@ classdef PODSImage < handle
 
         AzimuthImage double
         OF_image double
-        masked_OF_image double
+        %masked_OF_image double
         a double
         b double
 
@@ -98,8 +98,8 @@ classdef PODSImage < handle
         
 %% Filtering
 
-        SBCutoff = 3
-        OFFiltered double
+        %SBCutoff = 3
+        %OFFiltered double
         
 %%
         PrimaryIntensityDisplayLimits = [0 1];
@@ -197,13 +197,6 @@ classdef PODSImage < handle
             replicate.Width = obj.Width;
             replicate.Height = obj.Height;
 
-            replicate.pol_rawdata = obj.pol_rawdata;
-            replicate.RawPolAvg = obj.RawPolAvg;
-            replicate.pol_ffc = obj.pol_ffc;
-            replicate.Pol_ImAvg = obj.Pol_ImAvg;
-            replicate.norm = obj.norm;
-            replicate.r1 = obj.r1;
-
             replicate.FilesLoaded = obj.FilesLoaded;
             replicate.FFCDone = obj.FFCDone;
             replicate.MaskDone = obj.MaskDone;
@@ -213,17 +206,24 @@ classdef PODSImage < handle
             replicate.ObjectAzimuthDone = obj.ObjectAzimuthDone;
             replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
 
+            replicate.pol_rawdata = obj.pol_rawdata;
+            %replicate.RawPolAvg = obj.RawPolAvg;
+            replicate.pol_ffc = obj.pol_ffc;
+            %replicate.Pol_ImAvg = obj.Pol_ImAvg;
+            %replicate.norm = obj.norm;
+            %replicate.r1 = obj.r1;
+
             replicate.bw = obj.bw;
-            replicate.bwFiltered = obj.bwFiltered;
+%             replicate.bwFiltered = obj.bwFiltered;
 
             replicate.L = obj.L;
 
             replicate.ThresholdAdjusted = obj.ThresholdAdjusted; 
             replicate.level = obj.level;
 
-            replicate.I = obj.I;
-            replicate.BGImg = obj.BGImg;
-            replicate.BGSubtractedImg = obj.BGSubtractedImg;
+%             replicate.I = obj.I;
+%             replicate.BGImg = obj.BGImg;
+%             replicate.BGSubtractedImg = obj.BGSubtractedImg;
             replicate.EnhancedImg = obj.EnhancedImg;
 
             replicate.MaskName = obj.MaskName;
@@ -233,26 +233,23 @@ classdef PODSImage < handle
 
             replicate.AzimuthImage = obj.AzimuthImage;
             replicate.OF_image = obj.OF_image;
-            replicate.masked_OF_image = obj.masked_OF_image;
-            replicate.a = obj.a;
-            replicate.b = obj.b;
+%             replicate.masked_OF_image = obj.masked_OF_image;
+%             replicate.a = obj.a;
+%             replicate.b = obj.b;
 
             replicate.SBAvg = obj.SBAvg;
 
-            replicate.SBCutoff = obj.SBCutoff;
-            replicate.OFFiltered = obj.OFFiltered;
+%             replicate.SBCutoff = obj.SBCutoff;
+%             replicate.OFFiltered = obj.OFFiltered;
 
             replicate.PrimaryIntensityDisplayLimits = obj.PrimaryIntensityDisplayLimits;
             replicate.ReferenceIntensityDisplayLimits = obj.ReferenceIntensityDisplayLimits;
 
             replicate.nObjects = obj.nObjects;
 
-            replicate.ObjectProps = obj.ObjectProperties;
-
             replicate.CurrentObjectIdx = obj.CurrentObjectIdx;
 
             for i = 1:obj.nObjects
-                %replicate.Object(i) = saveobj(obj.Object(i));
                 replicate.Object(i) = obj.Object(i).saveobj();
             end
 
@@ -363,6 +360,19 @@ classdef PODSImage < handle
                 % add [Var2Get] from those objects to cell i of ObjectDataByLabel
                 ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
             end
+        end
+
+        function Objects = getObjectsByLabel(obj,Label)
+
+            Objects = PODSObject.empty();
+
+            if obj.nObjects >= 1
+                ObjIdxs = find([obj.Object.Label]==Label);
+                Objects = obj.Object(ObjIdxs);
+            else
+                Objects = [];
+            end
+
         end
 
         % detect local signal to BG ratio
@@ -545,7 +555,9 @@ classdef PODSImage < handle
                 'ConvexHull',...
                 'ConvexImage',...
                 'Eccentricity',...
+                'Extent',...
                 'Extrema',...
+                'EquivDiameter',...
                 'FilledArea',...
                 'Image',...
                 'MajorAxisLength',...
@@ -554,6 +566,7 @@ classdef PODSImage < handle
                 'Perimeter',...
                 'PixelIdxList',...
                 'PixelList',...
+                'Solidity',...
                 'SubarrayIdx',...
                 'MaxFeretProperties',...
                 'MinFeretProperties'});
@@ -615,13 +628,13 @@ classdef PODSImage < handle
             UnselectedVerticesMax = 0;
             UnselectedVerticesSum = 0;
 
-            % get list of selected objects to delete (selected)
+            % get list of selected objects
             Selected = AllObjects([obj.Object.Selected]);
             SelectedVerticesMax = 0;
             SelectedVerticesSum = 0;
 
             for cObject = obj.Object
-                nVertices = size(cObject.Boundary,1);
+                nVertices = size(cObject.SimplifiedBoundary,1);
                 switch cObject.Selected
                     case true
                         SelectedVerticesSum = SelectedVerticesSum + nVertices;
@@ -646,7 +659,7 @@ classdef PODSImage < handle
 
             for cObject = obj.Object
                 % get the boundary
-                thisObjectBoundary = cObject.Boundary;
+                thisObjectBoundary = cObject.SimplifiedBoundary;
                 % determine number of vertices
                 nvertices = size(thisObjectBoundary,1);
                 switch cObject.Selected
@@ -765,11 +778,29 @@ classdef PODSImage < handle
             obj.Height = replicate.Height;
 
             obj.pol_rawdata = replicate.pol_rawdata;
-            obj.RawPolAvg = replicate.RawPolAvg;
+            %obj.RawPolAvg = replicate.RawPolAvg;
+            obj.RawPolAvg = mean(replicate.pol_rawdata,3);
+
             obj.pol_ffc = replicate.pol_ffc;
-            obj.Pol_ImAvg = replicate.Pol_ImAvg;
-            obj.norm = replicate.norm;
-            obj.r1 = replicate.r1;
+
+            %obj.Pol_ImAvg = replicate.Pol_ImAvg;
+            obj.Pol_ImAvg = mean(obj.pol_ffc,3);
+            
+            obj.I = obj.Pol_ImAvg./max(max(obj.Pol_ImAvg));
+
+            % pixel-stack normalized intensity images (norm) and logical matrix representing 'on' pixels (r1)
+            n_img = 4;
+            maximum = max(obj.pol_ffc,[],3);
+            obj.r1 = obj.pol_ffc(:,:,1) > 0;
+            for j=1:n_img
+                obj.norm(:,:,j) = obj.pol_ffc(:,:,j)./maximum;
+            end
+            % orthogonal polarization difference components
+            obj.a = obj.norm(:,:,1) - obj.norm(:,:,3);
+            obj.b = obj.norm(:,:,2) - obj.norm(:,:,4);
+
+            %obj.norm = replicate.norm;
+            %obj.r1 = replicate.r1;
 
             obj.FilesLoaded = replicate.FilesLoaded;
             obj.FFCDone = replicate.FFCDone;
@@ -781,16 +812,16 @@ classdef PODSImage < handle
             obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;
 
             obj.bw = replicate.bw;
-            obj.bwFiltered = replicate.bwFiltered;
+%             obj.bwFiltered = replicate.bwFiltered;
 
             obj.L = replicate.L;
 
             obj.ThresholdAdjusted = replicate.ThresholdAdjusted; 
             obj.level = replicate.level;
 
-            obj.I = replicate.I;
-            obj.BGImg = replicate.BGImg;
-            obj.BGSubtractedImg = replicate.BGSubtractedImg;
+%             obj.I = replicate.I;
+%             obj.BGImg = replicate.BGImg;
+%             obj.BGSubtractedImg = replicate.BGSubtractedImg;
             obj.EnhancedImg = replicate.EnhancedImg;
 
             obj.MaskName = replicate.MaskName;
@@ -800,21 +831,21 @@ classdef PODSImage < handle
 
             obj.AzimuthImage = replicate.AzimuthImage;
             obj.OF_image = replicate.OF_image;
-            obj.masked_OF_image = replicate.masked_OF_image;
-            obj.a = replicate.a;
-            obj.b = replicate.b;
+%             obj.masked_OF_image = replicate.masked_OF_image;
+%             obj.a = replicate.a;
+%             obj.b = replicate.b;
 
             obj.SBAvg = replicate.SBAvg;
 
-            obj.SBCutoff = replicate.SBCutoff;
-            obj.OFFiltered = replicate.OFFiltered;
+%             obj.SBCutoff = replicate.SBCutoff;
+%             obj.OFFiltered = replicate.OFFiltered;
 
             obj.PrimaryIntensityDisplayLimits = replicate.PrimaryIntensityDisplayLimits;
             obj.ReferenceIntensityDisplayLimits = replicate.ReferenceIntensityDisplayLimits;
 
             obj.CurrentObjectIdx = replicate.CurrentObjectIdx;
 
-            for i = 1:length(replicate.ObjectProps) % for each detected object
+            for i = 1:length(replicate.Object) % for each detected object
                 % create an instance of PODSObject
                 obj.Object(i) = PODSObject.loadobj(replicate.Object(i));
                 obj.Object(i).Parent = obj;

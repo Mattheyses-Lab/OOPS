@@ -40,7 +40,7 @@ function [] = pb_LoadFFCFiles(source,~)
             
             if ~iscell(cal_files)
                 if cal_files == 0
-                    warning('No background normalization files selected. Proceeding anyway');
+                    error('No background normalization files selected. Exiting...');
                 end
             end
 
@@ -110,7 +110,7 @@ function [] = pb_LoadFFCFiles(source,~)
 
             if(iscell(cal_files)==0)
                 if(cal_files==0)
-                    warning('No background normalization files selected. Proceeding anyway');
+                    error('No background normalization files selected. Exiting...');
                 end
             end
 

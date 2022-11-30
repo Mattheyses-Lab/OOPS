@@ -23,6 +23,4 @@ function SelectObjectRectangles(source,~)
         PODSData.Handles.ObjectBoxes(ObjIdx,2).LineWidth = CurrentImage.Object(ObjIdx).SelectionBoxLineWidth;
     end
 
-
-
 end

@@ -249,19 +249,37 @@ function [] = UpdateImages(source)
         case 'Order Factor'
             %% Order Factor Tab
             % Order Factor
-            try
-                PODSData.Handles.OrderFactorImgH.CData = cImage.OF_image;
-                if ~PODSData.Settings.Zoom.Active
-                    PODSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
-                    PODSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
+            if PODSData.Handles.ShowAsOverlayOrderFactor.Value == 1
+                % show the OF-intensity composite image
+                try
+                    %OverlayIntensity = imadjust(cImage.I,cImage.PrimaryIntensityDisplayLimits);
+                    %OverlayIntensity = imadjust(cImage.I);
+                    %OverlayIntensity = imadjust(cImage.I);
+                    %OverlayIntensity = Scale0To1(imadjust(cImage.I.*cImage.OF_image));
+                    OverlayIntensity = cImage.I;
+                    OFRGB = ind2rgb(im2uint8(cImage.OF_image),PODSData.Settings.OrderFactorColormap);
+                    OFRGB = MaskRGB(OFRGB,OverlayIntensity);
+                    PODSData.Handles.OrderFactorImgH.CData = OFRGB;
+                catch
+                    PODSData.Handles.AzimuthImgH.CData = EmptyImage;
+                    disp('Warning: Error displaying OF-intensity composite image')
                 end
-            catch
-                PODSData.Handles.OrderFactorImgH.CData = EmptyImage;
+            else
+                % show the regular OF image
+                try
+                    PODSData.Handles.OrderFactorImgH.CData = cImage.OF_image;
+                    if ~PODSData.Settings.Zoom.Active
+                        PODSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
+                        PODSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
+                    end
+                catch
+                    PODSData.Handles.OrderFactorImgH.CData = EmptyImage;
+                end
             end
-            
+
             % change colormap to currently selected Order factor colormap
             PODSData.Handles.OrderFactorAxH.Colormap = PODSData.Settings.OrderFactorColormap;
-            
+
             % if ApplyMask toolbar state button set to true...
             if PODSData.Handles.ApplyMaskOrderFactor.Value == 1
                 % ...then apply current mask by setting image AlphaData
@@ -356,7 +374,10 @@ function [] = UpdateImages(source)
             if PODSData.Handles.ShowAsOverlayAzimuthImage.Value == 1
                 try
                     %OverlayIntensity = imadjust(cImage.I,cImage.PrimaryIntensityDisplayLimits);
-                    OverlayIntensity = imadjust(cImage.I);
+                    %OverlayIntensity = imadjust(cImage.I);
+                    %OverlayIntensity = imadjust(cImage.I);
+                    %OverlayIntensity = Scale0To1(imadjust(cImage.I.*cImage.OF_image));
+                    OverlayIntensity = cImage.I;
                     AzimuthRGB = MaskRGB(MakeAzimuthRGB(cImage.AzimuthImage,PODSData.Settings.AzimuthColormap),OverlayIntensity);
                     PODSData.Handles.AzimuthImgH.CData = AzimuthRGB;
                 catch

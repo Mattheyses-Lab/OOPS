@@ -67,6 +67,7 @@ classdef PODSGroup < handle
         
         OFAllDone logical
         
+        % pixel-average OF for all images in group
         OFAvg double
         
         ColorString char
@@ -119,6 +120,27 @@ classdef PODSGroup < handle
         function SelfIdx = get.SelfIdx(obj)
             SelfIdx = find(obj.Parent.Group==obj);
         end
+
+        function Objects = getObjectsByLabel(obj,Label)
+
+            ObjsFound = 0;
+            Objects = PODSObject.empty();
+
+            if obj.nReplicates>=1
+                for i = 1:obj.nReplicates
+                    TotalObjsCounted = numel(Objects);
+                    tempObjects = obj.Replicate(i).getObjectsByLabel(Label);
+                    ObjsFound = numel(tempObjects);
+                    Objects(TotalObjsCounted+1:TotalObjsCounted+ObjsFound,1) = tempObjects;
+                end
+            else
+                Objects = [];
+            end
+
+
+
+        end
+
 
         function deleteReplicates(obj)
             % collect and delete the objects in this image
@@ -314,6 +336,7 @@ classdef PODSGroup < handle
             % load each replicate
             for i = 1:group.nReplicates
                 obj.Replicate(i) = PODSImage.loadobj(group.Replicate(i));
+                obj.Replicate(i).Parent = obj;
             end
 
         end

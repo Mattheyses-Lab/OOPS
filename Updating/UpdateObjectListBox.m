@@ -1,6 +1,14 @@
 function UpdateObjectListBox(source)
     PODSData = guidata(source);
-    CurrentGroup = PODSData.CurrentGroup;
+
+    if PODSData.nGroups>=1
+        CurrentGroup = PODSData.CurrentGroup;
+    else
+        PODSData.Handles.ObjectSelector.Items = {};
+        PODSData.Handles.ObjectSelector.Enable = 0;
+        return
+    end
+
     Replicate = CurrentGroup.CurrentImage;
     
     % if the number of currently selected images is 1
@@ -14,7 +22,7 @@ function UpdateObjectListBox(source)
             PODSData.Handles.ObjectSelector.Value = Replicate.CurrentObjectIdx;
             scroll(PODSData.Handles.ObjectSelector,PODSData.Handles.ObjectSelector.Value);
         else
-            PODSData.Handles.ObjectSelector.Items = {'No objects identified for this group...'};
+            PODSData.Handles.ObjectSelector.Items = {'No objects found...'};
         end
         % else, if there are no currently selected images
     elseif isempty(Replicate)

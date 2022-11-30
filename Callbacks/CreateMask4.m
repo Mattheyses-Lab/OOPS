@@ -25,11 +25,11 @@ switch MaskType
                     % update log with status of masking
                     UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
                     % use disk-shaped structuring element to calculate BG
-                    cImage.BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
+                    BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
                     % subtract BG
-                    cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
+                    BGSubtractedImg = cImage.I - BGImg;
                     % median filter BG-subtracted image
-                    cImage.EnhancedImg = medfilt2(cImage.BGSubtractedImg);
+                    cImage.EnhancedImg = medfilt2(BGSubtractedImg);
                     % scale so that max intensity is 1
                     cImage.EnhancedImg = cImage.EnhancedImg./max(max(cImage.EnhancedImg));
                     % initial threshold guess using graythresh()
@@ -92,10 +92,12 @@ switch MaskType
                     %% Enhance and find threshold
                     I = cImage.I;
                     % MORPHOLOGICAL OPENING
-                    cImage.BGImg = imopen(I,SE);
+                    BGImg = imopen(I,SE);
                     % SUBTRACT OPENED IMAGE
-                    cImage.BGSubtractedImg = I - cImage.BGImg;
-
+                    BGSubtractedImg = I - BGImg;
+                    % apply median filter
+                    cImage.EnhancedImg = medfilt2(BGSubtractedImg);
+                    % normalize to max
                     cImage.EnhancedImg = medfilt2(cImage.EnhancedImg./max(max(cImage.EnhancedImg)));
 
                     %% test
@@ -188,11 +190,11 @@ switch MaskType
                     nhoodsize = 2*floor(size(cImage.I)/16)+1;
 
                     % MORPHOLOGICAL OPENING
-                    cImage.BGImg = imopen(cImage.I,SE);
+                    BGImg = imopen(cImage.I,SE);
                     % SUBTRACT OPENED IMAGE
-                    cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
+                    BGSubtractedImg = cImage.I - BGImg;
 
-                    I = cImage.BGSubtractedImg;
+                    I = BGSubtractedImg;
 
                     cImage.EnhancedImg = Scale0To1(medfilt2(I));
 
@@ -300,19 +302,13 @@ switch MaskType
                     % update log with status of masking
                     UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
                     % use disk-shaped structuring element to calculate BG
-                    cImage.BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
+                    BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
                     % subtract BG
-                    cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
+                    BGSubtractedImg = cImage.I - BGImg;
                     % median filter BG-subtracted image
-                    cImage.EnhancedImg = medfilt2(cImage.BGSubtractedImg);
-
-                    %% Intensity Distribution Histogram
-                    % scale to 0-1
+                    cImage.EnhancedImg = medfilt2(BGSubtractedImg);
+                    % normalize to max
                     cImage.EnhancedImg = cImage.EnhancedImg./max(max(cImage.EnhancedImg));
-
-                    %%testing
-                    %cImage.EnhancedImg = cImage.I;
-
                     % initial threshold guess using graythresh()
                     [cImage.level,~] = graythresh(cImage.EnhancedImg);
 
@@ -367,20 +363,16 @@ switch MaskType
                     UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
 
                     % use disk-shaped structuring element to calculate BG
-                    cImage.BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
+                    BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
                     % subtract BG
-                    cImage.BGSubtractedImg = cImage.I - cImage.BGImg;
+                    BGSubtractedImg = cImage.I - BGImg;
                     % median filter BG-subtracted image
-                    cImage.EnhancedImg = medfilt2(cImage.BGSubtractedImg);
-
+                    cImage.EnhancedImg = medfilt2(BGSubtractedImg);
+                    % normalize to max
                     cImage.EnhancedImg = cImage.EnhancedImg./max(max(cImage.EnhancedImg));
 
                     % GUESS THRESHOLD WITH OTSU'S METHOD
                     [cImage.level,~] = graythresh(cImage.I);
-
-                    %% testing
-                    %cImage.level = cImage.level*6;
-                    %% end testing
 
                     %% Build mask
                     cImage.bw = sparse(imbinarize(cImage.I,adaptthresh(cImage.I,cImage.level,'Statistic','Gaussian','NeighborhoodSize',3)));

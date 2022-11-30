@@ -38,6 +38,10 @@ function NameOut = ExpandVariableName(NameIn)
             NameOut = 'Azimuth Standard Deviation';
         case 'Orientation'
             NameOut = 'Orientation';
+        case 'EquivDiameter'
+            NameOut = 'Equivalent Diameter';
+        case 'ConvexArea'
+            NameOut = 'Convex Area';
         otherwise
             NameOut = NameIn;
     end

@@ -49,16 +49,31 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
                 switch PODSData.Settings.SwarmPlotColorMode
                     case 'Magnitude'
                         % color by value
-                        hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},150,Y{PlotIdx},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
+                        hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},Y{PlotIdx},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
                     case 'ID'
                         % color by group (label)
-                        hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},150,'Filled',...
+                        hSwarmPlot(PlotIdx) = swarmchart(axH,X{PlotIdx},Y{PlotIdx},'Filled',...
                             'HitTest','Off',...
                             'MarkerEdgeColor',[0 0 0],...
                             'MarkerFaceColor',PODSData.Settings.ObjectLabels(ii).Color);
                 end
                 MaxPerGroup(PlotIdx) = max(Y{PlotIdx});
-                hold on
+                %hold on
+                GroupMean = mean(Y{PlotIdx});
+                GroupStd = std(Y{PlotIdx});
+                % plot a horizontal line showing the group mean
+                line(axH,[PlotIdx-0.25 PlotIdx+0.25],[GroupMean GroupMean],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',[1 1 1],'PickableParts','none');
+                % plot horizontal lines showing the mean +/- SD
+                line(axH,[PlotIdx-0.15 PlotIdx+0.15],[GroupMean-GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',[1 1 1],'PickableParts','none');
+                line(axH,[PlotIdx-0.15 PlotIdx+0.15],[GroupMean+GroupStd GroupMean+GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',[1 1 1],'PickableParts','none');
+                % plot a vertical line orthogonal to the three lines above
+                line(axH,[PlotIdx PlotIdx],[GroupMean+GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',[1 1 1],'PickableParts','none');
+
+                mean_marker(PlotIdx) = plot(axH,PlotIdx,GroupMean,'Marker','o','MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',[1 1 1]);
+                dtRow1 = dataTipTextRow("Mean",GroupMean);
+                dtRow2 = dataTipTextRow("Standard Deviation",GroupStd);
+                mean_marker(PlotIdx).DataTipTemplate.DataTipRows(1) = dtRow1;
+                mean_marker(PlotIdx).DataTipTemplate.DataTipRows(2) = dtRow2;
             catch me
                 switch me.message
                     case "Object data missing"
@@ -73,7 +88,7 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
         end
     end
     
-    hold off
+    %hold off
 
     axH.YTickMode = 'Auto';
     axH.YTickLabelMode = 'Auto';
