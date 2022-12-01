@@ -98,31 +98,31 @@ end
     [silh3,h] = silhouette(ObjectData,cidx3,'sqeuclidean');
     % not quite as well separated as when we used 2 clusters
     
-    figure('Name',['3D Scatter (Euclidean Distance, ',num2str(nReplicates),' replicates)'])
-    % can plot the raw data again to see how kmeans assigned points to clusters
-    %   -> upper cluster split into 2 smaller clusters
-    for i = 1:nClusters
-        clust = find(cidx3==i);
-        plot3(ObjectData(clust,VariablesToPlot(1)),...
-            ObjectData(clust,VariablesToPlot(2)),...
-            ObjectData(clust,VariablesToPlot(3)),...
-            'o');
-        hold on
-    end
-    
-    % cluster centroids are plotted with circled x's
-    plot3(cmeans3(:,VariablesToPlot(1)),cmeans3(:,VariablesToPlot(2)),cmeans3(:,VariablesToPlot(3)),'ko');
-    plot3(cmeans3(:,VariablesToPlot(1)),cmeans3(:,VariablesToPlot(2)),cmeans3(:,VariablesToPlot(3)),'kx');
-    hold off
-    
-    % add axes labels
-    xlabel(Var1Name);
-    ylabel(Var2Name);
-    zlabel(Var3Name);
-    
-    % set viewing angle
-    view(-137,10);
-    grid on
+%     figure('Name',['3D Scatter (Euclidean Distance, ',num2str(nReplicates),' replicates)'])
+%     % can plot the raw data again to see how kmeans assigned points to clusters
+%     %   -> upper cluster split into 2 smaller clusters
+%     for i = 1:nClusters
+%         clust = find(cidx3==i);
+%         plot3(ObjectData(clust,VariablesToPlot(1)),...
+%             ObjectData(clust,VariablesToPlot(2)),...
+%             ObjectData(clust,VariablesToPlot(3)),...
+%             'o');
+%         hold on
+%     end
+%     
+%     % cluster centroids are plotted with circled x's
+%     plot3(cmeans3(:,VariablesToPlot(1)),cmeans3(:,VariablesToPlot(2)),cmeans3(:,VariablesToPlot(3)),'ko');
+%     plot3(cmeans3(:,VariablesToPlot(1)),cmeans3(:,VariablesToPlot(2)),cmeans3(:,VariablesToPlot(3)),'kx');
+%     hold off
+%     
+%     % add axes labels
+%     xlabel(Var1Name);
+%     ylabel(Var2Name);
+%     zlabel(Var3Name);
+%     
+%     % set viewing angle
+%     view(-137,10);
+%     grid on
 
     % display average silhouette width
     disp(['Mean Silhouette Width (Euclidean Distance, ',num2str(nReplicates),' replicates): ',num2str(mean(silh3))])
