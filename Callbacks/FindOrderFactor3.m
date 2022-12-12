@@ -13,11 +13,10 @@ function [] = FindOrderFactor3(source,~)
     % entire group if batch processing
     for i = 1:length(cImageIndex)
         ii = cImageIndex(i);
-        UpdateLog3(source,[chartab,'Image ',num2str(i),' of ',num2str(length(cImageIndex)),'...'],'append');        
-        
+        %UpdateLog3(source,[chartab,'Image ',num2str(i),' of ',num2str(length(cImageIndex)),'...'],'append');        
+        UpdateLog3(source,[chartab,cReplicate(ii).pol_shortname,' (',num2str(i),'/',num2str(length(cImageIndex)),')'],'append');
         %% Normalize pixel-by-pixel
         %cReplicate(ii).norm = zeros(size(cReplicate(ii).pol_ffc));
-
         n_img = 4;
 
         maximum = max(cReplicate(ii).pol_ffc,[],3);
@@ -42,12 +41,7 @@ function [] = FindOrderFactor3(source,~)
         % !WARNING! Output is in radians! Counterclockwise with respect to the horizontal direction in the image
         cReplicate(ii).AzimuthImage(cReplicate(ii).r1) = (1/2).*atan2(cReplicate(ii).b(cReplicate(ii).r1),cReplicate(ii).a(cReplicate(ii).r1));
 
-%         %apply mask to order factor image
-%         temp = zeros(size(cReplicate(ii).OF_image));  
-%         temp(cReplicate(ii).bw) = cReplicate(ii).OF_image(cReplicate(ii).bw);
-%         cReplicate(ii).masked_OF_image = sparse(temp);
-%         clear temp
-        
+        % update log
         logmsg = [chartab,chartab,'Image-Average Order Factor: ', num2str(cReplicate(ii).OFAvg),... 
                   chartab,chartab,chartab,'Max: ', num2str(cReplicate(ii).OFMax),...
                   chartab,chartab,chartab,'Min: ', num2str(cReplicate(ii).OFMin)];
@@ -57,31 +51,6 @@ function [] = FindOrderFactor3(source,~)
         % order factor image exists for this replicate
         cReplicate(ii).OFDone = 1;
 
-
-%% TESTING POLARIZATION FACTOR
-
-%         temp = zeros(size(cReplicate(ii).OF_image));
-% 
-%         S1 = cReplicate(ii).pol_ffc(:,:,1) - cReplicate(ii).pol_ffc(:,:,3);
-%         S2 = cReplicate(ii).pol_ffc(:,:,2) - cReplicate(ii).pol_ffc(:,:,4);
-% 
-%         totalintensity = ...
-%             cReplicate(ii).pol_ffc(:,:,1)...
-%             +cReplicate(ii).pol_ffc(:,:,2)...
-%             +cReplicate(ii).pol_ffc(:,:,3)...
-%             +cReplicate(ii).pol_ffc(:,:,4);
-% 
-%         S0 = 0.25.*totalintensity;
-% 
-%         temp(cReplicate(ii).r1) = sqrt(S1(cReplicate(ii).r1).^2+S2(cReplicate(ii).r1).^2)./(2.*S0(cReplicate(ii).r1));
-% 
-%         cReplicate(ii).PolarizationFactorImage(cReplicate(ii).r1) = temp(cReplicate(ii).r1);
-% 
-%         clear temp
-
-%% TESTING POLARIZATION FACTOR
-
-        
     end
 
     % update PODSData with new replicate data
@@ -95,6 +64,6 @@ function [] = FindOrderFactor3(source,~)
     % Update GUI
     UpdateSummaryDisplay(source);
     UpdateImages(source);
-    UpdateLog3(source,'Done calculating Order Factor.','append');
+    UpdateLog3(source,'Done.','append');
 
 end

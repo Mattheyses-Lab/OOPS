@@ -10,35 +10,32 @@ classdef PODSGroup < handle
 
         % replicates within group, no problem storing in memory (handle class)
         Replicate PODSImage
-        
-%         % this group's index (as child of PODSProject)
-%         SelfGroupIndex
 
         % indexing group members (Replicate/PODSImage objects)
         CurrentImageIndex double
         PreviousImageIndex double
         
         % FFC info for group
-        FFCData struct
+        %FFCData struct
 
         FFCLoaded = false
+
+        FFC_cal_shortname
+        FFC_cal_fullname
+        FFC_all_cal
+        FFC_n_cal
+        FFC_cal_average
+        FFC_cal_norm
+        FFC_cal_size
+        FFC_Height
+        FFC_Width
+
         FPMFilesLoaded = false
-        
-%         % output values
-%         %OFAvg double
-%         OFMax double
-%         OFMin double
-%         FiltOFAvg double
-        
-%         % status parameters
-%         MaskAllDone = false
-        
-%         CoLocFilesLoaded = false
         
         % store handle to the master GUI settings
         Settings PODSSettings
         
-        % group coloring
+        % group color for plots, etc.
         Color double
         
     end
@@ -67,11 +64,13 @@ classdef PODSGroup < handle
         
         OFAllDone logical
         
-        % pixel-average OF for all images in group
+        % pixel-average OF for all images in this PODSGroup for which OF has been calculated
         OFAvg double
         
+        % name of the color of this PODSGroup
         ColorString char
 
+        % index of this PODSGroup in [obj.Parent.Group(:)]
         SelfIdx
     
     end
@@ -100,11 +99,25 @@ classdef PODSGroup < handle
 
             disp('reached saveobj(Group)')
 
-            %group.Parent = [];
             group.GroupName = obj.GroupName;
             group.CurrentImageIndex = obj.CurrentImageIndex;
-            group.FFCData = obj.FFCData;
+            
             group.FFCLoaded = obj.FFCLoaded;
+
+            if group.FFCLoaded
+                group.FFC_cal_shortname = obj.FFC_cal_shortname;
+                group.FFC_cal_fullname = obj.FFC_cal_fullname;
+                group.FFC_cal_size = obj.FFC_cal_size;
+                group.FFC_Height = obj.FFC_Height;
+                group.FFC_Width = obj.FFC_Width;
+            else
+                group.FFC_cal_shortname = [];
+                group.FFC_cal_fullname = [];
+                group.FFC_cal_size = obj.FFC_cal_size;
+                group.FFC_Height = obj.FFC_Height;
+                group.FFC_Width = obj.FFC_Width;
+            end
+
             group.FPMFilesLoaded = obj.FPMFilesLoaded;
             group.Color = obj.Color;
             group.nReplicates = obj.nReplicates;
@@ -136,11 +149,14 @@ classdef PODSGroup < handle
             else
                 Objects = [];
             end
-
-
-
         end
 
+        % apply PODSLabel:Label to all selected objects in this PODSGroup
+        function LabelSelectedObjects(obj,Label)
+            for i = 1:obj.nReplicates
+                obj.Replicate(i).LabelSelectedObjects(Label);
+            end
+        end
 
         function deleteReplicates(obj)
             % collect and delete the objects in this image
@@ -154,7 +170,7 @@ classdef PODSGroup < handle
 %             delete(obj.Replicate);
         end
 
-        % delete seleted images from one PODSGroup based on obj.
+        % delete images from this PODSGroup based on selection status in GUI
         function DeleteSelectedImages(obj)
             
             % get handles to all images in this group
@@ -203,14 +219,14 @@ classdef PODSGroup < handle
 
         function DeleteSelectedObjects(obj)
             for i = 1:obj.nReplicates
-                obj.Replicate(i).DeleteSelectedObjects()
+                obj.Replicate(i).DeleteSelectedObjects();
             end
         end
-        
-        function LabelSelectedObjects(obj,Label)
+
+        function DeleteObjectsByLabel(obj,Label)
             for i = 1:obj.nReplicates
-                obj.Replicate(i).LabelSelectedObjects(Label)
-            end            
+                obj.Replicate(i).DeleteObjectsByLabel(Label);
+            end
         end
         
         function ClearSelection(obj)
@@ -318,7 +334,6 @@ classdef PODSGroup < handle
 
         end
 
-    
     end
 
     methods (Static)
@@ -328,8 +343,65 @@ classdef PODSGroup < handle
             obj = PODSGroup(group.GroupName,PODSSettings.empty(),PODSProject.empty());
 
             obj.CurrentImageIndex = group.CurrentImageIndex;
-            obj.FFCData = group.FFCData;
+
             obj.FFCLoaded = group.FFCLoaded;
+
+%% IN DEVELOPMENT
+
+            % get FFCData if the files were loaded into the project, otherwise simulate
+            if obj.FFCLoaded
+                obj.FFC_cal_shortname = group.FFC_cal_shortname;
+                obj.FFC_cal_fullname = group.FFC_cal_fullname;
+
+                % find file extension
+                fnameSplit = strsplit(obj.FFC_cal_fullname{1,1},'.');
+                fileType = fnameSplit{end};
+
+                % get other relevant parameters
+                obj.FFC_n_cal = numel(group.FFC_cal_shortname);
+
+                switch fileType
+
+                    case 'nd2'
+
+                        for i=1:obj.FFC_n_cal
+                            temp = bfopen(char(obj.FFC_cal_fullname{i,1}));
+                            temp2 = temp{1,1};
+                            clear temp
+
+                            if i==1
+                                obj.FFC_Height = size(temp2{1,1},1);
+                                obj.FFC_Width = size(temp2{1,1},2);
+                            end
+                            for j=1:4
+                                obj.FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
+                                % indexing example: FFCData.all_cal(row,col,pol,stack)
+                            end
+                        end
+
+                        obj.FFC_cal_average = sum(obj.FFC_all_cal,4)./obj.FFC_n_cal;
+                        obj.FFC_cal_norm = obj.FFC_cal_average/max(max(max(obj.FFC_cal_average)));
+                        obj.FFC_cal_size = size(obj.FFC_cal_norm);
+
+                    case 'tif'
+
+
+                end
+
+            else
+                obj.FFC_cal_shortname = [];
+                obj.FFC_cal_fullname = [];
+                obj.FFC_n_cal = 1;
+                obj.FFC_Height = group.FFC_Height;
+                obj.FFC_Width = group.FFC_Width;
+                obj.FFC_cal_size = group.FFC_cal_size;
+                obj.FFC_all_cal = ones(obj.FFC_cal_size);
+                obj.FFC_cal_average = sum(obj.FFC_all_cal,4)./obj.FFC_n_cal;
+                obj.FFC_cal_norm = obj.FFC_cal_average/max(max(max(obj.FFC_cal_average)));
+            end
+
+%% END IN DEVELOPMENT
+
             obj.FPMFilesLoaded = group.FPMFilesLoaded;
             obj.Color = group.Color;
 
@@ -337,6 +409,13 @@ classdef PODSGroup < handle
             for i = 1:group.nReplicates
                 obj.Replicate(i) = PODSImage.loadobj(group.Replicate(i));
                 obj.Replicate(i).Parent = obj;
+                if obj.Replicate(i).FFCDone
+                    obj.Replicate(i).FlatFieldCorrection();
+                end
+
+                if obj.Replicate(i).OFDone
+                    obj.Replicate(i).FindOrderFactor();
+                end
             end
 
         end

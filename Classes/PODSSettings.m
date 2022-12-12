@@ -174,7 +174,6 @@ classdef PODSSettings < handle
                 obj.MainPath = strjoin(CurrentPathSplit(1:end-2),'\');
             end
 
-
             try
                 Colormaps_mat_file = load('Colormaps.mat');
                 obj.Colormaps = Colormaps_mat_file.Colormaps;
@@ -283,9 +282,9 @@ classdef PODSSettings < handle
             obj.ObjectLabels(end+1,1) = PODSLabel(LabelName,LabelColor,obj);
         end
 
-         function DeleteObjectLabel(obj,Label)
+        function DeleteObjectLabel(obj,Label)
             Label2Delete = Label;
-            LabelIdx = find(obj.ObjectLabels==Label2Delete)
+            LabelIdx = find(obj.ObjectLabels==Label2Delete);
             if LabelIdx == 1
                 if obj.nLabels > 1
                     obj.ObjectLabels = obj.ObjectLabels(2:end);
@@ -298,7 +297,7 @@ classdef PODSSettings < handle
                 obj.ObjectLabels = [obj.ObjectLabels(1:LabelIdx-1);obj.ObjectLabels(LabelIdx+1:end)];
             end
             delete(Label2Delete);
-         end
+        end
 
         function AzimuthLineAlpha = get.AzimuthLineAlpha(obj)
             AzimuthLineAlpha = obj.AzimuthDisplaySettings.LineAlpha;
@@ -409,7 +408,6 @@ classdef PODSSettings < handle
                     ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
             end
         end        
-
 
         function nLabels = get.nLabels(obj)
             % find number of unique object labels

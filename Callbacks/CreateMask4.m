@@ -127,7 +127,6 @@ switch MaskType
                     % mask is the edge pixels
                     cImage.bw = sparse(IEdges);
 
-                    %% uncomment below to fill in mask
                     % BUILD 8-CONNECTED LABEL MATRIX
                     cImage.L = sparse(bwlabel(full(cImage.bw),8));
                     % fill in outlines and recreate mask
@@ -145,15 +144,17 @@ switch MaskType
                     cImage.bw = sparse(bwtemp);
                     %% end fill
 
+                    % NOTE: connectivity changed from 8 to 4, make sure it didn't mess anything up
+
                     % remove small objects one final time
-                    CC = bwconncomp(full(cImage.bw),8);
+                    CC = bwconncomp(full(cImage.bw),4);
                     S = regionprops(CC, 'Area','Eccentricity','Circularity');
                     L = labelmatrix(CC);
                     cImage.bw = sparse(ismember(L, find([S.Area] >= 5 & ...
                         [S.Eccentricity] > 0.5 & ...
                         [S.Circularity] < 0.5)));
 
-                    cImage.L = sparse(bwlabel(full(cImage.bw),8));
+                    cImage.L = sparse(bwlabel(full(cImage.bw),4));
 
                     % update log with masking output
                     UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
@@ -269,8 +270,11 @@ switch MaskType
                         [S.Eccentricity] > 0.8 & ...
                         [S.Circularity] < 0.5)));
 
-                    % BUILD 8-CONNECTED LABEL MATRIX
-                    cImage.L = sparse(bwlabel(full(cImage.bw),8));
+%                     % BUILD 8-CONNECTED LABEL MATRIX
+%                     cImage.L = sparse(bwlabel(full(cImage.bw),8));
+
+                    % BUILD 4-CONNECTED LABEL MATRIX
+                    cImage.L = sparse(bwlabel(full(cImage.bw),4));
 
                     % update log with masking output
                     UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');

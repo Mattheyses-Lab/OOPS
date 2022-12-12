@@ -199,14 +199,15 @@ function [] = pb_LoadFPMFiles(source,~)
     % if no FFC files loaded, simulate them with a matrix of ones
     if ~cGroup.FFCLoaded
         UpdateLog3(source,'Warning: No FFC files found. Simulating them with matrix of ones...','append');
-        FFCData = struct();
-        FFCData.all_cal = ones(size(PODSData.CurrentImage.pol_rawdata));
-        FFCData.n_cal = 1;
-        FFCData.cal_average = sum(FFCData(1).all_cal,4)./FFCData.n_cal;
-        FFCData.cal_norm = FFCData.cal_average/max(max(max(FFCData.cal_average)));
-        FFCData.Height = PODSData.CurrentImage.Height;
-        FFCData.Width = PODSData.CurrentImage.Width;
-        cGroup.FFCData = FFCData;
+        %FFCData = struct();
+        cGroup.FFC_all_cal = ones(size(PODSData.CurrentImage.pol_rawdata));
+        cGroup.FFC_n_cal = 1;
+        cGroup.FFC_cal_average = sum(cGroup.FFC_all_cal,4)./cGroup.FFC_n_cal;
+        cGroup.FFC_cal_norm = cGroup.FFC_cal_average/max(max(max(cGroup.FFC_cal_average)));
+        cGroup.FFC_Height = PODSData.CurrentImage.Height;
+        cGroup.FFC_Width = PODSData.CurrentImage.Width;
+        cGroup.FFC_cal_size = size(cGroup.FFC_cal_norm);
+        %cGroup.FFCData = FFCData;
         % update log to indicate completion
         UpdateLog3(source,'Done.','append');
     end

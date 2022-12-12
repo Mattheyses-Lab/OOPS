@@ -62,13 +62,13 @@ function [] = pb_LoadFFCFiles(source,~)
                 end
 
                 temp = strsplit(filename,'.');
-                FFCData.cal_shortname{i,1} = temp{1};
-                FFCData.cal_fullname{i,1} = [calPath filename];
+                cGroup.FFC_cal_shortname{i,1} = temp{1};
+                cGroup.FFC_cal_fullname{i,1} = [calPath filename];
 
                 if iscell(cal_files)
-                    temp = bfopen(char(FFCData(1).cal_fullname{i,1}));
+                    temp = bfopen(char(cGroup.FFC_cal_fullname{i,1}));
                 else
-                    temp = bfopen(char(FFCData(1).cal_fullname));
+                    temp = bfopen(char(cGroup.FFC_cal_fullname));
                 end
                 temp2 = temp{1,1};
                 clear temp
@@ -78,7 +78,7 @@ function [] = pb_LoadFFCFiles(source,~)
                     UpdateLog3(source,['Calibration file dimensions are ' num2str(w) ' by ' num2str(h)],'append');
                 end
                 for j=1:4
-                    FFCData.all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
+                    cGroup.FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
                     % indexing example: FFCData.all_cal(row,col,pol,stack)
                 end
             end
@@ -127,14 +127,14 @@ function [] = pb_LoadFFCFiles(source,~)
                     filename = cal_files;
                 end
                 temp = strsplit(filename,'.');
-                FFCData.cal_shortname{i,1} = temp{1};
+                cGroup.FFC_cal_shortname{i,1} = temp{1};
                 clear temp
-                FFCData.cal_fullname{i,1} = [calPath filename];
+                cGroup.FFC_cal_fullname{i,1} = [calPath filename];
                 if i == 1
                     if iscell(cal_files)
-                        info = imfinfo(char(FFCData(i).cal_fullname{i,1}));
+                        info = imfinfo(char(cGroup.FFC_cal_fullname{i,1}));
                     else
-                        info = imfinfo(char(FFCData(i).cal_fullname));
+                        info = imfinfo(char(cGroup.FFC_cal_fullname));
                     end
                     h = info.Height;
                     w = info.Width;
@@ -142,7 +142,7 @@ function [] = pb_LoadFFCFiles(source,~)
                 end
                 for j=1:4
                     try
-                        FFCData.all_cal(:,:,j,i) = im2double(imread(char(FFCData(1).cal_fullname{i,1}),j))*65535; %convert to 32 bit
+                        cGroup.FFC_all_cal(:,:,j,i) = im2double(imread(char(cGroup.FFC_cal_fullname{i,1}),j))*65535; %convert to 32 bit
                     catch
                         error('Correction files may not all be the same size')
                     end
@@ -157,14 +157,15 @@ function [] = pb_LoadFFCFiles(source,~)
     %excitation polarization
     %normalize resulting average stack by dividing by max value within
     %stack (across all images)    
-    FFCData.n_cal = size(FFCData.all_cal,4);
-    FFCData.cal_average = sum(FFCData(1).all_cal,4)./FFCData.n_cal;
-    FFCData.cal_norm = FFCData.cal_average/max(max(max(FFCData.cal_average)));
-    FFCData.Height = h;
-    FFCData.Width = w;    
+    cGroup.FFC_n_cal = size(cGroup.FFC_all_cal,4);
+    cGroup.FFC_cal_average = sum(cGroup.FFC_all_cal,4)./cGroup.FFC_n_cal;
+    cGroup.FFC_cal_norm = cGroup.FFC_cal_average/max(max(max(cGroup.FFC_cal_average)));
+    cGroup.FFC_Height = h;
+    cGroup.FFC_Width = w;
+    cGroup.FFC_cal_size = size(cGroup.FFC_cal_norm);
     
-    % update main data structure with new data
-    cGroup.FFCData = FFCData;
+%     % update main data structure with new data
+%     cGroup.FFCData = FFCData;
 
     % test below
     cGroup.FFCLoaded = true;

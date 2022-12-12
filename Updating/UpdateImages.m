@@ -3,10 +3,7 @@ function [] = UpdateImages(source)
     % get main data structure
     PODSData = guidata(source);
     
-%     % get gui PODSData.Handles
-%     PODSData.Handles = PODSData.Handles;
-
-    FFCData = PODSData.CurrentGroup(1).FFCData;
+    % get the current image
     cImage = PODSData.CurrentImage;
 
     % if the current selection includes at least one image
@@ -26,9 +23,10 @@ function [] = UpdateImages(source)
     switch CurrentTab
         case 'Files'
             %% FILES
+            cGroup = PODSData.CurrentGroup;
             try
                 for i = 1:4
-                    PODSData.Handles.FFCImgH(i).CData = FFCData.cal_norm(:,:,i);
+                    PODSData.Handles.FFCImgH(i).CData = cGroup.FFC_cal_norm(:,:,i);
                 end
             catch
                 UpdateLog3(source,'WARNING: No FFC Images found for this group, try loading them now','append');
@@ -370,13 +368,19 @@ function [] = UpdateImages(source)
             %% Azimuth
             UpdateSliders();
             UpdateAverageIntensity();
-            
+            UpdateThreshholdSlider();
+
             if PODSData.Handles.ShowAsOverlayAzimuthImage.Value == 1
                 try
                     %OverlayIntensity = imadjust(cImage.I,cImage.PrimaryIntensityDisplayLimits);
                     %OverlayIntensity = imadjust(cImage.I);
                     %OverlayIntensity = imadjust(cImage.I);
                     %OverlayIntensity = Scale0To1(imadjust(cImage.I.*cImage.OF_image));
+                    
+                    %Enhanced = adapthisteq(cImage.I,"Distribution","exponential");
+                    %OverlayIntensity = imadjust(Enhanced,stretchlim(Enhanced));
+
+                    % most predictable is just using 'I'
                     OverlayIntensity = cImage.I;
                     AzimuthRGB = MaskRGB(MakeAzimuthRGB(cImage.AzimuthImage,PODSData.Settings.AzimuthColormap),OverlayIntensity);
                     PODSData.Handles.AzimuthImgH.CData = AzimuthRGB;
@@ -702,9 +706,7 @@ function [] = UpdateImages(source)
     end
 
     function UpdateAverageIntensity()
-
         try
-
             if ~PODSData.Settings.Zoom.Active
                 PODSData.Handles.AverageIntensityAxH.XLim = [0.5 cImage.Width+0.5];
                 PODSData.Handles.AverageIntensityAxH.YLim = [0.5 cImage.Height+0.5];
@@ -748,11 +750,9 @@ function [] = UpdateImages(source)
         catch
             PODSData.Handles.AverageIntensityImgH.CData = EmptyImage;
         end
-
     end
 
     function UpdateThreshholdSlider()
-
         if PODSData.Settings.ManualThreshEnabled
             try
                 [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
@@ -783,11 +783,6 @@ function [] = UpdateImages(source)
             PODSData.Handles.CurrentThresholdLine.Label = {['']};
 
         end
-
     end
-
-    %update PODSData structure with updated PODSData.Handles
-    %PODSData.Handles = PODSData.Handles;
-    %guidata(PODSData.Handles.fH,PODSData);
 
 end

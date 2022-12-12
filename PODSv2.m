@@ -166,7 +166,7 @@ PODSData.Handles.hProcessMenu = uimenu(PODSData.Handles.fH,'Text','Process');
 % Process Operations
 PODSData.Handles.hProcessFFC = uimenu(PODSData.Handles.hProcessMenu,'Text','Flat-Field Correction','MenuSelectedFcn',@pb_FFC);
 PODSData.Handles.hProcessMask = uimenu(PODSData.Handles.hProcessMenu,'Text','Build Mask','MenuSelectedFcn',@CreateMask4);
-PODSData.Handles.hProcessOF = uimenu(PODSData.Handles.hProcessMenu,'Text','Order Factor','MenuSelectedFcn',@FindOrderFactor3);
+PODSData.Handles.hProcessOF = uimenu(PODSData.Handles.hProcessMenu,'Text','Order Factor','MenuSelectedFcn',@pb_FindOrderFactor);
 PODSData.Handles.hProcessLocalSB = uimenu(PODSData.Handles.hProcessMenu,'Text','Local Signal:Background','MenuSelectedFcn',@pb_FindLocalSB);
 PODSData.Handles.hProcessObjectAzimuthStats = uimenu(PODSData.Handles.hProcessMenu,'Text','Object Azimuth Stats','MenuSelectedFcn',@pb_ComputeObjectAzimuthStats);
 
@@ -182,6 +182,7 @@ PODSData.Handles.hDeleteSelectedObjects = uimenu(PODSData.Handles.hObjectsMenu,'
 PODSData.Handles.hLabelSelectedObjects = uimenu(PODSData.Handles.hObjectsMenu,'Text','Label Selected Objects','MenuSelectedFcn',@mbLabelSelectedObjects);
 PODSData.Handles.hClearSelection = uimenu(PODSData.Handles.hObjectsMenu,'Text','Clear Selection','MenuSelectedFcn',@mbClearSelection);
 PODSData.Handles.hkMeansClustering = uimenu(PODSData.Handles.hObjectsMenu,'Text','Label Objects with k-means Clustering','MenuSelectedFcn',@mbObjectkmeansClustering);
+PODSData.Handles.hShowObjectImagesByLabel = uimenu(PODSData.Handles.hObjectsMenu,'Text','Show Object Images by Label','MenuSelectedFcn',@mbShowObjectImagesByLabel);
 %% draw the menu bar objects and pause for more predictable performance
 drawnow
 pause(0.5)
@@ -561,12 +562,17 @@ PODSData.Handles.LabelTree = uitree(PODSData.Handles.LabelGrid,...
     'FontName',PODSData.Settings.DefaultFont,...
     'FontWeight','bold',...
     'Interruptible','off',...
-    'Editable','on');
+    'Editable','on',...
+    'Multiselect','On');
 
 % context menu for individual labels
 PODSData.Handles.LabelContextMenu = uicontextmenu(PODSData.Handles.fH);
-PODSData.Handles.LabelContextMenu_Delete = uimenu(PODSData.Handles.LabelContextMenu,'Text','Delete label','MenuSelectedFcn',{@DeleteLabel,PODSData.Handles.fH});
-PODSData.Handles.LabelContextMenu_ChangeColor = uimenu(PODSData.Handles.LabelContextMenu,'Text','Change color','MenuSelectedFcn',{@EditLabelColor,PODSData.Handles.fH});
+PODSData.Handles.LabelContextMenu_ApplyLabelToSelectedObjects = uimenu(PODSData.Handles.LabelContextMenu,'Text','Apply label to selected objects','MenuSelectedFcn',{@ApplyLabelToSelectedObjects,PODSData.Handles.fH});
+PODSData.Handles.LabelContextMenu_SelectLabeledObjects = uimenu(PODSData.Handles.LabelContextMenu,'Text','Select objects with selected label(s)','MenuSelectedFcn',{@SelectLabeledObjects,PODSData.Handles.fH});
+PODSData.Handles.LabelContextMenu_Delete = uimenu(PODSData.Handles.LabelContextMenu,'Text','Delete label(s)','MenuSelectedFcn',{@DeleteLabel,PODSData.Handles.fH});
+PODSData.Handles.LabelContextMenu_DeleteLabelAndObjects = uimenu(PODSData.Handles.LabelContextMenu,'Text','Delete label(s) and objects','MenuSelectedFcn',{@DeleteLabelAndObjects,PODSData.Handles.fH});
+PODSData.Handles.LabelContextMenu_ChangeColor = uimenu(PODSData.Handles.LabelContextMenu,'Text','Change label color','MenuSelectedFcn',{@EditLabelColor,PODSData.Handles.fH});
+PODSData.Handles.LabelContextMenu_MergeLabels = uimenu(PODSData.Handles.LabelContextMenu,'Text','Merge selected labels','MenuSelectedFcn',{@MergeLabels,PODSData.Handles.fH});
 PODSData.Handles.LabelContextMenu_AddNewLabel = uimenu(PODSData.Handles.LabelContextMenu,'Text','New label','MenuSelectedFcn',@AddNewLabel);
 
 uitreenode(PODSData.Handles.LabelTree,...
@@ -1452,8 +1458,6 @@ PODSData.Handles.fH.Visible = 'On';
 drawnow
 pause(0.5)
 
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% NESTED FUNCTIONS - VARIOUS GUI CALLBACKS AND ACCESSORY FUNCTIONS
@@ -1508,8 +1512,8 @@ pause(0.5)
         UpdateLog3(fH,['Deleting images...'],'append');
         delete(SelectedNodes)
         cGroup = PODSData.CurrentGroup;
-        cImage = PODSData.CurrentImage(1);
         cGroup.DeleteSelectedImages();
+        cGroup.CurrentImageIndex = cGroup.CurrentImageIndex(1);
         UpdateImageTree(source);
         UpdateImages(source);
         UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});
@@ -1661,6 +1665,11 @@ pause(0.5)
                 PODSData.Handles.OrderFactorAxH.Colormap = OrderFactorMap;
                 PODSData.Handles.ObjectOFAxH.Colormap = OrderFactorMap;
                 PODSData.Handles.ObjectOFContourAxH.Colormap = OrderFactorMap;
+                if (~isempty(PODSData.CurrentImage) && ...
+                       PODSData.Handles.ShowAsOverlayOrderFactor.Value && ...
+                       strcmp(PODSData.Settings.CurrentTab,'Order Factor'))
+                    UpdateImages(PODSData.Handles.fH);
+                end
             case 'Reference'
                 ReferenceMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
                 PODSData.Settings.ReferenceColormap = ReferenceMap;
@@ -1712,42 +1721,159 @@ pause(0.5)
     end
 
     function DeleteLabel(source,event,fH)
-        if numel(PODSData.Settings.ObjectLabels)==1
+        % get the selected nodes (to delete)
+        SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
+        % if no nodes in the tree are truly 'selected', get the right-clicked node instead
+        if numel(SelectedNodes)==0
+            SelectedNodes = fH.CurrentObject
+        end
+        % handle possible error (we always need at least one label)
+        if PODSData.Settings.nLabels==1 || PODSData.Settings.nLabels == numel(SelectedNodes)
             uialert(PODSData.Handles.fH,'There must be at least one object label','Error');
             return
         end
 
-        SelectedNode = fH.CurrentObject;
-        cLabel = SelectedNode.NodeData;
-        UpdateLog3(fH,['Deleting [Label:',cLabel.Name,']...'],'append');
-        delete(SelectedNode)
-        % before deleting the label, we need to check for any unlabeled objects
-        ObjectsWithOldLabel = PODSData.getObjectsByLabel(cLabel);
-        % delete the old label
-        PODSData.Settings.DeleteObjectLabel(cLabel);
-        % add new label to the now unlabeled objects, if necessary
-        if ~isempty(ObjectsWithOldLabel)
-            UpdateLog3(fH,[num2str(numel(ObjectsWithOldLabel)),' objects affected. Reassigning default label...'],'append');
-            % empty label object
-            DefaultLabel = PODSLabel.empty();
-            % chack if the default label exists
-            for LabelIdx = 1:numel(PODSData.Settings.ObjectLabels)
-                Label = PODSData.Settings.ObjectLabels(LabelIdx);
-                if strcmp(Label.Name,'Default')
-                    DefaultLabel = Label;
-                    break
+        % loop through and delete the labels corresponding to each node
+        for NodeIdx = 1:numel(SelectedNodes)
+%             SelectedNode = fH.CurrentObject;
+%             cLabel = SelectedNode.NodeData;
+            cLabel = SelectedNodes(NodeIdx).NodeData;
+            % update log to indicate progress for each label
+            UpdateLog3(fH,['Deleting [Label:',cLabel.Name,']...'],'append');
+            %delete(SelectedNode)
+            % before deleting the label, we need to check for any objects that would end up unlabeled
+            ObjectsWithOldLabel = PODSData.getObjectsByLabel(cLabel);
+            % delete the old label
+            PODSData.Settings.DeleteObjectLabel(cLabel);
+            % add new label to the now unlabeled objects, if necessary
+            if ~isempty(ObjectsWithOldLabel)
+                UpdateLog3(fH,[num2str(numel(ObjectsWithOldLabel)),' objects affected. Reassigning default label...'],'append');
+                % empty label object
+                DefaultLabel = PODSLabel.empty();
+                % chack if the default label exists
+                for LabelIdx = 1:numel(PODSData.Settings.ObjectLabels)
+                    Label = PODSData.Settings.ObjectLabels(LabelIdx);
+                    if strcmp(Label.Name,'Default')
+                        DefaultLabel = Label;
+                        break
+                    end
                 end
+                % if default label not found...
+                if isempty(DefaultLabel)
+                    % create a new default label
+                    PODSData.Settings.AddNewObjectLabel(...
+                        'Default',...
+                        distinguishable_colors(1,PODSData.Settings.LabelColors));
+                    DefaultLabel = PODSData.Settings.ObjectLabels(end);
+                end
+                % add the new label to each of the unlabeled objects
+                [ObjectsWithOldLabel(:).Label] = deal(DefaultLabel);
             end
-            % if default label not found...
-            if isempty(DefaultLabel)
-                % create a new default label
-                PODSData.Settings.AddNewObjectLabel(...
-                    'Default',...
-                    distinguishable_colors(1,PODSData.Settings.LabelColors));
-                DefaultLabel = PODSData.Settings.ObjectLabels(end);
+
+        end
+
+        UpdateLabelTree(source);
+        UpdateImages(source);
+        UpdateLog3(fH,'Done.','append');
+    end
+
+    function DeleteLabelAndObjects(source,event,fH)
+        % get the selected nodes (to delete)
+        SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
+        % if no nodes in the tree are truly 'selected', get the right-clicked node instead
+        if numel(SelectedNodes)==0
+            SelectedNodes = fH.CurrentObject;
+        end
+        % handle possible error (we always need at least one label)
+        if PODSData.Settings.nLabels==1 || PODSData.Settings.nLabels == numel(SelectedNodes)
+            uialert(PODSData.Handles.fH,'There must be at least one object label','Error');
+            return
+        end
+
+        % loop through and delete the labels corresponding to each node
+        for NodeIdx = 1:numel(SelectedNodes)
+            % get the label to delete
+            cLabel = SelectedNodes(NodeIdx).NodeData;
+            % update log to indicate progress for each label
+            UpdateLog3(fH,['Deleting [Label:',cLabel.Name,']...'],'append');
+            % before deleting the label, get all objects with this label to indicate how will be deleted
+            ObjectsWithOldLabel = PODSData.getObjectsByLabel(cLabel);
+            % if any objects found, delete them and update the log
+            if ~isempty(ObjectsWithOldLabel)
+                UpdateLog3(fH,['Deleting ',num2str(numel(ObjectsWithOldLabel)),' objects...'],'append');
+                PODSData.DeleteObjectsByLabel(cLabel);
+            else
+                UpdateLog3(fH,['No objects deleted.'],'append');
             end
-            % add the new label to each of the unlabeled objects
-            [ObjectsWithOldLabel(:).Label] = deal(DefaultLabel);
+            % delete the label
+            PODSData.Settings.DeleteObjectLabel(cLabel);
+        end
+        % update the display
+        UpdateLabelTree(source);
+        UpdateImages(source);
+        UpdateLog3(fH,'Done.','append');
+    end
+
+    function ApplyLabelToSelectedObjects(source,event,fH)
+        % get the node that was right-clicked
+        SelectedNode = fH.CurrentObject;
+        % get the label we are going to apply to the objects
+        cLabel = SelectedNode.NodeData;
+        % apply the label to any selected objects
+        PODSData.LabelSelectedObjects(cLabel);
+        % update display
+        UpdateImages(source);
+        UpdateSummaryDisplay(source,{'Object'});
+        UpdateLog3(fH,'Done.','append');
+    end
+
+    function SelectLabeledObjects(source,event,fH)
+        % get the selected nodes (to delete)
+        SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
+        % if no nodes in the tree are truly 'selected', get the right-clicked node instead
+        if numel(SelectedNodes)==0
+            SelectedNodes = fH.CurrentObject;
+        end
+
+        for NodeIdx = 1:numel(SelectedNodes)
+            % get the label associated with the node
+            cLabel = SelectedNodes(NodeIdx).NodeData;
+            % select all objects with the label
+            PODSData.SelectObjectsByLabel(cLabel);
+        end
+        % update display
+        UpdateImages(source);
+        UpdateSummaryDisplay(source,{'Object'});
+        UpdateLog3(fH,'Done.','append');
+    end
+
+    function MergeLabels(source,event,fH)
+        % get the selected nodes
+        SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
+        % get the node that was right-clicked
+        ClickedNode = fH.CurrentObject;
+        % deal with some potential errors
+        if ~ismember(ClickedNode,SelectedNodes)
+            uialert(PODSData.Handles.fH,'You can only merge labels into a selected label. Select the label and try again.','Error');
+            return
+        end
+        if ~(numel(SelectedNodes)>=2)
+            uialert(PODSData.Handles.fH,'Merging object labels requires at least 2 selected labels.','Error');
+            return
+        end
+        % get the label that other labels will be merged into
+        LabelToMergeInto = ClickedNode.NodeData;
+        % for each of the selected nodes
+        for NodeIdx = 1:numel(SelectedNodes)
+            % get the label corresponding to the node
+            cLabel = SelectedNodes(NodeIdx).NodeData;
+            % then, as long as it is not the label we are merging into
+            if cLabel ~= LabelToMergeInto
+                % replace any objects labeled with cLabel with label we want to merge into
+                PODSData.SwapObjectLabels(cLabel,LabelToMergeInto);
+                % and delete the old label
+                PODSData.Settings.DeleteObjectLabel(cLabel);
+            end
         end
         UpdateLabelTree(source);
         UpdateImages(source);
@@ -1777,10 +1903,9 @@ pause(0.5)
 %         end
     end
 
-
 %% Callbacks controlling dynamic resizing of GUI containers
 
-    function [] = ResetContainerSizes(source,~)
+    function ResetContainerSizes(source,~)
         disp('Figure Window Size Changed...');
         SmallWidth = round((source.InnerPosition(3)*0.38)/2);
         % update grid size to maatch new image sizes
@@ -1796,19 +1921,19 @@ pause(0.5)
 
 %% Callbacks for interactive thresholding
 % Set figure callbacks WindowButtonMotionFcn and WindowButtonUpFcn
-    function [] = StartUserThresholding(~,~)
+    function StartUserThresholding(~,~)
         PODSData.Handles.fH.WindowButtonMotionFcn = @MoveThresholdLine;
         PODSData.Handles.fH.WindowButtonUpFcn = @StopMovingAndSetThresholdLine;
     end
 % Update display while thresh line is moving
-    function [] = MoveThresholdLine(source,~)
+    function MoveThresholdLine(source,~)
         PODSData.Handles.CurrentThresholdLine.Value = round(PODSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
         PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
         ThresholdLineMoving(source,PODSData.Handles.CurrentThresholdLine.Value);
         drawnow
     end
 % Set final thresh position and restore callbacks
-    function [] = StopMovingAndSetThresholdLine(source,~)
+    function StopMovingAndSetThresholdLine(source,~)
         PODSData.Handles.CurrentThresholdLine.Value = round(PODSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
         PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
         PODSData.Handles.fH.WindowButtonMotionFcn = '';
@@ -1819,7 +1944,7 @@ pause(0.5)
 
 %% Callbacks for intensity display scaling
 
-    function [] = AdjustPrimaryChannelIntensity(source,~)
+    function AdjustPrimaryChannelIntensity(source,~)
 
         PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits = source.Value;
 
@@ -1833,7 +1958,7 @@ pause(0.5)
 
     end
 
-    function [] = AdjustReferenceChannelIntensity(source,~)
+    function AdjustReferenceChannelIntensity(source,~)
         PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits = source.Value;
         if PODSData.CurrentImage(1).ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value
             UpdateCompositeRGB();
@@ -2007,7 +2132,7 @@ pause(0.5)
 
 %% 'Objects' menubar callbacks
 
-    function [] = mbDeleteSelectedObjects(source,~)
+    function mbDeleteSelectedObjects(source,~)
         
         cGroup = PODSData.CurrentGroup;
         
@@ -2018,7 +2143,7 @@ pause(0.5)
         UpdateSummaryDisplay(source,{'Group','Image','Object'});
     end
 
-    function [] = mbLabelSelectedObjects(source,~)
+    function mbLabelSelectedObjects(source,~)
         
         CustomLabel = ChooseObjectLabel(source);
         
@@ -2033,7 +2158,7 @@ pause(0.5)
         UpdateSummaryDisplay(source,{'Object'});
     end
 
-    function [] = mbClearSelection(source,~)
+    function mbClearSelection(source,~)
         
         cGroup = PODSData.CurrentGroup;
         
@@ -2048,24 +2173,24 @@ pause(0.5)
 
         % get the object data table
         T = SavePODSData(source);
-
+        % the variables we can cluster on
         VarLongList = PODSData.Settings.SwarmPlotVariablesLong;
         VarShortList = PODSData.Settings.SwarmPlotVariablesShort;
-
+        % get user settings for the clustering
         ClusterSettings = GetClusterSettings(VarShortList);
-
+        % gather data for all objects using user-specified variables from above
         ObjectData = T{:,string(ClusterSettings.VarList)};
-
+        % list of variables that the user chose
         VariablesList = ClusterSettings.VarList;
-
+        % how many clusters we will build, valid for 'manual' only
         nClusters = ClusterSettings.nClusters;
-
+        % 'manual' or 'auto' selection of k
         nClustersMode = ClusterSettings.nClustersMode;
-
+        % criterion to find optimal k, valid only 'auto' only
         Criterion = ClusterSettings.Criterion;
-
+        % minimum repeats per iteration to find the best solution (smallest combined sum)
         nRepeats = 10;
-
+        % call the main clustering function with the inputs above
         [ClusterIdxs,OptimalK] = PODSObjectClustering(ObjectData,...
             nClusters,...
             nRepeats,...
@@ -2073,11 +2198,13 @@ pause(0.5)
             [1,1,1],...
             nClustersMode,...
             Criterion);
-
+        % in case k was set automatically, adjust number of clusters to match
         nClusters = OptimalK;
-
-        % reset (clear) the existing labels
-        PODSData.Settings.ObjectLabels = PODSLabel.empty();
+        % delete the existing object labels
+        CurrentLabels = PODSData.Settings.ObjectLabels;
+        for LabelIdx = 1:numel(CurrentLabels)
+            PODSData.Settings.DeleteObjectLabel(CurrentLabels(LabelIdx));
+        end
         % find set of colors (n = nClusters) distinguishable from both black and white 
         BGcolors = [0 0 0;1 1 1];
         LabelColors = distinguishable_colors(nClusters,BGcolors);
@@ -2129,9 +2256,48 @@ pause(0.5)
         UpdateImages(source);
 
     end
+
+    function mbShowObjectImagesByLabel(source,~)
+
+        fH_ObjectImages = uifigure(...
+            'Name','Object images by label',...
+            'HandleVisibility','on',...
+            'WindowStyle','alwaysontop',...
+            'AutoResizeChildren','Off');
+        % grid layout object
+        ObjectImagesGrid = uigridlayout(fH_ObjectImages,[1,1]);
+
+        ObjImgTiles = cell(PODSData.Settings.nLabels,1);
+
+        for LabelIdx = 1:PODSData.Settings.nLabels
+            Objs = PODSData.getObjectsByLabel(PODSData.Settings.ObjectLabels(LabelIdx));
+            ObjImgs = cell(numel(Objs),1);
+            for ObjIdx = 1:numel(Objs)
+                ObjImgs{ObjIdx} = Objs(ObjIdx).RestrictedPaddedMaskSubImage();
+            end
+            
+            ObjImgTiles{LabelIdx,1} = imtile(ObjImgs,...
+                'ThumbnailSize',[25 25],...
+                'BorderSize',1,...
+                'BackgroundColor',PODSData.Settings.ObjectLabels(LabelIdx).Color,...
+                'GridSize',[NaN 30]);
+        end
+
+        ObjImgTilesCombined = cell2mat(ObjImgTiles);
+
+        ObjImgTiles_hImg = imshow(ObjImgTilesCombined);
+
+        MyScrollPanel = imscrollpanel(fH_ObjectImages,ObjImgTiles_hImg);
+
+        hMagBox = immagbox(fH_ObjectImages,ObjImgTiles_hImg);
+        hMagBoxpos = get(hMagBox,'Position');
+        set(hMagBox,'Position',[0 0 hMagBoxpos(3) hMagBoxpos(4)])
+        imoverview(ObjImgTiles_hImg)
+    end
+
 %% Changing file input settings
 
-    function [] = ChangeInputFileType(source,~)
+    function ChangeInputFileType(source,~)
         PODSData.Settings.InputFileType = source.Text;
         UpdateLog3(source,['Input File Type Changed to ',source.Text],'append');
         
@@ -2150,7 +2316,7 @@ pause(0.5)
 
 %% Changing object boxes type
 
-    function [] = ChangeObjectBoxType(source,~)
+    function ChangeObjectBoxType(source,~)
         PODSData.Settings.ObjectBoxType = source.Text;
         UpdateLog3(source,['Object Box Type Changed to ',source.Text],'append');
         
@@ -2176,7 +2342,7 @@ pause(0.5)
 
 %% changing GUI theme (dark or light)
 
-    function [] = ChangeGUITheme(source,~)
+    function ChangeGUITheme(source,~)
 
         PODSData.Settings.GUITheme = source.Text;
         UpdateLog3(source,['Switched theme to ',source.Text],'append');
@@ -2267,7 +2433,7 @@ pause(0.5)
     end
 
     function BuildNewScheme(source,~)
-
+        
         SchemeNameCell = SimpleFormFig('Enter a name for the masking scheme',{'Scheme name'},'White','Black');
 
         if iscell(SchemeNameCell)
@@ -2320,9 +2486,10 @@ pause(0.5)
         % update the log window
         UpdateLog3(PODSData.Handles.fH,['Saved new scheme:','SchemeFilesPath','NewSchemeName','.mat'],'append');
     end
+
 %% Changing active object/image/group indices
 
-    function [] = ChangeActiveObject(source,~)
+    function ChangeActiveObject(source,~)
         cImage = PODSData.CurrentImage;
         cImage.CurrentObjectIdx = source.Value;
         UpdateSummaryDisplay(source,{'Object'});
@@ -2360,7 +2527,6 @@ pause(0.5)
         UpdateImages(source);
         UpdateSummaryDisplay(source,{'Image','Object'});
     end
-
 
 %% Changing active image operation
 
@@ -2414,7 +2580,7 @@ pause(0.5)
 
     end
 
-    function [] = ChangeImageOperation(source,~)
+    function ChangeImageOperation(source,~)
         
         %data = guidata(source);
         OldOperation = PODSData.Settings.CurrentImageOperation;
@@ -2425,7 +2591,7 @@ pause(0.5)
 
 %% Change summary display type
 
-    function [] = ChangeSummaryDisplay(source,~)
+    function ChangeSummaryDisplay(source,~)
 
         %data = guidata(source);
         PODSData.Settings.SummaryDisplayType = source.Value;
@@ -2435,9 +2601,7 @@ pause(0.5)
 
 %% Local SB
 
-    function [] = pb_FindLocalSB(source,~)
-        % get the data structure
-        %data = guidata(source);
+    function pb_FindLocalSB(source,~)
         % number of selected images
         nImages = length(PODSData.CurrentImage);
         % update log to indicate # of images we are processing
@@ -2449,18 +2613,6 @@ pause(0.5)
             UpdateLog3(source,['    ',cImage.pol_shortname,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
             % detect local S/B for one image
             cImage.FindLocalSB();
-%             % preallocate filtered mask and OF image
-%             cImage.bwFiltered = zeros(size(cImage.bw));
-%             cImage.OFFiltered = zeros(size(cImage.OF_image));
-%             % fill filtered mask and OF images according to local S/B cutoff level
-%             if cImage.nObjects > 0
-%                 for ii = 1:length(cImage.Object)
-%                     if cImage.Object(ii).SBRatio >= cImage.SBCutoff
-%                         cImage.bwFiltered(cImage.Object(ii).PixelIdxList) = 1;
-%                     end
-%                     cImage.OFFiltered(cImage.bwFiltered) = cImage.OF_image(cImage.bwFiltered);
-%                 end
-%             end
             % log update to indicate we are done with this image
             UpdateLog3(source,['        Local S/B detected for ',num2str(cImage.nObjects),' objects...'],'append');
             % increment counter
@@ -2496,6 +2648,36 @@ pause(0.5)
         UpdateLog3(source,'Done.','append');
         % update summary table
         UpdateSummaryDisplay(source,{'Image','Object'});
+    end
+
+%% Order statistics (OF, azimuth, potentially more in the future)
+
+    function pb_FindOrderFactor(source,~)
+        % number of selected images
+        nImages = length(PODSData.CurrentImage);
+        % update log to indicate # of images we are processing
+        UpdateLog3(source,['Computing order statistics statistics for ',num2str(nImages),' images'],'append');
+        % counter to track progress
+        Counter = 1;
+        % detect object azimuth stats for each currently selected image
+        for cImage = PODSData.CurrentImage
+            % update log to indicate which image we are on
+            UpdateLog3(source,['    ',cImage.pol_shortname,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
+            % compute the azimuth stats
+            cImage.FindOrderFactor();
+            % increment the counter
+            Counter = Counter+1;
+        end
+        % change to the Order Factor 'tab' if not there already
+        if ~strcmp(PODSData.Settings.CurrentTab,'Order Factor')
+            feval(PODSData.Handles.hTabOrderFactor.Callback,PODSData.Handles.hTabOrderFactor,[]);
+        end
+        % update display
+        UpdateImages(source);
+        % update summary table
+        UpdateSummaryDisplay(source,{'Image','Object'});
+        % update log to indicate we are done
+        UpdateLog3(source,'Done.','append');        
     end
 
 %% Project saving and loading
@@ -2537,9 +2719,10 @@ pause(0.5)
             if isa(SavedPODSData,'struct')
                 SavedPODSData = PODSProject.loadobj(SavedPODSData);
             end
-        catch
+        catch ME
+            report = getReport(ME);
             PODSData.Handles.fH.Pointer = OldPointer;
-            uialert(PODSData.Handles.fH,'Unable to load project','Error')
+            uialert(PODSData.Handles.fH,['Unable to load project: ',report],'Error')
             return
         end
 
@@ -2622,7 +2805,6 @@ pause(0.5)
 
     end
 
-
 %% Data saving
 
     function [] = SaveImages(source,~)
@@ -2703,8 +2885,6 @@ pause(0.5)
         % save user-specified data for each currently selected image
         for cImage = PODSData.CurrentImage
             
-            % current replicate to save images for
-            %cImage = data.Group(cGroupIndex).Replicate(cImageIndex(i));
             % data struct to hold output variable for current image
             ImageSummary = struct();
             ImageSummary.I = cImage.I;
@@ -2753,7 +2933,6 @@ pause(0.5)
                 IOut = ind2rgb(im2uint8(cImage.OF_image),PODSData.Settings.OrderFactorColormap);
                 imwrite(IOut,name);
             end
-
 
             if any(strcmp(UserSaveChoices,'Masked Order Factor (RGB .png)'))
                 name = [loc,'-MaskedOF_RGB.png'];

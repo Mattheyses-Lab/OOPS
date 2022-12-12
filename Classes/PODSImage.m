@@ -17,7 +17,7 @@ classdef PODSImage < handle
         Width double
         Height double
         
-%% Experimental Data
+%% Raw data stack and various normalized/averaged versions
         % raw image stack - pol_rawdata(y/row,x/col,PolIdx)
         %   PolIdx: 1 = 0 deg | 2 = 45 deg | 3 = 90 deg | 4 = 135 deg
         pol_rawdata
@@ -35,20 +35,17 @@ classdef PODSImage < handle
 %% Status Tracking        
         % status parameters - false by default as we haven't started yet
         FilesLoaded = false
-
         FFCDone = false
         MaskDone = false
         OFDone = false
         ObjectDetectionDone = false
         LocalSBDone = false
         ObjectAzimuthDone = false
-
         ReferenceImageLoaded = false
         
 %% Masking            
         % masks
         bw logical
-        %bwFiltered logical
         
         % label matrices
         L
@@ -59,8 +56,6 @@ classdef PODSImage < handle
         
         % masking steps
         I double
-%         BGImg double
-%         BGSubtractedImg double
         EnhancedImg double
 
         MaskName char
@@ -85,21 +80,13 @@ classdef PODSImage < handle
 
         AzimuthImage double
         OF_image double
-        %masked_OF_image double
         a double
         b double
-
-        %PolarizationFactorImage double
         
 %% Output Values        
         
         % output values
         SBAvg double
-        
-%% Filtering
-
-        %SBCutoff = 3
-        %OFFiltered double
         
 %%
         PrimaryIntensityDisplayLimits = [0 1];
@@ -140,7 +127,7 @@ classdef PODSImage < handle
         RealWorldLimits double        
         
         % depends on bwFiltered
-        FiltOFAvg double
+        %FiltOFAvg double
         
         % depend on objects
         OFAvg double
@@ -206,24 +193,11 @@ classdef PODSImage < handle
             replicate.ObjectAzimuthDone = obj.ObjectAzimuthDone;
             replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
 
-            replicate.pol_rawdata = obj.pol_rawdata;
-            %replicate.RawPolAvg = obj.RawPolAvg;
-            replicate.pol_ffc = obj.pol_ffc;
-            %replicate.Pol_ImAvg = obj.Pol_ImAvg;
-            %replicate.norm = obj.norm;
-            %replicate.r1 = obj.r1;
-
             replicate.bw = obj.bw;
-%             replicate.bwFiltered = obj.bwFiltered;
-
-            replicate.L = obj.L;
 
             replicate.ThresholdAdjusted = obj.ThresholdAdjusted; 
             replicate.level = obj.level;
 
-%             replicate.I = obj.I;
-%             replicate.BGImg = obj.BGImg;
-%             replicate.BGSubtractedImg = obj.BGSubtractedImg;
             replicate.EnhancedImg = obj.EnhancedImg;
 
             replicate.MaskName = obj.MaskName;
@@ -231,16 +205,7 @@ classdef PODSImage < handle
             replicate.IntensityBinCenters = obj.IntensityBinCenters;
             replicate.IntensityHistPlot = obj.IntensityHistPlot;
 
-            replicate.AzimuthImage = obj.AzimuthImage;
-            replicate.OF_image = obj.OF_image;
-%             replicate.masked_OF_image = obj.masked_OF_image;
-%             replicate.a = obj.a;
-%             replicate.b = obj.b;
-
             replicate.SBAvg = obj.SBAvg;
-
-%             replicate.SBCutoff = obj.SBCutoff;
-%             replicate.OFFiltered = obj.OFFiltered;
 
             replicate.PrimaryIntensityDisplayLimits = obj.PrimaryIntensityDisplayLimits;
             replicate.ReferenceIntensityDisplayLimits = obj.ReferenceIntensityDisplayLimits;
@@ -253,9 +218,9 @@ classdef PODSImage < handle
                 replicate.Object(i) = obj.Object(i).saveobj();
             end
 
-
         end
 
+        % get the index of this PODSImage in [obj.Parent.Replicate(:)]
         function SelfIdx = get.SelfIdx(obj)
             SelfIdx = find(obj.Parent.Replicate==obj);
         end
@@ -264,7 +229,7 @@ classdef PODSImage < handle
         function FlatFieldCorrection(obj)
             % divide each raw data image by the corresponding flatfield image
             for i = 1:4
-                obj.pol_ffc(:,:,i) = obj.pol_rawdata(:,:,i)./obj.Parent.FFCData.cal_norm(:,:,i);
+                obj.pol_ffc(:,:,i) = obj.pol_rawdata(:,:,i)./obj.Parent.FFC_cal_norm(:,:,i);
             end
             % average FFC intensity
             obj.Pol_ImAvg = mean(obj.pol_ffc,3);
@@ -274,7 +239,7 @@ classdef PODSImage < handle
             obj.FFCDone = true;
         end
 
-        % detects objects in one PODSImage
+        % detects objects in this PODSImage
         function DetectObjects(obj)
             % start by deleting any currently existing objects
             obj.deleteObjects();
@@ -337,8 +302,40 @@ classdef PODSImage < handle
             % compute a new label matrix
             obj.L = bwlabel(full(obj.bw),4);
         end
+
+        function DeleteObjectsByLabel(obj,Label)
+            
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+            % idxs to the bad objects
+            BadIdxs = find([AllObjects.Label]==Label);
+            % and the bad objects
+            Bad = AllObjects(BadIdxs);
+            % idxs to the good objects
+            GoodIdxs = find([AllObjects.Label]~=Label);
+            % and the good objects
+            Good = AllObjects(GoodIdxs);
+            % replace the Object array of this image with only the ones we are keeping
+            obj.Object = Good;
+            % in case current object is greater than the total # of objects
+            if obj.CurrentObjectIdx > obj.nObjects
+                % select the last object in the list
+                obj.CurrentObjectIdx = obj.nObjects;
+            end
+            % delete the bad PODSObject objects
+            % set their pixel idxs to 0 in the mask
+            for i = 1:length(Bad)
+                obj.bw(Bad(i).PixelIdxList) = 0;
+                delete(Bad(i));
+            end
+            % clear Bad array
+            clear Bad
+            % compute a new label matrix
+            obj.L = bwlabel(full(obj.bw),4);
+
+        end
         
-        % apply unique label to selected objects in one PODSImage
+        % apply PODSLabel:Label to all selected objects in this PODSImage
         function LabelSelectedObjects(obj,Label)
             % find indices of currently selected objects
             Selected = find([obj.Object.Selected]);
@@ -362,6 +359,7 @@ classdef PODSImage < handle
             end
         end
 
+        % return all objects in this PODSImage with the PODSLabel:Label
         function Objects = getObjectsByLabel(obj,Label)
 
             Objects = PODSObject.empty();
@@ -375,7 +373,28 @@ classdef PODSImage < handle
 
         end
 
-        % detect local signal to BG ratio
+        function FindOrderFactor(obj)
+            n_img = 4;
+            maximum = max(obj.pol_ffc,[],3);
+            obj.r1 = obj.pol_ffc(:,:,1) > 0;
+            for j=1:n_img
+                obj.norm(:,:,j) = obj.pol_ffc(:,:,j)./maximum;
+            end
+            % orthogonal polarization difference components
+            obj.a = obj.norm(:,:,1) - obj.norm(:,:,3);
+            obj.b = obj.norm(:,:,2) - obj.norm(:,:,4);
+            % find Order Factor
+            obj.OF_image = zeros(size(obj.norm(:,:,1)));
+            obj.OF_image(obj.r1) = sqrt(obj.a(obj.r1).^2+obj.b(obj.r1).^2);
+            % find azimuth image
+            obj.AzimuthImage = zeros(size(obj.norm(:,:,1)));
+            % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
+            obj.AzimuthImage(obj.r1) = (1/2).*atan2(obj.b(obj.r1),obj.a(obj.r1));
+            % update completion status
+            obj.OFDone = true;
+        end
+
+        % detect local S/B ratio for each object in this PODSImage
         function obj = FindLocalSB(obj)
             
             % can't detect local S/B until we detect the objects!
@@ -518,19 +537,11 @@ classdef PODSImage < handle
         end
 
         function Dimensions = get.Dimensions(obj)
-            
             Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
-            
         end
         
         function RealWorldLimits = get.RealWorldLimits(obj)
             RealWorldLimits = [0 obj.Settings.PixelSize*obj.Width];
-        end
-        
-        function FiltOFAvg = get.FiltOFAvg(obj)
-            
-            FiltOFAvg = sum(sum(obj.OFFiltered))/nnz(obj.OFFiltered);
-            
         end
 
 %% PODSObject Methods
@@ -693,7 +704,7 @@ classdef PODSImage < handle
             end
         end
 
-        % get nObjects
+        % return the number of objects in this PODSImage
         function nObjects = get.nObjects(obj)
             if isvalid(obj.Object)
                 nObjects = length(obj.Object);
@@ -771,36 +782,52 @@ classdef PODSImage < handle
 
             obj = PODSImage(PODSGroup.empty());
 
+            % info about the image path and filename
             obj.filename = replicate.filename;
             obj.pol_shortname = replicate.pol_shortname;
             obj.pol_fullname = replicate.pol_fullname;
-            obj.Width = replicate.Width;
-            obj.Height = replicate.Height;
 
-            obj.pol_rawdata = replicate.pol_rawdata;
-            %obj.RawPolAvg = replicate.RawPolAvg;
-            obj.RawPolAvg = mean(replicate.pol_rawdata,3);
+            %% attempt to load the raw data using the saved filename
 
-            obj.pol_ffc = replicate.pol_ffc;
+            % find file extension
+            fnameSplit = strsplit(obj.filename,'.');
+            fileType = fnameSplit{end};
 
-            %obj.Pol_ImAvg = replicate.Pol_ImAvg;
-            obj.Pol_ImAvg = mean(obj.pol_ffc,3);
-            
-            obj.I = obj.Pol_ImAvg./max(max(obj.Pol_ImAvg));
-
-            % pixel-stack normalized intensity images (norm) and logical matrix representing 'on' pixels (r1)
-            n_img = 4;
-            maximum = max(obj.pol_ffc,[],3);
-            obj.r1 = obj.pol_ffc(:,:,1) > 0;
-            for j=1:n_img
-                obj.norm(:,:,j) = obj.pol_ffc(:,:,j)./maximum;
+            % load the image data
+            switch fileType
+                case 'nd2'
+                    disp(['Loading ',obj.pol_fullname,'...']);
+                    % get file data structure
+                    temp = bfopen(char(replicate.pol_fullname));
+                    temp2 = temp{1,1};
+                    % get image dimensions
+                    obj.Height = size(temp2{1,1},1);
+                    obj.Width = size(temp2{1,1},2);
+                    % pre-allocate raw data array
+                    obj.pol_rawdata = zeros(obj.Height,obj.Width,4);
+                    % add each pol slice to 3D image matrix
+                    for j=1:4
+                        obj.pol_rawdata(:,:,j) = im2double(temp2{j,1})*65535;
+                    end
+                case 'tif'
+                    disp(['Loading ',obj.pol_fullname,'...']);
+                    % get file data structure
+                    info = imfinfo(char(obj.pol_fullname));
+                    % get image dimensions
+                    obj.Height = info.Height;
+                    obj.Width = info.Width;
+                    % pre-allocate raw data array
+                    obj.pol_rawdata = zeros(obj.Height,obj.Width,4);
+                    % add the image data to pol_rawdata
+                    for j=1:4
+                        obj.pol_rawdata(:,:,j) = im2double(imread(char(obj.pol_fullname),j))*65535;
+                    end
             end
-            % orthogonal polarization difference components
-            obj.a = obj.norm(:,:,1) - obj.norm(:,:,3);
-            obj.b = obj.norm(:,:,2) - obj.norm(:,:,4);
 
-            %obj.norm = replicate.norm;
-            %obj.r1 = replicate.r1;
+            %% end raw data loading
+
+            % average the raw data (polarization stack)
+            obj.RawPolAvg = mean(obj.pol_rawdata,3);
 
             obj.FilesLoaded = replicate.FilesLoaded;
             obj.FFCDone = replicate.FFCDone;
@@ -812,16 +839,12 @@ classdef PODSImage < handle
             obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;
 
             obj.bw = replicate.bw;
-%             obj.bwFiltered = replicate.bwFiltered;
 
-            obj.L = replicate.L;
+            obj.L = sparse(bwlabel(full(obj.bw),4));
 
             obj.ThresholdAdjusted = replicate.ThresholdAdjusted; 
             obj.level = replicate.level;
 
-%             obj.I = replicate.I;
-%             obj.BGImg = replicate.BGImg;
-%             obj.BGSubtractedImg = replicate.BGSubtractedImg;
             obj.EnhancedImg = replicate.EnhancedImg;
 
             obj.MaskName = replicate.MaskName;
@@ -829,16 +852,7 @@ classdef PODSImage < handle
             obj.IntensityBinCenters = replicate.IntensityBinCenters;
             obj.IntensityHistPlot = replicate.IntensityHistPlot;
 
-            obj.AzimuthImage = replicate.AzimuthImage;
-            obj.OF_image = replicate.OF_image;
-%             obj.masked_OF_image = replicate.masked_OF_image;
-%             obj.a = replicate.a;
-%             obj.b = replicate.b;
-
             obj.SBAvg = replicate.SBAvg;
-
-%             obj.SBCutoff = replicate.SBCutoff;
-%             obj.OFFiltered = replicate.OFFiltered;
 
             obj.PrimaryIntensityDisplayLimits = replicate.PrimaryIntensityDisplayLimits;
             obj.ReferenceIntensityDisplayLimits = replicate.ReferenceIntensityDisplayLimits;

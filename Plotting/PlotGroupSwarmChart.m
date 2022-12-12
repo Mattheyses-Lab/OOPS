@@ -3,8 +3,8 @@ function hSwarmPlot = PlotGroupSwarmChart(source,axH)
 % get the GUI data structure
 PODSData = guidata(source);
 
-% array to hold the group idxs where selected variable has been determined
-%GoodGroups = [];
+% use GUI foreground color as error bar color
+ErrorBarColor = PODSData.Settings.GUIForegroundColor;
 
 % determine the number of plots
 nPlots = PODSData.nGroups;
@@ -69,15 +69,15 @@ for i = 1:nPlots
         GroupMean = mean(Y{i});
         GroupStd = std(Y{i});
         % plot a horizontal line showing the group mean
-        line(axH,[i-0.25 i+0.25],[GroupMean GroupMean],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',[1 1 1],'PickableParts','none');
+        line(axH,[i-0.25 i+0.25],[GroupMean GroupMean],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
         % plot horizontal lines showing the mean +/- SD
-        line(axH,[i-0.15 i+0.15],[GroupMean-GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',[1 1 1],'PickableParts','none');
-        line(axH,[i-0.15 i+0.15],[GroupMean+GroupStd GroupMean+GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',[1 1 1],'PickableParts','none');
+        line(axH,[i-0.15 i+0.15],[GroupMean-GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
+        line(axH,[i-0.15 i+0.15],[GroupMean+GroupStd GroupMean+GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
         % plot a vertical line orthogonal to the three lines above
-        line(axH,[i i],[GroupMean+GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',[1 1 1],'PickableParts','none');
+        line(axH,[i i],[GroupMean+GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
 
 
-        mean_marker(i) = plot(axH,i,GroupMean,'Marker','o','MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',[1 1 1]);
+        mean_marker(i) = plot(axH,i,GroupMean,'Marker','o','MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',ErrorBarColor);
         dtRow1 = dataTipTextRow("Mean",GroupMean);
         dtRow2 = dataTipTextRow("Standard Deviation",GroupStd);
         mean_marker(i).DataTipTemplate.DataTipRows(1) = dtRow1;
