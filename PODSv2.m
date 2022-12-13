@@ -2815,7 +2815,7 @@ pause(0.5)
         center = [ss(3)/2,ss(4)/2];
 
         %% Data Selection
-        sz = [center(1)-150 center(2)-300 300 600];
+        sz = [center(1)-150 center(2)-150 300 300];
         
         fig = uifigure('Name','Select Images to Save',...
             'Menubar','None',...
@@ -2831,7 +2831,6 @@ pause(0.5)
         
         % cell array of char vectors of possible save options
         SaveOptions = {'Average Intensity Image (8-bit .tif)';...
-            'Enhanced Intensity Image (8-bit .tif)';...
             'Order Factor (RGB .png)';...
             'Masked Order Factor (RGB .png)';...
             'Azimuth (RGB .png)';...
@@ -2891,26 +2890,18 @@ pause(0.5)
             % mask and average OF
             ImageSummary.bw = cImage.bw;
             ImageSummary.OFAvg = cImage.OFAvg;
-            % filtered mask and average OF
-            ImageSummary.bwFiltered = cImage.bwFiltered;
-            ImageSummary.FilteredOFAvg = cImage.FiltOFAvg;
             % raw data, raw data normalized to stack-max, raw stack-average
             ImageSummary.RawData = cImage.pol_rawdata;
-            ImageSummary.RawDataNormMax = cImage.pol_rawdata_normalizedbystack;
             ImageSummary.RawDataAvg = cImage.RawPolAvg;
             % same as above, but with flat-field corrected data
             ImageSummary.FlatFieldCorrectedData = cImage.pol_ffc;
-            ImageSummary.FlatFieldCorrectedDataNormMax = cImage.pol_ffc_normalizedbystack;
             ImageSummary.FlatFieldCorrectedDataAvg = cImage.Pol_ImAvg;
             % FF-corrected data normalized within each 4-px stack
             ImageSummary.FlatFieldCorrectedDataPixelNorm = cImage.norm;
             % output images
             ImageSummary.OFImage = cImage.OF_image;
-            ImageSummary.MaskedOFImage = cImage.masked_OF_image;
-            ImageSummary.FilteredOFImage = cImage.OFFiltered;
+            ImageSummary.MaskedOFImage = cImage.MaskedOFImage;
             ImageSummary.AzimuthImage = cImage.AzimuthImage;
-            % object properties data for image
-            ImageSummary.ObjectProperties = cImage.ObjectProperties;
             % image info
             ImageSummary.ImageName = cImage.pol_shortname;
             % calculated obj data (SB,OF,etc.)
@@ -2930,16 +2921,19 @@ pause(0.5)
             if any(strcmp(UserSaveChoices,'Order Factor (RGB .png)'))
                 name = [loc,'-OF_RGB.png'];
                 UpdateLog3(source,name,'append');
-                IOut = ind2rgb(im2uint8(cImage.OF_image),PODSData.Settings.OrderFactorColormap);
+                %IOut = ind2rgb(im2uint8(cImage.OF_image),PODSData.Settings.OrderFactorColormap);
+                IOut = cImage.OFImageRGB;
                 imwrite(IOut,name);
             end
 
             if any(strcmp(UserSaveChoices,'Masked Order Factor (RGB .png)'))
                 name = [loc,'-MaskedOF_RGB.png'];
                 UpdateLog3(source,name,'append');
-                temporarymap = PODSData.Settings.OrderFactorColormap;
-                temporarymap(1,:) = [0 0 0];
-                IOut = ind2rgb(im2uint8(full(cImage.masked_OF_image)),temporarymap);
+                IOut = cImage.MaskedOFImageRGB;
+%                 temporarymap = PODSData.Settings.OrderFactorColormap;
+%                 temporarymap(1,:) = [0 0 0];
+%                 IOut = ind2rgb(im2uint8(full(cImage.MaskedOFImage)),temporarymap);
+
                 imwrite(IOut,name);
             end
 
@@ -2947,13 +2941,14 @@ pause(0.5)
             if any(strcmp(UserSaveChoices,'Azimuth (RGB .png)'))
                 name = [loc,'-Azimuth_RGB.png'];
                 UpdateLog3(source,name,'append');
-                Aztemp = cImage.AzimuthImage;
-                % rescale values between [0,pi]
-                Aztemp(Aztemp<0) = Aztemp(Aztemp<0)+pi;
-                % scale to between [0 1]
-                Aztemp = Aztemp./max(max(Aztemp));
-                temporarymap = hsv;
-                IOut = ind2rgb(im2uint8(Aztemp),temporarymap);
+%                 Aztemp = cImage.AzimuthImage;
+%                 % rescale values between [0,pi]
+%                 Aztemp(Aztemp<0) = Aztemp(Aztemp<0)+pi;
+%                 % scale to between [0 1]
+%                 Aztemp = Aztemp./max(max(Aztemp));
+%                 temporarymap = hsv;
+%                 IOut = ind2rgb(im2uint8(Aztemp),temporarymap);
+                IOut = cImage.AzimuthRGB;
                 imwrite(IOut,name);
             end
 
@@ -2961,13 +2956,14 @@ pause(0.5)
             if any(strcmp(UserSaveChoices,'Masked Azimuth (RGB .png)'))
                 name = [loc,'-MaskedAzimuth_RGB.png'];
                 UpdateLog3(source,name,'append');
-                Aztemp = cImage.AzimuthImage;
-                Aztemp(Aztemp<0) = Aztemp(Aztemp<0)+pi;
-                Aztemp = Aztemp./max(max(Aztemp));
-                Aztemp(~cImage.bw) = 0;
-                temporarymap = hsv;
-                temporarymap(1,:) = [0 0 0];
-                IOut = ind2rgb(im2uint8(Aztemp),temporarymap);
+%                 Aztemp = cImage.AzimuthImage;
+%                 Aztemp(Aztemp<0) = Aztemp(Aztemp<0)+pi;
+%                 Aztemp = Aztemp./max(max(Aztemp));
+%                 Aztemp(~cImage.bw) = 0;
+%                 temporarymap = hsv;
+%                 temporarymap(1,:) = [0 0 0];
+%                 IOut = ind2rgb(im2uint8(Aztemp),temporarymap);
+                IOut = cImage.MaskedAzimuthRGB;
                 imwrite(IOut,name);
             end
             
@@ -2977,13 +2973,6 @@ pause(0.5)
                 UpdateLog3(source,name,'append');
                 IOut = im2uint8(Scale0To1(cImage.Pol_ImAvg));
                 imwrite(IOut,PODSData.Settings.IntensityColormap,name);                
-            end
-
-            if any(strcmp(UserSaveChoices,'Enhanced Intensity Image (8-bit .tif)'))    
-                name = [loc '-EnhancedIntensity.tif'];
-                UpdateLog3(source,name,'append');
-                IOut = im2uint8(Scale0To1(cImage.EnhancedImg));
-                imwrite(IOut,PODSData.Settings.IntensityColormap,name);
             end
 
             if any(strcmp(UserSaveChoices,'Mask (8-bit .tif)'))    

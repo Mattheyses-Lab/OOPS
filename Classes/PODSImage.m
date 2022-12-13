@@ -101,6 +101,13 @@ classdef PODSImage < handle
     % dependent properties
     properties (Dependent = true)
         
+        % other output images that we don't need in memory
+        OFImageRGB        
+        MaskedOFImage
+        MaskedOFImageRGB
+        AzimuthRGB
+        MaskedAzimuthRGB
+
         % no need to keep this in memory, calculating is pretty fast and it will change frequently
         ObjectProperties struct
 
@@ -542,6 +549,37 @@ classdef PODSImage < handle
         
         function RealWorldLimits = get.RealWorldLimits(obj)
             RealWorldLimits = [0 obj.Settings.PixelSize*obj.Width];
+        end
+
+%% Get methods for output images
+
+        function OFImageRGB = get.OFImageRGB(obj)
+            OFImageRGB = ind2rgb(im2uint8(obj.OF_image),obj.Settings.OrderFactorColormap);
+        end
+
+        function MaskedOFImage = get.MaskedOFImage(obj)
+            % get the full OF image
+            MaskedOFImage = obj.OF_image;
+            % set any pixels outside the mask to 0
+            MaskedOFImage(~obj.bw) = 0;
+        end
+
+        function MaskedOFImageRGB = get.MaskedOFImageRGB(obj)
+            MaskedOFImageRGB = MaskRGB(obj.OFImageRGB,obj.bw);
+        end
+
+        function AzimuthRGB = get.AzimuthRGB(obj)
+            AzimuthImage = obj.AzimuthImage;
+            % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
+            AzimuthImage(AzimuthImage<0) = AzimuthImage(AzimuthImage<0)+pi;
+            % scale values to [0 1]
+            AzimuthImage = AzimuthImage./pi;
+            % convert to uint8 then to RGB
+            AzimuthRGB = ind2rgb(im2uint8(AzimuthImage),obj.Settings.AzimuthColormap);
+        end
+
+        function MaskedAzimuthRGB = get.MaskedAzimuthRGB(obj)
+            MaskedAzimuthRGB = MaskRGB(obj.AzimuthRGB,obj.bw);
         end
 
 %% PODSObject Methods

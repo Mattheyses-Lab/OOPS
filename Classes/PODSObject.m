@@ -292,6 +292,11 @@ classdef PODSObject < handle
             LabelName = obj.Label.Name;
         end
         
+        function GroupName = get.GroupName(obj)
+            % get the name of the group this object belongs to
+            obj.GroupName = obj.Parent.Parent.GroupName;
+        end
+
         function OFPixelValues = get.OFPixelValues(obj)
             % list of OF in all object pixels
             try
@@ -310,7 +315,6 @@ classdef PODSObject < handle
             end
         end
       
-
         function OFSubImage = get.OFSubImage(obj)
             OFImage = obj.Parent.OF_image;
             PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
