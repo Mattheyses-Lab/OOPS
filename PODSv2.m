@@ -2788,11 +2788,21 @@ pause(0.5)
 %         SavedPODSData = PODSData;
 
         tic
+
+
+
+        disp('Retrieving data struct...')
+
         SavedPODSData = PODSData.saveobj();
 
         disp('Saving data struct...')
         % save project, v7.3 .mat file type in case > 2 GB
         save([path,filename],'SavedPODSData','-v7.3');
+
+
+        
+
+
         % display how long it took to save the data
         timeElapsed = toc;
         disp(['Total time elapsed: ',num2str(timeElapsed)])

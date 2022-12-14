@@ -38,9 +38,6 @@ classdef PODSObject < handle
         % coordinates to trace object boundary
         Boundary
         
-        % name of parent group
-        GroupName
-        
         % S/B properties
         BGIdxList
         BufferIdxList
@@ -60,11 +57,14 @@ classdef PODSObject < handle
     end % end properties
     
     properties(Dependent = true)
-        % various output values, object properties, and object images that
-        % are too costly to store in memory, but quick to calculate if needed
+        % various output values, object properties, and object images that are too costly 
+        % to constantly store in memory, but quick to calculate if needed
 
-        % list of values, average, and standard dev. of object azimuths
+        % list of azimuth pixel values
         AzimuthPixelValues
+
+        % rarely used for now, so we don't need to store it constantly
+        GroupName
 
         % various object images
         OFSubImage 
@@ -77,6 +77,7 @@ classdef PODSObject < handle
         PaddedColocNorm2MaxSubImage
         PaddedAzimuthSubImage
         
+        % we store the centroid as a 2 element vector, no need to store these too
         CentroidX
         CentroidY
 
@@ -198,9 +199,6 @@ classdef PODSObject < handle
             % coordinates to trace object boundary
             object.Boundary = obj.Boundary;
 
-            % name of parent group
-            object.GroupName = obj.GroupName;
-
             % S:B properties
             object.BGIdxList = obj.BGIdxList;
             object.BufferIdxList = obj.BufferIdxList;
@@ -294,7 +292,7 @@ classdef PODSObject < handle
         
         function GroupName = get.GroupName(obj)
             % get the name of the group this object belongs to
-            obj.GroupName = obj.Parent.Parent.GroupName;
+            GroupName = obj.Parent.Parent.GroupName;
         end
 
         function OFPixelValues = get.OFPixelValues(obj)
@@ -456,7 +454,6 @@ classdef PODSObject < handle
 
             ObjectProps.Solidity = object.Solidity;
 
-
             ObjectProps.BWBoundary = object.Boundary;
 
             ObjectProps.PixelIdxList = object.PixelIdxList;
@@ -468,8 +465,6 @@ classdef PODSObject < handle
 
             % create new instance of PODSObject
             obj = PODSObject(ObjectProps,PODSImage.empty(),ObjectLabel);
-
-            obj.GroupName = object.GroupName;
 
             obj.BGIdxList = object.BGIdxList;
             obj.BufferIdxList = object.BufferIdxList;
