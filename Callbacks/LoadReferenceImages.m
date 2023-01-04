@@ -65,7 +65,6 @@ switch InputFileType
         % Update Log Window
         UpdateLog3(source,['Opening ' num2str(n_Pol) ' reference images...'],'append');
         
-        
         % for each image
         for i=1:n_Pol
             

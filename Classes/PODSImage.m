@@ -58,7 +58,8 @@ classdef PODSImage < handle
         I double
         EnhancedImg double
 
-        MaskName char
+        MaskType = 'Default'
+        MaskName = 'Legacy'
         
         % mask threshold adjustment (for display purposes)
         IntensityBinCenters
@@ -133,16 +134,19 @@ classdef PODSImage < handle
         % 2-element vector describing the limits of the image in real-world coordinates
         RealWorldLimits double        
         
-        % depends on bwFiltered
-        %FiltOFAvg double
-        
         % depend on objects
         OFAvg double
         OFMax double
         OFMin double
         OFList double
 
+        % index of this image in [obj.Parent.Replicate()]
         SelfIdx
+
+        % some display properties specific to this image
+        ThreshPanelTitle char
+        ThreshStatisticName char
+        ManualThreshEnabled logical
     end
     
     methods
@@ -384,9 +388,16 @@ classdef PODSImage < handle
             n_img = 4;
             maximum = max(obj.pol_ffc,[],3);
             obj.r1 = obj.pol_ffc(:,:,1) > 0;
-            for j=1:n_img
-                obj.norm(:,:,j) = obj.pol_ffc(:,:,j)./maximum;
-            end
+%             for j=1:n_img
+%                 obj.norm(:,:,j) = obj.pol_ffc(:,:,j)./maximum;
+%             end
+            
+            % testing below without the loop
+            obj.norm = obj.pol_ffc./maximum;
+            % end testing
+
+
+
             % orthogonal polarization difference components
             obj.a = obj.norm(:,:,1) - obj.norm(:,:,3);
             obj.b = obj.norm(:,:,2) - obj.norm(:,:,4);
@@ -549,6 +560,63 @@ classdef PODSImage < handle
         
         function RealWorldLimits = get.RealWorldLimits(obj)
             RealWorldLimits = [0 obj.Settings.PixelSize*obj.Width];
+        end
+
+%% Get methods for various display options specific to this image
+
+        function ThreshPanelTitle = get.ThreshPanelTitle(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ThreshPanelTitle = 'Adjust Otsu threshold';
+                        case 'Adaptive'
+                            ThreshPanelTitle = 'Adjust adaptive mask sensitivity';
+                        case 'Intensity'
+                            ThreshPanelTitle = 'Adjust intensity threshold';
+                        otherwise
+                            ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
+                    end
+                case 'CustomScheme'
+                    ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
+            end
+        end
+
+        function ThreshStatisticName = get.ThreshStatisticName(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ThreshStatisticName = 'Threshold';
+                        case 'Adaptive'
+                            ThreshStatisticName = 'Adaptive mask sensitivity';
+                        case 'Intensity'
+                            ThreshStatisticName = 'Threshold';
+                        otherwise
+                            ThreshStatisticName = false;
+                    end
+                case 'CustomScheme'
+                    ThreshStatisticName = false;
+            end
+            % when set to false, will throw an error that we will catch when updating display
+        end
+
+        function ManualThreshEnabled = get.ManualThreshEnabled(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ManualThreshEnabled = true;
+                        case 'Adaptive'
+                            ManualThreshEnabled = true;
+                        case 'Intensity'
+                            ManualThreshEnabled = true;
+                        otherwise
+                            ManualThreshEnabled = false;
+                    end
+                case 'CustomScheme'
+                    ManualThreshEnabled = false;
+            end
         end
 
 %% Get methods for output images

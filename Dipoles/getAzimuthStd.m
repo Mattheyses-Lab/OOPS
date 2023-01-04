@@ -9,6 +9,10 @@ function AzimuthStd = getAzimuthStd(azimuths)
     % vector to hold each azimuth's deviation from the mean
     AzimuthDiff = zeros(size(AzimuthAverage));
 
+
+    %% the following code to find differences from the mean should be replaced with a more elegant approach
+    % one idea = AzimuthDiff = 
+
     for i = 1:length(azimuths)
         % deviation is the smallest angle between each azimuth and the mean
         % there are 3 cases to consider:

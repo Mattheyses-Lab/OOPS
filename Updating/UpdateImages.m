@@ -104,11 +104,11 @@ function [] = UpdateImages(source)
                 PODSData.Handles.MaskImgH.CData = EmptyImage;
             end
 
-            UpdateThreshholdSlider();          
+            %UpdateThreshholdSlider();          
 
         case 'Mask'
             %% VIEW MASK
-            UpdateSliders();
+            %UpdateSliders();
             
             % Mask
             try
@@ -240,7 +240,7 @@ function [] = UpdateImages(source)
             end
             
             UpdateAverageIntensity();            
-            UpdateThreshholdSlider();
+            %UpdateThreshholdSlider();
 
             drawnow
 
@@ -359,16 +359,14 @@ function [] = UpdateImages(source)
                 end
             end
 
-            UpdateSliders();
-            UpdateAverageIntensity();
-            UpdateThreshholdSlider();            
+            UpdateAverageIntensity();           
             drawnow
 
         case 'Azimuth'
             %% Azimuth
-            UpdateSliders();
+            %UpdateSliders();
             UpdateAverageIntensity();
-            UpdateThreshholdSlider();
+            %UpdateThreshholdSlider();
 
             if PODSData.Handles.ShowAsOverlayAzimuthImage.Value == 1
                 try
@@ -693,16 +691,16 @@ function [] = UpdateImages(source)
     end
 
     function UpdateSliders()
-        try
-            % only update the sliders if the intensity display setting is active
-            if strcmp(PODSData.Settings.CurrentImageOperation,'Intensity Display')
-                PODSData.Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
-                PODSData.Handles.ReferenceIntensitySlider.Value = cImage.ReferenceIntensityDisplayLimits;
-            end
-        catch
-            PODSData.Handles.PrimaryIntensitySlider.Value = [0 1];
-            PODSData.Handles.ReferenceIntensitySlider.Value = [0 1];
-        end
+%         try
+%             % only update the sliders if the intensity display setting is active
+%             if strcmp(PODSData.Settings.CurrentImageOperation,'Intensity Display')
+%                 PODSData.Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
+%                 PODSData.Handles.ReferenceIntensitySlider.Value = cImage.ReferenceIntensityDisplayLimits;
+%             end
+%         catch
+%             PODSData.Handles.PrimaryIntensitySlider.Value = [0 1];
+%             PODSData.Handles.ReferenceIntensitySlider.Value = [0 1];
+%         end
     end
 
     function UpdateAverageIntensity()
@@ -752,37 +750,37 @@ function [] = UpdateImages(source)
         end
     end
 
-    function UpdateThreshholdSlider()
-        if PODSData.Settings.ManualThreshEnabled
-            try
-                [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
-                PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
-                PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
-            catch
-                disp('Warning: Failed to update threshold slider with currently selected image data');
-            end
-
-            try
-                PODSData.Handles.CurrentThresholdLine.Value = cImage.level;
-                PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
-            catch
-                disp('Warning: Error while moving thresh line...')
-                PODSData.Handles.CurrentThresholdLine.Value = 0;
-                PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
-            end
-        else
-            try
-                [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.I);
-                PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
-                PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
-            catch
-                disp('Warning: Failed to update threshold slider with currently selected image data');
-            end
-
-            PODSData.Handles.CurrentThresholdLine.Value = 0;
-            PODSData.Handles.CurrentThresholdLine.Label = {['']};
-
-        end
-    end
+%     function UpdateThreshholdSlider()
+%         if PODSData.Settings.ManualThreshEnabled
+%             try
+%                 [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
+%                 PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
+%                 PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
+%             catch
+%                 disp('Warning: Failed to update threshold slider with currently selected image data');
+%             end
+% 
+%             try
+%                 PODSData.Handles.CurrentThresholdLine.Value = cImage.level;
+%                 PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
+%             catch
+%                 disp('Warning: Error while moving thresh line...')
+%                 PODSData.Handles.CurrentThresholdLine.Value = 0;
+%                 PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
+%             end
+%         else
+%             try
+%                 [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.I);
+%                 PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
+%                 PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
+%             catch
+%                 disp('Warning: Failed to update threshold slider with currently selected image data');
+%             end
+% 
+%             PODSData.Handles.CurrentThresholdLine.Value = 0;
+%             PODSData.Handles.CurrentThresholdLine.Label = {['']};
+% 
+%         end
+%     end
 
 end

@@ -1,5 +1,7 @@
 function [] = UpdateTables(source)
 
+% I think this function can be removed %
+
     PODSData = guidata(source);
     cGroupIndex = PODSData.CurrentGroupIndex;
     cGroup = PODSData.CurrentGroup;

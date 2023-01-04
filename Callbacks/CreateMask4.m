@@ -71,8 +71,9 @@ switch MaskType
                     cImage.ThresholdAdjusted = 0;
                     % a mask exists for this replicate
                     cImage.MaskDone = 1;
-                    % store the name of the mask used
+                    % store the type/name of the mask used
                     cImage.MaskName = MaskName;
+                    cImage.MaskType = MaskType;
                     % update log
                     UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
                     % end main loop timer
@@ -154,7 +155,14 @@ switch MaskType
                         [S.Eccentricity] > 0.5 & ...
                         [S.Circularity] < 0.5)));
 
-                    cImage.L = sparse(bwlabel(full(cImage.bw),4));
+                    % prior labeling method
+                    % cImage.L = sparse(bwlabel(full(cImage.bw),4));
+                    % end prior labeling method
+
+                    % testing a labeling method that will label individual branches
+                    [~,cImage.L] = labelBranches(full(cImage.bw));
+                    % end testing
+
 
                     % update log with masking output
                     UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
@@ -171,6 +179,7 @@ switch MaskType
                     cImage.MaskDone = 1;
                     % store the name of the mask used
                     cImage.MaskName = MaskName;
+                    cImage.MaskType = MaskType;                    
                     % update log
                     UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
                     % end main loop timer
@@ -291,6 +300,7 @@ switch MaskType
                     cImage.MaskDone = 1;
                     % store the name of the mask used
                     cImage.MaskName = MaskName;
+                    cImage.MaskType = MaskType;
                     % update log
                     UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
                     % end main loop timer
@@ -349,6 +359,7 @@ switch MaskType
                     cImage.MaskDone = 1;
                     % store the name of the mask used
                     cImage.MaskName = MaskName;
+                    cImage.MaskType = MaskType;
 
                     UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
 
@@ -407,6 +418,7 @@ switch MaskType
                     cImage.MaskDone = 1;
                     % store the name of the mask used
                     cImage.MaskName = MaskName;
+                    cImage.MaskType = MaskType;
                     % update log
                     UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
                     % end main loop timer
@@ -449,6 +461,7 @@ switch MaskType
             cImage.MaskDone = 1;
             % store the name of the mask used
             cImage.MaskName = MaskName;
+            cImage.MaskType = MaskType;
             % update log
             UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
             % end loop timer
@@ -470,5 +483,6 @@ UpdateLog3(source,'Done.','append');
 UpdateSummaryDisplay(source);
 UpdateObjectListBox(source);
 UpdateImages(source);
+UpdateImageOperationDisplay(source);
     
 end

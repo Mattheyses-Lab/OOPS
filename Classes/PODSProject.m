@@ -192,6 +192,7 @@ classdef PODSProject < handle
             obj = PODSProject();
 
             NewScreenSize = obj.Settings.ScreenSize;
+            NewFontSize = obj.Settings.FontSize;
 
             obj.ProjectName = proj.ProjectName;
             obj.Settings = proj.Settings;
@@ -199,6 +200,7 @@ classdef PODSProject < handle
             obj.Handles = proj.Handles;
 
             obj.Settings.ScreenSize = NewScreenSize;
+            obj.Settings.FontSize = NewFontSize;
 
             % load each group (calls loadobj() of PODSGroup)
             for i = 1:length(proj.Group)

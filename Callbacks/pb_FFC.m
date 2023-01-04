@@ -1,31 +1,30 @@
-function data = pb_FFC(source,~)
-    % get main data structure
+function pb_FFC(source,~)
+    % get data structure
     PODSData = guidata(source);
-
-    for cReplicate = PODSData.CurrentImage
-        try
-            cReplicate.FlatFieldCorrection;
-        catch
-            UpdateLog3(source,['Failed to perform FFC for ',cReplicate.pol_shortname],'append');
-            warning(['Failed to perform FFC for ',cReplicate.pol_shortname]);
-        end
+    % number of selected images
+    nImages = length(PODSData.CurrentImage);
+    % update log to indicate # of images we are processing
+    UpdateLog3(source,['Performing flat-field correction for ',num2str(nImages),' images'],'append');
+    % counter to track progress
+    Counter = 1;
+    % perform flat-field correction for each image
+    for cImage = PODSData.CurrentImage
+        % update log to indicate which image we are on
+        UpdateLog3(source,['    ',cImage.pol_shortname,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
+        % perform the flat-field correction for this image
+        cImage.FlatFieldCorrection;
+        % increment the counter
+        Counter = Counter+1;
     end
-        
-%     % normalize the images to the maximum value across the stack
-%     images = PODSData.CurrentImage(1).pol_ffc_normalizedbystack;
-% 
-%     % Update flat-field corrected intensity image objects with new data
-%     PODSData.Handles.PolFFCImage0.CData = images(:,:,1);
-%     PODSData.Handles.PolFFCImage45.CData = images(:,:,2);
-%     PODSData.Handles.PolFFCImage90.CData = images(:,:,3);
-%     PODSData.Handles.PolFFCImage135.CData = images(:,:,4);
-    % update the log and tables
-
-    UpdateLog3(source,['Flat-Field Correction Performed for ',num2str(length(PODSData.CurrentGroup.CurrentImageIndex)),' replicates'],'append');
-
+    % switch tabs if we are not already at the FFC tab
     if ~strcmp(PODSData.Settings.CurrentTab,'FFC')
         feval(PODSData.Handles.hTabFFC.Callback,PODSData.Handles.hTabFFC,[]);
-    end  
-    
-    UpdateSummaryDisplay(source,{'Project','Group','Image'});    
+    else
+        % update displayed images (tab switching will automatically update the display)
+        UpdateImages(source);
+    end
+    % update the summary display
+    UpdateSummaryDisplay(source,{'Project','Group','Image'});
+    % update the log
+    UpdateLog3(source,'Done.','append');
 end

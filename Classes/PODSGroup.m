@@ -97,7 +97,7 @@ classdef PODSGroup < handle
 
         function group = saveobj(obj)
 
-            disp('reached saveobj(Group)')
+            disp(['Saving PODSGroup: ',obj.GroupName])
 
             group.GroupName = obj.GroupName;
             group.CurrentImageIndex = obj.CurrentImageIndex;
@@ -123,7 +123,7 @@ classdef PODSGroup < handle
             group.nReplicates = obj.nReplicates;
 
             for i = 1:obj.nReplicates
-                disp('calling saveobj(Replicate)')
+                disp(['Saving PODSImage: ',obj.Replicate(i).pol_shortname])
 %                 group.Replicate(i) = saveobj(obj.Replicate(i));
                 group.Replicate(i) = obj.Replicate(i).saveobj();
             end

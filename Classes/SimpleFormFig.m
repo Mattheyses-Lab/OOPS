@@ -1,5 +1,8 @@
 function Outputs = SimpleFormFig(Name,Params,FontColor,BackgroundColor)
 
+
+    error('Using simple form fig');
+
     % initialize cell array of output variables
     Outputs = cell(numel(Params),1);
 
@@ -14,7 +17,10 @@ function Outputs = SimpleFormFig(Name,Params,FontColor,BackgroundColor)
         "CloseRequestFcn",@(o,e) GatherOutputs());
 
     % create the SimpleForm object in the figure we just created
-    hSimpleForm = SimpleForm('Parent',hFig,'Params',Params,'FontColor',FontColor,'BackgroundColor',BackgroundColor);
+    hSimpleForm = SimpleForm('Parent',hFig,...
+        'Params',Params,...
+        'FontColor',FontColor,...
+        'BackgroundColor',BackgroundColor);
 
     % set inner height of figure based on number of inputs (calculated by SimpleForm object)
     hFig.InnerPosition(4) = hSimpleForm.FigInnerHeight;
@@ -37,13 +43,10 @@ function Outputs = SimpleFormFig(Name,Params,FontColor,BackgroundColor)
             case "Cancel"
                 Outputs = 0;
         end
-
         % delete the SimpleForm custom container object
         delete(hSimpleForm)
-
         % delete the figure
         delete(hFig)
-
     end
 
 end

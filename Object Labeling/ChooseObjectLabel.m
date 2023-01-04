@@ -1,5 +1,7 @@
 function ChosenLabel = ChooseObjectLabel(source)
 
+% can delete this function %
+
     PODSData = guidata(source);
 
     ChosenLabel = PODSData.Settings.ObjectLabels(1);

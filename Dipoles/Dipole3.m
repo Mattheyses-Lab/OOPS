@@ -52,7 +52,7 @@ classdef Dipole3 < handle & matlab.mixin.Copyable
 
         function Alpha = get.Alpha(obj)
             % orientation of the projection of the dipole into the x-y plane
-            % (relative to the azimuth reference direction: positive x-axis)
+            % (relative to the positive x-axis (azimuth)
             Alpha = atan2d(obj.V,obj.U);
 
 %              if obj.V == 0
@@ -68,7 +68,7 @@ classdef Dipole3 < handle & matlab.mixin.Copyable
 
         function Beta = get.Beta(obj)
             % inclination of the dipole 
-            % (relative to the zenith: positive z-axis)
+            % relative to the positive z-axis (zenith)
             Beta = acosd(obj.W/obj.Magnitude);
         end
 
@@ -191,11 +191,7 @@ classdef Dipole3 < handle & matlab.mixin.Copyable
                     end
                 end
             end
-
         end
-
-
-
 
     end
 

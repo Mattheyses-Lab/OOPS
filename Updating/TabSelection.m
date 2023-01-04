@@ -1,4 +1,4 @@
-function [] = TabSelection(source,~)
+function TabSelection(source,~)
 
     % current PODSData structure
     PODSData = guidata(source);
@@ -19,15 +19,8 @@ function [] = TabSelection(source,~)
     switch PODSData.Settings.PreviousTab % the tab we are switching from
     
         case 'Files'
-%             try
-%                 linkaxes(PODSData.Handles.FFCAxH,'off');
-%                 linkaxes(PODSData.Handles.RawIntensityAxH,'off');
-%             catch
-%                 % do nothing
-%             end
     
             for i = 1:4
-                %PODSData.Handles.RawIntensityAxH(i).Parent = PODSData.Handles.SmallPanels(1,i);
     
                 PODSData.Handles.FFCImgH(i).Visible = 'Off';
                 PODSData.Handles.FFCAxH(i).Title.Visible = 'Off';
@@ -46,7 +39,6 @@ function [] = TabSelection(source,~)
         case 'FFC'
     
             for i = 1:4
-                %PODSData.Handles.RawIntensityAxH(i).Parent = PODSData.Handles.SmallPanels(2,i);
     
                 PODSData.Handles.PolFFCImgH(i).Visible = 'Off';
                 PODSData.Handles.PolFFCAxH(i).Title.Visible = 'Off';
@@ -57,34 +49,6 @@ function [] = TabSelection(source,~)
                 PODSData.Handles.RawIntensityAxH(i).Title.Visible = 'Off';
                 PODSData.Handles.RawIntensityAxH(i).Toolbar.Visible = 'Off';
                 PODSData.Handles.RawIntensityAxH(i).HitTest = 'Off';
-    
-                PODSData.Handles.SmallPanels(1,i).Visible = 'Off';
-                PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
-            end
-    
-        case 'Generate Mask'
-            try
-                linkaxes([PODSData.Handles.MStepsAxH,PODSData.Handles.MaskAxH],'off');
-            catch
-                % do nothing
-            end
-    
-            PODSData.Handles.MaskImgH.Visible = 'Off';
-            PODSData.Handles.MaskAxH.Title.Visible = 'Off';
-            PODSData.Handles.MaskAxH.Toolbar.Visible = 'Off';
-            PODSData.Handles.MaskAxH.HitTest = 'Off';
-    
-            % hide masking steps and small panels
-            for i = 1:2
-                PODSData.Handles.MStepsImgH(i).Visible = 'Off';
-                PODSData.Handles.MStepsAxH(i).Title.Visible = 'Off';
-                PODSData.Handles.MStepsAxH(i).Toolbar.Visible = 'Off';
-                PODSData.Handles.MStepsAxH(i).HitTest = 'Off';
-    
-                PODSData.Handles.MStepsImgH(i+2).Visible = 'Off';
-                PODSData.Handles.MStepsAxH(i+2).Title.Visible = 'Off';
-                PODSData.Handles.MStepsAxH(i+2).Toolbar.Visible = 'Off';
-                PODSData.Handles.MStepsAxH(i+2).HitTest = 'Off';
     
                 PODSData.Handles.SmallPanels(1,i).Visible = 'Off';
                 PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
@@ -172,9 +136,6 @@ function [] = TabSelection(source,~)
     
         case 'View Objects'
     
-            %                 % delete the object OF contour plot
-            %                 delete(data.Handles.hObjectOFContour);
-    
             % delete the object Azimuth lines
             delete(PODSData.Handles.ObjectAzimuthLines);
     
@@ -189,18 +150,23 @@ function [] = TabSelection(source,~)
             PODSData.Handles.ObjectMaskAxH.Title.Visible = 'Off';
             PODSData.Handles.ObjectMaskImgH.Visible = 'Off';
     
+            % object intensity image with azimuth lines overlay
             PODSData.Handles.ObjectAzimuthOverlayAxH.Title.Visible = 'Off';
             PODSData.Handles.ObjectAzimuthOverlayImgH.Visible = 'Off';
     
+            % object OF image
             PODSData.Handles.ObjectOFAxH.Title.Visible = 'Off';
             PODSData.Handles.ObjectOFImgH.Visible = 'Off';
     
+            % object intensity fit plot
             PODSData.Handles.ObjectIntensityPlotAxH.Visible = 'Off';
             PODSData.Handles.ObjectIntensityPlotAxH.Title.Visible = 'Off';
     
+            % object stack-normalized intensity
             PODSData.Handles.ObjectNormIntStackImgH.Visible = 'Off';
             PODSData.Handles.ObjectNormIntStackAxH.Title.Visible = 'Off';
     
+            % hide panels that were used by this tab
             PODSData.Handles.ImgPanel2.Visible = 'Off';
     
             for i = 1:2
@@ -214,7 +180,6 @@ function [] = TabSelection(source,~)
         case 'Files'
     
             for i = 1:4
-                %PODSData.Handles.RawIntensityAxH(i).Parent = PODSData.Handles.SmallPanels(2,i);
     
                 PODSData.Handles.RawIntensityImgH(i).Visible = 'On';
                 PODSData.Handles.RawIntensityAxH(i).Title.Visible = 'On';
@@ -236,7 +201,6 @@ function [] = TabSelection(source,~)
         case 'FFC'
     
             for i = 1:4
-                %PODSData.Handles.RawIntensityAxH(i).Parent = PODSData.Handles.SmallPanels(1,i);
     
                 PODSData.Handles.RawIntensityImgH(i).Visible = 'On';
                 PODSData.Handles.RawIntensityAxH(i).Title.Visible = 'On';
@@ -253,35 +217,6 @@ function [] = TabSelection(source,~)
             end
             PODSData.Handles.ImgPanel1.Visible = 'Off';
             PODSData.Handles.ImgPanel2.Visible = 'Off';
-    
-        case 'Generate Mask'
-    
-            PODSData.Handles.MaskImgH.Visible = 'On';
-            PODSData.Handles.MaskAxH.Title.Visible = 'On';
-            PODSData.Handles.MaskAxH.Toolbar.Visible = 'On';
-    
-            PODSData.Handles.ImgPanel1.Visible = 'Off';
-            PODSData.Handles.ImgPanel2.Visible = 'On';
-    
-            for i = 1:2
-                PODSData.Handles.MStepsImgH(i).Visible = 'On';
-                PODSData.Handles.MStepsAxH(i).Title.Visible = 'On';
-                PODSData.Handles.MStepsAxH(i).Toolbar.Visible = 'On';
-                PODSData.Handles.MStepsAxH(i).HitTest = 'On';
-    
-                PODSData.Handles.MStepsImgH(i+2).Visible = 'On';
-                PODSData.Handles.MStepsAxH(i+2).Title.Visible = 'On';
-                PODSData.Handles.MStepsAxH(i+2).Toolbar.Visible = 'On';
-                PODSData.Handles.MStepsAxH(i+2).HitTest = 'On';
-    
-                PODSData.Handles.SmallPanels(1,i).Visible = 'On';
-                PODSData.Handles.SmallPanels(2,i).Visible = 'On';
-    
-                PODSData.Handles.SmallPanels(1,i+2).Visible = 'Off';
-                PODSData.Handles.SmallPanels(2,i+2).Visible = 'Off';
-            end
-    
-            linkaxes([PODSData.Handles.MStepsAxH,PODSData.Handles.MaskAxH],'xy');
     
         case 'Mask'
             PODSData.Handles.ImgPanel1.Visible = 'On';
@@ -383,28 +318,6 @@ function [] = TabSelection(source,~)
                 PODSData.Handles.SmallPanels(1,i).Visible = 'Off';
                 PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
             end
-    
-%         case 'Filtered Order Factor'
-%     
-%             PODSData.Handles.AverageIntensityImgH.Visible = 'On';
-%             PODSData.Handles.AverageIntensityAxH.Title.Visible = 'On';
-%             PODSData.Handles.AverageIntensityAxH.Toolbar.Visible = 'On';
-%             PODSData.Handles.AverageIntensityAxH.HitTest = 'On';
-%     
-%             PODSData.Handles.FilteredOFImgH.Visible = 'On';
-%             PODSData.Handles.FilteredOFAxH.Title.Visible = 'On';
-%             PODSData.Handles.FilteredOFAxH.Toolbar.Visible = 'On';
-%             PODSData.Handles.FilteredOFAxH.HitTest = 'On';
-%     
-%             PODSData.Handles.OFCbar2.Visible = 'On';
-%     
-%             PODSData.Handles.ImgPanel1.Visible = 'On';
-%             PODSData.Handles.ImgPanel2.Visible = 'On';
-%     
-%             for i = 1:4
-%                 PODSData.Handles.SmallPanels(1,i).Visible = 'Off';
-%                 PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
-%             end
     
         case 'View Objects'
     

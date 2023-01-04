@@ -7,7 +7,7 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
     rows = MainReplicate.Height;
     cols = MainReplicate.Width;
 
-    switch PODSData.Settings.MaskName
+    switch MainReplicate.MaskName
         case 'Legacy'
             IM = MainReplicate.EnhancedImg;
             IM = IM./max(max(IM));

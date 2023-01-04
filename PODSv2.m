@@ -36,8 +36,10 @@ Splash.setLocation((screenWidth-imgWidth)/2,(screenHeight-imgHeight)/2);
 Splash.show % show the splash screen
 %% END TESTING
 
-PODSData.Handles = struct();
+%% set up the main window
 
+% struct to hold graphics objects
+PODSData.Handles = struct();
 % create the uifigure (main gui window)
 PODSData.Handles.fH = uifigure('Name','PODS GUI',...
     'numbertitle','off',...
@@ -105,23 +107,32 @@ PODSData.Handles.hGUITheme_Royal = uimenu(PODSData.Handles.hGUITheme,'Text','Roy
 PODSData.Handles.hGUIBackgroundColor = uimenu(PODSData.Handles.hGUI,'Text','Background Color','Separator','on','Tag','GUIBackgroundColor','Callback',@ChangeGUIColors);
 PODSData.Handles.hGUIForegroundColor = uimenu(PODSData.Handles.hGUI,'Text','Foreground Color','Tag','GUIForegroundColor','Callback',@ChangeGUIColors);
 PODSData.Handles.hGUIHighlightColor = uimenu(PODSData.Handles.hGUI,'Text','Highlight Color','Tag','GUIHighlightColor','Callback',@ChangeGUIColors);
+
+% GUI font size option
+PODSData.Handles.hGUIFontSize = uimenu(PODSData.Handles.hGUI,'Text','Font Size');
+% options for GUI font size
+PODSData.Handles.hGUIFontSize_Larger = uimenu(PODSData.Handles.hGUIFontSize,'Text','Larger','Callback',@ChangeGUIFontSize);
+PODSData.Handles.hGUIFontSize_Smaller = uimenu(PODSData.Handles.hGUIFontSize,'Text','Smaller','Callback',@ChangeGUIFontSize);
+
 % Input File Type Option
 PODSData.Handles.hFileInputType = uimenu(PODSData.Handles.hOptionsMenu,'Text','File Input Type');
 % Options for input file type
 PODSData.Handles.hFileInputType_nd2 = uimenu(PODSData.Handles.hFileInputType,'Text','.nd2','Checked','On','Callback',@ChangeInputFileType);
 PODSData.Handles.hFileInputType_tif = uimenu(PODSData.Handles.hFileInputType,'Text','.tif','Checked','Off','Callback',@ChangeInputFileType);
-% Options for mask  type
-PODSData.Handles.hMaskType = uimenu(PODSData.Handles.hOptionsMenu,'Text','Mask Type');
-PODSData.Handles.hMaskType_Default = uimenu(PODSData.Handles.hMaskType,'Text','Default');
 
+% Options for mask type ('Default' or 'Custom', 'Upload mask' in development
+PODSData.Handles.hMaskType = uimenu(PODSData.Handles.hOptionsMenu,'Text','Mask Type');
+% Option to select 'Default' mask type
+PODSData.Handles.hMaskType_Default = uimenu(PODSData.Handles.hMaskType,'Text','Default');
+% Names of 'Default' masks
 PODSData.Handles.hMaskType_Default_Legacy = uimenu(PODSData.Handles.hMaskType_Default,'Text','Legacy','Checked','On','Tag','Default','Callback', @ChangeMaskType);
 PODSData.Handles.hMaskType_Default_Filament = uimenu(PODSData.Handles.hMaskType_Default,'Text','Filament','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
 PODSData.Handles.hMaskType_Default_FilamentEdge = uimenu(PODSData.Handles.hMaskType_Default,'Text','FilamentEdge','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
 PODSData.Handles.hMaskType_Default_Intensity = uimenu(PODSData.Handles.hMaskType_Default,'Text','Intensity','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
 PODSData.Handles.hMaskType_Default_Adaptive = uimenu(PODSData.Handles.hMaskType_Default,'Text','Adaptive','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
-
+% Option to select 'Custom' mask type
 PODSData.Handles.hMaskType_CustomScheme = uimenu(PODSData.Handles.hMaskType,'Text','CustomScheme');
-
+% Load the custom schemes and make a menu option for each one
 for i = 1:numel(PODSData.Settings.SchemeNames)
     SchemeName = PODSData.Settings.SchemeNames{i};
     PODSData.Handles.(['hMaskType_CustomScheme_',PODSData.Settings.SchemeNames{i}]) = ...
@@ -131,15 +142,13 @@ for i = 1:numel(PODSData.Settings.SchemeNames)
         'Checked','Off',...
         'Callback',@ChangeMaskType);
 end
-
+% Option to create new 'Custom' mask scheme
 PODSData.Handles.hMaskType_NewScheme = uimenu(PODSData.Handles.hMaskType_CustomScheme,...
     'Text','Create new scheme',...
     'Separator','on',...
     'Callback',@BuildNewScheme);
 
-% % Change azimuth display settings
-% PODSData.Handles.hSwarmChartSettingsMenu = uimenu(PODSData.Handles.hOptionsMenu,'Text','Swarm Chart Settings','Callback',@SetSwarmChartSettings);
-
+% Options for display of object boxes
 PODSData.Handles.hObjectBoxMenu = uimenu(PODSData.Handles.hOptionsMenu,'Text','Object boxes');
 % Box type option
 PODSData.Handles.hObjectBoxType = uimenu(PODSData.Handles.hObjectBoxMenu,'Text','Box type');
@@ -179,7 +188,7 @@ PODSData.Handles.hSumaryAll = uimenu(PODSData.Handles.hSummaryMenu,'Text','All D
 PODSData.Handles.hObjectsMenu = uimenu(PODSData.Handles.fH,'Text','Objects');
 % Object Actions
 PODSData.Handles.hDeleteSelectedObjects = uimenu(PODSData.Handles.hObjectsMenu,'Text','Delete Selected Objects','MenuSelectedFcn',@mbDeleteSelectedObjects);
-PODSData.Handles.hLabelSelectedObjects = uimenu(PODSData.Handles.hObjectsMenu,'Text','Label Selected Objects','MenuSelectedFcn',@mbLabelSelectedObjects);
+% PODSData.Handles.hLabelSelectedObjects = uimenu(PODSData.Handles.hObjectsMenu,'Text','Label Selected Objects','MenuSelectedFcn',@mbLabelSelectedObjects);
 PODSData.Handles.hClearSelection = uimenu(PODSData.Handles.hObjectsMenu,'Text','Clear Selection','MenuSelectedFcn',@mbClearSelection);
 PODSData.Handles.hkMeansClustering = uimenu(PODSData.Handles.hObjectsMenu,'Text','Label Objects with k-means Clustering','MenuSelectedFcn',@mbObjectkmeansClustering);
 PODSData.Handles.hShowObjectImagesByLabel = uimenu(PODSData.Handles.hObjectsMenu,'Text','Show Object Images by Label','MenuSelectedFcn',@mbShowObjectImagesByLabel);
@@ -205,15 +214,12 @@ sheight = swidth;
 % main grid for managing layout
 PODSData.Handles.MainGrid = uigridlayout(PODSData.Handles.fH,[4,5]);
 PODSData.Handles.MainGrid.BackgroundColor = [0 0 0];
-% PODSData.Handles.MainGrid.RowSpacing = 5;
-% PODSData.Handles.MainGrid.ColumnSpacing = 5;
-%PODSData.Handles.MainGrid.RowHeight = {'0.5x',swidth,swidth,'0.3x'};
-% testing below
+
 PODSData.Handles.MainGrid.RowHeight = {'1x',swidth,swidth,'1x'};
 PODSData.Handles.MainGrid.RowSpacing = 0;
 PODSData.Handles.MainGrid.ColumnSpacing = 0;
 PODSData.Handles.MainGrid.Padding = [0 0 0 0];
-% end testing
+
 PODSData.Handles.MainGrid.ColumnWidth = {'1x',sheight,sheight,sheight,sheight};
 
 %% CHECKPOINT
@@ -621,7 +627,7 @@ PODSData.Handles.ImageOperationsSelector = uilistbox('parent',PODSData.Handles.I
 PODSData.Handles.ImageOperationsPanel = uipanel(PODSData.Handles.ImageOperationsGrid,...
     'Visible','Off');
 PODSData.Handles.ImageOperationsPanel.Layout.Column = 2;
-PODSData.Handles.ImageOperationsPanel.Title = PODSData.Settings.ThreshPanelTitle;
+PODSData.Handles.ImageOperationsPanel.Title = 'Adjust Otsu threshhold';
 
 %% LogPanel
 % panel to display log messages (updates user on running/completed processes)
@@ -1436,7 +1442,7 @@ PODSData.Handles.ObjectAzimuthLines = gobjects(1,1);
 % (this is how we will retain access to the data across different functions)
 guidata(PODSData.Handles.fH,PODSData)
 % set optimum font size for display
-fontsize(PODSData.Handles.fH,PODSData.Settings.DefaultFontSize,'pixels');
+fontsize(PODSData.Handles.fH,PODSData.Settings.FontSize,'pixels');
 % update GUI display colors
 UpdateGUITheme();
 
@@ -1462,7 +1468,6 @@ pause(0.5)
 
 %% NESTED FUNCTIONS - VARIOUS GUI CALLBACKS AND ACCESSORY FUNCTIONS
 
-%% Context menu callbacks
 %% Group uitree callbacks
 
     function GroupTreeNodeTextChanged(source,event)
@@ -1928,14 +1933,14 @@ pause(0.5)
 % Update display while thresh line is moving
     function MoveThresholdLine(source,~)
         PODSData.Handles.CurrentThresholdLine.Value = round(PODSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
-        PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
+        PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
         ThresholdLineMoving(source,PODSData.Handles.CurrentThresholdLine.Value);
         drawnow
     end
 % Set final thresh position and restore callbacks
     function StopMovingAndSetThresholdLine(source,~)
         PODSData.Handles.CurrentThresholdLine.Value = round(PODSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
-        PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
+        PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
         PODSData.Handles.fH.WindowButtonMotionFcn = '';
         PODSData.Handles.fH.WindowButtonUpFcn = '';
         ThresholdLineMoved(source,PODSData.Handles.CurrentThresholdLine.Value);
@@ -2143,20 +2148,20 @@ pause(0.5)
         UpdateSummaryDisplay(source,{'Group','Image','Object'});
     end
 
-    function mbLabelSelectedObjects(source,~)
-        
-        CustomLabel = ChooseObjectLabel(source);
-        
-        for GroupIdx = 1:PODSData.nGroups
-            PODSData.Group(GroupIdx,1).LabelSelectedObjects(CustomLabel);
-        end
-
-        mbClearSelection(source);
-        
-        UpdateImages(source);
-        UpdateObjectListBox(source);
-        UpdateSummaryDisplay(source,{'Object'});
-    end
+%     function mbLabelSelectedObjects(source,~)
+%         
+%         CustomLabel = ChooseObjectLabel(source);
+%         
+%         for GroupIdx = 1:PODSData.nGroups
+%             PODSData.Group(GroupIdx,1).LabelSelectedObjects(CustomLabel);
+%         end
+% 
+%         mbClearSelection(source);
+%         
+%         UpdateImages(source);
+%         UpdateObjectListBox(source);
+%         UpdateSummaryDisplay(source,{'Object'});
+%     end
 
     function mbClearSelection(source,~)
         
@@ -2368,7 +2373,7 @@ pause(0.5)
                 PODSData.Settings.GUIForegroundColor = '#fcc729';
                 PODSData.Settings.GUIHighlightColor = '#fcc729';
         end
-
+        
         UpdateGUITheme();
     end
 
@@ -2398,6 +2403,7 @@ pause(0.5)
         PODSData.Handles.ScatterPlotAxH.XAxis.Label.Color = GUIForegroundColor;
         PODSData.Handles.ScatterPlotAxH.XAxis.Color = GUIForegroundColor;
         PODSData.Handles.ScatterPlotAxH.YAxis.Color = GUIForegroundColor;
+
         PODSData.Handles.SwarmPlotAxH.YAxis.Label.Color = GUIForegroundColor;
         PODSData.Handles.SwarmPlotAxH.XAxis.Label.Color = GUIForegroundColor;
         PODSData.Handles.SwarmPlotAxH.XAxis.Color = GUIForegroundColor;
@@ -2412,10 +2418,28 @@ pause(0.5)
     end
 
     function ChangeGUIColors(source,event)
+        % get the color of the GUI element for which we want to change color
         PODSData.Settings.(source.Tag) = uisetcolor();
+        % bring the main figure into focus
         figure(PODSData.Handles.fH);
+        % uncheck all menubar options for built-in themes
+        set(PODSData.Handles.hGUITheme.Children,'Checked','Off');
+        % update the GUI colors
         UpdateGUITheme();
     end
+
+%% GUI font size
+
+    function ChangeGUIFontSize(source,event)
+        switch source.Text
+            case 'Larger'
+                PODSData.Settings.FontSize = PODSData.Settings.FontSize+1;
+            case 'Smaller'
+                PODSData.Settings.FontSize = PODSData.Settings.FontSize-1;
+        end
+        fontsize(PODSData.Handles.fH,PODSData.Settings.FontSize,'pixels');
+    end
+
 
 %% MaskType Selection
 
@@ -2429,7 +2453,7 @@ pause(0.5)
         % only update summary overview if 'Project' is selected
         UpdateSummaryDisplay(source,{'Project'});
         % update image operations display
-        UpdateImageOperationDisplay();
+        UpdateImageOperationDisplay(source);
     end
 
     function BuildNewScheme(source,~)
@@ -2504,6 +2528,7 @@ pause(0.5)
         % update display of image tree, images, and summary
         UpdateImageTree(source);
         UpdateImages(source);
+        UpdateImageOperationDisplay(source);
         UpdateSummaryDisplay(source,{'Group','Image','Object'});
     end
 
@@ -2515,6 +2540,7 @@ pause(0.5)
         % update display of images, object selector, summary
         UpdateImages(source);
         UpdateObjectListBox(source);
+        UpdateImageOperationDisplay(source);
         UpdateSummaryDisplay(source,{'Image','Object'});
     end
 
@@ -2528,65 +2554,22 @@ pause(0.5)
         UpdateSummaryDisplay(source,{'Image','Object'});
     end
 
-%% Changing active image operation
-
-    function UpdateImageOperationDisplay()
-        PODSData.Handles.ThreshSliderGrid.Visible = 'Off';
-        PODSData.Handles.IntensitySlidersGrid.Visible = 'Off';
-
-        switch PODSData.Settings.CurrentImageOperation
-
-            case 'Mask Threshold'
-                PODSData.Handles.ThreshSliderGrid.Visible = 'On';
-                PODSData.Handles.ImageOperationsPanel.Title = PODSData.Settings.ThreshPanelTitle;
-
-                if PODSData.Settings.ManualThreshEnabled
-                    PODSData.Handles.ThreshAxH.HitTest = 'On';
-                else
-                    PODSData.Handles.ThreshAxH.HitTest = 'Off';
-                end
-
-                try
-                    cImage = PODSData.CurrentImage(1);
-                    [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
-                    PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
-                    PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
-                    PODSData.Handles.CurrentThresholdLine.Value = cImage.level;
-                    PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
-                catch
-                    % build histogram from random data
-                    [BinCtrs,HistPlot] = BuildHistogram(rand(1024,1024));
-                    PODSData.Handles.ThreshBar.XData = BinCtrs;
-                    PODSData.Handles.ThreshBar.YData = HistPlot;
-                    PODSData.Handles.CurrentThresholdLine.Value = 0;
-                    PODSData.Handles.CurrentThresholdLine.Label = '';
-                end
-
-            case 'Intensity Display'
-                PODSData.Handles.IntensitySlidersGrid.Visible = 'On';
-                PODSData.Handles.ImageOperationsPanel.Title = 'Adjust intensity display limits';
-                try
-                    PODSData.Handles.PrimaryIntensitySlider.Value = PODSData.CurrentImage(1).PrimaryIntensityDisplayLimits;
-                catch
-                    PODSData.Handles.PrimaryIntensitySlider.Value = [0 1];
-                end
-
-                try
-                    PODSData.Handles.ReferenceIntensitySlider.Value = PODSData.CurrentImage(1).ReferenceIntensityDisplayLimits;
-                catch
-                    PODSData.Handles.ReferenceIntensitySlider.Value = [0 1];
-                end
-        end
-
-    end
-
     function ChangeImageOperation(source,~)
-        
-        %data = guidata(source);
+
         OldOperation = PODSData.Settings.CurrentImageOperation;
         PODSData.Settings.CurrentImageOperation = source.Value;
 
-        UpdateImageOperationDisplay();
+        try
+            cImage = PODSData.CurrentImage(1);
+        catch
+            PODSData.Settings.CurrentImageOperation = OldOperation;
+            source.Value = OldOperation;
+            UpdateLog3(source,'Warning: No image selected','append');
+            return
+        end
+
+        UpdateImageOperationDisplay(source);
+
     end
 
 %% Change summary display type
@@ -2644,10 +2627,10 @@ pause(0.5)
             % increment the counter
             Counter = Counter+1;
         end
-        % update log to indicate we are done
-        UpdateLog3(source,'Done.','append');
         % update summary table
         UpdateSummaryDisplay(source,{'Image','Object'});
+        % update log to indicate we are done
+        UpdateLog3(source,'Done.','append');
     end
 
 %% Order statistics (OF, azimuth, potentially more in the future)
@@ -2659,6 +2642,8 @@ pause(0.5)
         UpdateLog3(source,['Computing order statistics statistics for ',num2str(nImages),' images'],'append');
         % counter to track progress
         Counter = 1;
+        % start a timer
+        tic
         % detect object azimuth stats for each currently selected image
         for cImage = PODSData.CurrentImage
             % update log to indicate which image we are on
@@ -2668,14 +2653,19 @@ pause(0.5)
             % increment the counter
             Counter = Counter+1;
         end
+        % end the timer and save the time
+        timeElapsed = toc;
         % change to the Order Factor 'tab' if not there already
         if ~strcmp(PODSData.Settings.CurrentTab,'Order Factor')
             feval(PODSData.Handles.hTabOrderFactor.Callback,PODSData.Handles.hTabOrderFactor,[]);
+        else
+            % update displayed images (tab switching will automatically update the display)
+            UpdateImages(source);
         end
-        % update display
-        UpdateImages(source);
         % update summary table
         UpdateSummaryDisplay(source,{'Image','Object'});
+        % update log with time elapsed
+        UpdateLog3(source,['Time elapsed: ',num2str(timeElapsed),' seconds'],'append');
         % update log to indicate we are done
         UpdateLog3(source,'Done.','append');        
     end
@@ -2725,7 +2715,6 @@ pause(0.5)
             uialert(PODSData.Handles.fH,['Unable to load project: ',report],'Error')
             return
         end
-
         % add the stored handles to the newly loaded project
         SavedPODSData.Handles = Handles;
         % add the loaded project to the PODSData variable
@@ -2734,7 +2723,7 @@ pause(0.5)
         guidata(PODSData.Handles.fH,PODSData);
         % update some settings for the current window
         Tab2Switch2 = PODSData.Settings.CurrentTab;
-        % set "CurrentTab" to previous current tab before loading project
+        % set 'CurrentTab' to previous current tab before loading project
         PODSData.Settings.CurrentTab = PreviousTab;
         % find the uimenu that would normally be used to switch to the tab indicated by 'CurrentTab' in the loaded project
         Menu2Pass = findobj(PODSData.Handles.hTabMenu.Children,'Text',Tab2Switch2);
@@ -2743,14 +2732,12 @@ pause(0.5)
         UpdateImageTree(source);
         UpdateLabelTree(source);
         UpdateSummaryDisplay(source);
-        UpdateImageOperationDisplay();
+        UpdateImageOperationDisplay(source);
         % update current tab using uimenu object as the source
         TabSelection(Menu2Pass);
         UpdateImages(source);
-        
-        % restor old pointer
+        % restore old pointer
         PODSData.Handles.fH.Pointer = OldPointer;
-
         % update log to indicate completion
         UpdateLog3(source,'Done.','append');
     end
@@ -2789,19 +2776,25 @@ pause(0.5)
 
         tic
 
+        % attempt to save the project
+        try
+            disp('Retrieving data struct...')
+    
+            % 'working' method
+            %SavedPODSData = PODSData.saveobj();
 
+            SavedPODSData = PODSData;
 
-        disp('Retrieving data struct...')
-
-        SavedPODSData = PODSData.saveobj();
-
-        disp('Saving data struct...')
-        % save project, v7.3 .mat file type in case > 2 GB
-        save([path,filename],'SavedPODSData','-v7.3');
-
-
-        
-
+            disp('Saving data struct...')
+            % save project, v7.3 .mat file type in case > 2 GB
+            %save([path,filename],'SavedPODSData','-v7.3');
+            save([path,filename],'SavedPODSData');
+        catch ME
+            report = getReport(ME);
+            PODSData.Handles.fH.Pointer = OldPointer;
+            uialert(PODSData.Handles.fH,['Unable to save project: ',report],'Error')
+            return
+        end
 
         % display how long it took to save the data
         timeElapsed = toc;
@@ -2809,7 +2802,6 @@ pause(0.5)
         % restore old pointer
         PODSData.Handles.fH.Pointer = OldPointer;
 
-        
         % update log to indicate successful save
         UpdateLog3(source,['Successfully saved project:',path,filename],'append');
 
@@ -3254,7 +3246,6 @@ pause(0.5)
     end
 
     function CloseLineScanFig(~,~)
-        
         delete(PODSData.Handles.LineScanROI);
         delete(PODSData.Handles.LineScanListeners(1));
         delete(PODSData.Handles.LineScanListeners(2));        
@@ -3268,11 +3259,6 @@ pause(0.5)
         switch source.Tag
             case 'LineScanAverageIntensity'
                 if cImage.ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value==1
-%                     PODSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(PODSData.Handles.LineScanAxes,...
-%                         PODSData.Handles.LineScanROI.Position,...
-%                         cImage.Pol_ImAvg,...
-%                         cImage.ReferenceImageEnhanced,...
-%                         cImage.RealWorldLimits);
                     PODSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(PODSData.Handles.LineScanAxes,...
                         PODSData.Handles.LineScanROI.Position,...
                         cImage.Pol_ImAvg,...

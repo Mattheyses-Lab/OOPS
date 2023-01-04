@@ -3,7 +3,7 @@ function [] = UpdateSummaryDisplay(source,varargin)
     PODSData = guidata(source);
 
     % check if we really need to update to prevent unnecessary overhead
-    % (varargin{1} = {'Project','Image',...}
+    % varargin{1} = {'Project','Image',...}
     if ~isempty(varargin)
         % if no choices match currently selected display type, don't update
         if ~any(ismember(varargin{1},PODSData.Settings.SummaryDisplayType))
@@ -20,7 +20,9 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 ['Current Tab:          ', PODSData.Settings.CurrentTab];...
                 ['Previous Tab:         ', PODSData.Settings.PreviousTab];...
                 ['Mask Type:            ', PODSData.Settings.MaskType];...
-                ['Mask Name:            ', PODSData.Settings.MaskName]};
+                ['Mask Name:            ', PODSData.Settings.MaskName];...
+                ['<b>GUI Settings</b>'];...
+                ['Font Size:            ', num2str(PODSData.Settings.FontSize)]};
 
         case 'Group'
             cGroup = PODSData.CurrentGroup;

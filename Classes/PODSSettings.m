@@ -45,8 +45,8 @@ classdef PODSSettings < handle
         % size of the display (to set main window Position)
         ScreenSize
 
-        % optimized font size (px) based on size of display
-        DefaultFontSize
+        % starts as optimized font size (px) based on size of display, user can change
+        FontSize
 
         % themes and colors for GUI display
         GUITheme = 'Dark2';
@@ -134,10 +134,10 @@ classdef PODSSettings < handle
         SwarmPlotGroupingType
         SwarmPlotColorMode
 
-        % helper variable for dynamic thresh slider functionality
-        ManualThreshEnabled
-        ThreshStatisticName
-        ThreshPanelTitle
+%         % helper variable for dynamic thresh slider functionality
+%         ManualThreshEnabled
+%         ThreshStatisticName
+%         ThreshPanelTitle
 
         % for adding/deleting/adjusting labels
         nLabels
@@ -152,7 +152,7 @@ classdef PODSSettings < handle
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
             % optimum font size
-            obj.DefaultFontSize = round(obj.ScreenSize(4)*.009);
+            obj.FontSize = round(obj.ScreenSize(4)*.009);
             % set up default object label (PODSLabel object)
             obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],obj);
             % get list of supported fonts
@@ -354,60 +354,6 @@ classdef PODSSettings < handle
         function SwarmPlotGroupingType = get.SwarmPlotGroupingType(obj)
             SwarmPlotGroupingType = obj.SwarmPlotSettings.GroupingType;
         end
-
-        function ManualThreshEnabled = get.ManualThreshEnabled(obj)
-            switch obj.MaskType
-                case 'Default'
-                    switch obj.MaskName
-                        case 'Legacy'
-                            ManualThreshEnabled = true;
-                        case 'Adaptive'
-                            ManualThreshEnabled = true;
-                        case 'Intensity'
-                            ManualThreshEnabled = true;
-                        otherwise
-                            ManualThreshEnabled = false;
-                    end
-                case 'CustomScheme'
-                    ManualThreshEnabled = false;
-            end
-        end
-
-        function ThreshStatisticName = get.ThreshStatisticName(obj)
-            switch obj.MaskType
-                case 'Default'
-                    switch obj.MaskName
-                        case 'Legacy'
-                            ThreshStatisticName = 'Threshold';
-                        case 'Adaptive'
-                            ThreshStatisticName = 'Adaptive mask sensitivity';
-                        case 'Intensity'
-                            ThreshStatisticName = 'Threshold';
-                        otherwise
-                            ThreshStatisticName = false;
-                    end
-                case 'CustomScheme'
-                    ThreshStatisticName = '';
-            end
-        end  
-
-        function ThreshPanelTitle = get.ThreshPanelTitle(obj)
-            switch obj.MaskType
-                case 'Default'
-                    switch obj.MaskName
-                        case 'Legacy'
-                            ThreshPanelTitle = 'Adjust Otsu threshold';
-                        case 'Adaptive'
-                            ThreshPanelTitle = 'Adjust adaptive mask sensitivity';
-                        case 'Intensity'
-                            ThreshPanelTitle = 'Adjust intensity threshold';
-                        otherwise
-                            ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
-                    end
-                case 'CustomScheme'
-                    ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
-            end
-        end        
 
         function nLabels = get.nLabels(obj)
             % find number of unique object labels
