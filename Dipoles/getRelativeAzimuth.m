@@ -52,10 +52,6 @@ function [MidlineRelativeAzimuth,NormalRelativeAzimuth] = getRelativeAzimuth(I,A
     MidlineRelativeAzimuths = getAzimuthDiff(TangentValues,AzValues);
     NormalRelativeAzimuths = getAzimuthDiff(NormalValues,AzValues);
 
-    % find the average of all differences (VERY IMPORTANT TO TAKE THE MEAN OF THE ABSOLUTE VALUE)
-%     MidlineRelativeAzimuth = mean(abs(MidlineRelativeAzimuths));
-%     NormalRelativeAzimuth = mean(abs(NormalRelativeAzimuths));
-
     MidlineRelativeAzimuth = mean(MidlineRelativeAzimuths);
     NormalRelativeAzimuth = mean(NormalRelativeAzimuths);
 
