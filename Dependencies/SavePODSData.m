@@ -27,7 +27,9 @@ function TableOut = SavePODSData(source)
                          'EquivDiameter',0,...
                          'Extent',0,...
                          'AvgReferenceChannelIntensity',0,...
-                         'LabelName','');
+                         'LabelName','',...
+                         'MidlineRelativeAzimuth',0,...
+                         'NormalRelativeAzimuth',0);
 
     MasterIdx = 1;
                
@@ -59,7 +61,9 @@ function TableOut = SavePODSData(source)
                 PODSDataOut(MasterIdx).EquivDiameter = PODSData.Group(i).Replicate(j).Object(k).EquivDiameter;
                 PODSDataOut(MasterIdx).Extent = PODSData.Group(i).Replicate(j).Object(k).Extent;
                 PODSDataOut(MasterIdx).AvgReferenceChannelIntensity = PODSData.Group(i).Replicate(j).Object(k).AvgReferenceChannelIntensity;
-                PODSDataOut(MasterIdx).LabelName =  PODSData.Group(i).Replicate(j).Object(k).LabelName;                
+                PODSDataOut(MasterIdx).LabelName =  PODSData.Group(i).Replicate(j).Object(k).LabelName;
+                PODSDataOut(MasterIdx).MidlineRelativeAzimuth = PODSData.Group(i).Replicate(j).Object(k).MidlineRelativeAzimuth;
+                PODSDataOut(MasterIdx).NormalRelativeAzimuth = PODSData.Group(i).Replicate(j).Object(k).NormalRelativeAzimuth;
                 MasterIdx = MasterIdx+1;
             end % end objects
         end % end images
