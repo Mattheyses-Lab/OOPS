@@ -1598,7 +1598,7 @@ pause(0.5)
     function SaveSwarmPlotSettings(source,~)
         % saves the currently selected SwarmPlot settings to a .mat file
         % which will be loaded in future sessions by PODSSettings
-        UpdateLog3(source,'Saving azimuth display settings...','append');
+        UpdateLog3(source,'Saving swarmplot settings...','append');
         SwarmPlotSettings = PODSData.Settings.SwarmPlotSettings;
         if ismac
             CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
