@@ -29,19 +29,22 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
 
     % empty array to hold the swarm plots
     hSwarmPlot = [];
+    % maximum value in each group
     MaxPerGroup = [];
+    % minimum value in each group
+    MinPerGroup = [];
     
     LabelIdxs = 1:1:nLabels;
 
     for i = 1:nPlots
         % Y data is just the vector of object values for selected variable
-        Y{i} = LabelObjectData{i};
+        Y{i} = rmmissing(LabelObjectData{i});
         % generate X data of the same size, multiply by the index of the current group
         X{i} = LabelIdxs(i)*ones(size(Y{i}));
         
         try
             % throw error if we have any NaNs
-            if any(isnan(Y{i}))
+            if isempty(Y{i})
                 error("Object data missing");
             end
             
@@ -58,6 +61,7 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
             end
 
             MaxPerGroup(i) = max(Y{i});
+            MinPerGroup(i) = min(Y{i});
             %hold on
             GroupMean = mean(Y{i});
             GroupStd = std(Y{i});
@@ -100,6 +104,7 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
     axH.XLim = [LabelIdxs(1)-1 nLabels+1];
 
     GlobalMax = max(MaxPerGroup);
+    GlobalMin = min(MinPerGroup);
 
     if GlobalMax > 1
         UpperLim = round(GlobalMax)+round(0.1*GlobalMax);
@@ -107,9 +112,15 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
         UpperLim = round(GlobalMax,1);
         if UpperLim < GlobalMax;UpperLim = UpperLim+0.1;end
     end
-    
+
+    if GlobalMin < 0
+        LowerLim = (UpperLim)*(-1);
+    else
+        LowerLim = 0;
+    end
+
     try
-        axH.YLim = [0 UpperLim];
+        axH.YLim = [LowerLim UpperLim];
         axH.CLim = axH.YLim;
     catch
         axH.YLim = [0 1];

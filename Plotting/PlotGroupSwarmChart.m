@@ -38,15 +38,18 @@ hSwarmPlot = [];
 % maximum value in each group
 MaxPerGroup = [];
 
+% minimum value in each group
+MinPerGroup = [];
+
 for i = 1:nPlots
     % Y data is just the vector of object values for selected variable
-    Y{i} = GroupObjectData{i};
+    Y{i} = rmmissing(GroupObjectData{i});
     % generate X data of the same size, multiply by the index of the current group
     X{i} = i*ones(size(Y{i}));
     
     try
         % throw error if we have any NaNs
-        if any(isnan(Y{i}))
+        if isempty(Y{i})
             error("Object data missing");
         end
 
@@ -65,6 +68,7 @@ for i = 1:nPlots
         end
 
         MaxPerGroup(i) = max(Y{i});
+        MinPerGroup(i) = min(Y{i});
         %hold on
         GroupMean = mean(Y{i});
         GroupStd = std(Y{i});
@@ -105,6 +109,8 @@ axH.XLim = [0 PODSData.nGroups+1];
 
 GlobalMax = max(MaxPerGroup);
 
+GlobalMin = min(MinPerGroup);
+
 if GlobalMax > 1
     UpperLim = round(GlobalMax)+round(0.1*GlobalMax);
 else
@@ -112,15 +118,19 @@ else
     if UpperLim < GlobalMax;UpperLim = UpperLim+0.1;end
 end
 
+if GlobalMin < 0
+    LowerLim = (UpperLim)*(-1);
+else
+    LowerLim = 0;
+end
+
 try
-    axH.YLim = [0 UpperLim];
+    axH.YLim = [LowerLim UpperLim];
     axH.CLim = axH.YLim;
 catch
     axH.YLim = [0 1];
     axH.CLim = axH.YLim;
 end
-% set the JitterWidth of each plot
-%[hSwarmPlot(:).XJitterWidth] = deal(0.5);
 
 % color the points according to magnitude using the currently selected Order factor colormap
 colormap(axH,PODSData.Settings.OrderFactorColormap);

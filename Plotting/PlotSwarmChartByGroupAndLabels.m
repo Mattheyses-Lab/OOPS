@@ -32,19 +32,22 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
     hSwarmPlot = [];
     % empty array to hold the max values in each group (to set axis limits later)
     MaxPerGroup = [];
+    % minimum value in each group
+    MinPerGroup = [];
     % return PlotIdx to 1
     PlotIdx = 1;
 
     for i = 1:nGroups
         
         for ii = 1:nLabels
-            Y{PlotIdx} = LabelObjectData{i,ii};
+
+            Y{PlotIdx} = rmmissing(LabelObjectData{i,ii});
             
             X{PlotIdx} = PlotIdx*ones(size(Y{PlotIdx}));
             
             try
                 % throw error if we have any NaNs
-                if any(isnan(Y{PlotIdx}))
+                if isempty(Y{PlotIdx})
                     error("Object data missing");
                 end
                 
@@ -59,7 +62,10 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
                             'MarkerEdgeColor',[0 0 0],...
                             'MarkerFaceColor',PODSData.Settings.ObjectLabels(ii).Color);
                 end
+                
                 MaxPerGroup(PlotIdx) = max(Y{PlotIdx});
+                MinPerGroup(PlotIdx) = min(Y{PlotIdx});
+
                 %hold on
                 GroupMean = mean(Y{PlotIdx});
                 GroupStd = std(Y{PlotIdx});
@@ -99,6 +105,9 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
     axH.XLim = [0 nPlots+1];
     % find max across all groups/labels
     GlobalMax = max(MaxPerGroup);
+    % find min across all groups/labels
+    GlobalMin = min(MinPerGroup);
+
     % use it to set the y-axis limits
     if GlobalMax > 1
         UpperLim = round(GlobalMax)+round(0.1*GlobalMax);
@@ -106,9 +115,15 @@ function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
         UpperLim = round(GlobalMax,1);
         if UpperLim < GlobalMax;UpperLim = UpperLim+0.1;end
     end
+
+    if GlobalMin < 0
+        LowerLim = (UpperLim)*(-1);
+    else
+        LowerLim = 0;
+    end
     
     try
-        axH.YLim = [0 UpperLim];
+        axH.YLim = [LowerLim UpperLim];
         axH.CLim = axH.YLim;
     catch
         axH.YLim = [0 1];
