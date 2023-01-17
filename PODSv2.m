@@ -10,14 +10,17 @@ end
 % this object will hold ALL project data and GUI settings
 PODSData = PODSProject;
 
-%% TESTING BELOW
+%% set up splash screen
+
+% get the splash screen image
 if ismac
     SplashIconPath = fullfile([PODSData.Settings.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
 elseif ispc
     SplashIconPath = fullfile([PODSData.Settings.MainPath,'\SplashScreenIcon\AppSplashScreen.png']);
 end
 SplashScreenIcon = java.awt.Toolkit.getDefaultToolkit.createImage(SplashIconPath);
-%% Create splash screen
+
+% Create splash screen window
 SplashImage = SplashScreenIcon;
 Splash = javax.swing.JWindow;
 icon = javax.swing.ImageIcon(SplashImage);
@@ -25,7 +28,8 @@ label = javax.swing.JLabel(icon);
 Splash.getContentPane.add(label);
 Splash.setAlwaysOnTop(true);
 Splash.pack;
-%% set the splash image to the center of the screen
+
+% set the splash image to the center of the screen
 screenSize = Splash.getToolkit.getScreenSize;
 screenHeight = screenSize.height;
 screenWidth = screenSize.width;
@@ -34,7 +38,6 @@ imgHeight = icon.getIconHeight;
 imgWidth = icon.getIconWidth;
 Splash.setLocation((screenWidth-imgWidth)/2,(screenHeight-imgHeight)/2);
 Splash.show % show the splash screen
-%% END TESTING
 
 %% set up the main window
 
@@ -52,6 +55,7 @@ PODSData.Handles.fH = uifigure('Name','PODS GUI',...
     'SizeChangedFcn',@ResetContainerSizes);
 
 %% set some defaults to save time and improve readability
+
 % panel properties
 set(gcf,'defaultUipanelFontName',PODSData.Settings.DefaultFont);
 set(gcf,'defaultUipanelFontWeight','Bold');
@@ -71,6 +75,7 @@ warning('off','MATLAB:polyshape:repairedBySimplify');
 disp('Setting up menubar...')
 
 %% File Menu Button - Create a new project, load files, etc...
+
 PODSData.Handles.hFileMenu = uimenu(PODSData.Handles.fH,'Text','File');
 % Options for File Menu Button
 PODSData.Handles.hNewProject = uimenu(PODSData.Handles.hFileMenu,'Text','&New Project','Callback',@NewProject);
@@ -83,7 +88,7 @@ PODSData.Handles.hLoadFFCFiles = uimenu(PODSData.Handles.hFileMenu,'Text','Load 
 PODSData.Handles.hLoadFPMFiles = uimenu(PODSData.Handles.hFileMenu,'Text','Load FPM Files','Callback',@pb_LoadFPMFiles);
 PODSData.Handles.hLoadReferenceImages = uimenu(PODSData.Handles.hFileMenu,'Text','Load Reference Images','Callback',@LoadReferenceImages);
 % save data
-PODSData.Handles.hSaveOF = uimenu(PODSData.Handles.hFileMenu,'Text','Save Selected Image Data','Separator','On','Callback',@SaveImages);
+PODSData.Handles.hSaveOF = uimenu(PODSData.Handles.hFileMenu,'Text','Save Data for Selected Images','Separator','On','Callback',@SaveImages);
 PODSData.Handles.hSaveObjectData = uimenu(PODSData.Handles.hFileMenu,'Text','Save Object Data','Callback',@SaveObjectData);
 % save settings
 PODSData.Handles.hSaveColormapsSettings = uimenu(PODSData.Handles.hFileMenu,'Text','Save Colormaps Settings','Separator','On','Callback',@SaveColormapsSettings);
@@ -91,8 +96,8 @@ PODSData.Handles.hSaveAzimuthDisplaySettings = uimenu(PODSData.Handles.hFileMenu
 PODSData.Handles.hScatterPlotSettingsMenu = uimenu(PODSData.Handles.hFileMenu,'Text','Save Scatter Plot Settings','Callback',@SaveScatterPlotSettings);
 PODSData.Handles.hSaveSwarmPlotSettings = uimenu(PODSData.Handles.hFileMenu,'Text','Save Swarm Plot Settings','Callback',@SaveSwarmPlotSettings);
 
-
 %% Options Menu Button - Change gui option and settings
+
 PODSData.Handles.hOptionsMenu = uimenu(PODSData.Handles.fH,'Text','Options');
 % GUI options (themes, colors, fonts, etc.)
 PODSData.Handles.hGUI = uimenu(PODSData.Handles.hOptionsMenu,'Text','GUI');
@@ -158,6 +163,7 @@ PODSData.Handles.hObjectBoxType_Boundary = uimenu(PODSData.Handles.hObjectBoxTyp
 PODSData.Handles.hObjectBoxType_NewBoxes = uimenu(PODSData.Handles.hObjectBoxType,'Text','NewBoxes','Checked','Off','Callback',@ChangeObjectBoxType);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
+
 PODSData.Handles.hTabMenu = uimenu(PODSData.Handles.fH,'Text','View');
 % Tabs for 'View'
 PODSData.Handles.hTabFiles = uimenu(PODSData.Handles.hTabMenu,'Text','Files','MenuSelectedFcn',@TabSelection,'tag','hTabFiles');
@@ -171,6 +177,7 @@ PODSData.Handles.hTabViewPlots = uimenu(PODSData.Handles.hTabMenu,'Text','Plots'
 PODSData.Handles.hViewObjects = uimenu(PODSData.Handles.hTabMenu,'Text','View Objects','MenuSelectedFcn',@TabSelection,'tag','hViewObjects');
 
 %% Process Menu Button - allows user to perform FFC, generate mask, and generate output images
+
 PODSData.Handles.hProcessMenu = uimenu(PODSData.Handles.fH,'Text','Process');
 % Process Operations
 PODSData.Handles.hProcessFFC = uimenu(PODSData.Handles.hProcessMenu,'Text','Flat-Field Correction','MenuSelectedFcn',@pb_FFC);
@@ -180,6 +187,7 @@ PODSData.Handles.hProcessLocalSB = uimenu(PODSData.Handles.hProcessMenu,'Text','
 PODSData.Handles.hProcessObjectAzimuthStats = uimenu(PODSData.Handles.hProcessMenu,'Text','Object Azimuth Stats','MenuSelectedFcn',@pb_ComputeObjectAzimuthStats);
 
 %% Summary Menu Button
+
 PODSData.Handles.hSummaryMenu = uimenu(PODSData.Handles.fH,'Text','Summary');
 % Summary choices
 PODSData.Handles.hSumaryAll = uimenu(PODSData.Handles.hSummaryMenu,'Text','All Data','MenuSelectedFcn',@ShowSummaryTable);
@@ -192,7 +200,9 @@ PODSData.Handles.hDeleteSelectedObjects = uimenu(PODSData.Handles.hObjectsMenu,'
 PODSData.Handles.hClearSelection = uimenu(PODSData.Handles.hObjectsMenu,'Text','Clear Selection','MenuSelectedFcn',@mbClearSelection);
 PODSData.Handles.hkMeansClustering = uimenu(PODSData.Handles.hObjectsMenu,'Text','Label Objects with k-means Clustering','MenuSelectedFcn',@mbObjectkmeansClustering);
 PODSData.Handles.hShowObjectImagesByLabel = uimenu(PODSData.Handles.hObjectsMenu,'Text','Show Object Images by Label','MenuSelectedFcn',@mbShowObjectImagesByLabel);
+
 %% draw the menu bar objects and pause for more predictable performance
+
 drawnow
 pause(0.5)
 
@@ -348,7 +358,6 @@ PODSData.Handles.ExampleColormapAx.YLim = [0.5 50.5];
 PODSData.Handles.ExampleColormapAx.XLim = [0.5 256.5];
 
 PODSData.Handles.ExampleColormapAx.Colormap = ImageTypeColormaps{1};
-
 %% azimuth display settings
 
 PODSData.Handles.AzimuthDisplaySettingsGrid = uigridlayout(PODSData.Handles.SettingsPanel,[7,2],...
@@ -435,7 +444,6 @@ PODSData.Handles.ApplyAzimuthDisplaySettingsButton = uibutton(PODSData.Handles.A
     'FontName',PODSData.Settings.DefaultFont);
 PODSData.Handles.ApplyAzimuthDisplaySettingsButton.Layout.Row = 7;
 PODSData.Handles.ApplyAzimuthDisplaySettingsButton.Layout.Column = [1 2];
-
 %% ScatterPlot settings
 
 PODSData.Handles.ScatterPlotSettingsGrid = uigridlayout(PODSData.Handles.SettingsPanel,[3,1],...
@@ -480,7 +488,6 @@ PODSData.Handles.ScatterPlotYVarSelectBox = uilistbox(PODSData.Handles.ScatterPl
     'Tag','YVariable',...
     'ValueChangedFcn',@ScatterPlotVariablesChanged,...
     'FontName',PODSData.Settings.DefaultFont);
-
 %% SwarmPlot settings
 
 PODSData.Handles.SwarmPlotSettingsGrid = uigridlayout(PODSData.Handles.SettingsPanel,[4,2],...
@@ -542,7 +549,6 @@ PODSData.Handles.SwarmPlotColorModeDropdown = uidropdown('Parent',PODSData.Handl
     'ValueChangedFcn',@SwarmPlotColorModeChanged);
 PODSData.Handles.SwarmPlotColorModeDropdown.Layout.Row = 4;
 PODSData.Handles.SwarmPlotColorModeDropdown.Layout.Column = 2;
-
 %% Label settings
 
 PODSData.Handles.LabelSettingsGrid = uigridlayout(PODSData.Handles.SettingsPanel,[2,1],...
@@ -587,8 +593,6 @@ uitreenode(PODSData.Handles.LabelTree,...
     'ContextMenu',PODSData.Handles.LabelContextMenu,...
     'Icon',makeRGBColorSquare(PODSData.Settings.ObjectLabels(1).Color,10));
 
-
-
 % draw the current figure to update final container sizes
 drawnow
 pause(0.05)
@@ -630,6 +634,7 @@ PODSData.Handles.ImageOperationsPanel.Layout.Column = 2;
 PODSData.Handles.ImageOperationsPanel.Title = 'Adjust Otsu threshhold';
 
 %% LogPanel
+
 % panel to display log messages (updates user on running/completed processes)
 PODSData.Handles.LogPanel = uipanel(PODSData.Handles.MainGrid,...
     'Visible','Off');
@@ -710,12 +715,21 @@ PODSData.Handles.GroupTree.Layout.Row = 1;
 PODSData.Handles.GroupTree.Layout.Column = 1;
 % context menu for the entire group tree
 PODSData.Handles.GroupTreeContextMenu = uicontextmenu(PODSData.Handles.fH);
-PODSData.Handles.GroupTreeContextMenu_New = uimenu(PODSData.Handles.GroupTreeContextMenu,'Text','New group','MenuSelectedFcn',@AddNewGroup);
+PODSData.Handles.GroupTreeContextMenu_New = uimenu(PODSData.Handles.GroupTreeContextMenu,...
+    'Text','New group',...
+    'MenuSelectedFcn',@AddNewGroup);
 PODSData.Handles.GroupTree.ContextMenu = PODSData.Handles.GroupTreeContextMenu;
 % context menu for individual groups
 PODSData.Handles.GroupContextMenu = uicontextmenu(PODSData.Handles.fH);
-PODSData.Handles.GroupContextMenu_Delete = uimenu(PODSData.Handles.GroupContextMenu,'Text','Delete group','MenuSelectedFcn',{@DeleteGroup,PODSData.Handles.fH});
-PODSData.Handles.GroupContextMenu_ChangeColor = uimenu(PODSData.Handles.GroupContextMenu,'Text','Change color','MenuSelectedFcn',{@EditGroupColor,PODSData.Handles.fH});
+PODSData.Handles.GroupContextMenu_Delete = uimenu(PODSData.Handles.GroupContextMenu,...
+    'Text','Delete group',...
+    'MenuSelectedFcn',{@DeleteGroup,PODSData.Handles.fH});
+PODSData.Handles.GroupContextMenu_ChangeColor = uimenu(PODSData.Handles.GroupContextMenu,...
+    'Text','Change color',...
+    'MenuSelectedFcn',{@EditGroupColor,PODSData.Handles.fH});
+PODSData.Handles.GroupContextMenu_New = uimenu(PODSData.Handles.GroupContextMenu,...
+    'Text','New group',...
+    'MenuSelectedFcn',@AddNewGroup);
 
 % image selector (uitree)
 PODSData.Handles.ImageSelectorPanel = uipanel(PODSData.Handles.SelectorGrid,...
@@ -881,7 +895,6 @@ PODSData.Handles.LogWindow = uitextarea(PODSData.Handles.LogWindowGrid,...
     'Value',{''},...
     'Visible','off',...
     'Editable','off');
-
 %% CHECKPOINT
 
 disp('Setting up summary table...')
@@ -1401,7 +1414,6 @@ disp('Setting up object image axes...')
     
 %% Turning on important containers and adjusting some components for proper initial display
 
-
 set(PODSData.Handles.AppInfoSelectorPanel,'Visible','On');
 set(PODSData.Handles.AppInfoSelector,'Visible','On');
 
@@ -1423,10 +1435,8 @@ set(PODSData.Handles.ImageSelectorPanel,'Visible','On');
 set(PODSData.Handles.ObjectSelectorPanel,'Visible','On');
 set(PODSData.Handles.ObjectSelector,'Visible','On');
 
-% testing below
 % set uipanel linewidth
 set(findobj(PODSData.Handles.fH,'type','uipanel'),'BorderWidth',1);
-% end testing
 
 % initialize some graphics placeholder objects
 PODSData.Handles.LineScanROI = gobjects(1,1);
@@ -1434,9 +1444,9 @@ PODSData.Handles.LineScanFig = gobjects(1,1);
 PODSData.Handles.LineScanPlot = gobjects(1,1);
 PODSData.Handles.ObjectBoxes = gobjects(1,1);
 PODSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-%PODSData.Handles.ObjectRectangles = gobjects(1,1);
 PODSData.Handles.AzimuthLines = gobjects(1,1);
 PODSData.Handles.ObjectAzimuthLines = gobjects(1,1);
+PODSData.Handles.ObjectMidlinePlot = gobjects(1,1);
 
 % add PODSData to the gui using guidata
 % (this is how we will retain access to the data across different functions)
@@ -1445,8 +1455,9 @@ guidata(PODSData.Handles.fH,PODSData)
 fontsize(PODSData.Handles.fH,PODSData.Settings.FontSize,'pixels');
 % update GUI display colors
 UpdateGUITheme();
+% update summary display
+UpdateSummaryDisplay(PODSData.Handles.fH);
 
-%% TESTING BELOW
 % delete the splash screen and clear out java components so we don't run into issues when saving
 Splash.dispose();
 clear Splash
@@ -1454,7 +1465,6 @@ clear label
 clear icon
 clear SplashImage
 clear SplashScreenIcon
-%% END TESTING
 
 disp('Opening...')
 
@@ -1833,7 +1843,7 @@ pause(0.5)
     end
 
     function SelectLabeledObjects(source,event,fH)
-        % get the selected nodes (to delete)
+        % get the selected nodes
         SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
         % if no nodes in the tree are truly 'selected', get the right-clicked node instead
         if numel(SelectedNodes)==0
@@ -1997,6 +2007,8 @@ pause(0.5)
         axH.Tag = OriginalTag;
         
         tb = axtoolbar(axH,{});
+
+        axH.Interactions = [];
         
         % add relevant custom toolbars to specific axes
         switch axH.Tag
@@ -2020,18 +2032,6 @@ pause(0.5)
                 addShowReferenceImageToolbarBtn;
                 addLineScanToolbarBtn;
                 addExportAxesToolbarBtn;
-            case 'MStepsIntensity'
-                addZoomToCursorToolbarBtn;
-                addApplyMaskToolbarBtn;
-            case 'MStepsBackground'
-                addZoomToCursorToolbarBtn;
-                addApplyMaskToolbarBtn;
-            case 'MStepsBGSubtracted'
-                addZoomToCursorToolbarBtn;
-                addApplyMaskToolbarBtn;
-            case 'MStepsMedianFiltered'
-                addZoomToCursorToolbarBtn;
-                addApplyMaskToolbarBtn;
             case 'AzimuthImage'
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
@@ -2148,21 +2148,6 @@ pause(0.5)
         UpdateSummaryDisplay(source,{'Group','Image','Object'});
     end
 
-%     function mbLabelSelectedObjects(source,~)
-%         
-%         CustomLabel = ChooseObjectLabel(source);
-%         
-%         for GroupIdx = 1:PODSData.nGroups
-%             PODSData.Group(GroupIdx,1).LabelSelectedObjects(CustomLabel);
-%         end
-% 
-%         mbClearSelection(source);
-%         
-%         UpdateImages(source);
-%         UpdateObjectListBox(source);
-%         UpdateSummaryDisplay(source,{'Object'});
-%     end
-
     function mbClearSelection(source,~)
         
         cGroup = PODSData.CurrentGroup;
@@ -2183,6 +2168,11 @@ pause(0.5)
         VarShortList = PODSData.Settings.SwarmPlotVariablesShort;
         % get user settings for the clustering
         ClusterSettings = GetClusterSettings(VarShortList);
+        % make sure the output is valid
+        if isempty(ClusterSettings)
+            UpdateLog3(source,'No variables selected.','append');
+            return
+        end
         % gather data for all objects using user-specified variables from above
         ObjectData = T{:,string(ClusterSettings.VarList)};
         % list of variables that the user chose
@@ -2211,8 +2201,8 @@ pause(0.5)
             PODSData.Settings.DeleteObjectLabel(CurrentLabels(LabelIdx));
         end
         % find set of colors (n = nClusters) distinguishable from both black and white 
-        BGcolors = [0 0 0;1 1 1];
-        LabelColors = distinguishable_colors(nClusters,BGcolors);
+        BGColors = [0 0 0;1 1 1];
+        LabelColors = distinguishable_colors(nClusters,BGColors);
         % create the new cluster labels
         for idx = 1:nClusters
             PODSData.Settings.ObjectLabels(idx,1) = PODSLabel(['Cluster #',num2str(idx)],LabelColors(idx,:),PODSData.Settings);
@@ -2437,7 +2427,10 @@ pause(0.5)
             case 'Smaller'
                 PODSData.Settings.FontSize = PODSData.Settings.FontSize-1;
         end
+        % adjust the font size across the board
         fontsize(PODSData.Handles.fH,PODSData.Settings.FontSize,'pixels');
+        % update the GUI summary display panel
+        UpdateSummaryDisplay(source,{'Project'});
     end
 
 
@@ -2752,7 +2745,11 @@ pause(0.5)
 
         PODSData.Handles.fH.Visible = 'Off';
 
-        [filename,path] = uiputfile('*.mat','Set directory and filename',PODSData.Settings.LastDirectory);
+        try
+            [filename,path] = uiputfile('*.mat','Set directory and filename',PODSData.Settings.LastDirectory);
+        catch
+            [filename,path] = uiputfile('*.mat','Set directory and filename');
+        end
 
         PODSData.Handles.fH.Visible = 'On';
 
@@ -2780,15 +2777,18 @@ pause(0.5)
         try
             disp('Retrieving data struct...')
     
-            % 'working' method
-            %SavedPODSData = PODSData.saveobj();
+            % % method 1
+            % SavedPODSData = PODSData.saveobj();
+            % disp('Saving data struct...')
+            % save([path,filename],'SavedPODSData');
 
+
+            % % method 2
             SavedPODSData = PODSData;
-
             disp('Saving data struct...')
-            % save project, v7.3 .mat file type in case > 2 GB
-            %save([path,filename],'SavedPODSData','-v7.3');
             save([path,filename],'SavedPODSData');
+
+            clear SavedPODSData
         catch ME
             report = getReport(ME);
             PODSData.Handles.fH.Pointer = OldPointer;
@@ -2837,7 +2837,8 @@ pause(0.5)
             'Masked Order Factor (RGB .png)';...
             'Azimuth (RGB .png)';...
             'Masked Azimuth (RGB .png)';...
-            'Mask (8-bit .tif)'...
+            'Mask (8-bit .tif)';...
+            'Image Summary'...
             };
 
         SaveOptionsGrid = uigridlayout(SaveOptionsPanel,[length(SaveOptions),1],'BackgroundColor','Black');
@@ -2886,29 +2887,6 @@ pause(0.5)
         % save user-specified data for each currently selected image
         for cImage = PODSData.CurrentImage
             
-            % data struct to hold output variable for current image
-            ImageSummary = struct();
-            ImageSummary.I = cImage.I;
-            % mask and average OF
-            ImageSummary.bw = cImage.bw;
-            ImageSummary.OFAvg = cImage.OFAvg;
-            % raw data, raw data normalized to stack-max, raw stack-average
-            ImageSummary.RawData = cImage.pol_rawdata;
-            ImageSummary.RawDataAvg = cImage.RawPolAvg;
-            % same as above, but with flat-field corrected data
-            ImageSummary.FlatFieldCorrectedData = cImage.pol_ffc;
-            ImageSummary.FlatFieldCorrectedDataAvg = cImage.Pol_ImAvg;
-            % FF-corrected data normalized within each 4-px stack
-            ImageSummary.FlatFieldCorrectedDataPixelNorm = cImage.norm;
-            % output images
-            ImageSummary.OFImage = cImage.OF_image;
-            ImageSummary.MaskedOFImage = cImage.MaskedOFImage;
-            ImageSummary.AzimuthImage = cImage.AzimuthImage;
-            % image info
-            ImageSummary.ImageName = cImage.pol_shortname;
-            % calculated obj data (SB,OF,etc.)
-            ImageSummary.ObjectData = GetImageObjectSummary(cImage);
-
             % control for mac vs pc
             if ismac
                 loc = [folder_name '/' cImage.pol_shortname];
@@ -2916,14 +2894,40 @@ pause(0.5)
                 loc = [folder_name '\' cImage.pol_shortname];
             end
             
-            save([loc,'_Output'],'ImageSummary');
-            
+            if any(strcmp(UserSaveChoices,'Image Summary'))
+
+                % data struct to hold output variable for current image
+                ImageSummary = struct();
+                ImageSummary.I = cImage.I;
+                % mask and average OF
+                ImageSummary.bw = cImage.bw;
+                ImageSummary.OFAvg = cImage.OFAvg;
+                % raw data, raw data normalized to stack-max, raw stack-average
+                ImageSummary.RawData = cImage.pol_rawdata;
+                ImageSummary.RawDataAvg = cImage.RawPolAvg;
+                % same as above, but with flat-field corrected data
+                ImageSummary.FlatFieldCorrectedData = cImage.pol_ffc;
+                ImageSummary.FlatFieldCorrectedDataAvg = cImage.Pol_ImAvg;
+                % FF-corrected data normalized within each 4-px stack
+                ImageSummary.FlatFieldCorrectedDataPixelNorm = cImage.norm;
+                % output images
+                ImageSummary.OFImage = cImage.OF_image;
+                ImageSummary.MaskedOFImage = cImage.MaskedOFImage;
+                ImageSummary.AzimuthImage = cImage.AzimuthImage;
+                % image info
+                ImageSummary.ImageName = cImage.pol_shortname;
+                % calculated obj data (SB,OF,etc.)
+                ImageSummary.ObjectData = GetImageObjectSummary(cImage);
+                
+                save([loc,'_Output'],'ImageSummary');
+
+            end
+
             %% Masked OF Image
             % if user selected this save option, then...
             if any(strcmp(UserSaveChoices,'Order Factor (RGB .png)'))
                 name = [loc,'-OF_RGB.png'];
                 UpdateLog3(source,name,'append');
-                %IOut = ind2rgb(im2uint8(cImage.OF_image),PODSData.Settings.OrderFactorColormap);
                 IOut = cImage.OFImageRGB;
                 imwrite(IOut,name);
             end
@@ -2932,10 +2936,6 @@ pause(0.5)
                 name = [loc,'-MaskedOF_RGB.png'];
                 UpdateLog3(source,name,'append');
                 IOut = cImage.MaskedOFImageRGB;
-%                 temporarymap = PODSData.Settings.OrderFactorColormap;
-%                 temporarymap(1,:) = [0 0 0];
-%                 IOut = ind2rgb(im2uint8(full(cImage.MaskedOFImage)),temporarymap);
-
                 imwrite(IOut,name);
             end
 
@@ -2943,13 +2943,6 @@ pause(0.5)
             if any(strcmp(UserSaveChoices,'Azimuth (RGB .png)'))
                 name = [loc,'-Azimuth_RGB.png'];
                 UpdateLog3(source,name,'append');
-%                 Aztemp = cImage.AzimuthImage;
-%                 % rescale values between [0,pi]
-%                 Aztemp(Aztemp<0) = Aztemp(Aztemp<0)+pi;
-%                 % scale to between [0 1]
-%                 Aztemp = Aztemp./max(max(Aztemp));
-%                 temporarymap = hsv;
-%                 IOut = ind2rgb(im2uint8(Aztemp),temporarymap);
                 IOut = cImage.AzimuthRGB;
                 imwrite(IOut,name);
             end
@@ -2958,13 +2951,6 @@ pause(0.5)
             if any(strcmp(UserSaveChoices,'Masked Azimuth (RGB .png)'))
                 name = [loc,'-MaskedAzimuth_RGB.png'];
                 UpdateLog3(source,name,'append');
-%                 Aztemp = cImage.AzimuthImage;
-%                 Aztemp(Aztemp<0) = Aztemp(Aztemp<0)+pi;
-%                 Aztemp = Aztemp./max(max(Aztemp));
-%                 Aztemp(~cImage.bw) = 0;
-%                 temporarymap = hsv;
-%                 temporarymap(1,:) = [0 0 0];
-%                 IOut = ind2rgb(im2uint8(Aztemp),temporarymap);
                 IOut = cImage.MaskedAzimuthRGB;
                 imwrite(IOut,name);
             end
@@ -3150,8 +3136,26 @@ pause(0.5)
     end
 
     function [] = tbRectangularROI(source,~)
+        % original code here
         ctb = source.Parent;
         cax = ctb.Parent;
+        % end original code, start test
+
+        cimg = findobj(cax.Children,'Type','image');
+
+        hTool = imcontrast(cimg);
+
+        %figure(PODSData.Handles.fH);
+
+        %hTool.WindowStyle = "modal";
+
+        waitfor(hTool)
+        
+
+        return
+        % end test
+
+        % below is original code
         % draw rectangular ROI
         ROI = drawrectangle(cax);
         % find and 'select' objects within ROI

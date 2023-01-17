@@ -101,6 +101,7 @@ function TabSelection(source,~)
             linkaxes([PODSData.Handles.AverageIntensityAxH,PODSData.Handles.AzimuthAxH],'off');
     
             delete(PODSData.Handles.AzimuthLines);
+            delete(PODSData.Handles.ObjectMidlinePlot);
     
             set(PODSData.Handles.PhaseBarComponents,'Visible','Off');
     
@@ -138,6 +139,9 @@ function TabSelection(source,~)
     
             % delete the object Azimuth lines
             delete(PODSData.Handles.ObjectAzimuthLines);
+
+            % delete the object midline plot
+            delete(PODSData.Handles.ObjectMidlinePlot);
     
             % delete the object intensity curves
             delete(PODSData.Handles.ObjectIntensityPlotAxH.Children);

@@ -5,7 +5,9 @@ function UpdateImageOperationDisplay(source)
     PODSData.Handles.ThreshSliderGrid.Visible = 'Off';
     PODSData.Handles.IntensitySlidersGrid.Visible = 'Off';
 
-    cImage = PODSData.CurrentImage(1);
+    cImage = PODSData.CurrentImage;
+
+    if numel(cImage)>1; cImage = cImage(1); end
 
     switch PODSData.Settings.CurrentImageOperation
     

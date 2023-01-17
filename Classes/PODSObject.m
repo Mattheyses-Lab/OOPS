@@ -37,6 +37,9 @@ classdef PODSObject < handle
 
         % coordinates to trace object boundary
         Boundary
+
+        % coordinates of the object midline
+        Midline
         
         % S/B properties
         BGIdxList
@@ -53,6 +56,8 @@ classdef PODSObject < handle
         % (currently somewhat slow to calculate, so store them in memory)
         AzimuthAverage
         AzimuthStd
+        MidlineRelativeAzimuth
+        NormalRelativeAzimuth
 
     end % end properties
     
@@ -94,6 +99,7 @@ classdef PODSObject < handle
         % we can search for objects by the properties of their labels
         LabelIdx
         LabelName
+        LabelColor
         
         % Reference channel properties
         AvgReferenceChannelIntensity
@@ -164,6 +170,7 @@ classdef PODSObject < handle
             delete(obj);
         end
 
+        % saveobj function
         function object = saveobj(obj)
 
             object.Area = obj.Area;
@@ -213,11 +220,9 @@ classdef PODSObject < handle
             % object azimuth stats
             object.AzimuthAverage = obj.AzimuthAverage;
             object.AzimuthStd = obj.AzimuthStd;
+            object.MidlineRelativeAzimuth = obj.MidlineRelativeAzimuth;
+            object.NormalRelativeAzimuth = obj.NormalRelativeAzimuth;
 
-        end
-
-        function SelfIdx = get.SelfIdx(obj)
-            SelfIdx = find(obj.Parent.Object==obj);
         end
 
         function InvertSelection(obj)
@@ -227,6 +232,10 @@ classdef PODSObject < handle
         end
 
         %% Dependent 'get' methods
+
+        function SelfIdx = get.SelfIdx(obj)
+            SelfIdx = find(obj.Parent.Object==obj);
+        end
 
         function Name = get.Name(obj)
             Name = ['Object ',num2str(obj.SelfIdx)];
@@ -290,6 +299,10 @@ classdef PODSObject < handle
             LabelName = obj.Label.Name;
         end
         
+        function LabelColor = get.LabelColor(obj)
+            LabelColor = obj.Label.Color;
+        end
+
         function GroupName = get.GroupName(obj)
             % get the name of the group this object belongs to
             GroupName = obj.Parent.Parent.GroupName;
@@ -472,10 +485,15 @@ classdef PODSObject < handle
             obj.BGAverage = object.BGAverage;
             obj.SBRatio = object.SBRatio;
 
+            % selection status
             obj.Selected = object.Selected;
 
+            % azimuth stats
             obj.AzimuthAverage = object.AzimuthAverage;
             obj.AzimuthStd = object.AzimuthStd;
+            obj.MidlineRelativeAzimuth = object.MidlineRelativeAzimuth;
+            obj.NormalRelativeAzimuth = object.NormalRelativeAzimuth;
+
         end
     end
 

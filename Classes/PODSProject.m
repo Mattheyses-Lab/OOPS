@@ -2,7 +2,7 @@ classdef PODSProject < handle
     % experimental groups class
     properties
         % name of the project
-        ProjectName = '';
+        ProjectName = 'Untitled';
 
         % array of PODSGroup objects
         Group PODSGroup
@@ -161,8 +161,16 @@ classdef PODSProject < handle
 
         % return the currently selected PODSImage in GUI
         function CurrentImage = get.CurrentImage(obj)
+            % get the currently selected group
             cGroup = obj.CurrentGroup;
-            CurrentImage = cGroup.CurrentImage;
+            % if the group is not empty
+            if ~isempty(cGroup) 
+                % get its current image
+                CurrentImage = cGroup.CurrentImage; 
+            else
+                % otherwise, return empty
+                CurrentImage = PODSImage.empty(); 
+            end
         end
 
         % return the currently selected PODSObject in GUI

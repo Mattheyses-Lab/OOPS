@@ -112,6 +112,7 @@ classdef PODSImage < handle
         % no need to keep this in memory, calculating is pretty fast and it will change frequently
         ObjectProperties struct
 
+
         ObjectBoundaries4
         ObjectBoundaries8
         
@@ -187,6 +188,7 @@ classdef PODSImage < handle
             delete(obj);
         end
 
+        % saveobj method
         function replicate = saveobj(obj)
 
             replicate.filename = obj.filename;
@@ -310,10 +312,17 @@ classdef PODSImage < handle
             end
             % clear Bad array
             clear Bad
-            % compute a new label matrix
-            obj.L = bwlabel(full(obj.bw),4);
+
+            obj.L(:) = 0;
+            for i = 1:numel(obj.Object)
+                obj.L(obj.Object(i).PixelIdxList) = obj.Object(i).SelfIdx;
+            end
+
+            % % compute a new label matrix
+            % obj.L = bwlabel(full(obj.bw),4);
         end
 
+        % delete objects with a specific label
         function DeleteObjectsByLabel(obj,Label)
             
             % get handles to all objects in this image
@@ -341,8 +350,15 @@ classdef PODSImage < handle
             end
             % clear Bad array
             clear Bad
-            % compute a new label matrix
-            obj.L = bwlabel(full(obj.bw),4);
+
+            obj.L(:) = 0;
+            for i = 1:numel(obj.Object)
+                obj.L(obj.Object(i).PixelIdxList) = obj.Object(i).SelfIdx;
+            end
+            % 
+            % 
+            % % compute a new label matrix
+            % obj.L = bwlabel(full(obj.bw),4);
 
         end
         
@@ -359,6 +375,7 @@ classdef PODSImage < handle
             [obj.Object.Selected] = deal(false);
         end
         
+        % return object data grouped by the object labels
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
             nLabels = length(obj.Settings.ObjectLabels);
             ObjectDataByLabel = cell(1,nLabels);
@@ -385,19 +402,10 @@ classdef PODSImage < handle
         end
 
         function FindOrderFactor(obj)
-            n_img = 4;
+            % normalize each pixel in polarization stack to the maximum in dim 3
             maximum = max(obj.pol_ffc,[],3);
             obj.r1 = obj.pol_ffc(:,:,1) > 0;
-%             for j=1:n_img
-%                 obj.norm(:,:,j) = obj.pol_ffc(:,:,j)./maximum;
-%             end
-            
-            % testing below without the loop
             obj.norm = obj.pol_ffc./maximum;
-            % end testing
-
-
-
             % orthogonal polarization difference components
             obj.a = obj.norm(:,:,1) - obj.norm(:,:,3);
             obj.b = obj.norm(:,:,2) - obj.norm(:,:,4);
@@ -549,11 +557,29 @@ classdef PODSImage < handle
                     catch
                         cObject.AzimuthStd = NaN;
                     end
+
+                    try
+
+                        % construct the object midline (this function still needs optimization)
+                        [~,~,cObject.Midline] = getObjectMidline(cObject.RestrictedPaddedMaskSubImage,"DisplayResults",false);
+
+                        [cObject.MidlineRelativeAzimuth,cObject.NormalRelativeAzimuth] = getRelativeAzimuth(...
+                            cObject.RestrictedPaddedMaskSubImage,...
+                            cObject.PaddedAzimuthSubImage,...
+                            cObject.Midline...
+                            );
+                    catch
+                        warning(['Warning: Failed to calculate relative azimuth for object: ',num2str(cObject.SelfIdx)])
+                        cObject.MidlineRelativeAzimuth = NaN;
+                        cObject.NormalRelativeAzimuth = NaN;
+                    end
+
                 end
                 obj.ObjectAzimuthDone = true;
             end
         end
 
+        % dependent get methods for image size, resolution
         function Dimensions = get.Dimensions(obj)
             Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
         end
@@ -562,7 +588,7 @@ classdef PODSImage < handle
             RealWorldLimits = [0 obj.Settings.PixelSize*obj.Width];
         end
 
-%% Get methods for various display options specific to this image
+%% dependent get methods for various display options specific to this image
 
         function ThreshPanelTitle = get.ThreshPanelTitle(obj)
             switch obj.MaskType
@@ -619,7 +645,7 @@ classdef PODSImage < handle
             end
         end
 
-%% Get methods for output images
+%% dependent get methods for output images
 
         function OFImageRGB = get.OFImageRGB(obj)
             OFImageRGB = ind2rgb(im2uint8(obj.OF_image),obj.Settings.OrderFactorColormap);
@@ -826,9 +852,9 @@ classdef PODSImage < handle
             % clear the placeholders
             clear Objects
             % reinitialize the obj.Object vector
-            obj.Object = [];
-            % delete again? CHECK THIS
-            delete(obj.Object);
+            obj.Object = PODSObject.empty();
+            % % delete again? CHECK THIS
+            % delete(obj.Object);
         end
         
 %% Normalize Image Stacks

@@ -145,6 +145,8 @@ switch MaskType
                     cImage.bw = sparse(bwtemp);
                     %% end fill
 
+
+
                     % NOTE: connectivity changed from 8 to 4, make sure it didn't mess anything up
 
                     % remove small objects one final time
@@ -155,13 +157,11 @@ switch MaskType
                         [S.Eccentricity] > 0.5 & ...
                         [S.Circularity] < 0.5)));
 
-                    % prior labeling method
-                    % cImage.L = sparse(bwlabel(full(cImage.bw),4));
-                    % end prior labeling method
 
-                    % testing a labeling method that will label individual branches
+                    % label individual branches
                     [~,cImage.L] = labelBranches(full(cImage.bw));
-                    % end testing
+
+
 
 
                     % update log with masking output

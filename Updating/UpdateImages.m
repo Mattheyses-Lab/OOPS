@@ -29,7 +29,6 @@ function [] = UpdateImages(source)
                     PODSData.Handles.FFCImgH(i).CData = cGroup.FFC_cal_norm(:,:,i);
                 end
             catch
-                UpdateLog3(source,'WARNING: No FFC Images found for this group, try loading them now','append');
                 for i = 1:4
                     PODSData.Handles.FFCImgH(i).CData = EmptyImage;
                 end
@@ -72,39 +71,7 @@ function [] = UpdateImages(source)
                 for i = 1:4
                     PODSData.Handles.RawIntensityImgH(i).CData = EmptyImage;
                 end
-            end
-            
-        case 'Generate Mask'
-            %% MASKING STEPS
-            try
-                % average FF-corrected intensity
-                PODSData.Handles.MStepsImgH(1).CData = cImage.I;
-                
-                % opened image (BG)
-                PODSData.Handles.MStepsImgH(2).CData = cImage.BGImg;
-
-                % BG-subtracted image (tophat filtered)
-                PODSData.Handles.MStepsImgH(3).CData = cImage.BGSubtractedImg;
-                PODSData.Handles.MStepsAxH(3).CLim = [min(min(cImage.BGSubtractedImg)) max(max(cImage.BGSubtractedImg))];
-
-                % enhanced image
-                PODSData.Handles.MStepsImgH(4).CData = cImage.EnhancedImg;
-                PODSData.Handles.MStepsAxH(4).CLim = [min(min(cImage.EnhancedImg)) max(max(cImage.EnhancedImg))];
-            catch
-                PODSData.Handles.MStepsImgH(1).CData = EmptyImage;
-                PODSData.Handles.MStepsImgH(2).CData = EmptyImage;
-                PODSData.Handles.MStepsImgH(3).CData = EmptyImage;
-                PODSData.Handles.MStepsImgH(4).CData = EmptyImage;        
-            end
-            
-            % mask
-            try
-                PODSData.Handles.MaskImgH.CData = cImage.bw;
-            catch
-                PODSData.Handles.MaskImgH.CData = EmptyImage;
-            end
-
-            %UpdateThreshholdSlider();          
+            end         
 
         case 'Mask'
             %% VIEW MASK
@@ -137,6 +104,7 @@ function [] = UpdateImages(source)
             % show object selection boxes
             if PODSData.Handles.ShowSelectionAverageIntensity.Value == 1
                 switch PODSData.Settings.ObjectBoxType
+                    % simple lines showing the boundaries
                     case 'Boundary'
                         for ObjIdx = 1:cImage.nObjects
                             PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
@@ -167,6 +135,7 @@ function [] = UpdateImages(source)
                                 'UserData',ObjIdx);
                             hold off
                         end
+                    % simple rectangles
                     case 'Box'
                         for ObjIdx = 1:cImage.nObjects
                             % plot expanded bounding boxes of each object...
@@ -193,7 +162,10 @@ function [] = UpdateImages(source)
                                 'Visible','On',...
                                 'UserData',ObjIdx);
                         end
+                    % in development - various mathods
                     case 'NewBoxes'
+
+                        %% using patch objects
                         % plotting obj patches with faces/vertices
                         % (we could also pass in the object boundary coordinates as XData and YData)
                         [SelectedFaces,...
@@ -236,6 +208,58 @@ function [] = UpdateImages(source)
                             PODSData.Handles.SelectedObjectBoxes.LineWidth = 2;
                         end
                         hold off
+
+%                         %% using polygons
+%                         shape = polyshape.empty(cImage.nObjects,0);
+% 
+%                         for ObjIdx = 1:cImage.nObjects
+% %                             PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
+% %                             hold on
+%                             Boundary = cImage.Object(ObjIdx).Boundary;
+% 
+%                             % build the poly shape
+%                             shape(ObjIdx,1) = polyshape(Boundary(:,2),Boundary(:,1),"KeepCollinearPoints",false);
+%                             shape(ObjIdx,1) = shape(ObjIdx,1).simplify();
+%                         end
+% 
+%                         PODSData.Handles.ObjectBoxes = gobjects(cImage.nObjects,2);
+% 
+%                         PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
+%                         hold on
+%                         % plot the polyshapes
+%                         PODSData.Handles.ObjectBoxes(:,1) = plot(shape,...
+%                             'Tag','ObjectBox',...
+%                             'HitTest','On',...
+%                             'ButtonDownFcn',@SelectObjectRectangles,...
+%                             'PickableParts','all',...
+%                             'FaceColor','none',...
+%                             'Visible','off');
+%                         hold off
+% 
+%                         PODSData.Handles.fH.CurrentAxes = PODSData.Handles.MaskAxH;
+%                         hold on
+%                         PODSData.Handles.ObjectBoxes(:,2) = plot(shape,...
+%                             'Tag','ObjectBox',...
+%                             'HitTest','On',...
+%                             'ButtonDownFcn',@SelectObjectRectangles,...
+%                             'PickableParts','all',...
+%                             'FaceColor','none',...
+%                             'Visible','off');
+%                         hold off
+% 
+%                         EdgeColor = repmat({cImage.Object(:).LabelColor}',1,2);
+%                         %set(PODSData.Handles.ObjectBoxes(:),{'EdgeColor'},EdgeColor(:))
+% 
+%                         LineWidth = repmat({cImage.Object(:).SelectionBoxLineWidth}',1,2);
+%                         %set(PODSData.Handles.ObjectBoxes(:),{'LineWidth'},LineWidth(:))
+% 
+%                         UserData = repmat({cImage.Object(:).SelfIdx}',1,2);
+%                         %set(PODSData.Handles.ObjectBoxes(:),{'UserData'},UserData(:))
+% 
+%                         set(PODSData.Handles.ObjectBoxes(:),{'EdgeColor'},EdgeColor(:),{'LineWidth'},LineWidth(:),{'UserData'},UserData(:))
+%                         set(PODSData.Handles.ObjectBoxes,'Visible','on')
+
+
                 end
             end
             
@@ -370,17 +394,18 @@ function [] = UpdateImages(source)
 
             if PODSData.Handles.ShowAsOverlayAzimuthImage.Value == 1
                 try
-                    %OverlayIntensity = imadjust(cImage.I,cImage.PrimaryIntensityDisplayLimits);
-                    %OverlayIntensity = imadjust(cImage.I);
-                    %OverlayIntensity = imadjust(cImage.I);
-                    %OverlayIntensity = Scale0To1(imadjust(cImage.I.*cImage.OF_image));
-                    
-                    %Enhanced = adapthisteq(cImage.I,"Distribution","exponential");
-                    %OverlayIntensity = imadjust(Enhanced,stretchlim(Enhanced));
 
-                    % most predictable is just using 'I'
-                    OverlayIntensity = cImage.I;
-                    AzimuthRGB = MaskRGB(MakeAzimuthRGB(cImage.AzimuthImage,PODSData.Settings.AzimuthColormap),OverlayIntensity);
+                    % no enhancement
+                    % OverlayIntensity = cImage.I;
+                    % AzimuthRGB = MaskRGB(MakeAzimuthRGB(cImage.AzimuthImage,PODSData.Settings.AzimuthColormap),OverlayIntensity);
+
+                    % using adjusted contrast intensity image and denoised azimuth image
+                     OverlayIntensity = imadjust(cImage.I,stretchlim(cImage.I));
+                     AzimuthRGB = MaskRGB(MakeAzimuthRGB(...
+                         getAverageAzimuthImage(cImage.AzimuthImage),...
+                         PODSData.Settings.AzimuthColormap),...
+                         OverlayIntensity);
+
                     PODSData.Handles.AzimuthImgH.CData = AzimuthRGB;
                 catch
                     PODSData.Handles.AzimuthImgH.CData = EmptyImage;
@@ -577,6 +602,13 @@ function [] = UpdateImages(source)
             end
 
             try
+                delete(PODSData.Handles.ObjectMidlinePlot);
+            catch
+                disp('Warning: Could not delete object midline plot');
+            end
+
+
+            try
                 % create 'circular' colormap by vertically concatenating 2 hsv maps
                 tempmap = hsv;
                 circmap = vertcat(tempmap,tempmap);
@@ -660,6 +692,20 @@ function [] = UpdateImages(source)
                     LineAlpha);
                 PODSData.Handles.ObjectAzimuthOverlayAxH.XLim = PODSData.Handles.ObjectPolFFCAxH.XLim;
                 PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = PODSData.Handles.ObjectPolFFCAxH.YLim;
+
+                % now show the object midline overlayed
+                %[~,~,Midline] = getObjectMidline(RestrictedPaddedObjMask,"DisplayResults",false);
+
+                
+                Midline = cObject.Midline;
+                PODSData.Handles.ObjectMidlinePlot = line(PODSData.Handles.ObjectAzimuthOverlayAxH,...
+                    'XData',Midline(:,1),...
+                    'YData',Midline(:,2),...
+                    'Marker','none',...
+                    'LineStyle','-',...
+                    'LineWidth',2,...
+                    'Color',[0 0 0]);
+                
             catch
                 disp('Warning: Error displaying object azimuth sticks');
                 % because setting the axes limits will change lim mode to 'manual', we need to set the limits
@@ -688,19 +734,6 @@ function [] = UpdateImages(source)
 
             drawnow
              
-    end
-
-    function UpdateSliders()
-%         try
-%             % only update the sliders if the intensity display setting is active
-%             if strcmp(PODSData.Settings.CurrentImageOperation,'Intensity Display')
-%                 PODSData.Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
-%                 PODSData.Handles.ReferenceIntensitySlider.Value = cImage.ReferenceIntensityDisplayLimits;
-%             end
-%         catch
-%             PODSData.Handles.PrimaryIntensitySlider.Value = [0 1];
-%             PODSData.Handles.ReferenceIntensitySlider.Value = [0 1];
-%         end
     end
 
     function UpdateAverageIntensity()
@@ -749,38 +782,5 @@ function [] = UpdateImages(source)
             PODSData.Handles.AverageIntensityImgH.CData = EmptyImage;
         end
     end
-
-%     function UpdateThreshholdSlider()
-%         if PODSData.Settings.ManualThreshEnabled
-%             try
-%                 [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
-%                 PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
-%                 PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
-%             catch
-%                 disp('Warning: Failed to update threshold slider with currently selected image data');
-%             end
-% 
-%             try
-%                 PODSData.Handles.CurrentThresholdLine.Value = cImage.level;
-%                 PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
-%             catch
-%                 disp('Warning: Error while moving thresh line...')
-%                 PODSData.Handles.CurrentThresholdLine.Value = 0;
-%                 PODSData.Handles.CurrentThresholdLine.Label = {[PODSData.Settings.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
-%             end
-%         else
-%             try
-%                 [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.I);
-%                 PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
-%                 PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
-%             catch
-%                 disp('Warning: Failed to update threshold slider with currently selected image data');
-%             end
-% 
-%             PODSData.Handles.CurrentThresholdLine.Value = 0;
-%             PODSData.Handles.CurrentThresholdLine.Label = {['']};
-% 
-%         end
-%     end
 
 end
