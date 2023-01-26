@@ -9,7 +9,7 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
     axH.XTick = 1:1:nLabels;
 
     % use GUI foreground color as error bar color
-    ErrorBarColor = PODSData.Settings.GUIForegroundColor;
+    ErrorBarColor = PODSData.Settings.SwarmPlotErrorBarColor;
 
     for ii = 1:nLabels
         axH.XTickLabel{ii} = [CurrentGroup.GroupName,' (',PODSData.Settings.ObjectLabels(ii).Name,')'];
@@ -28,11 +28,11 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
     X = cell(nPlots,1);
 
     % empty array to hold the swarm plots
-    hSwarmPlot = [];
-    % maximum value in each group
-    MaxPerGroup = [];
-    % minimum value in each group
-    MinPerGroup = [];
+    hSwarmPlot = gobjects(nPlots,1);
+    mean_marker = gobjects(nPlots,1);
+
+    globalMax = 0;
+    globalMin = 0;
     
     LabelIdxs = 1:1:nLabels;
 
@@ -50,19 +50,19 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
             
             switch PODSData.Settings.SwarmPlotColorMode
                 case 'Magnitude'
-                % color by value
-                hSwarmPlot(i) = swarmchart(axH,X{i},Y{i},Y{i},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
+                    % color by value
+                    hSwarmPlot(i) = swarmchart(axH,X{i},Y{i},Y{i},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
                 case 'ID'
-                % color by group (label)
-                hSwarmPlot(i) = swarmchart(axH,X{i},Y{i},'Filled',...
-                    'HitTest','Off',...
-                    'MarkerEdgeColor',[0 0 0],...
-                    'MarkerFaceColor',PODSData.Settings.ObjectLabels(i).Color);
+                    % color by group (label)
+                    hSwarmPlot(i) = swarmchart(axH,X{i},Y{i},'Filled',...
+                        'HitTest','Off',...
+                        'MarkerEdgeColor',[0 0 0],...
+                        'MarkerFaceColor',PODSData.Settings.ObjectLabels(i).Color);
             end
 
-            MaxPerGroup(i) = max(Y{i});
-            MinPerGroup(i) = min(Y{i});
-            %hold on
+            globalMax = max(globalMax,max(Y{i}));
+            globalMin = min(globalMin,min(Y{i}));
+
             GroupMean = mean(Y{i});
             GroupStd = std(Y{i});
             % plot a horizontal line showing the group mean
@@ -74,19 +74,15 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
             line(axH,[i i],[GroupMean+GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
 
             mean_marker(i) = plot(axH,i,GroupMean,'Marker','o','MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',ErrorBarColor);
-            dtRow1 = dataTipTextRow("Mean",GroupMean);
-            dtRow2 = dataTipTextRow("Standard Deviation",GroupStd);
-            mean_marker(i).DataTipTemplate.DataTipRows(1) = dtRow1;
-            mean_marker(i).DataTipTemplate.DataTipRows(2) = dtRow2;
+            mean_marker(i).DataTipTemplate.DataTipRows(1) = dataTipTextRow("Mean",GroupMean);
+            mean_marker(i).DataTipTemplate.DataTipRows(2) = dataTipTextRow("Standard Deviation",GroupStd);
             
         catch me
             switch me.message
                 case "Object data missing"
-                    UpdateLog3(source,['ERROR: ',ExpandVariableName(Var2Get),' data missing or incomplete for objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
-                    MaxPerGroup(i) = NaN;
+                    UpdateLog3(source,['Warning: ',ExpandVariableName(Var2Get),' data missing or incomplete for objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
                 otherwise
-                    UpdateLog3(source,['ERROR: Unable to find objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
-                    MaxPerGroup(i) = NaN;
+                    UpdateLog3(source,['Warning: Unable to find objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
             end
             
 
@@ -94,26 +90,20 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
         
     end
 
-    %hold off
-
     axH.YTickMode = 'Auto';
     axH.YTickLabelMode = 'Auto';
-    %axH.Color = 'Black';
     
     % set X limits to 0.5 below and above the max
     axH.XLim = [LabelIdxs(1)-1 nLabels+1];
 
-    GlobalMax = max(MaxPerGroup);
-    GlobalMin = min(MinPerGroup);
-
-    if GlobalMax > 1
-        UpperLim = round(GlobalMax)+round(0.1*GlobalMax);
+    if globalMax > 1
+        UpperLim = round(globalMax)+round(0.1*globalMax);
     else
-        UpperLim = round(GlobalMax,1);
-        if UpperLim < GlobalMax;UpperLim = UpperLim+0.1;end
+        UpperLim = round(globalMax,1);
+        if UpperLim < globalMax;UpperLim = UpperLim+0.1;end
     end
 
-    if GlobalMin < 0
+    if globalMin < 0
         LowerLim = (UpperLim)*(-1);
     else
         LowerLim = 0;
@@ -126,9 +116,6 @@ function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
         axH.YLim = [0 1];
         axH.CLim = [0 1];
     end
-
-    % set the JitterWidth of each plot
-    %[hSwarmPlot(:).XJitterWidth] = deal(0.5);
 
     % color the points according to magnitude using the currently selected Order factor colormap
     colormap(axH,PODSData.Settings.OrderFactorColormap);

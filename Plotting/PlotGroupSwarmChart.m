@@ -2,21 +2,16 @@ function hSwarmPlot = PlotGroupSwarmChart(source,axH)
 
 % get the GUI data structure
 PODSData = guidata(source);
-
 % use GUI foreground color as error bar color
-ErrorBarColor = PODSData.Settings.GUIForegroundColor;
-
+ErrorBarColor = PODSData.Settings.SwarmPlotErrorBarColor;
 % determine the number of plots
 nPlots = PODSData.nGroups;
-
 % set axis ticks, one for each group, even those that won't be plotted
 axH.XTick = 1:1:PODSData.nGroups;
-
-%% set x-axis label for each group
+% set x-axis label for each group
 for i = 1:nPlots
     axH.XTickLabel{i} = PODSData.Group(i).GroupName;
 end
-
 % cell array to hold vectors of objectOF for each group
 GroupObjectData = cell(1,nPlots);
 
@@ -32,14 +27,12 @@ end
 Y = cell(nPlots,1);
 X = cell(nPlots,1);
 
-% empty array to hold the swarmcharts
-hSwarmPlot = [];
+globalMax = 0;
+globalMin = 0;
 
-% maximum value in each group
-MaxPerGroup = [];
-
-% minimum value in each group
-MinPerGroup = [];
+% initialize swarmchart array
+hSwarmPlot = gobjects(nPlots,1);
+mean_marker = gobjects(nPlots,1);
 
 for i = 1:nPlots
     % Y data is just the vector of object values for selected variable
@@ -48,7 +41,6 @@ for i = 1:nPlots
     X{i} = i*ones(size(Y{i}));
     
     try
-        % throw error if we have any NaNs
         if isempty(Y{i})
             error("Object data missing");
         end
@@ -67,8 +59,8 @@ for i = 1:nPlots
                     'MarkerEdgeColor',[0 0 0]);
         end
 
-        MaxPerGroup(i) = max(Y{i});
-        MinPerGroup(i) = min(Y{i});
+        globalMax = max(globalMax,max(Y{i}));
+        globalMin = min(globalMin,min(Y{i}));
         %hold on
         GroupMean = mean(Y{i});
         GroupStd = std(Y{i});
@@ -79,27 +71,19 @@ for i = 1:nPlots
         line(axH,[i-0.15 i+0.15],[GroupMean+GroupStd GroupMean+GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
         % plot a vertical line orthogonal to the three lines above
         line(axH,[i i],[GroupMean+GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
-
-
         mean_marker(i) = plot(axH,i,GroupMean,'Marker','o','MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',ErrorBarColor);
-        dtRow1 = dataTipTextRow("Mean",GroupMean);
-        dtRow2 = dataTipTextRow("Standard Deviation",GroupStd);
-        mean_marker(i).DataTipTemplate.DataTipRows(1) = dtRow1;
-        mean_marker(i).DataTipTemplate.DataTipRows(2) = dtRow2;
+        mean_marker(i).DataTipTemplate.DataTipRows(1) = dataTipTextRow("Mean",GroupMean);
+        mean_marker(i).DataTipTemplate.DataTipRows(2) = dataTipTextRow("Standard Deviation",GroupStd);
 
     catch me
         switch me.message
             case "Object data missing"
-                UpdateLog3(source,['ERROR: ',ExpandVariableName(Var2Plot),' data missing or incomplete for objects in [Group:',PODSData.Group(i).GroupName,']'],'append');
-                MaxPerGroup(i) = NaN;
+                UpdateLog3(source,['Warning: ',ExpandVariableName(Var2Plot),' data missing or incomplete for objects in [Group:',PODSData.Group(i).GroupName,']'],'append');
             otherwise
-                UpdateLog3(source,['ERROR: Unable to find objects in [Group:',PODSData.Group(i).GroupName,']'],'append');
-                MaxPerGroup(i) = NaN;
+                UpdateLog3(source,['Warning: Unable to find objects in [Group:',PODSData.Group(i).GroupName,']'],'append');
         end
     end
 end
-
-%hold off 
 
 axH.YTickMode = 'Auto';
 axH.YTickLabelMode = 'Auto';
@@ -107,18 +91,14 @@ axH.YTickLabelMode = 'Auto';
 % set X limits to 1 below and above the max
 axH.XLim = [0 PODSData.nGroups+1];
 
-GlobalMax = max(MaxPerGroup);
-
-GlobalMin = min(MinPerGroup);
-
-if GlobalMax > 1
-    UpperLim = round(GlobalMax)+round(0.1*GlobalMax);
+if globalMax > 1
+    UpperLim = round(globalMax)+round(0.1*globalMax);
 else
-    UpperLim = round(GlobalMax,1);
-    if UpperLim < GlobalMax;UpperLim = UpperLim+0.1;end
+    UpperLim = round(globalMax,1);
+    if UpperLim < globalMax;UpperLim = UpperLim+0.1;end
 end
 
-if GlobalMin < 0
+if globalMin < 0
     LowerLim = (UpperLim)*(-1);
 else
     LowerLim = 0;

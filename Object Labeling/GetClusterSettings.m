@@ -126,7 +126,7 @@ waitfor(fH_ClusterSettings)
         end
     end
 
-    function CloseClusterSettingsFig(source,event)
+    function CloseClusterSettingsFig(~,~)
         % gather the output
         if isempty(VarTree.CheckedNodes)
             ClusterSettings.VarList = {};

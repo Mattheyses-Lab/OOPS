@@ -37,7 +37,7 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
             
             obj.Units = 'normalized';
             obj.Position = [0 0 1 1];
-            obj.Grid = uigridlayout(obj,[obj.nParams+1 2]);
+            obj.Grid = uigridlayout(obj,[(obj.nParams)+1 1]);
 
             for i = 1:obj.nParams
                 obj.EditFieldLabels(i) = uilabel(obj.Grid,"Text",obj.Params{i});
@@ -45,26 +45,27 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
                 obj.EditFieldLabels(i).Layout.Column = 1;
 
                 obj.EditFields(i) = uieditfield(obj.Grid);
+                obj.EditFields(i).Placeholder = obj.Params{i};
                 obj.EditFields(i).Layout.Row = i;
                 obj.EditFields(i).Layout.Column = 2;
             end
 
-            obj.ButtonGrid = uigridlayout(obj.Grid,[1 2]);
+            obj.ButtonGrid = uigridlayout(obj.Grid,[2 3]);
             obj.ButtonGrid.Padding = [0 0 0 0];
-            obj.ButtonGrid.RowHeight = 20;
-            obj.ButtonGrid.ColumnWidth = {'1x','1x'};
-
-            obj.CancelButton = uibutton(obj.ButtonGrid,...
-                "ButtonPushedFcn",@(o,e) obj.Finish(o,e),...
-                "Text","Cancel");
-            obj.CancelButton.Layout.Row = 1;
-            obj.CancelButton.Layout.Column = 1;
+            obj.ButtonGrid.RowHeight = [20,20];
+            obj.ButtonGrid.ColumnWidth = {'1x','2x','1x'};
 
             obj.DoneButton = uibutton(obj.ButtonGrid,...
                 "ButtonPushedFcn",@(o,e) obj.Finish(o,e),...
                 "Text","Save");
             obj.DoneButton.Layout.Row = 1;
             obj.DoneButton.Layout.Column = 2;
+
+            obj.CancelButton = uibutton(obj.ButtonGrid,...
+                "ButtonPushedFcn",@(o,e) obj.Finish(o,e),...
+                "Text","Cancel");
+            obj.CancelButton.Layout.Row = 2;
+            obj.CancelButton.Layout.Column = 2;
 
         end
         
@@ -76,12 +77,14 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
             delete(obj.EditFields);
 
             for i = 1:numel(obj.Params)
+
                 obj.EditFieldLabels(i) = uilabel(obj.Grid,"Text",obj.Params{i});
                 obj.EditFieldLabels(i).Layout.Row = i;
                 obj.EditFieldLabels(i).Layout.Column = 1;
                 obj.EditFieldLabels(i).FontColor = obj.FontColor;
 
                 obj.EditFields(i) = uieditfield(obj.Grid);
+                obj.EditFields(i).Placeholder = obj.Params{i};
                 obj.EditFields(i).Layout.Row = i;
                 obj.EditFields(i).Layout.Column = 2;
 
@@ -92,9 +95,8 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
             obj.ButtonGrid.Layout.Column = [1 2];
             obj.ButtonGrid.BackgroundColor = obj.BGColor;
             
-            obj.Grid.RowHeight{obj.nParams+1} = 20;
-
-            obj.Grid.ColumnWidth{1} = 'fit';
+            obj.Grid.RowHeight{obj.nParams+1} = 50;
+            obj.Grid.ColumnWidth = {'fit','1x'};
 
         end
         
@@ -114,7 +116,7 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
             end
 
             function FigInnerHeight = get.FigInnerHeight(obj)
-                FigInnerHeight = 20*(obj.nParams+1)+10*(obj.nParams)+20;
+                FigInnerHeight = 20*(obj.nParams+2)+10*(obj.nParams+1)+20;
             end
 
             function Finish(obj,source,~)
@@ -124,6 +126,10 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
 
             function delete(obj)
                 delete(obj)
+            end
+
+            function focusFirst(obj)
+                focus(obj.EditFields(1));
             end
 
         end

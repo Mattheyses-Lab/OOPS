@@ -80,9 +80,15 @@ classdef PODSSettings < handle
         
         % ScatterPlot Settings
         ScatterPlotSettings struct
+        ScatterPlotBackgroundColor = [0 0 0];
+        ScatterPlotForegroundColor = [1 1 1];
+        ScatterPlotLegendVisible = true;
 
         % SwarmPlot Settings
         SwarmPlotSettings struct
+        SwarmPlotBackgroundColor = [0 0 0];
+        SwarmPlotForegroundColor = [1 1 1];
+        SwarmPlotErrorBarColor = [1 1 1];
         
         % Group Colors
         DefaultGroupColors cell
@@ -92,6 +98,7 @@ classdef PODSSettings < handle
         
         % Fonts
         DefaultFont char
+        DefaultPlotFont = 'Arial';
         
         % default px size (um/px)
         PixelSize = 0.1083;
@@ -133,11 +140,6 @@ classdef PODSSettings < handle
         SwarmPlotYVariable
         SwarmPlotGroupingType
         SwarmPlotColorMode
-
-%         % helper variable for dynamic thresh slider functionality
-%         ManualThreshEnabled
-%         ThreshStatisticName
-%         ThreshPanelTitle
 
         % for adding/deleting/adjusting labels
         nLabels
@@ -234,7 +236,7 @@ classdef PODSSettings < handle
                 SchemeFilesList = dir(fullfile([obj.MainPath,'\CustomMasks\Schemes'],'*.mat'));
             end
 
-            for i = 1:numel(SchemeFilesList);
+            for i = 1:numel(SchemeFilesList)
                 SplitName = strsplit(SchemeFilesList(i).name,'.');
                 obj.SchemeNames{i} = SplitName{1};
                 if ismac

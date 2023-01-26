@@ -148,6 +148,7 @@ classdef PODSImage < handle
         ThreshPanelTitle char
         ThreshStatisticName char
         ManualThreshEnabled logical
+
     end
     
     methods
@@ -396,7 +397,7 @@ classdef PODSImage < handle
                 ObjIdxs = find([obj.Object.Label]==Label);
                 Objects = obj.Object(ObjIdxs);
             else
-                Objects = [];
+                return
             end
 
         end
@@ -544,34 +545,39 @@ classdef PODSImage < handle
             if obj.ObjectDetectionDone && obj.OFDone
                 for i = 1:obj.nObjects
                     cObject = obj.Object(i);
-                    % get object azimuth avg values
-                    try
-                        [~,cObject.AzimuthAverage] = getAzimuthAverageUsingDipoles(rad2deg(cObject.AzimuthPixelValues));
-                    catch
-                        cObject.AzimuthAverage = NaN;
-                    end
 
                     % get object azimuth std values
                     try
-                        cObject.AzimuthStd = getAzimuthStd(rad2deg(cObject.AzimuthPixelValues));
+                        cObject.AzimuthStd = getAzimuthStd(cObject.AzimuthPixelValues);
                     catch
                         cObject.AzimuthStd = NaN;
                     end
 
-                    try
 
+                    % object midline and relative azimuth detection
+                    try
                         % construct the object midline (this function still needs optimization)
                         [~,~,cObject.Midline] = getObjectMidline(cObject.RestrictedPaddedMaskSubImage,"DisplayResults",false);
+
+                        if isempty(cObject.Midline)
+                            error('Failed to detect object midline');
+                        end
 
                         [cObject.MidlineRelativeAzimuth,cObject.NormalRelativeAzimuth] = getRelativeAzimuth(...
                             cObject.RestrictedPaddedMaskSubImage,...
                             cObject.PaddedAzimuthSubImage,...
                             cObject.Midline...
                             );
-                    catch
-                        warning(['Warning: Failed to calculate relative azimuth for object: ',num2str(cObject.SelfIdx)])
-                        cObject.MidlineRelativeAzimuth = NaN;
-                        cObject.NormalRelativeAzimuth = NaN;
+                    catch me
+                        switch me.message
+                            case 'Failed to detect object midline'
+                                %disp(['Warning: ',me.message]);
+                                blah = 0;
+                            otherwise
+                                disp(['Warning: Failed to calculate relative azimuth for object: ',num2str(cObject.SelfIdx)])
+                                cObject.MidlineRelativeAzimuth = NaN;
+                                cObject.NormalRelativeAzimuth = NaN;
+                        end
                     end
 
                 end

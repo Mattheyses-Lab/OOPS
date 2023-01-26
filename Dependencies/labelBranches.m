@@ -86,39 +86,38 @@ dilatedLRGB = label2rgb(dilatedL);
 
 end
 
-
-function out = replacenans(in)
-
-u = in;
-
-% Now find the nan's
-nanLocations = isnan(u);
-nanLinearIndexes = find(nanLocations);
-nonNanLinearIndexes = setdiff(1:numel(u), nanLinearIndexes);
-% Get the x,y,z of all other locations that are non nan.
-[xGood, yGood, zGood] = ind2sub(size(u), nonNanLinearIndexes);
-for index = 1 : length(nanLinearIndexes);
-  thisLinearIndex = nanLinearIndexes(index);
-  % Get the x,y,z location
-  [x,y,z] = ind2sub(size(u), thisLinearIndex);
-  % Get distances of this location to all the other locations
-  distances = sqrt((x-xGood).^2 + (y - yGood) .^ 2 + (z - zGood) .^ 2);
-  [sortedDistances, sortedIndexes] = sort(distances, 'ascend');
-  % The closest non-nan value will be located at index sortedIndexes(1)
-  indexOfClosest = sortedIndexes(1);
-  % Get the u value there.
-  goodValue = u(xGood(indexOfClosest), yGood(indexOfClosest), zGood(indexOfClosest));
-  % Replace the bad nan value in u with the good value.
-  u(x,y,z) = goodValue;
-end
-% u should be fixed now - no nans in it.
-% Double check.  Sum of nans should be zero now.
+% function out = replacenans(in)
+% 
+% u = in;
+% 
+% % Now find the nan's
 % nanLocations = isnan(u);
-% numberOfNans = sum(nanLocations(:));
-
-out = u;
-
-end
+% nanLinearIndexes = find(nanLocations);
+% nonNanLinearIndexes = setdiff(1:numel(u), nanLinearIndexes);
+% % Get the x,y,z of all other locations that are non nan.
+% [xGood, yGood, zGood] = ind2sub(size(u), nonNanLinearIndexes);
+% for index = 1 : length(nanLinearIndexes)
+%   thisLinearIndex = nanLinearIndexes(index);
+%   % Get the x,y,z location
+%   [x,y,z] = ind2sub(size(u), thisLinearIndex);
+%   % Get distances of this location to all the other locations
+%   distances = sqrt((x-xGood).^2 + (y - yGood) .^ 2 + (z - zGood) .^ 2);
+%   [sortedDistances, sortedIndexes] = sort(distances, 'ascend');
+%   % The closest non-nan value will be located at index sortedIndexes(1)
+%   indexOfClosest = sortedIndexes(1);
+%   % Get the u value there.
+%   goodValue = u(xGood(indexOfClosest), yGood(indexOfClosest), zGood(indexOfClosest));
+%   % Replace the bad nan value in u with the good value.
+%   u(x,y,z) = goodValue;
+% end
+% % u should be fixed now - no nans in it.
+% % Double check.  Sum of nans should be zero now.
+% % nanLocations = isnan(u);
+% % numberOfNans = sum(nanLocations(:));
+% 
+% out = u;
+% 
+% end
 
 
 function out = replacenansinmask(in,mask)
@@ -136,7 +135,7 @@ nonNanLinearIndexes = find(nonNanLocations);
 %nonNanLinearIndexes = setdiff(1:numel(u), nanLinearIndexes);
 % Get the x,y,z of all other locations that are non nan.
 [xGood, yGood, zGood] = ind2sub(size(u), nonNanLinearIndexes);
-for index = 1 : length(nanLinearIndexes);
+for index = 1 : length(nanLinearIndexes)
   thisLinearIndex = nanLinearIndexes(index);
   % Get the x,y,z location
   % These are not actually x,y, and z coordinates in the mathematical sense!!!

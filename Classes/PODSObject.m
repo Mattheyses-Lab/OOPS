@@ -54,10 +54,11 @@ classdef PODSObject < handle
 
         % object azimuth stats
         % (currently somewhat slow to calculate, so store them in memory)
-        AzimuthAverage
+        %AzimuthAverage
         AzimuthStd
         MidlineRelativeAzimuth
         NormalRelativeAzimuth
+
 
     end % end properties
     
@@ -113,7 +114,12 @@ classdef PODSObject < handle
 
         % simplified boundary (may store in memory if becomes useful)
         SimplifiedBoundary
-        
+
+        % other stats !IN DEVELOPMENT!
+        Tortuosity
+        MidlineLength
+        AzimuthAverage
+        TangentAverage
     end
 
     methods
@@ -218,7 +224,7 @@ classdef PODSObject < handle
             object.Selected = obj.Selected;
 
             % object azimuth stats
-            object.AzimuthAverage = obj.AzimuthAverage;
+            %object.AzimuthAverage = obj.AzimuthAverage;
             object.AzimuthStd = obj.AzimuthStd;
             object.MidlineRelativeAzimuth = obj.MidlineRelativeAzimuth;
             object.NormalRelativeAzimuth = obj.NormalRelativeAzimuth;
@@ -276,6 +282,13 @@ classdef PODSObject < handle
         end
         
         function AvgReferenceChannelIntensity = get.AvgReferenceChannelIntensity(obj)
+            
+            % if no reference image loaded, return NaN
+            if isempty(obj.Parent.ReferenceImage)
+                AvgReferenceChannelIntensity = NaN;
+                return
+            end
+
             try
                 AvgReferenceChannelIntensity = mean(obj.Parent.ReferenceImage(obj.PixelIdxList));
             catch
@@ -284,6 +297,13 @@ classdef PODSObject < handle
         end
         
         function IntegratedReferenceChannelIntensity = get.IntegratedReferenceChannelIntensity(obj)
+
+            % if no reference image loaded, return NaN
+            if isempty(obj.Parent.ReferenceImage)
+                IntegratedReferenceChannelIntensity = NaN;
+                return
+            end
+
             try
                 IntegratedReferenceChannelIntensity = sum(obj.Parent.ReferenceImage(obj.PixelIdxList));
             catch
@@ -437,6 +457,53 @@ classdef PODSObject < handle
             CentroidY = obj.Centroid(2);
         end        
 
+
+% GET METHODS STILL IN DEVELOPMENT
+
+        function AzimuthAverage = get.AzimuthAverage(obj)
+            try
+                AzimuthAverage = rad2deg(getAzimuthAverage(obj.AzimuthPixelValues));
+            catch
+                AzimuthAverage = NaN;
+            end
+        end
+
+        function TangentAverage = get.TangentAverage(obj)
+            try
+                TangentAverage = rad2deg(getAzimuthAverage(getMidlineTangent(obj.Midline)));
+            catch
+                TangentAverage = NaN;
+            end
+        end
+
+        function MidlineLength = get.MidlineLength(obj)
+            try
+                MidlineLength = getCurveLength(obj.Midline);
+            catch
+                MidlineLength = NaN;
+            end
+        end
+
+        function Tortuosity = get.Tortuosity(obj)
+
+            if isempty(obj.Midline)
+                Tortuosity = NaN;
+                return
+            end
+
+            try
+                midline = obj.Midline;
+                Tortuosity = 1-(getCurveLength([midline(1,:);midline(end,:)])/obj.MidlineLength);
+            catch
+                Tortuosity = NaN;
+            end
+        end
+
+% end methods in development
+
+
+
+
     end % end methods
     
     methods (Static)
@@ -489,7 +556,7 @@ classdef PODSObject < handle
             obj.Selected = object.Selected;
 
             % azimuth stats
-            obj.AzimuthAverage = object.AzimuthAverage;
+            %obj.AzimuthAverage = object.AzimuthAverage;
             obj.AzimuthStd = object.AzimuthStd;
             obj.MidlineRelativeAzimuth = object.MidlineRelativeAzimuth;
             obj.NormalRelativeAzimuth = object.NormalRelativeAzimuth;

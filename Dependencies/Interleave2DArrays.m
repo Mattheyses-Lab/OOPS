@@ -11,11 +11,19 @@ function OutputArray = Interleave2DArrays(array1,array2,mode)
     
     switch mode
         case 'row'
-            OutputArray = zeros(nRows*2,nCols);
+            if iscell(array1)
+                OutputArray = cell(nRows*2,nCols);
+            else
+                OutputArray = zeros(nRows*2,nCols);
+            end
             OutputArray(1:2:end,:) = array1;
             OutputArray(2:2:end,:) = array2;
         case 'column'
-            OutputArray = zeros(nRows,nCols*2);
+            if iscell(array1)
+                OutputArray = cell(nRows,nCols*2);
+            else
+                OutputArray = zeros(nRows,nCols*2);
+            end
             OutputArray(:,1:2:end) = array1;
             OutputArray(:,2:2:end) = array2;
     end

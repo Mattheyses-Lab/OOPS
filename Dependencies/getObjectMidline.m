@@ -34,11 +34,11 @@ boundarypoly = polyshape(boundariesx(1:end),boundariesy(1:end),"KeepCollinearPoi
 %boundarypoly = simplify(boundarypoly);
 
 % testing below, get buffer around polygon for larger boundary
-% d = 0.7071;
-% %boundarypoly = polybuffer(boundarypoly,d);
-% boundarypoly = polybuffer(boundarypoly,d,"JointType","square");
-% boundarypoly = simplify(boundarypoly);
-% end testing
+d = 0.7071;
+%boundarypoly = polybuffer(boundarypoly,d);
+boundarypoly = polybuffer(boundarypoly,d,"JointType","round");
+% % boundarypoly = simplify(boundarypoly);
+% % end testing
 
 % extract coordinates of the polyshape vertices, these are our new boundaries
 boundariesx = [boundarypoly.Vertices(1:end,1);boundarypoly.Vertices(1,1)];
@@ -57,14 +57,15 @@ lengthPerEdge = boundaryPerimeter/boundaryEdges;
 if Options.BoundaryInterpolation
     % desired spacing between points after interpolation (we want less interpolation as the object gets larger)
     boundary_interp_res = log(nthroot(boundaryPerimeter,4))*1.5;
+
     % determine the number of edges to draw in the interpolated curve
     nEdgesDesired = ceil(boundaryPerimeter/boundary_interp_res);
     % if odd, make even (seems to work better for small objects)
 
-    % check if this helps or not
-    if mod(nEdgesDesired,2)
-        nEdgesDesired = nEdgesDesired+1;
-    end
+    % % check if this helps or not
+    % if mod(nEdgesDesired,2)
+    %     nEdgesDesired = nEdgesDesired+1;
+    % end
 
     % rescale the edge length to perfectly fit nEdgesDesired edges in our original boundary
     length1 = nEdgesDesired*boundary_interp_res;
@@ -73,18 +74,22 @@ if Options.BoundaryInterpolation
     boundary_interp_res = boundary_interp_res/interpScale;
 
     % using interparc interpolation method - seems to work better but need to tweak params
-    %nPointsDesired = round(boundaryPerimeter/boundary_interp_res)+1;
+    nPointsDesired = round(boundaryPerimeter/boundary_interp_res)+1;
 
     % check which method is best
-    nPointsDesired = round(boundaryPerimeter/boundary_interp_res);
+    %nPointsDesired = round(boundaryPerimeter/boundary_interp_res);
 
+    % working method
     newPoints = interparc(nPointsDesired,boundariesx,boundariesy,'linear');
+
     boundariesx = newPoints(:,1);
     boundariesy = newPoints(:,2);
-    % save the interpolated boundaries for plotting
-    interp_boundariesx = boundariesx;
-    interp_boundariesy = boundariesy;
+
 end
+
+% save the interpolated boundaries for plotting
+interp_boundariesx = boundariesx;
+interp_boundariesy = boundariesy;
 
 %% smooth out the boundary
 
@@ -103,7 +108,7 @@ if Options.BoundarySmoothing
 
 
     % !important step! if we do not re-space boundary points after smoothing, we could end up with a very jagged midline
-    boundaryPerimeter = getCurveLength([boundariesx,boundariesy]);
+    %boundaryPerimeter = getCurveLength([boundariesx,boundariesy]);
     % we want the respaced boundary to have the same number of points
     nPointsDesired = numel(boundariesx);
     % now re-interpolate
@@ -113,11 +118,33 @@ if Options.BoundarySmoothing
 
 end
 
+smooth_boundariesx = boundariesx;
+smooth_boundariesy = boundariesy;
+
 % could interpolate/respace again here, as smoothing changes the positions of coordinates
 % -- code to respace here --
 % end respace
 
 %% Delaunay triangulation and Voronoi tesselation to find edges
+
+
+%% testing below
+% % convert to polyshape, don't keep collinear points (won't take effect unless we simplify)
+% boundarypoly = polyshape(boundariesx(1:end),boundariesy(1:end),"KeepCollinearPoints",false,"Simplify",false);
+% 
+% % testing below, get buffer around polygon for larger boundary
+% d = 0.7071;
+% %boundarypoly = polybuffer(boundarypoly,d);
+% boundarypoly = polybuffer(boundarypoly,d,"JointType","round");
+% %boundarypoly = simplify(boundarypoly);
+% % end testing
+% 
+% % extract coordinates of the polyshape vertices, these are our new boundaries
+% boundariesx = [boundarypoly.Vertices(1:end,1);boundarypoly.Vertices(1,1)];
+% boundariesy = [boundarypoly.Vertices(1:end,2);boundarypoly.Vertices(1,2)];
+%% end testing
+
+
 
 % extracting unique coordinates of the boundary for 
 % Voronoi tesselation & Delaunay triangulation
@@ -195,23 +222,97 @@ end
 
 % create the undirected graph object
 G = graph(edges(:,1),edges(:,2),weights);
-% find any remove any isolated nodes (maybe not necessary but just in case)
-isolated_nodes = find(degree(G)==0);
-%disp(['Removed ',num2str(numel(isolated_nodes)),' isolated nodes']);
-G = rmnode(G,isolated_nodes);
+% add a name for each node
+nodenames = cell(size(v_inobj,1),1);
+nodexcoord = [];
+nodeycoord = [];
+for i = 1:numel(nodenames)
+    nodenames{i,1} = num2str(i);
+    nodexcoord(i,1) = v_inobj(i,1);
+    nodeycoord(i,1) = v_inobj(i,2);
+end
+G.Nodes.Name = nodenames;
+G.Nodes.Xcoord = nodexcoord;
+G.Nodes.Ycoord = nodeycoord;
+
+% [~,ia,~] = unique(round([G.Nodes.Xcoord G.Nodes.Ycoord],4),'rows');
+% G = subgraph(G,ia);
+
+
+nDegreeGT2 = numel(find(degree(G)>2));
+% attempt to prune the graph
+while nDegreeGT2 > 0
+    G = rmnode(G,find(degree(G)<2));
+
+    temp = numel(find(degree(G)>2));
+
+    % if the number of nodes with degree > 2 did not change
+    if temp==nDegreeGT2
+        % break to prevent infinite loop
+        break
+    else
+        nDegreeGT2 = temp;
+    end
+end
+
+% remove any isolated nodes
+G = rmnode(G,find(degree(G)==0));
+
+if numel(G.Nodes)==0
+    G = [];
+    edges = [];
+    Midline = [];
+    return
+end
+
+% % get the largest connected component if there is more than 1 graph component
+% [bin,binsize] = conncomp(G,'Type','weak');
+% idx = binsize(bin) == max(binsize);
+% G = subgraph(G, idx);
+
 % get the shortest distance between all nodes
 d = distances(G);
 % the largest distance represents the path between endpoint nodes
 [maxDist,maxIdx] = max(d,[],'all');
 % get node idxs from the linear idx found above (maxIdx)
 [end1,end2] = ind2sub(size(d),maxIdx);
-% now get the (x,y) coordinates of those nodes
-endNode1 = v_inobj(end1,:);
-endNode2 = v_inobj(end2,:);
-% get the ordered list of nodes representing the midline
-midlinePathNodes = shortestpath(G,end1,end2);
-% finally, convert the node list to midline coordinates
-Midline = [v_inobj(midlinePathNodes,1),v_inobj(midlinePathNodes,2)];
+
+
+% % get the ordered list of nodes representing the midline
+% midlinePathNodes = shortestpath(G,end1,end2);
+% % reorder the graph
+% G = reordernodes(G,midlinePathNodes);
+
+try    
+    % get the ordered list of nodes representing the midline
+    midlinePathNodes = shortestpath(G,end1,end2);
+    % reorder the graph
+    G = reordernodes(G,midlinePathNodes);
+catch
+    [~,~,edgepath] = shortestpath(G,end1,end2);
+
+    goodEdges = G.Edges.EndNodes(edgepath,:);
+    goodNodes = Interleave2DArrays(goodEdges(:,1),goodEdges(:,2),'row');
+    goodNodes = unique(goodNodes,'stable');
+    goodNodes = [goodNodes(2);goodNodes(1);goodNodes(3:end)];
+    G = subgraph(G,goodNodes);
+end
+
+
+% get the midline coordinates
+Midline = [G.Nodes.Xcoord G.Nodes.Ycoord];
+
+% get the endpoint coordinates
+endNode1 = Midline(1,:);
+endNode2 = Midline(end,:);
+
+
+% % now get the (x,y) coordinates of those nodes
+% endNode1 = v_inobj(end1,:);
+% endNode2 = v_inobj(end2,:);
+% 
+% % finally, convert the node list to midline coordinates
+% Midline = [v_inobj(midlinePathNodes,1),v_inobj(midlinePathNodes,2)];
 % due to the use of floating point coordinates, there is a chance for "near duplicate" vertices
 % so we will round the vertex coordinates and only keep the unique values
 Midline = unique(round(Midline,8),'rows','stable');
@@ -279,41 +380,61 @@ if Options.DisplayResults
         v2idx = edge(i,2);
         v1 = V(v1idx,:);
         v2 = V(v2idx,:);
-        plot([v1(1,1) v2(1,1)],[v1(1,2) v2(1,2)],'LineStyle','-','Color',[0 0 1],'LineWidth',2);
+        plot([v1(1,1) v2(1,1)],[v1(1,2) v2(1,2)],...
+            'LineStyle','-',...
+            'Color',[0 0 1],...
+            'LineWidth',2,...
+            'DisplayName','');
     end
-%     % plot the edges found within the object as solid red lines
-%     for i = 1:size(edges,1)
-%         v1idx = edges(i,1);
-%         v2idx = edges(i,2);
-%         v1 = v_inobj(v1idx,:);
-%         v2 = v_inobj(v2idx,:);
-%         plot([v1(1,1) v2(1,1)],[v1(1,2) v2(1,2)],'LineStyle','-','Color',[1 0 0],'LineWidth',1);
-%     end
-    % plot the original boundary as a green line
-    plot(orig_boundariesx,orig_boundariesy,...
+    % plot the edges found within the object as solid red lines
+    for i = 1:size(edges,1)
+        v1idx = edges(i,1);
+        v2idx = edges(i,2);
+        v1 = v_inobj(v1idx,:);
+        v2 = v_inobj(v2idx,:);
+        plot([v1(1,1) v2(1,1)],[v1(1,2) v2(1,2)],'LineStyle','-','Color',[1 0 0],'LineWidth',2,'Marker','o');
+    end
+
+    % plot the original boundary
+    p1 = plot(orig_boundariesx,orig_boundariesy,...
         'LineStyle','-',...
         'LineWidth',2,...
-        'Color',[0 1 0],...
-        'Marker','none');
-    % plot the boundaries after buffering, interpolation
-    plot(interp_boundariesx,interp_boundariesy,...
-        'LineStyle','-',...
+        'Color',[1 0 1],...
+        'Marker','none',...
+        'DisplayName','8-connected boundary');
+    % plot the boundaries after interpolation
+    p2 = plot(interp_boundariesx,interp_boundariesy,...
+        'LineStyle','--',...
         'LineWidth',2,...
-        'Color',[0 1 0],...
-        'Marker','none');
+        'Color',[1 0 0],...
+        'Marker','none',...
+        'DisplayName','Interpolated boundary');
+    % plot the boundaries after smoothing
+    p3 = plot(smooth_boundariesx,smooth_boundariesy,...
+        'LineStyle','--',...
+        'LineWidth',2,...
+        'Color',[1 1 0],...
+        'Marker','none',...
+        'DisplayName','Smooth boundary');
+
+
+    % plot the midline as a dotted black line
+    p4 = plot(Midline(:,1),Midline(:,2),...
+        'LineStyle',':',...
+        'LineWidth',3,...
+        'Color',[0 0 0],...
+        'Marker','none',...
+        'DisplayName','Midline');
     % plot the endpoint coordinates as red stars
-    plot([endNode1(1,1) endNode2(1,1)],[endNode1(1,2) endNode2(1,2)],...
+    p5 = plot([endNode1(1,1) endNode2(1,1)],[endNode1(1,2) endNode2(1,2)],...
         'Marker','pentagram',...
         'MarkerSize',15,...
         'LineStyle','none',...
-        'MarkerFaceColor',[1 0 0]);
-    % plot the midline as a dotted black line
-    plot(Midline(:,1),Midline(:,2),...
-        'LineStyle','-',...
-        'LineWidth',3,...
-        'Color',[0 0 0],...
-        'Marker','none');
+        'MarkerFaceColor',[1 0 0],...
+        'DisplayName','Endpoint nodes');
+
     hold off
+    legend([p1 p2 p3 p4 p5])
 end
 
 end % end of main function

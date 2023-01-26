@@ -20,14 +20,15 @@ function TableOut = GetGroupObjectSummary(source)
                          'MinFeretDiameter',0,...
                          'LabelName','',...
                          'AzimuthAverage',0,...
-                         'AzimuthStd',0);
+                         'AzimuthStd',0,...
+                         'MidlineRelativeAzimuth',0,...
+                         'NormalRelativeAzimuth',0);
     
     CurrentGroup = PODSData.CurrentGroup;
 
     MasterIdx = 1;
 
     for j = 1:CurrentGroup.nReplicates
-
 
         for k = 1:CurrentGroup.Replicate(j).nObjects
             
@@ -50,6 +51,8 @@ function TableOut = GetGroupObjectSummary(source)
             PODSDataOut(MasterIdx).LabelName =  CurrentGroup.Replicate(j).Object(k).LabelName;
             PODSDataOut(MasterIdx).AzimuthAverage =  CurrentGroup.Replicate(j).Object(k).AzimuthAverage;
             PODSDataOut(MasterIdx).AzimuthStd =  CurrentGroup.Replicate(j).Object(k).AzimuthStd;
+            PODSDataOut(MasterIdx).MidlineRelativeAzimuth = CurrentGroup.Replicate(j).Object(k).MidlineRelativeAzimuth;
+            PODSDataOut(MasterIdx).NormalRelativeAzimuth = CurrentGroup.Replicate(j).Object(k).NormalRelativeAzimuth;
             
             MasterIdx = MasterIdx+1;
 

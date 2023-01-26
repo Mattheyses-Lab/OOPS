@@ -1,27 +1,11 @@
 function [MidlineRelativeAzimuth,NormalRelativeAzimuth] = getRelativeAzimuth(I,Az,Midline)
+% calculate the relative direction of azimuths with respect to the tangents and normals of a midline traced through a binary object
 
     Isz = size(I);
-%     [~,~,Midline] = getObjectMidline(I);
 
+    %% compute the midline tangent
+    midlineTangent = getMidlineTangent(Midline);
 
-    nMidline = size(Midline,1);
-    midlineTangent = zeros(nMidline,1);
-    % calculate the tangent angle at each point along the midline
-    midlineEx = [Midline(end-1,:); Midline(1:end,:); Midline(2,:)];
-    for j=2:nMidline+1
-        % get two points on either side of this point to find the tangent
-        point1 = midlineEx(j-1,:);
-        point2 = midlineEx(j+1,:);
-        % our tangent is measured in radians, CCW from the positive x direction
-        midlineTangent(j-1) = pi - mod(atan2(point1(1,2)-point2(1,2), point1(1,1)-point2(1,1)), pi);
-    end
-    % need to adjust enpoint tangents since this is not a closed curve
-    midlineTangent(1) = midlineTangent(2);
-    midlineTangent(end) = midlineTangent(end-1);
-    
-    % wrap values to fall in the range [-pi/2, pi/2]
-    midlineTangent(midlineTangent>(pi/2)) = midlineTangent(midlineTangent>(pi/2))-pi;
-    
     % get the list of pixel azimuth values
     AzValues = Az(I);
     
@@ -36,7 +20,7 @@ function [MidlineRelativeAzimuth,NormalRelativeAzimuth] = getRelativeAzimuth(I,A
             % get Euclidean distances between this pixel and all midline points
             dist = sqrt((x-Midline(:,1)).^2+(y-Midline(:,2)).^2);
             % find the shortest distance, that will be the point we need
-            [minDist,minIdx] = min(dist);
+            [~,minIdx] = min(dist);
             % add the value to the tangent image
             IT(Idx) = midlineTangent(minIdx);
         end
@@ -44,15 +28,46 @@ function [MidlineRelativeAzimuth,NormalRelativeAzimuth] = getRelativeAzimuth(I,A
     
     % list of midline tangent angles
     TangentValues = IT(I);
+
     % list of midline normal values (90° angle to midline)
     NormalValues = TangentValues+pi/2;
     NormalValues(NormalValues>(pi/2)) = NormalValues(NormalValues>(pi/2))-pi;
     
-    % find difference between each azimuth value and its associatedd midline/midline normal values
-    MidlineRelativeAzimuths = getAzimuthDiff(TangentValues,AzValues);
-    NormalRelativeAzimuths = getAzimuthDiff(NormalValues,AzValues);
 
-    MidlineRelativeAzimuth = mean(MidlineRelativeAzimuths);
-    NormalRelativeAzimuth = mean(NormalRelativeAzimuths);
+
+
+
+    %% method 1
+    % getAzimuthDiff returns in degrees!
+    % diff = getAzimuthDiff(TangentValues,AzValues);
+    % diff2 = getAzimuthDiff(NormalValues,AzValues);
+    % 
+    % diff(diff>90) = diff(diff>90)-180;
+    % diff2(diff2>90) = diff2(diff2>90)-180;
+    % 
+    % diff(diff<-90) = diff(diff<-90)+180;
+    % diff2(diff2<-90) = diff2(diff2<-90)+180;
+    % 
+    % MidlineRelativeAzimuth = rad2deg(getAzimuthAverage(deg2rad(diff)));
+    % NormalRelativeAzimuth = rad2deg(getAzimuthAverage(deg2rad(diff2)));
+
+    %% better method?
+
+
+    % tangentDiff = angle(exp(2i*AzValues)./exp(2i*TangentValues));
+    % MidlineRelativeAzimuth = rad2deg(circ_mean(tangentDiff))*0.5;
+    % 
+    % normalDiff = angle(exp(2i*AzValues)./exp(2i*NormalValues));
+    % NormalRelativeAzimuth = rad2deg(circ_mean(normalDiff))*0.5;
+
+    %% method 3
+
+    tangentDiff = angle(exp(2i*AzValues)./exp(2i*TangentValues))*0.5;
+    MidlineRelativeAzimuth = rad2deg(getAzimuthAverage(tangentDiff));
+
+    normalDiff = angle(exp(2i*AzValues)./exp(2i*NormalValues))*0.5;
+    NormalRelativeAzimuth = rad2deg(getAzimuthAverage(normalDiff));
+
+
 
 end

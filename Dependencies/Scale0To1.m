@@ -1,27 +1,5 @@
 function Scaled = Scale0To1(UnscaledImage)
-
-    sz = size(UnscaledImage);
-    ndim = length(sz);
-    
-    if ndim > 3
-        error('Dimensions > 3 not supported!');
-    end
-    
-    switch ndim
-        
-        case 3
-            max_value = max(max(max(UnscaledImage)));
-            min_value = min(min(min(UnscaledImage)));
-        case 2
-            max_value = max(max(UnscaledImage));
-            min_value = min(min(UnscaledImage));            
-        case 1
-            max_value = max(UnscaledImage);
-            min_value = min(UnscaledImage); 
-    end
-
-    Scaled = UnscaledImage;
-
-    Scaled = (UnscaledImage-min_value)./(max_value-min_value);
+% rescale the intensity imagevalues  to fall between 0 and 1
+    Scaled = rescale(UnscaledImage,0,1);
 
 end

@@ -3,16 +3,12 @@ classdef PODSProject < handle
     properties
         % name of the project
         ProjectName = 'Untitled';
-
         % array of PODSGroup objects
         Group PODSGroup
-
         % indicates which PODSGroup is selected in the GUI
-        CurrentGroupIndex uint8
-
+        CurrentGroupIndex double
         % handles to all gui objects
         Handles struct
-
         % handle to the main PODSSettings object (shared across multiple objects)
         Settings
     end
@@ -74,7 +70,6 @@ classdef PODSProject < handle
 
         % return all objects with Label:Label
         function Objects = getObjectsByLabel(obj,Label)
-            ObjsFound = 0;
             Objects = PODSObject.empty();
             if obj.nGroups >= 1
                 for i = 1:obj.nGroups
@@ -201,6 +196,8 @@ classdef PODSProject < handle
 
             NewScreenSize = obj.Settings.ScreenSize;
             NewFontSize = obj.Settings.FontSize;
+            NewSchemeNames = obj.Settings.SchemeNames;
+            NewSchemePaths = obj.Settings.SchemePaths;
 
             obj.ProjectName = proj.ProjectName;
             obj.Settings = proj.Settings;
@@ -209,6 +206,8 @@ classdef PODSProject < handle
 
             obj.Settings.ScreenSize = NewScreenSize;
             obj.Settings.FontSize = NewFontSize;
+            obj.Settings.SchemeNames = NewSchemeNames;
+            obj.Settings.SchemePaths = NewSchemePaths;
 
             % load each group (calls loadobj() of PODSGroup)
             for i = 1:length(proj.Group)

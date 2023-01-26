@@ -278,7 +278,11 @@ function [] = UpdateImages(source)
                     %OverlayIntensity = imadjust(cImage.I);
                     %OverlayIntensity = imadjust(cImage.I);
                     %OverlayIntensity = Scale0To1(imadjust(cImage.I.*cImage.OF_image));
+
                     OverlayIntensity = cImage.I;
+                    stretchlim(OverlayIntensity)
+                    OverlayIntensity = imadjust(OverlayIntensity,stretchlim(OverlayIntensity));
+
                     OFRGB = ind2rgb(im2uint8(cImage.OF_image),PODSData.Settings.OrderFactorColormap);
                     OFRGB = MaskRGB(OFRGB,OverlayIntensity);
                     PODSData.Handles.OrderFactorImgH.CData = OFRGB;
@@ -297,6 +301,13 @@ function [] = UpdateImages(source)
                 catch
                     PODSData.Handles.OrderFactorImgH.CData = EmptyImage;
                 end
+            end
+
+            % show or hide the OF colorbar
+            if PODSData.Handles.ShowColorbarOrderFactor.Value == 1
+                PODSData.Handles.OFCbar.Visible = 'on';
+            else
+                PODSData.Handles.OFCbar.Visible = 'off';
             end
 
             % change colormap to currently selected Order factor colormap
@@ -397,10 +408,14 @@ function [] = UpdateImages(source)
 
                     % no enhancement
                     % OverlayIntensity = cImage.I;
-                    % AzimuthRGB = MaskRGB(MakeAzimuthRGB(cImage.AzimuthImage,PODSData.Settings.AzimuthColormap),OverlayIntensity);
 
                     % using adjusted contrast intensity image and denoised azimuth image
-                     OverlayIntensity = imadjust(cImage.I,stretchlim(cImage.I));
+                    % OverlayIntensity = imadjust(cImage.I,stretchlim(cImage.I));
+
+                    OverlayIntensity = cImage.I .* cImage.OF_image;
+                    OverlayIntensity = imadjust(OverlayIntensity,stretchlim(OverlayIntensity));
+
+                     
                      AzimuthRGB = MaskRGB(MakeAzimuthRGB(...
                          getAverageAzimuthImage(cImage.AzimuthImage),...
                          PODSData.Settings.AzimuthColormap),...
@@ -424,7 +439,14 @@ function [] = UpdateImages(source)
                     disp('Warning: Error displaying azimuth image')
                 end
             end
-            
+
+            % show or hide the azimuth colorbar
+            if PODSData.Handles.ShowColorbarAzimuthImage.Value == 1
+                set(PODSData.Handles.PhaseBarComponents,'Visible','on');
+            else
+                set(PODSData.Handles.PhaseBarComponents,'Visible','off');
+            end
+
             % create 'circular' colormap by vertically concatenating
             %   2 hsv maps and make it current
             tempmap = PODSData.Settings.AzimuthColormap;
@@ -490,7 +512,7 @@ function [] = UpdateImages(source)
             end
 
             % testing below
-            drawnow
+            %drawnow
             % end testing
 
         case 'Plots'
@@ -501,13 +523,24 @@ function [] = UpdateImages(source)
                 % do nothing
             end
             
-            PODSData.Handles.hScatterPlot = PlotGroupScatterPlot(source,PODSData.Handles.ScatterPlotAxH);
-
             try
                 delete(PODSData.Handles.SwarmPlotAxH.Children)
             catch
                 % do nothing
             end
+
+
+            if isempty(cImage)
+                return
+            end
+
+            PODSData.Handles.hScatterPlot = PlotGroupScatterPlot(source,...
+                PODSData.Handles.ScatterPlotAxH,...
+                PODSData.Settings.ScatterPlotLegendVisible,...
+                PODSData.Settings.ScatterPlotBackgroundColor,...
+                PODSData.Settings.ScatterPlotForegroundColor);
+
+
             
             switch PODSData.Settings.SwarmPlotGroupingType
                 case 'Group'
@@ -524,7 +557,6 @@ function [] = UpdateImages(source)
             end
             
             PODSData.Handles.SwarmPlotAxH.Title.String = ExpandVariableName(PODSData.Settings.SwarmPlotYVariable);
-            
             PODSData.Handles.SwarmPlotAxH.YAxis.Label.String = ExpandVariableName(PODSData.Settings.SwarmPlotYVariable);            
             
         case 'View Objects'

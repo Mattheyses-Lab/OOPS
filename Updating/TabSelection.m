@@ -119,6 +119,8 @@ function TabSelection(source,~)
     
         case 'Plots'
     
+            % hide the scatter plot
+            PODSData.Handles.ScatterPlotGrid.Visible = 'Off';
             delete(PODSData.Handles.ScatterPlotAxH.Children)
     
             if isvalid(PODSData.Handles.ScatterPlotAxH.Legend)
@@ -127,13 +129,20 @@ function TabSelection(source,~)
             PODSData.Handles.ScatterPlotAxH.Title.Visible = 'Off';
             PODSData.Handles.ScatterPlotAxH.Toolbar.Visible = 'Off';
             PODSData.Handles.ScatterPlotAxH.Visible = 'Off';
-    
+            PODSData.Handles.ScatterPlotAxH.XAxis.Label.Visible = 'Off';
+            PODSData.Handles.ScatterPlotAxH.YAxis.Label.Visible = 'Off';
+            PODSData.Handles.ScatterPlotAxH.HitTest = 'Off';
+
             % hide the swarm plot
+            PODSData.Handles.SwarmPlotGrid.Visible = 'Off';
             delete(PODSData.Handles.SwarmPlotAxH.Children)
     
             PODSData.Handles.SwarmPlotAxH.Title.Visible = 'Off';
             PODSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
             PODSData.Handles.SwarmPlotAxH.Visible = 'Off';
+            PODSData.Handles.SwarmPlotAxH.XAxis.Label.Visible = 'Off';
+            PODSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'Off';
+            PODSData.Handles.SwarmPlotAxH.HitTest = 'Off';
     
         case 'View Objects'
     
@@ -307,14 +316,22 @@ function TabSelection(source,~)
                 PODSData.Handles.ScatterPlotAxH.Legend.Visible = 'On';
             end
     
+            PODSData.Handles.ScatterPlotGrid.Visible = 'On';
             PODSData.Handles.ScatterPlotAxH.Title.Visible = 'On';
             PODSData.Handles.ScatterPlotAxH.Toolbar.Visible = 'On';
             PODSData.Handles.ScatterPlotAxH.Visible = 'On';
-    
+            PODSData.Handles.ScatterPlotAxH.XAxis.Label.Visible = 'On';
+            PODSData.Handles.ScatterPlotAxH.YAxis.Label.Visible = 'On';
+            PODSData.Handles.ScatterPlotAxH.HitTest = 'On';
+
+            PODSData.Handles.SwarmPlotGrid.Visible = 'On';
             PODSData.Handles.SwarmPlotAxH.Visible = 'On';
             PODSData.Handles.SwarmPlotAxH.Title.Visible = 'On';
             PODSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'On';
-    
+            PODSData.Handles.SwarmPlotAxH.XAxis.Label.Visible = 'On';
+            PODSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'On';
+            PODSData.Handles.SwarmPlotAxH.HitTest = 'On';
+
             PODSData.Handles.ImgPanel1.Visible = 'On';
             PODSData.Handles.ImgPanel2.Visible = 'On';
     

@@ -145,8 +145,6 @@ switch MaskType
                     cImage.bw = sparse(bwtemp);
                     %% end fill
 
-
-
                     % NOTE: connectivity changed from 8 to 4, make sure it didn't mess anything up
 
                     % remove small objects one final time
@@ -160,8 +158,6 @@ switch MaskType
 
                     % label individual branches
                     [~,cImage.L] = labelBranches(full(cImage.bw));
-
-
 
 
                     % update log with masking output
@@ -429,9 +425,9 @@ switch MaskType
 
     case 'CustomScheme'
         % get idx to user-defined mask scheme by searching through list of scheme names for a match
-        SchemeIdx = find(ismember(PODSData.Settings.SchemeNames,MaskName));
+        %SchemeIdx = find(ismember(PODSData.Settings.SchemeNames,MaskName));
         % load the scheme into struct() S -> should have single fieldname matching 'MaskName'
-        S = load(PODSData.Settings.SchemePaths{SchemeIdx});
+        S = load(PODSData.Settings.SchemePaths{ismember(PODSData.Settings.SchemeNames,MaskName)});
         % extract the scheme into a new var
         CustomScheme = S.(MaskName);
         % clear the struct
@@ -452,6 +448,11 @@ switch MaskType
             cImage.bw = sparse(CustomScheme.Images(end).ImageData);
             % use the mask to build the label matrix
             cImage.L = sparse(bwlabel(full(cImage.bw),4));
+
+
+            % label individual branches
+            [~,cImage.L] = labelBranches(full(cImage.bw));
+
             %% BUILD NEW OBJECTS
             % ...so we can detect the new ones (requires bw and L to be computed previously)
             cImage.DetectObjects();

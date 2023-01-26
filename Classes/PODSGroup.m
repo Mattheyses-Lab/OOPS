@@ -94,7 +94,7 @@ classdef PODSGroup < handle
             delete(obj);
         end
         
-
+        % saveobj method
         function group = saveobj(obj)
 
             disp(['Saving PODSGroup: ',obj.GroupName])
@@ -149,6 +149,7 @@ classdef PODSGroup < handle
             else
                 Objects = [];
             end
+
         end
 
         % apply PODSLabel:Label to all selected objects in this PODSGroup
@@ -183,10 +184,10 @@ classdef PODSGroup < handle
             Selected(obj.CurrentImageIndex) = true;
 
             % get list of 'good' objects (not selected)
-            Good = AllReplicates(~[Selected]);
+            Good = AllReplicates(~Selected);
             
             % get list of objects to delete (selected)
-            Bad = AllReplicates([Selected]);
+            Bad = AllReplicates(Selected);
             
             % replace image array of group with only the ones we wish to keep (not selected)
             obj.Replicate = Good;
@@ -255,9 +256,8 @@ classdef PODSGroup < handle
         end
         
         function ColorString = get.ColorString(obj)
-%             ColorStringCell = colornames('MATLAB',obj.Color);
             ColorStringCell = colornames('MATLAB',obj.Color);
-            ColorString = ColorStringCell{1};            
+            ColorString = ColorStringCell{1};         
         end
         
         function OFAllDone = get.OFAllDone(obj)
@@ -285,6 +285,10 @@ classdef PODSGroup < handle
             
             count = 0;
             last = 1;
+
+            % test below
+            ObjectData = [];
+            % end test
             
             for i = 1:obj.nReplicates
                 
@@ -309,7 +313,7 @@ classdef PODSGroup < handle
                 % column 1 holds x data
                 VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
                 last = count+1;
-            end            
+            end        
         end
         
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)

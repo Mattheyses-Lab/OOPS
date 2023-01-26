@@ -1,4 +1,4 @@
-function hScatter = PlotGroupScatterPlot(source,axH)
+function hScatter = PlotGroupScatterPlot(source,axH,legendVisible,legendBackgroundColor,legendForegroundColor)
 
     % get the master data object
     PODSData = guidata(source);
@@ -16,16 +16,16 @@ function hScatter = PlotGroupScatterPlot(source,axH)
     axH.YLabel.String = YName;
     % set the proper current axes
     PODSData.Handles.fH.CurrentAxes = axH;
-    % initialize empty array to hold the scatterplots
-    hScatter = [];
+    % initialize scatterplot array
+    hScatter = gobjects(nGroups,1);
     
     for i = 1:nGroups
         try
             % get the data to plot
-            ObjectData = CombineObjectData(PODSData.Group(i),XVar,YVar);
+            ObjectData = rmmissing(CombineObjectData(PODSData.Group(i),XVar,YVar));
             % check for NaNs, throw error if found
-            if any(isnan(ObjectData(:)))
-                error();
+            if isempty(ObjectData(:))
+                error("Object data missing");
             end
             % plot the data
             hScatter(i) = scatter(axH,ObjectData(:,1),ObjectData(:,2),...
@@ -34,8 +34,13 @@ function hScatter = PlotGroupScatterPlot(source,axH)
                 'DisplayName',PODSData.Group(i).GroupName,...
                 'MarkerFaceAlpha',1,...
                 'MarkerEdgeAlpha',0.5);            
-        catch
-            UpdateLog3(source,['Error building group scatterplot: Data missing or incomplete for [Group:',PODSData.Group(i).GroupName,']'],'append');
+        catch me
+            switch me.message
+                case 'Object data missing'
+                    UpdateLog3(source,['Error building scatterplot: Data missing or incomplete for [Group:',PODSData.Group(i).GroupName,']'],'append');
+                otherwise
+                    UpdateLog3(source,['Error building scatterplot: ',me.message],'append');
+            end
         end
         hold on
     end
@@ -46,10 +51,14 @@ function hScatter = PlotGroupScatterPlot(source,axH)
     axH.XTickMode = 'Auto';
     axH.XTickLabelMode = 'Auto';
     axH.XLimMode = 'Auto';
-    lgd = legend(axH);
-    lgd.Color = [0 0 0];
-    lgd.TextColor = 'Yellow';
-    lgd.EdgeColor = 'Yellow';
+
+    if legendVisible
+        lgd = legend(axH);
+    
+        lgd.Color = legendBackgroundColor;
+        lgd.TextColor = legendForegroundColor;
+        lgd.EdgeColor = legendForegroundColor;
+    end
     
     hold off
 

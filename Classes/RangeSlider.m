@@ -225,12 +225,12 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             
             function MoveKnob1(obj)
                 obj.Value(1) = max(min(obj.CurrentPoint,obj.Knob(2).Value),obj.Limits(1));
-                drawnow
+                %drawnow
             end
             
             function MoveKnob2(obj)
                 obj.Value(2) = min(max(obj.CurrentPoint,obj.Knob(1).Value),obj.Limits(2));
-                drawnow
+                %drawnow
             end
 
             function StopMovingAndRestoreCallbacks(obj)

@@ -1,8 +1,5 @@
 function Outputs = SimpleFormFig(Name,Params,FontColor,BackgroundColor)
 
-
-    error('Using simple form fig');
-
     % initialize cell array of output variables
     Outputs = cell(numel(Params),1);
 
@@ -12,7 +9,7 @@ function Outputs = SimpleFormFig(Name,Params,FontColor,BackgroundColor)
         "HandleVisibility","on",...
         "Color","Black",...
         "Name",Name,...
-        "Visible","on",...
+        "Visible","off",...
         "WindowStyle","modal",...
         "CloseRequestFcn",@(o,e) GatherOutputs());
 
@@ -28,8 +25,12 @@ function Outputs = SimpleFormFig(Name,Params,FontColor,BackgroundColor)
     % move gui to the center of window
     movegui(hFig,'center');
 
+    drawnow
+
     % turn on figure visibility
     hFig.Visible = 'On';
+
+    hSimpleForm.focusFirst();    
 
     % wait until the figure is closed
     waitfor(hFig);
@@ -43,8 +44,6 @@ function Outputs = SimpleFormFig(Name,Params,FontColor,BackgroundColor)
             case "Cancel"
                 Outputs = 0;
         end
-        % delete the SimpleForm custom container object
-        delete(hSimpleForm)
         % delete the figure
         delete(hFig)
     end

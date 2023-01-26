@@ -78,7 +78,7 @@ disp('Setting up menubar...')
 
 PODSData.Handles.hFileMenu = uimenu(PODSData.Handles.fH,'Text','File');
 % Options for File Menu Button
-PODSData.Handles.hNewProject = uimenu(PODSData.Handles.hFileMenu,'Text','&New Project','Callback',@NewProject);
+PODSData.Handles.hNewProject = uimenu(PODSData.Handles.hFileMenu,'Text','&New Project','Callback',@NewProject2);
 PODSData.Handles.hNewProject.Accelerator = 'N';
 % menu for loading existing project
 PODSData.Handles.hLoadProject = uimenu(PODSData.Handles.hFileMenu,'Text','Load Project','Callback',@LoadProject);
@@ -139,7 +139,6 @@ PODSData.Handles.hMaskType_Default_Adaptive = uimenu(PODSData.Handles.hMaskType_
 PODSData.Handles.hMaskType_CustomScheme = uimenu(PODSData.Handles.hMaskType,'Text','CustomScheme');
 % Load the custom schemes and make a menu option for each one
 for i = 1:numel(PODSData.Settings.SchemeNames)
-    SchemeName = PODSData.Settings.SchemeNames{i};
     PODSData.Handles.(['hMaskType_CustomScheme_',PODSData.Settings.SchemeNames{i}]) = ...
         uimenu(PODSData.Handles.hMaskType_CustomScheme,...
         'Text',PODSData.Settings.SchemeNames{i},...
@@ -1096,64 +1095,112 @@ disp('Setting up large image axes...')
     
     %% Axis for swarm plots
 
-    PODSData.Handles.SwarmPlotAxH = uiaxes(PODSData.Handles.ImgPanel2,...
-        'Units','Normalized',...
-        'OuterPosition',[0 0 1 1],...
+    PODSData.Handles.SwarmPlotGrid = uigridlayout(PODSData.Handles.ImgPanel2,[1,1],...
+        'Padding',[0 0 0 0],...
+        'BackgroundColor',PODSData.Settings.SwarmPlotBackgroundColor,...
+        'Tag','SwarmPlotGrid',...
+        'Visible','Off',...
+        'ColumnWidth',{'1x'},...
+        'RowHeight',{'1x'});
+
+    PODSData.Handles.SwarmPlotAxH = uiaxes(PODSData.Handles.SwarmPlotGrid,...
         'Tag','SwarmPlotAxes',...
         'XTick',[],...
         'YTick',[0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0],...
         'NextPlot','Add',...
         'Visible','Off',...
-        'Color','Black',...
+        'Color',PODSData.Settings.SwarmPlotBackgroundColor,...
         'XColor','White',...
         'YColor','White',...
         'HitTest','Off',...
-        'FontName',PODSData.Settings.DefaultFont);
+        'FontName',PODSData.Settings.DefaultPlotFont);
     
     %disableDefaultInteractivity(PODSData.Handles.SwarmPlotAxH);
-    PODSData.Handles.SwarmPlotAxH.Interactions = [dataTipInteraction];
+    PODSData.Handles.SwarmPlotAxH.Interactions = dataTipInteraction;
+    axtoolbar(PODSData.Handles.SwarmPlotAxH,{});
+
     % set axis title
     PODSData.Handles.SwarmPlotAxH = SetAxisTitle(PODSData.Handles.SwarmPlotAxH,'Object OF (per group)');
-    
     PODSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
-    PODSData.Handles.SwarmPlotAxH.XAxis.Label.Color = 'White';
-    PODSData.Handles.SwarmPlotAxH.XAxis.FontName = PODSData.Settings.DefaultFont;
+    PODSData.Handles.SwarmPlotAxH.XAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
+    PODSData.Handles.SwarmPlotAxH.XAxis.FontName = PODSData.Settings.DefaultPlotFont;
     PODSData.Handles.SwarmPlotAxH.YAxis.Label.String = "Object Order Factor";
-    PODSData.Handles.SwarmPlotAxH.YAxis.Label.Color = 'White';
-    PODSData.Handles.SwarmPlotAxH.YAxis.FontName = PODSData.Settings.DefaultFont;
+    PODSData.Handles.SwarmPlotAxH.YAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
+    PODSData.Handles.SwarmPlotAxH.YAxis.FontName = PODSData.Settings.DefaultPlotFont;
     PODSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
-
     PODSData.Handles.SwarmPlotAxH.Title.Visible = 'Off';
+
+    % set up context menu for swarm plot
+    PODSData.Handles.SwarmPlotContextMenu = uicontextmenu(PODSData.Handles.fH);
+    % set up context menu options
+    PODSData.Handles.SwarmPlotContextMenu_CopyVector = uimenu(PODSData.Handles.SwarmPlotContextMenu,...
+        'Text','Copy as vector graphic',...
+        'MenuSelectedFcn',@CopySwarmPlotVector);
+    PODSData.Handles.SwarmPlotContextMenu_BackgroundColor = uimenu(PODSData.Handles.SwarmPlotContextMenu,...
+        'Text','Background color',...
+        'MenuSelectedFcn',@SetSwarmPlotBackgroundColor);
+    PODSData.Handles.SwarmPlotContextMenu_ForegroundColor = uimenu(PODSData.Handles.SwarmPlotContextMenu,...
+        'Text','Foreground color',...
+        'MenuSelectedFcn',@SetSwarmPlotForegroundColor);
+    PODSData.Handles.SwarmPlotContextMenu_ErrorBarColor = uimenu(PODSData.Handles.SwarmPlotContextMenu,...
+        'Text','Error bars color',...
+        'MenuSelectedFcn',@SetSwarmPlotErrorBarColor);
+
+    % add the context menu to the axes
+    PODSData.Handles.SwarmPlotAxH.ContextMenu = PODSData.Handles.SwarmPlotContextMenu;
     
     %% Axis for scatter plots
 
-    PODSData.Handles.ScatterPlotAxH = uiaxes(PODSData.Handles.ImgPanel1,...
-        'Units','Normalized',...
-        'OuterPosition',[0 0 1 1],...
+    PODSData.Handles.ScatterPlotGrid = uigridlayout(PODSData.Handles.ImgPanel1,[1,1],...
+        'Padding',[0 0 0 0],...
+        'BackgroundColor',PODSData.Settings.ScatterPlotBackgroundColor,...
+        'Tag','ScatterPlotGrid',...
+        'Visible','Off',...
+        'ColumnWidth',{'1x'},...
+        'RowHeight',{'1x'});
+
+    PODSData.Handles.ScatterPlotAxH = uiaxes(PODSData.Handles.ScatterPlotGrid,...
         'Tag','ScatterPlotAxes',...
         'XTick',[],...
         'YTick',[0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0],...
         'NextPlot','Add',...
         'Visible','Off',...
-        'Color','Black',...
+        'Color',PODSData.Settings.ScatterPlotBackgroundColor,...
         'XColor','White',...
         'YColor','White',...
         'HitTest','Off',...
-        'FontName',PODSData.Settings.DefaultFont);
+        'FontName',PODSData.Settings.DefaultPlotFont);
     
     disableDefaultInteractivity(PODSData.Handles.ScatterPlotAxH);
+    axtoolbar(PODSData.Handles.ScatterPlotAxH,{});
+
     % set axis title
     PODSData.Handles.ScatterPlotAxH = SetAxisTitle(PODSData.Handles.ScatterPlotAxH,'Object-Average OF vs Local S/B');
     
     PODSData.Handles.ScatterPlotAxH.XAxis.Label.String = "Local S/B";
-    PODSData.Handles.ScatterPlotAxH.XAxis.Label.Color = 'White';
-    PODSData.Handles.ScatterPlotAxH.XAxis.Label.FontName = PODSData.Settings.DefaultFont;
+    PODSData.Handles.ScatterPlotAxH.XAxis.Color = PODSData.Settings.ScatterPlotForegroundColor;
+    PODSData.Handles.ScatterPlotAxH.XAxis.Label.FontName = PODSData.Settings.DefaultPlotFont;
     PODSData.Handles.ScatterPlotAxH.YAxis.Label.String = "Object-Average Order Factor";
-    PODSData.Handles.ScatterPlotAxH.YAxis.Label.Color = 'White';
-    PODSData.Handles.ScatterPlotAxH.YAxis.Label.FontName = PODSData.Settings.DefaultFont;
+    PODSData.Handles.ScatterPlotAxH.YAxis.Color = PODSData.Settings.ScatterPlotForegroundColor;
+    PODSData.Handles.ScatterPlotAxH.YAxis.Label.FontName = PODSData.Settings.DefaultPlotFont;
     PODSData.Handles.ScatterPlotAxH.Toolbar.Visible = 'Off';
-
     PODSData.Handles.ScatterPlotAxH.Title.Visible = 'Off';
+
+    % set up context menu for scatter plot
+    PODSData.Handles.ScatterPlotContextMenu = uicontextmenu(PODSData.Handles.fH);
+    % set up context menu options
+    PODSData.Handles.ScatterPlotContextMenu_CopyVector = uimenu(PODSData.Handles.ScatterPlotContextMenu,...
+        'Text','Copy as vector graphic',...
+        'MenuSelectedFcn',@CopyScatterPlotVector);
+    PODSData.Handles.ScatterPlotContextMenu_BackgroundColor = uimenu(PODSData.Handles.ScatterPlotContextMenu,...
+        'Text','Background color',...
+        'MenuSelectedFcn',@SetScatterPlotBackgroundColor);
+    PODSData.Handles.ScatterPlotContextMenu_AxisColor = uimenu(PODSData.Handles.ScatterPlotContextMenu,...
+        'Text','Foreground color',...
+        'MenuSelectedFcn',@SetScatterPlotForegroundColor);
+
+    % add the context menu to the axes
+    PODSData.Handles.ScatterPlotAxH.ContextMenu = PODSData.Handles.ScatterPlotContextMenu;    
 
     %% MASK
 
@@ -1369,18 +1416,20 @@ disp('Setting up object image axes...')
         'XLim',[0 pi],...
         'XTick',[0 pi/4 pi/2 3*pi/4 pi],...
         'XTickLabel',{'0°' '45°' '90°' '135°' '180°'},...
-        'FontName',PODSData.Settings.DefaultFont);
+        'FontName',PODSData.Settings.DefaultPlotFont);
     
     PODSData.Handles.ObjectIntensityPlotAxH.Title.String = 'Pixel-normalized intensitites fit to sinusoids';
-    PODSData.Handles.ObjectIntensityPlotAxH.Title.Color = 'Yellow';
-    PODSData.Handles.ObjectIntensityPlotAxH.Title.FontName = PODSData.Settings.DefaultFont;
+    PODSData.Handles.ObjectIntensityPlotAxH.Title.Color = 'White';
+    PODSData.Handles.ObjectIntensityPlotAxH.Title.FontName = PODSData.Settings.DefaultPlotFont;
     PODSData.Handles.ObjectIntensityPlotAxH.Title.HorizontalAlignment = 'Center';
     PODSData.Handles.ObjectIntensityPlotAxH.Title.VerticalAlignment = 'Top';
     
     PODSData.Handles.ObjectIntensityPlotAxH.XAxis.Label.String = "Excitation polarization (°)";
     PODSData.Handles.ObjectIntensityPlotAxH.XAxis.Label.Color = [1 1 0];
+    PODSData.Handles.ObjectIntensityPlotAxH.XAxis.Label.FontName = PODSData.Settings.DefaultPlotFont;
     PODSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.String = "Normalized emission intensity (A.U.)";
-    PODSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.Color = [1 1 0];    
+    PODSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.Color = [1 1 0];
+    PODSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.FontName = PODSData.Settings.DefaultPlotFont;
     
     disableDefaultInteractivity(PODSData.Handles.ObjectIntensityPlotAxH);
     
@@ -1468,6 +1517,12 @@ clear SplashScreenIcon
 
 disp('Opening...')
 
+try
+    minimizeMLDesktop();
+catch
+    warning('Could not minimize MATLAB desktop window');
+end
+
 % set figure to visible to draw containers
 PODSData.Handles.fH.Visible = 'On';
 
@@ -1478,6 +1533,56 @@ pause(0.5)
 
 %% NESTED FUNCTIONS - VARIOUS GUI CALLBACKS AND ACCESSORY FUNCTIONS
 
+%% Context menu callbacks for swarm plot
+
+    function CopySwarmPlotVector(source,~)
+        UpdateLog3(source,'Copying...','append');
+        copygraphics(PODSData.Handles.SwarmPlotAxH,'ContentType','vector','BackgroundColor',PODSData.Settings.SwarmPlotBackgroundColor);
+        UpdateLog3(source,'Swarm plot vector graphic copied to clipboard','append');
+    end
+
+    function SetSwarmPlotBackgroundColor(~,~)
+        PODSData.Settings.SwarmPlotBackgroundColor = uisetcolor();
+        figure(PODSData.Handles.fH);
+        PODSData.Handles.SwarmPlotAxH.Color = PODSData.Settings.SwarmPlotBackgroundColor;
+        PODSData.Handles.SwarmPlotGrid.BackgroundColor = PODSData.Settings.SwarmPlotBackgroundColor;
+    end
+
+    function SetSwarmPlotForegroundColor(~,~)
+        PODSData.Settings.SwarmPlotForegroundColor = uisetcolor();
+        figure(PODSData.Handles.fH);
+        PODSData.Handles.SwarmPlotAxH.XAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
+        PODSData.Handles.SwarmPlotAxH.YAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
+    end
+
+    function SetSwarmPlotErrorBarColor(source,~)
+        PODSData.Settings.SwarmPlotErrorBarColor = uisetcolor();
+        figure(PODSData.Handles.fH);
+        UpdateImages(source);
+    end
+
+%% callback functions for scatter plot
+
+    function CopyScatterPlotVector(source,~)
+        UpdateLog3(source,'Copying...','append');
+        copygraphics(PODSData.Handles.ScatterPlotAxH,'ContentType','vector','BackgroundColor',PODSData.Settings.ScatterPlotBackgroundColor);
+        UpdateLog3(source,'Scatter plot vector graphic copied to clipboard','append');
+    end
+
+    function SetScatterPlotBackgroundColor(~,~)
+        PODSData.Settings.ScatterPlotBackgroundColor = uisetcolor();
+        figure(PODSData.Handles.fH);
+        PODSData.Handles.ScatterPlotAxH.Color = PODSData.Settings.ScatterPlotBackgroundColor;
+        PODSData.Handles.ScatterPlotGrid.BackgroundColor = PODSData.Settings.ScatterPlotBackgroundColor;
+    end
+
+    function SetScatterPlotForegroundColor(~,~)
+        PODSData.Settings.ScatterPlotForegroundColor = uisetcolor();
+        figure(PODSData.Handles.fH);
+        PODSData.Handles.ScatterPlotAxH.XAxis.Color = PODSData.Settings.ScatterPlotForegroundColor;
+        PODSData.Handles.ScatterPlotAxH.YAxis.Color = PODSData.Settings.ScatterPlotForegroundColor;
+    end
+
 %% Group uitree callbacks
 
     function GroupTreeNodeTextChanged(source,event)
@@ -1485,7 +1590,7 @@ pause(0.5)
         UpdateSummaryDisplay(source,{'Group'});
     end
 
-    function DeleteGroup(source,event,fH)
+    function DeleteGroup(source,~,fH)
         SelectedNode = fH.CurrentObject;
         cGroup = SelectedNode.NodeData;
         UpdateLog3(fH,['Deleting [Group:',cGroup.GroupName,']...'],'append');
@@ -1496,7 +1601,7 @@ pause(0.5)
         UpdateLog3(fH,'Done.','append');
     end
 
-    function AddNewGroup(source,event)
+    function AddNewGroup(source,~)
         PODSData.AddNewGroup(['Untitled Group ',num2str(PODSData.nGroups+1)]);
         NewGroup = PODSData.Group(end);
         newNode = uitreenode(PODSData.Handles.GroupTree,...
@@ -1507,7 +1612,7 @@ pause(0.5)
         UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});
     end
 
-    function EditGroupColor(source,event,fH)
+    function EditGroupColor(source,~,fH)
         SelectedNode = fH.CurrentObject;
         cGroup = SelectedNode.NodeData;
         cGroup.Color = uisetcolor();
@@ -1520,14 +1625,15 @@ pause(0.5)
 
 %% Image uitree callbacks
 
-    function DeleteImage(source,event,fH)
+    function DeleteImage(source,~,fH)
 
         SelectedNodes = PODSData.Handles.ImageTree.SelectedNodes;
         %SelectedImages = deal([SelectedNodes(:).NodeData]);
-        UpdateLog3(fH,['Deleting images...'],'append');
+        UpdateLog3(fH,'Deleting images...','append');
         delete(SelectedNodes)
         cGroup = PODSData.CurrentGroup;
         cGroup.DeleteSelectedImages();
+        
         cGroup.CurrentImageIndex = cGroup.CurrentImageIndex(1);
         UpdateImageTree(source);
         UpdateImages(source);
@@ -2023,6 +2129,7 @@ pause(0.5)
                 addLineScanToolbarBtn;
                 addExportAxesToolbarBtn;
                 addShowAsOverlayToolbarBtn;
+                addShowColorbarToolbarBtn;
             case 'AverageIntensity'
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
@@ -2036,6 +2143,8 @@ pause(0.5)
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
                 addShowAsOverlayToolbarBtn;
+                addShowColorbarToolbarBtn;
+                addExportAxesToolbarBtn;
         end
         
         % Adding custom toolbar to allow ZoomToCursor
@@ -2119,6 +2228,16 @@ pause(0.5)
             btn.Tooltip = 'Export image';
             PODSData.Handles.(btn.Tag) = btn;
         end
+
+        function addShowColorbarToolbarBtn
+            btn = axtoolbarbtn(tb,'state');
+            btn.Icon = 'ChangeColorbarVisibilityIcon.png';
+            btn.ValueChangedFcn = @tbShowColorbarStateChanged;
+            btn.Tag = ['ShowColorbar',axH.Tag];
+            btn.Tooltip = 'Show colorbar';
+            PODSData.Handles.(btn.Tag) = btn;
+            btn.Value = 1;
+        end
         
     end
 
@@ -2126,7 +2245,7 @@ pause(0.5)
         % Set image (actually axis) title to top center of axis
         axH.Title.String = title;
         axH.Title.Units = 'Normalized';
-        axH.Title.FontName = PODSData.Settings.DefaultFont;
+        axH.Title.FontName = PODSData.Settings.DefaultPlotFont;
         axH.Title.HorizontalAlignment = 'Center';
         axH.Title.VerticalAlignment = 'Top';
         axH.Title.Color = 'White';
@@ -2164,7 +2283,7 @@ pause(0.5)
         % get the object data table
         T = SavePODSData(source);
         % the variables we can cluster on
-        VarLongList = PODSData.Settings.SwarmPlotVariablesLong;
+        %VarLongList = PODSData.Settings.SwarmPlotVariablesLong;
         VarShortList = PODSData.Settings.SwarmPlotVariablesShort;
         % get user settings for the clustering
         ClusterSettings = GetClusterSettings(VarShortList);
@@ -2239,7 +2358,8 @@ pause(0.5)
         end
 
         fH_ClusterProportions = uifigure('Name','Cluster proportions by group','HandleVisibility','on');
-        PieGrid = uigridlayout(fH_ClusterProportions,[1,PODSData.nGroups]);
+        % PieGrid = uigridlayout(fH_ClusterProportions,[1,PODSData.nGroups]);
+        PieGrid = uigridlayout(fH_ClusterProportions);
         PieAxes = gobjects(PODSData.nGroups,1);
         for g_idx = 1:PODSData.nGroups
             PieAxes(g_idx) = uiaxes(PieGrid);
@@ -2267,8 +2387,11 @@ pause(0.5)
         for LabelIdx = 1:PODSData.Settings.nLabels
             Objs = PODSData.getObjectsByLabel(PODSData.Settings.ObjectLabels(LabelIdx));
             ObjImgs = cell(numel(Objs),1);
+            % for ObjIdx = 1:numel(Objs)
+            %     ObjImgs{ObjIdx} = Objs(ObjIdx).RestrictedPaddedMaskSubImage();
+            % end
             for ObjIdx = 1:numel(Objs)
-                ObjImgs{ObjIdx} = Objs(ObjIdx).RestrictedPaddedMaskSubImage();
+                ObjImgs{ObjIdx} = Objs(ObjIdx).PaddedFFCIntensitySubImage();
             end
             
             ObjImgTiles{LabelIdx,1} = imtile(ObjImgs,...
@@ -2389,15 +2512,18 @@ pause(0.5)
         set(findobj(PODSData.Handles.fH,'type','uitree'),'BackgroundColor',GUIBackgroundColor);
         set(findobj(PODSData.Handles.fH,'type','uitree'),'FontColor',GUIForegroundColor);
 
-        PODSData.Handles.ScatterPlotAxH.YAxis.Label.Color = GUIForegroundColor;
-        PODSData.Handles.ScatterPlotAxH.XAxis.Label.Color = GUIForegroundColor;
-        PODSData.Handles.ScatterPlotAxH.XAxis.Color = GUIForegroundColor;
-        PODSData.Handles.ScatterPlotAxH.YAxis.Color = GUIForegroundColor;
 
-        PODSData.Handles.SwarmPlotAxH.YAxis.Label.Color = GUIForegroundColor;
-        PODSData.Handles.SwarmPlotAxH.XAxis.Label.Color = GUIForegroundColor;
-        PODSData.Handles.SwarmPlotAxH.XAxis.Color = GUIForegroundColor;
-        PODSData.Handles.SwarmPlotAxH.YAxis.Color = GUIForegroundColor;
+        PODSData.Handles.ScatterPlotGrid.BackgroundColor = PODSData.Settings.SwarmPlotBackgroundColor;
+        PODSData.Handles.ScatterPlotAxH.Color = PODSData.Settings.SwarmPlotBackgroundColor;
+        PODSData.Handles.ScatterPlotAxH.XAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
+        PODSData.Handles.ScatterPlotAxH.YAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
+
+
+        PODSData.Handles.SwarmPlotGrid.BackgroundColor = PODSData.Settings.SwarmPlotBackgroundColor;
+        PODSData.Handles.SwarmPlotAxH.Color = PODSData.Settings.SwarmPlotBackgroundColor;
+        PODSData.Handles.SwarmPlotAxH.XAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
+        PODSData.Handles.SwarmPlotAxH.YAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
+
 
         PODSData.Handles.CurrentThresholdLine.Color = GUIForegroundColor;
 
@@ -2407,7 +2533,7 @@ pause(0.5)
         PODSData.Handles.MaskAxH.Color = 'Black';
     end
 
-    function ChangeGUIColors(source,event)
+    function ChangeGUIColors(source,~)
         % get the color of the GUI element for which we want to change color
         PODSData.Settings.(source.Tag) = uisetcolor();
         % bring the main figure into focus
@@ -2420,7 +2546,7 @@ pause(0.5)
 
 %% GUI font size
 
-    function ChangeGUIFontSize(source,event)
+    function ChangeGUIFontSize(source,~)
         switch source.Text
             case 'Larger'
                 PODSData.Settings.FontSize = PODSData.Settings.FontSize+1;
@@ -2449,7 +2575,7 @@ pause(0.5)
         UpdateImageOperationDisplay(source);
     end
 
-    function BuildNewScheme(source,~)
+    function BuildNewScheme(~,~)
         
         SchemeNameCell = SimpleFormFig('Enter a name for the masking scheme',{'Scheme name'},'White','Black');
 
@@ -2459,7 +2585,7 @@ pause(0.5)
             return
         end
 
-        NewScheme = CustomMaskMaker(PODSData.CurrentImage(1).I,[]);
+        NewScheme = CustomMaskMaker(PODSData.CurrentImage(1).I,[],PODSData.Settings.IntensityColormap);
 
         MaskMakerFig = findobj(groot,'Name','Mask Maker');
 
@@ -2484,11 +2610,10 @@ pause(0.5)
 
         PODSData.Handles.hMaskType_CustomScheme = uimenu(PODSData.Handles.hMaskType,'Text','CustomScheme');
 
-        for i = 1:numel(PODSData.Settings.SchemeNames)
-            SchemeName = PODSData.Settings.SchemeNames{i};
-            PODSData.Handles.(['hMaskType_CustomScheme_',PODSData.Settings.SchemeNames{i}]) = ...
+        for SchemeIdx = 1:numel(PODSData.Settings.SchemeNames)
+            PODSData.Handles.(['hMaskType_CustomScheme_',PODSData.Settings.SchemeNames{SchemeIdx}]) = ...
                 uimenu(PODSData.Handles.hMaskType_CustomScheme,...
-                'Text',PODSData.Settings.SchemeNames{i},...
+                'Text',PODSData.Settings.SchemeNames{SchemeIdx},...
                 'Tag','CustomScheme',...
                 'Checked','Off',...
                 'Callback',@ChangeMaskType);
@@ -2499,9 +2624,8 @@ pause(0.5)
             'Separator','on',...
             'Callback',@BuildNewScheme);
 
-
         % update the log window
-        UpdateLog3(PODSData.Handles.fH,['Saved new scheme:','SchemeFilesPath','NewSchemeName','.mat'],'append');
+        UpdateLog3(PODSData.Handles.fH,['Saved new scheme:',SchemeFilesPath,NewSchemeName,'.mat'],'append');
     end
 
 %% Changing active object/image/group indices
@@ -2527,7 +2651,6 @@ pause(0.5)
 
     function ImageSelectionChanged(source,~)
         CurrentGroupIndex = PODSData.CurrentGroupIndex;
-        SelectedNodes = source.SelectedNodes;
         SelectedImages = deal([source.SelectedNodes(:).NodeData]);
         PODSData.Group(CurrentGroupIndex).CurrentImageIndex = [SelectedImages(:).SelfIdx];
         % update display of images, object selector, summary
@@ -2539,7 +2662,6 @@ pause(0.5)
 
     function ObjectSelectionChanged(source,~)
         cImage = PODSData.CurrentImage;
-        SelectedNodes = source.SelectedNodes;
         SelectedObjects = deal([source.SelectedNodes(:).NodeData]);
         cImage.CurrentObjectIdx = [SelectedObjects(:).SelfIdx];
         % update images and summary
@@ -2665,7 +2787,7 @@ pause(0.5)
 
 %% Project saving and loading
 
-    function LoadProject(source,event)
+    function LoadProject(source,~)
         % alert user to required action (select saved project file to load)
         uialert(PODSData.Handles.fH,'Select saved project file (.mat)','Load Project File',...
             'Icon','',...
@@ -2714,12 +2836,38 @@ pause(0.5)
         PODSData = SavedPODSData;
         % add the project with handles to the gui
         guidata(PODSData.Handles.fH,PODSData);
+
         % update some settings for the current window
+
+        % update custom schemes menu options
+        % delete all the existing options
+        delete(PODSData.Handles.hMaskType_CustomScheme.Children)
+        % Load the custom schemes and make a menu option for each one
+        for SchemeIdx = 1:numel(PODSData.Settings.SchemeNames)
+            PODSData.Handles.(['hMaskType_CustomScheme_',PODSData.Settings.SchemeNames{SchemeIdx}]) = ...
+                uimenu(PODSData.Handles.hMaskType_CustomScheme,...
+                'Text',PODSData.Settings.SchemeNames{SchemeIdx},...
+                'Tag','CustomScheme',...
+                'Checked','Off',...
+                'Callback',@ChangeMaskType);
+        end
+        % Option to create new 'Custom' mask scheme
+        PODSData.Handles.hMaskType_NewScheme = uimenu(PODSData.Handles.hMaskType_CustomScheme,...
+            'Text','Create new scheme',...
+            'Separator','on',...
+            'Callback',@BuildNewScheme);
+
+        % update swarm plot grouping type drop down
+        PODSData.Handles.SwarmPlotGroupingTypeDropdown.Value = PODSData.Settings.SwarmPlotGroupingType;
+
+
+        % update the display with selected tab
         Tab2Switch2 = PODSData.Settings.CurrentTab;
         % set 'CurrentTab' to previous current tab before loading project
         PODSData.Settings.CurrentTab = PreviousTab;
         % find the uimenu that would normally be used to switch to the tab indicated by 'CurrentTab' in the loaded project
         Menu2Pass = findobj(PODSData.Handles.hTabMenu.Children,'Text',Tab2Switch2);
+
         % update view and display with newly loaded project
         UpdateGroupTree(source);
         UpdateImageTree(source);
@@ -2735,7 +2883,7 @@ pause(0.5)
         UpdateLog3(source,'Done.','append');
     end
 
-    function SaveProject(source,event)
+    function SaveProject(source,~)
 
         uialert(PODSData.Handles.fH,'Set save location/filename','Save Project File',...
             'Icon','',...
@@ -2823,10 +2971,12 @@ pause(0.5)
             'Menubar','None',...
             'Position',sz,...
             'HandleVisibility','On',...
-            'Visible','Off');
+            'Visible','Off',...
+            'CloseRequestFcn',@ContinueToSave);
 
         MainGrid = uigridlayout(fig,[2,1],'BackgroundColor','Black');
-        MainGrid.RowHeight = {'fit',20};
+        MainGrid.RowHeight = {'1x',20};
+        MainGrid.ColumnWidth = {'1x'};
         
         SaveOptionsPanel = uipanel(MainGrid);
         SaveOptionsPanel.Title = 'Save Options';
@@ -2841,42 +2991,52 @@ pause(0.5)
             'Image Summary'...
             };
 
-        SaveOptionsGrid = uigridlayout(SaveOptionsPanel,[length(SaveOptions),1],'BackgroundColor','Black');
-        SaveOptionsGrid.Padding = [5 5 5 5];
-        
-        % generate save options check boxes
-        SaveCBox = gobjects(length(SaveOptions));
-        for SaveOption = 1:length(SaveOptions)
-            SaveCBox(SaveOption) = uicheckbox(SaveOptionsGrid,...
-                'Text',SaveOptions{SaveOption},...
-                'Value',0,...
-                'FontColor','White');
+        % create grid for uitree with the possible save options
+        SaveOptionsTreeGrid = uigridlayout(SaveOptionsPanel,[1,1],...
+            'BackgroundColor','Black',...
+            'Padding',[0 0 0 0]);
+        % the uitree
+        SaveOptionsTree = uitree(SaveOptionsTreeGrid,'checkbox');
+        % the top level nodes (save options)
+        for OptionIdx = 1:numel(SaveOptions)
+            uitreenode(SaveOptionsTree,'Text',SaveOptions{OptionIdx},'NodeData',SaveOptions{OptionIdx});
         end
-        
+        % note: we could add children nodes for more user control over the saved data 
+        % (ex: select what to include in our image summary struct, etc.)
+
+        % button to indicate completion, leads to selecting save directory
         uibutton(MainGrid,'Push',...
             'Text','Choose Save Directory',...
             'ButtonPushedFcn',@ContinueToSave);
 
+        % move the window to the center before showing it
+        movegui(fig,'center')
+        % now show it
         fig.Visible = 'On';
-        
+        % initialize save choices cell
         UserSaveChoices = {};
 
         % callback for Btn to close fig
         function [] = ContinueToSave(~,~)
             % hide main fig
             PODSData.Handles.fH.Visible = 'Off';
-
-            for SaveOptionIdx = 1:length(SaveCBox)
-                if SaveCBox(SaveOptionIdx).Value == 1
-                    UserSaveChoices{end+1} = SaveCBox(SaveOptionIdx).Text;
-                end
+            if numel(SaveOptionsTree.CheckedNodes)>0
+                % collect the selected options
+                [UserSaveChoices{1:numel(SaveOptionsTree.CheckedNodes),1}] = deal(SaveOptionsTree.CheckedNodes.NodeData);
             end
+            % delete the figure
             delete(fig)
-
         end
 
-        % wait until fig deleted
+        % wait until fig deleted (by 'X' or continue button)
         waitfor(fig);
+        % then check for valid input
+        if isempty(UserSaveChoices)
+            UpdateLog3(source,'No options selected.','append');
+            % turn main fig back on
+            PODSData.Handles.fH.Visible = 'On';
+            return
+        end
         % get save directory
         folder_name = uigetdir(pwd);
         % turn main fig back on
@@ -2919,12 +3079,14 @@ pause(0.5)
                 % calculated obj data (SB,OF,etc.)
                 ImageSummary.ObjectData = GetImageObjectSummary(cImage);
                 
-                save([loc,'_Output'],'ImageSummary');
-
+                name = [loc,'_Output'];
+                UpdateLog3(source,name,'append');
+                save(name,'ImageSummary');
+                clear ImageSummary
             end
 
             %% Masked OF Image
-            % if user selected this save option, then...
+            
             if any(strcmp(UserSaveChoices,'Order Factor (RGB .png)'))
                 name = [loc,'-OF_RGB.png'];
                 UpdateLog3(source,name,'append');
@@ -2940,6 +3102,7 @@ pause(0.5)
             end
 
             %% Azimuth (.png)
+            
             if any(strcmp(UserSaveChoices,'Azimuth (RGB .png)'))
                 name = [loc,'-Azimuth_RGB.png'];
                 UpdateLog3(source,name,'append');
@@ -2948,6 +3111,7 @@ pause(0.5)
             end
 
             %% Masked azimuth (.png)
+            
             if any(strcmp(UserSaveChoices,'Masked Azimuth (RGB .png)'))
                 name = [loc,'-MaskedAzimuth_RGB.png'];
                 UpdateLog3(source,name,'append');
@@ -2956,6 +3120,7 @@ pause(0.5)
             end
             
             %% Average Intensity
+            
             if any(strcmp(UserSaveChoices,'Average Intensity Image (8-bit .tif)'))
                 name = [loc '-AvgIntensity.tif'];
                 UpdateLog3(source,name,'append');
@@ -3029,10 +3194,6 @@ pause(0.5)
         S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_AvgOFPerImage'])) = full([CurrentGroup.Replicate(:).OFAvg]');
         save([SaveLocation,'_AvgOFPerImage','.mat'],'-struct','S');
         clear S
-        
-%         % create a struct with dynamic field name for unambiguous naming of the saved variable
-%         S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_AvgFilteredOFPerImage'])) = full([CurrentGroup.Replicate(:).FiltOFAvg]');
-%         save([SaveLocation,'_AvgFilteredOFPerImage','.mat'],'-struct','S');
         
         UpdateLog3(source,['Done saving data for Group:',CurrentGroup.GroupName],'append');
         
@@ -3126,6 +3287,16 @@ pause(0.5)
         
     end
 
+    function tbShowColorbarStateChanged(source,~)
+        UpdateImages(source);
+    end
+
+
+
+
+
+
+
     function [] = tbShowReferenceImageStateChanged(source,~)
         if PODSData.CurrentImage.ReferenceImageLoaded
             UpdateImages(source);
@@ -3151,7 +3322,6 @@ pause(0.5)
 
         waitfor(hTool)
         
-
         return
         % end test
 
