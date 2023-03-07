@@ -12,18 +12,16 @@ function SubarrayIdxOut = padSubarrayIdx(SubarrayIdxIn,Padding)
     YMin = Y(1)-Padding;
     NewY = YMin:1:YMax;
 
-
     clear YMax YMin XMax XMin
-    
-    
+
     if mod(length(NewX),2) % if odd # of elements
         NewX(end+1) = NewX(end) + 1; % then make even by adding element
     end
-    
+
     if mod(length(NewY),2) % if odd # of elements
         NewY(end+1) = NewY(end) + 1; % then make even by adding element
     end
- 
+
     if length(NewX) > length(NewY) % extend Y to match length of X
 
         delta = (length(NewX) - length(NewY)) / 2;
