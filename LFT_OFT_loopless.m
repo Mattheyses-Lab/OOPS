@@ -2,8 +2,11 @@ function [OFT,LFT,LFTO] =  LFT_OFT_loopless(Img, R, Nangles)
 % performs line filter transform and orientation filter transform of an image
 
 
-% Note: this function is modified from its original form (a mex file) to run quickly in MATLAB
-% original functionality is unchanged, but code is now highly vectorized and runs in parallel
+% Note: this function is modified from its original form (a mex file) to run quickly in MATLAB.
+% The original functionality is unchanged, but code is now highly vectorized and runs in parallel, 
+% no compilation required.
+% On my system, this function actually runs faster than the compiled mex, although the 
+% parallelization requires more optimization.
 
 %% Original developers
 % Developers: Zhen Zhang, Pakorn Kanchanawong
@@ -55,8 +58,6 @@ function [OFT,LFT,LFTO] =  LFT_OFT_loopless(Img, R, Nangles)
     loopMask = false(Isize);
     % build mask with false border (width = R pixels)
     loopMask(R+1:end-R,R+1:end-R) = true;
-    % row vector of linear idxs
-    %loopIdxs = find(loopMask(:)).';
     % start a timer
     tic
     % these don't change, so no need to put them in the loop
@@ -92,9 +93,7 @@ function [OFT,LFT,LFTO] =  LFT_OFT_loopless(Img, R, Nangles)
     LFT_time = toc;
     disp(['LFT: ',num2str(LFT_time),' seconds elapsed']);
 
-
-
-%% highly vectorized LFT code
+%% example of completely vectorized LFT code - seems to run slower than a less vectorized version placed in a parfor loop (above)
 % tic
 %     [maxI,maxIdx] = max(reshape(sum(reshape(Img(sub2ind(Isize,...
 %         max(min(repmat([R+1:1:H-R].',1,H-2*R,nQ*nK)-reshape(floor(q.*sin(k)+0.5),1,1,nQ*nK),H),1),...
@@ -104,7 +103,7 @@ function [OFT,LFT,LFTO] =  LFT_OFT_loopless(Img, R, Nangles)
 %     LFT(loopMask) = maxI./(2*R+1);
 %     LFTO(loopMask) = k(maxIdx);
 % toc
-%% end highly vectorized LFT code
+%% end highly vectorized LFT code example
 
 
     k_column = repmat(k,nQ,1);
