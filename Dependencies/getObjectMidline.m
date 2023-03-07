@@ -1,6 +1,5 @@
 function [G,edges,Midline] = getObjectMidline(I,Options)
-%%input validation
-
+%% input validation
 arguments
     I {mustBeA(I,'logical')}
     Options.BoundaryInterpolation {mustBeA(Options.BoundaryInterpolation,'logical')} = true
@@ -10,9 +9,10 @@ arguments
     Options.DisplayResults {mustBeA(Options.DisplayResults,'logical')} = false
 end
 
+% store the original input image
 Iorig = I;
 
-% end testing
+% midline interpolation resolution
 midline_interp_res = 0.1;
 
 %% determine the original object boundary using bwboundaries()
@@ -273,19 +273,28 @@ end
 % get the shortest distance between all nodes
 d = distances(G);
 % the largest distance represents the path between endpoint nodes
-[maxDist,maxIdx] = max(d,[],'all');
+[~,maxIdx] = max(d,[],'all');
 % get node idxs from the linear idx found above (maxIdx)
 [end1,end2] = ind2sub(size(d),maxIdx);
 
 
-% % get the ordered list of nodes representing the midline
-% midlinePathNodes = shortestpath(G,end1,end2);
-% % reorder the graph
-% G = reordernodes(G,midlinePathNodes);
-
 try    
     % get the ordered list of nodes representing the midline
     midlinePathNodes = shortestpath(G,end1,end2);
+
+    % if our midline does not include all nodes, remove the bad ones and try again
+    if numel(midlinePathNodes)~=G.numnodes
+        G = subgraph(G,midlinePathNodes);
+        % get the shortest distance between all nodes
+        d = distances(G);
+        % the largest distance represents the path between endpoint nodes
+        [~,maxIdx] = max(d,[],'all');
+        % get node idxs from the linear idx found above (maxIdx)
+        [end1,end2] = ind2sub(size(d),maxIdx);
+        % get the ordered list of nodes representing the midline
+        midlinePathNodes = shortestpath(G,end1,end2);
+    end
+
     % reorder the graph
     G = reordernodes(G,midlinePathNodes);
 catch
@@ -416,8 +425,6 @@ if Options.DisplayResults
         'Color',[1 1 0],...
         'Marker','none',...
         'DisplayName','Smooth boundary');
-
-
     % plot the midline as a dotted black line
     p4 = plot(Midline(:,1),Midline(:,2),...
         'LineStyle',':',...
