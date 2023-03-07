@@ -1,5 +1,5 @@
 function curveLength = getCurveLength(Curve)
-%-------------------------------------------------------------------------------------%
+%% -------------------------------------------------------------------------------------%
 % FUNCTION NAME:
 %   getCurveLength
 %
@@ -24,11 +24,11 @@ function curveLength = getCurveLength(Curve)
 %   12/25/2022 - Will Dean
 %       * Initial implementation
 %
-%-------------------------------------------------------------------------------------%
+%% --------------------------------------------------------------------------------------%
 % split into x and y coordinates
 curveX = Curve(:,1);
 curveY = Curve(:,2);
-% comput distances between neighboring points
+% compute distances between neighboring points
 dx = curveX(2:end) - curveX(1:end-1);
 dy = curveY(2:end) - curveY(1:end-1);
 d = sqrt(dx.*dx+dy.*dy);
