@@ -4,11 +4,11 @@ function azimuthStd = getAzimuthStd(azimuths)
     % % find the average azimuth, accounting for the 0°==180° degeneracy
     % [~,AzimuthAverage] = getAzimuthAverageUsingDipoles(azimuths);
 
-    % get azimuth average in radians
-    AzimuthAverage = getAzimuthAverage(azimuths);
-
-    % total number of azimuths
-    nAzimuths = length(azimuths);
+    % % get azimuth average in radians
+    % AzimuthAverage = getAzimuthAverage(azimuths);
+    % 
+    % % total number of azimuths
+    % nAzimuths = length(azimuths);
 
     % vector to hold each azimuth's deviation from the mean
     %AzimuthDiff = zeros(size(AzimuthAverage));
@@ -45,9 +45,6 @@ function azimuthStd = getAzimuthStd(azimuths)
 
     %% yet another new method to calculate the actual circular standard deviation
 
-    % axial correction
-    %azimuths = mod(azimuths*2,2*pi);
-
     % mean resultant vector length
     r = abs(mean(exp(1i*azimuths*2)));
 
@@ -55,7 +52,7 @@ function azimuthStd = getAzimuthStd(azimuths)
     azimuthStd = rad2deg(sqrt(-2*log(r))*0.5);
 
     % get the angular deviation
-    %azimuthAngularDeviation = sqrt(2*(1-r));
+    %azimuthAngularDeviation = sqrt(2*(1-r))*0.5;
 
 
 end
