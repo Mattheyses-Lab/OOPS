@@ -10,16 +10,17 @@ classdef PODSSettings < handle
             'ZRange',0,...
             'XDist',0,...
             'YDist',0,...
-            'ZDist',0,...
             'OldXLim',[0 1],...
             'OldYLim',[0 1],...
-            'OldZLim',[0 1],...
             'pct',0.5,...
             'ZoomLevels',[1/20 1/15 1/10 1/5 1/3 1/2 1/1.5 1/1.25 1],...
             'ZoomLevelIdx',6,...
             'OldWindowButtonMotionFcn','',...
             'OldImageButtonDownFcn','',...
             'Active',false,...
+            'Freeze',false,...
+            'Restore',false,...
+            'RestoreProps',[],...
             'CurrentButton',gobjects(1,1),...
             'StaticAxes',gobjects(1,1),...
             'StaticImage',gobjects(1,1),...
@@ -49,10 +50,10 @@ classdef PODSSettings < handle
         FontSize
 
         % themes and colors for GUI display
-        GUITheme = 'Dark2';
-        GUIBackgroundColor = '#0E1117';
-        GUIForegroundColor = 'White';
-        GUIHighlightColor = '#999999';
+        GUITheme = 'Dark';
+        GUIBackgroundColor = [0 0 0];
+        GUIForegroundColor = [1 1 1];
+        GUIHighlightColor = [1 1 1];
 
         % sturcturing element for masking
         SEShape = 'disk';
@@ -114,7 +115,7 @@ classdef PODSSettings < handle
         SchemeNames cell
         SchemePaths cell
         
-        % object box type ('Box' or 'Boundary')
+        % object box type ('Box','Boundary',etc...)
         ObjectBoxType = 'Box';
 
     end
@@ -227,6 +228,64 @@ classdef PODSSettings < handle
                 warning('Unable to load custom mask schemes...')
             end
             
+        end
+
+        % saveobj method
+        function settings = saveobj(obj)
+
+            settings.InputFileType = obj.InputFileType;
+
+            settings.SummaryDisplayType = obj.SummaryDisplayType;
+
+            % monitor tab switching
+            settings.CurrentTab = obj.CurrentTab;
+            settings.PreviousTab = obj.PreviousTab;
+
+            % current image operation
+            settings.CurrentImageOperation = obj.CurrentImageOperation;
+
+            % themes and colors for GUI display
+            settings.GUITheme = obj.GUITheme;
+            settings.GUIBackgroundColor = obj.GUIBackgroundColor;
+            settings.GUIForegroundColor = obj.GUIForegroundColor;
+            settings.GUIHighlightColor = obj.GUIHighlightColor;
+
+            % sturcturing element for masking
+            settings.SEShape = obj.SEShape;
+            settings.SESize = obj.SESize;
+            settings.SELines = obj.SELines;
+
+            % currently selected colormaps for each image type
+            % must be 256x3 double with values in the range [0 1]
+            settings.IntensityColormap = obj.IntensityColormap;
+            settings.OrderFactorColormap = obj.OrderFactorColormap;
+            settings.ReferenceColormap = obj.ReferenceColormap;
+            settings.AzimuthColormap = obj.AzimuthColormap;
+
+            % ScatterPlot Settings
+            settings.ScatterPlotBackgroundColor = obj.ScatterPlotBackgroundColor;
+            settings.ScatterPlotForegroundColor = obj.ScatterPlotForegroundColor;
+            settings.ScatterPlotLegendVisible = obj.ScatterPlotLegendVisible;
+
+            % SwarmPlot Settings
+            % SwarmPlotSettings struct
+            settings.SwarmPlotBackgroundColor = obj.SwarmPlotBackgroundColor;
+            settings.SwarmPlotForegroundColor = obj.SwarmPlotForegroundColor;
+            settings.SwarmPlotErrorBarColor = obj.SwarmPlotErrorBarColor;
+
+            % object labeling
+            settings.ObjectLabels = obj.ObjectLabels;
+
+            % type of mask to generate and use for object detection
+            % Default, CustomScheme, or CustomUpload
+            settings.MaskType = obj.MaskType;
+
+            % various names
+            settings.MaskName = obj.MaskName;
+
+            % object box type ('Box' or 'Boundary')
+            settings.ObjectBoxType = obj.ObjectBoxType;
+
         end
 
         function LoadCustomMaskSchemes(obj)
@@ -369,6 +428,73 @@ classdef PODSSettings < handle
             for i = 1:obj.nLabels
                 LabelColors(i,:) = obj.ObjectLabels(i).Color;
             end
+        end
+
+    end
+
+    methods (Static)
+
+        function obj = loadobj(settings)
+
+            % create the default settings object, to which we will add our saved settings
+            obj = PODSSettings();
+
+            obj.InputFileType = settings.InputFileType;
+
+            obj.SummaryDisplayType = settings.SummaryDisplayType;
+
+            % monitor tab switching
+            obj.CurrentTab = settings.CurrentTab;
+            obj.PreviousTab = settings.PreviousTab;
+
+            % current image operation
+            obj.CurrentImageOperation = settings.CurrentImageOperation;
+
+            % themes and colors for GUI display
+            obj.GUITheme = settings.GUITheme;
+            obj.GUIBackgroundColor = settings.GUIBackgroundColor;
+            obj.GUIForegroundColor = settings.GUIForegroundColor;
+            obj.GUIHighlightColor = settings.GUIHighlightColor;
+
+            % sturcturing element for masking
+            obj.SEShape = settings.SEShape;
+            obj.SESize = settings.SESize;
+            obj.SELines = settings.SELines;
+
+            % currently selected colormaps for each image type
+            % must be 256x3 double with values in the range [0 1]
+            obj.IntensityColormap = settings.IntensityColormap;
+            obj.OrderFactorColormap = settings.OrderFactorColormap;
+            obj.ReferenceColormap = settings.ReferenceColormap;
+            obj.AzimuthColormap = settings.AzimuthColormap;
+
+            % ScatterPlot Settings
+            obj.ScatterPlotBackgroundColor = settings.ScatterPlotBackgroundColor;
+            obj.ScatterPlotForegroundColor = settings.ScatterPlotForegroundColor;
+            obj.ScatterPlotLegendVisible = settings.ScatterPlotLegendVisible;
+
+            % SwarmPlot Settings
+            obj.SwarmPlotBackgroundColor = settings.SwarmPlotBackgroundColor;
+            obj.SwarmPlotForegroundColor = settings.SwarmPlotForegroundColor;
+            obj.SwarmPlotErrorBarColor = settings.SwarmPlotErrorBarColor;
+
+            % object labeling
+            obj.ObjectLabels = settings.ObjectLabels;
+
+            % make sure to add this settings object to each of the labels
+            for LabelIdx = 1:numel(obj.ObjectLabels)
+                obj.ObjectLabels(LabelIdx).Settings = obj;
+            end
+
+            % type of mask to generate and use for object detection
+            % Default, CustomScheme, or CustomUpload
+            obj.MaskType = settings.MaskType;
+
+            % various names
+            obj.MaskName = settings.MaskName;
+
+            % object box type ('Box' or 'Boundary')
+            obj.ObjectBoxType = settings.ObjectBoxType;
         end
 
     end

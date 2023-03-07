@@ -83,7 +83,7 @@ classdef PODSObject < handle
         PaddedColocNorm2MaxSubImage
         PaddedAzimuthSubImage
         
-        % we store the centroid as a 2 element vector, no need to store these too
+        % we store the centroid as a 2-element vector, no need to store these too
         CentroidX
         CentroidY
 
@@ -120,6 +120,11 @@ classdef PODSObject < handle
         MidlineLength
         AzimuthAverage
         TangentAverage
+
+        AzimuthAngularDeviation
+
+        ObjectSummaryDisplayTable
+
     end
 
     methods
@@ -191,7 +196,7 @@ classdef PODSObject < handle
             object.Extent = obj.Extent;
             object.Extrema = obj.Extrema;
             object.FilledArea = obj.FilledArea;
-            object.Image = obj.Image;
+            object.Image = sparse(obj.Image);
             object.MajorAxisLength = obj.MajorAxisLength;
             object.MinorAxisLength = obj.MinorAxisLength;
             object.Orientation = obj.Orientation;
@@ -229,6 +234,8 @@ classdef PODSObject < handle
             object.MidlineRelativeAzimuth = obj.MidlineRelativeAzimuth;
             object.NormalRelativeAzimuth = obj.NormalRelativeAzimuth;
 
+            object.Midline = obj.Midline;
+
         end
 
         function InvertSelection(obj)
@@ -248,10 +255,18 @@ classdef PODSObject < handle
         end
 
         function SimplifiedBoundary = get.SimplifiedBoundary(obj)
+            % get x and y coordinates of the object boundary
             x = obj.Boundary(:,2);
             y = obj.Boundary(:,1);
+            % create polygon from boundary coordinates
             temp_poly = polyshape(x,y,"Simplify",false,"KeepCollinearPoints",false);
-            SimplifiedBoundary = [temp_poly.Vertices(:,2) temp_poly.Vertices(:,1)];
+            % simplify it
+            %temp_poly = simplify(temp_poly);
+            % extract the simplified coordinates (with duplicated endpoint)
+            newX = [temp_poly.Vertices(:,1);temp_poly.Vertices(1,1)];
+            newY = [temp_poly.Vertices(:,2);temp_poly.Vertices(1,2)];
+
+            SimplifiedBoundary = [newY newX];
         end
 
         function OFAvg = get.OFAvg(obj)
@@ -457,8 +472,16 @@ classdef PODSObject < handle
             CentroidY = obj.Centroid(2);
         end        
 
-
 % GET METHODS STILL IN DEVELOPMENT
+
+        function AzimuthAngularDeviation = get.AzimuthAngularDeviation(obj)
+            try
+                r = abs(mean(exp(1i*obj.AzimuthPixelValues*2)));
+                AzimuthAngularDeviation = rad2deg(sqrt(2*(1-r))*0.5);
+            catch
+                AzimuthAngularDeviation = NaN;
+            end
+        end
 
         function AzimuthAverage = get.AzimuthAverage(obj)
             try
@@ -501,6 +524,62 @@ classdef PODSObject < handle
 
 % end methods in development
 
+        function ObjectSummaryDisplayTable = get.ObjectSummaryDisplayTable(obj)
+            varNames = [...
+                "Name",...
+                "Label",...
+                "Mean OF",...
+                "Pixel area",...
+                "Convex area",...
+                "Perimeter",...
+                "Circularity",...
+                "Eccentricity",...
+                "Orientation",...
+                "Extent",...
+                "Solidity",...
+                "Average signal intensity",...
+                "Average BG intensity",...
+                "Local S/B ratio",...
+                "Original index",...
+                "Azimuth average",...
+                "Azimuth standard deviation",...
+                "Azimuth w.r.t. midline",...
+                "Azimuth w.r.t. normal",...
+                "Tortuosity",...
+                "Midline length",...
+                "Midline tangent average"];
+
+            ObjectSummaryDisplayTable = table(...
+                {obj.Name},...
+                {obj.Label.Name},...
+                {num2str(obj.OFAvg)},...
+                {num2str(obj.Area)},...
+                {num2str(obj.ConvexArea)},...
+                {num2str(obj.Perimeter)},...
+                {num2str(obj.Circularity)},...
+                {num2str(obj.Eccentricity)},...
+                {num2str(obj.Orientation)},...
+                {num2str(obj.Extent)},...
+                {num2str(obj.Solidity)},...
+                {num2str(obj.SignalAverage)},...
+                {num2str(obj.BGAverage)},...
+                {num2str(obj.SBRatio)},...
+                {num2str(obj.SelfIdx)},...
+                {num2str(obj.AzimuthAverage)},...
+                {num2str(obj.AzimuthStd)},...
+                {num2str(obj.MidlineRelativeAzimuth)},...
+                {num2str(obj.NormalRelativeAzimuth)},...
+                {num2str(obj.Tortuosity)},...
+                {num2str(obj.MidlineLength)},...
+                {num2str(obj.TangentAverage)},...
+                'VariableNames',varNames,...
+                'RowNames',"Group");
+
+            ObjectSummaryDisplayTable = rows2vars(ObjectSummaryDisplayTable,"VariableNamingRule","preserve");
+
+            ObjectSummaryDisplayTable.Properties.RowNames = varNames;
+
+        end
 
 
 
@@ -524,7 +603,7 @@ classdef PODSObject < handle
             ObjectProps.Extent = object.Extent;
 
             ObjectProps.FilledArea = object.FilledArea;
-            ObjectProps.Image = object.Image;
+            ObjectProps.Image = full(object.Image);
             ObjectProps.MajorAxisLength = object.MajorAxisLength;
             ObjectProps.MinorAxisLength = object.MinorAxisLength;
             ObjectProps.Orientation = object.Orientation;
@@ -560,6 +639,12 @@ classdef PODSObject < handle
             obj.AzimuthStd = object.AzimuthStd;
             obj.MidlineRelativeAzimuth = object.MidlineRelativeAzimuth;
             obj.NormalRelativeAzimuth = object.NormalRelativeAzimuth;
+
+            try 
+                obj.Midline = object.Midline; 
+            catch
+                obj.Midline = [];
+            end
 
         end
     end

@@ -33,7 +33,7 @@ classdef PODSGroup < handle
         FPMFilesLoaded = false
         
         % store handle to the master GUI settings
-        Settings PODSSettings
+        %Settings PODSSettings
         
         % group color for plots, etc.
         Color double
@@ -62,7 +62,13 @@ classdef PODSGroup < handle
 
         FilteredObjectData table
         
+        % status tracking for the group
+        MaskAllDone logical
         OFAllDone logical
+        FFCAllDone logical
+        ObjectDetectionAllDone logical
+        LocalSBAllDone logical
+        ObjectAzimuthAllDone logical
         
         % pixel-average OF for all images in this PODSGroup for which OF has been calculated
         OFAvg double
@@ -72,16 +78,21 @@ classdef PODSGroup < handle
 
         % index of this PODSGroup in [obj.Parent.Group(:)]
         SelfIdx
+
+        % quick access to project settings
+        Settings PODSSettings
+
+        GroupSummaryDisplayTable table
     
     end
     
     methods
         
         % class constructor method
-        function obj = PODSGroup(GroupName,Settings,Project)
+        function obj = PODSGroup(GroupName,Project)
             if nargin > 0
                 obj.GroupName = GroupName;
-                obj.Settings = Settings;
+                %obj.Settings = Settings;
                 obj.Parent = Project;
             end
         end
@@ -167,8 +178,6 @@ classdef PODSGroup < handle
             clear Replicates
             % reinitialize the obj.Replicate vector
             obj.Replicate = PODSImage.empty();
-%             % delete again? CHECK THIS
-%             delete(obj.Replicate);
         end
 
         % delete images from this PODSGroup based on selection status in GUI
@@ -249,10 +258,22 @@ classdef PODSGroup < handle
                 CurrentImage = PODSImage.empty();
             end
         end
+
+        function Settings = get.Settings(obj)
+            try
+                Settings = obj.Parent.Settings;
+            catch
+                Settings = PODSSettings.empty();
+            end
+        end
         
         function CurrentObject = get.CurrentObject(obj)
             cImage = obj.CurrentImage;
-            CurrentObject = cImage.CurrentObject;
+            if ~isempty(cImage)
+                CurrentObject = cImage(1).CurrentObject;
+            else
+                CurrentObject = PODSObject.empty();
+            end
         end
         
         function ColorString = get.ColorString(obj)
@@ -274,6 +295,86 @@ classdef PODSGroup < handle
             end
             OFAllDone = true;
         end
+
+        function MaskAllDone = get.MaskAllDone(obj)
+            if obj.nReplicates == 0
+                MaskAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nReplicates
+                if ~obj.Replicate(i).MaskDone
+                    MaskAllDone = false;
+                    return
+                end
+            end
+            MaskAllDone = true;
+        end
+
+        function FFCAllDone = get.FFCAllDone(obj)
+            if obj.nReplicates == 0
+                FFCAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nReplicates
+                if ~obj.Replicate(i).FFCDone
+                    FFCAllDone = false;
+                    return
+                end
+            end
+            FFCAllDone = true;
+        end
+
+        function ObjectDetectionAllDone = get.ObjectDetectionAllDone(obj)
+            if obj.nReplicates == 0
+                ObjectDetectionAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nReplicates
+                if ~obj.Replicate(i).ObjectDetectionDone
+                    ObjectDetectionAllDone = false;
+                    return
+                end
+            end
+            ObjectDetectionAllDone = true;
+        end
+
+        function LocalSBAllDone = get.LocalSBAllDone(obj)
+            if obj.nReplicates == 0
+                LocalSBAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nReplicates
+                if ~obj.Replicate(i).LocalSBDone
+                    LocalSBAllDone = false;
+                    return
+                end
+            end
+            LocalSBAllDone = true;
+        end
+
+        function ObjectAzimuthAllDone = get.ObjectAzimuthAllDone(obj)
+            if obj.nReplicates == 0
+                ObjectAzimuthAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nReplicates
+                if ~obj.Replicate(i).ObjectAzimuthDone
+                    ObjectAzimuthAllDone = false;
+                    return
+                end
+            end
+            ObjectAzimuthAllDone = true;
+        end
+
+
+
+
+
            
         function OFAvg = get.OFAvg(obj)
             OFAvg = mean([obj.Replicate(find([obj.Replicate.OFDone])).OFAvg]);
@@ -338,13 +439,47 @@ classdef PODSGroup < handle
 
         end
 
+        function GroupSummaryDisplayTable = get.GroupSummaryDisplayTable(obj)
+            varNames = [...
+                "FFC files loaded",...
+                "FPM files loaded",...
+                "Number of replicates",...
+                "Mean pixel OF",...
+                "Total objects",...
+                "FFC performed",...
+                "Mask generated",...
+                "OF/azimuth calculated",...
+                "Objects detected",...
+                "Local S/B calculated",...
+                "Azimuth stats calculated"];
+
+            GroupSummaryDisplayTable = table(...
+                {Logical2String(obj.FFCLoaded)},...
+                {Logical2String(obj.FPMFilesLoaded)},...
+                {num2str(obj.nReplicates)},...
+                {num2str(obj.OFAvg)},...
+                {num2str(obj.TotalObjects)},...
+                {Logical2String(obj.FFCAllDone)},...
+                {Logical2String(obj.MaskAllDone)},...
+                {Logical2String(obj.OFAllDone)},...
+                {Logical2String(obj.ObjectDetectionAllDone)},...
+                {Logical2String(obj.LocalSBAllDone)},...
+                {Logical2String(obj.ObjectAzimuthAllDone)},...
+                'VariableNames',varNames,...
+                'RowNames',"Group");
+
+            GroupSummaryDisplayTable = rows2vars(GroupSummaryDisplayTable,"VariableNamingRule","preserve");
+
+            GroupSummaryDisplayTable.Properties.RowNames = varNames;
+        end
+
     end
 
     methods (Static)
 
         function obj = loadobj(group)
 
-            obj = PODSGroup(group.GroupName,PODSSettings.empty(),PODSProject.empty());
+            obj = PODSGroup(group.GroupName,PODSProject.empty());
 
             obj.CurrentImageIndex = group.CurrentImageIndex;
 
@@ -409,9 +544,11 @@ classdef PODSGroup < handle
             obj.FPMFilesLoaded = group.FPMFilesLoaded;
             obj.Color = group.Color;
 
-            % load each replicate
+            % for each replicate in group
             for i = 1:group.nReplicates
+                % load the replicate
                 obj.Replicate(i) = PODSImage.loadobj(group.Replicate(i));
+                % set its parent group (this group)
                 obj.Replicate(i).Parent = obj;
                 if obj.Replicate(i).FFCDone
                     obj.Replicate(i).FlatFieldCorrection();

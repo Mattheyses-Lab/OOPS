@@ -10,7 +10,7 @@ classdef PODSProject < handle
         % handles to all gui objects
         Handles struct
         % handle to the main PODSSettings object (shared across multiple objects)
-        Settings
+        Settings PODSSettings
     end
 
     properties (Dependent = true)
@@ -20,20 +20,43 @@ classdef PODSProject < handle
         CurrentObject PODSObject
 
         GroupNames
+
+        ProjectSummaryDisplayTable
+
     end
 
     methods
 
         % constructor method
-        function obj = PODSProject()
-            obj.Settings = PODSSettings;
+        function obj = PODSProject(settings)
+            if nargin > 0
+                obj.Settings = settings;
+            else
+                obj.Settings = PODSSettings;
+            end
+        end
+
+        function delete(obj)
+            obj.deleteGroups()
+        end
+
+        function deleteGroups(obj)
+            % collect and delete the groups in this project
+            Groups = obj.Group;
+            delete(Groups);
+            % clear the placeholders
+            clear Groups
+            % reinitialize the obj.Group vector
+            obj.Group = PODSGroup.empty();
         end
 
         % save method, for saving the project to continue later
         function proj = saveobj(obj)
 
             proj.ProjectName = obj.ProjectName;
-            proj.Settings = obj.Settings;
+            %proj.Settings = obj.Settings;
+            proj.Settings = obj.Settings.saveobj();
+
             proj.CurrentGroupIndex = obj.CurrentGroupIndex;
             proj.Handles = [];
 
@@ -43,28 +66,34 @@ classdef PODSProject < handle
                 for i = 1:obj.nGroups
                     disp('calling saveobj(Group)')
                     %proj.Group(i) = saveobj(obj.Group(i));
+
+                    % best working method below
                     proj.Group(i,1) = obj.Group(i,1).saveobj();
+
                 end
             end
+
         end
 
         % add a new group with only group name as input
         function AddNewGroup(obj,GroupName)
             NewColor = obj.getUniqueGroupColor();
-            obj.Group(end+1,1) = PODSGroup(GroupName,obj.Settings,obj);
+            obj.Group(end+1,1) = PODSGroup(GroupName,obj);
             obj.Group(end).Color = NewColor;
         end
 
         % find unique group color based on existing group colors
         function NewColor = getUniqueGroupColor(obj)
+            % we want to avoid having these colors set as group colors
+            BGColors = [0 0 0;1 1 1];
             if obj.nGroups>0
-                CurrentColors = zeros(obj.nGroups,3);
+                CurrentColors = zeros(obj.nGroups,3);    
                 for i = 1:obj.nGroups
                     CurrentColors(i,:) = obj.Group(i).Color;
                 end
-                NewColor = distinguishable_colors(1,CurrentColors);
+                NewColor = distinguishable_colors(1,[CurrentColors;BGColors]);
             else
-                NewColor = distinguishable_colors(1);
+                NewColor = distinguishable_colors(1,BGColors);
             end
         end
 
@@ -170,7 +199,14 @@ classdef PODSProject < handle
 
         % return the currently selected PODSObject in GUI
         function CurrentObject = get.CurrentObject(obj)
-            CurrentObject = obj.CurrentImage.CurrentObject;
+            % get the current image
+            cImage = obj.CurrentImage;
+            % if the image is not empty
+            if ~isempty(cImage)
+                CurrentObject = obj.CurrentImage(1).CurrentObject;
+            else
+                CurrentObject = PODSObject.empty();
+            end
         end
 
         % return Var2Get data for each object, grouped by object label
@@ -188,37 +224,64 @@ classdef PODSProject < handle
                 ObjectDataByLabel(i,:) = obj.Group(i).GetObjectDataByLabel(Var2Get);
             end
         end
+
+        function ProjectSummaryDisplayTable = get.ProjectSummaryDisplayTable(obj)
+
+            varNames = [...
+                "Project name",...
+                "Number of groups",...
+                "Input file type",...
+                "Current tab",...
+                "Previous tab",...
+                "Mask type",...
+                "Mask name",...
+                "GUI font size"];
+
+            ProjectSummaryDisplayTable = table(...
+                {obj.ProjectName},...
+                {num2str(obj.nGroups)},...
+                {obj.Settings.InputFileType},...
+                {obj.Settings.CurrentTab},...
+                {obj.Settings.PreviousTab},...
+                {obj.Settings.MaskType},...
+                {obj.Settings.MaskName},...
+                {num2str(obj.Settings.FontSize)},...
+                'VariableNames',varNames,...
+                'RowNames',"Project");
+
+            ProjectSummaryDisplayTable = rows2vars(ProjectSummaryDisplayTable,"VariableNamingRule","preserve");
+
+            ProjectSummaryDisplayTable.Properties.RowNames = varNames;
+        end
+
     end
 
     methods (Static)
         function obj = loadobj(proj)
-            obj = PODSProject();
 
-            NewScreenSize = obj.Settings.ScreenSize;
-            NewFontSize = obj.Settings.FontSize;
-            NewSchemeNames = obj.Settings.SchemeNames;
-            NewSchemePaths = obj.Settings.SchemePaths;
+            obj = PODSProject(PODSSettings.loadobj(proj.Settings));
 
+            % NewScreenSize = obj.Settings.ScreenSize;
+            % NewFontSize = obj.Settings.FontSize;
+            % NewSchemeNames = obj.Settings.SchemeNames;
+            % NewSchemePaths = obj.Settings.SchemePaths;
+            % 
             obj.ProjectName = proj.ProjectName;
-            obj.Settings = proj.Settings;
+            %obj.Settings = proj.Settings;
             obj.CurrentGroupIndex = proj.CurrentGroupIndex;
             obj.Handles = proj.Handles;
+            % 
+            % obj.Settings.ScreenSize = NewScreenSize;
+            % obj.Settings.FontSize = NewFontSize;
+            % obj.Settings.SchemeNames = NewSchemeNames;
+            % obj.Settings.SchemePaths = NewSchemePaths;
 
-            obj.Settings.ScreenSize = NewScreenSize;
-            obj.Settings.FontSize = NewFontSize;
-            obj.Settings.SchemeNames = NewSchemeNames;
-            obj.Settings.SchemePaths = NewSchemePaths;
-
-            % load each group (calls loadobj() of PODSGroup)
+            % for each group in the saved data structure
             for i = 1:length(proj.Group)
+                % load the group
                 obj.Group(i,1) = PODSGroup.loadobj(proj.Group(i,1));
+                % and set its parent project (this project)
                 obj.Group(i,1).Parent = obj;
-                obj.Group(i,1).Settings = obj.Settings;
-
-                for ii = 1:obj.Group(i,1).nReplicates
-                    obj.Group(i,1).Replicate(ii).Settings = obj.Settings;
-                    obj.Group(i,1).Replicate(ii).Parent = obj.Group(i,1);
-                end
             end
         end
     end

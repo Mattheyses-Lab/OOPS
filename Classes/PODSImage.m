@@ -95,7 +95,7 @@ classdef PODSImage < handle
         
 %% Settings
         % store handle to settings object to speed up retrieval of various settings
-        Settings PODSSettings
+        %Settings PODSSettings
  
     end
     
@@ -141,6 +141,10 @@ classdef PODSImage < handle
         OFMin double
         OFList double
 
+        % various filtered output
+        bw_filt
+        FilteredOFAvg
+
         % index of this image in [obj.Parent.Replicate()]
         SelfIdx
 
@@ -148,6 +152,11 @@ classdef PODSImage < handle
         ThreshPanelTitle char
         ThreshStatisticName char
         ManualThreshEnabled logical
+
+        % quick access to project settings
+        Settings PODSSettings
+
+        ImageSummaryDisplayTable
 
     end
     
@@ -157,11 +166,11 @@ classdef PODSImage < handle
         function obj = PODSImage(Group)
             obj.Parent = Group;
 
-            if ~isempty(obj.Parent)
-                obj.Settings = Group.Settings;
-            else
-                obj.Settings = PODSSettings.empty();
-            end
+            % if ~isempty(obj.Parent)
+            %     obj.Settings = Group.Settings;
+            % else
+            %     obj.Settings = PODSSettings.empty();
+            % end
             
             % image name (minus path and file extension)
             obj.pol_shortname = '';
@@ -198,6 +207,7 @@ classdef PODSImage < handle
             replicate.Width = obj.Width;
             replicate.Height = obj.Height;
 
+            % status tracking
             replicate.FilesLoaded = obj.FilesLoaded;
             replicate.FFCDone = obj.FFCDone;
             replicate.MaskDone = obj.MaskDone;
@@ -207,7 +217,11 @@ classdef PODSImage < handle
             replicate.ObjectAzimuthDone = obj.ObjectAzimuthDone;
             replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
 
-            replicate.bw = obj.bw;
+            % image mask
+            replicate.bw = sparse(obj.bw);
+
+            % testing below
+            replicate.L = sparse(obj.L);
 
             replicate.ThresholdAdjusted = obj.ThresholdAdjusted; 
             replicate.level = obj.level;
@@ -237,6 +251,14 @@ classdef PODSImage < handle
         % get the index of this PODSImage in [obj.Parent.Replicate(:)]
         function SelfIdx = get.SelfIdx(obj)
             SelfIdx = find(obj.Parent.Replicate==obj);
+        end
+
+        function Settings = get.Settings(obj)
+            try
+                Settings = obj.Parent.Settings;
+            catch
+                Settings = PODSSettings.empty();
+            end
         end
 
         % performs flat field correction for 1 PODSImage
@@ -352,14 +374,12 @@ classdef PODSImage < handle
             % clear Bad array
             clear Bad
 
+            % make new label matrix
             obj.L(:) = 0;
             for i = 1:numel(obj.Object)
                 obj.L(obj.Object(i).PixelIdxList) = obj.Object(i).SelfIdx;
             end
-            % 
-            % 
-            % % compute a new label matrix
-            % obj.L = bwlabel(full(obj.bw),4);
+
 
         end
         
@@ -553,7 +573,6 @@ classdef PODSImage < handle
                         cObject.AzimuthStd = NaN;
                     end
 
-
                     % object midline and relative azimuth detection
                     try
                         % construct the object midline (this function still needs optimization)
@@ -572,7 +591,8 @@ classdef PODSImage < handle
                         switch me.message
                             case 'Failed to detect object midline'
                                 %disp(['Warning: ',me.message]);
-                                blah = 0;
+                                cObject.MidlineRelativeAzimuth = NaN;
+                                cObject.NormalRelativeAzimuth = NaN;
                             otherwise
                                 disp(['Warning: Failed to calculate relative azimuth for object: ',num2str(cObject.SelfIdx)])
                                 cObject.MidlineRelativeAzimuth = NaN;
@@ -651,6 +671,51 @@ classdef PODSImage < handle
             end
         end
 
+        function ImageSummaryDisplayTable = get.ImageSummaryDisplayTable(obj)
+
+            varNames = [...
+                "Name",...
+                "Dimensions",...
+                "Mask threshold",...
+                "Threshold adjusted",...
+                "Number of objects",...
+                "Mask name",...
+                "Mean pixel OF",...
+                "Mean pixel OF (filtered)",...
+                "Files loaded",...
+                "FFC performed",...
+                "Mask generated",...
+                "OF/azimuth calculated",...
+                "Objects detected",...
+                "Local S/B calculated",...
+                "Azimuth stats calculated"];
+
+            ImageSummaryDisplayTable = table(...
+                {obj.pol_shortname},...
+                {obj.Dimensions},...
+                {num2str(obj.level)},...
+                {Logical2String(obj.ThresholdAdjusted)},...
+                {num2str(obj.nObjects)},...
+                {obj.MaskName},...
+                {num2str(obj.OFAvg)},...
+                {num2str(obj.FilteredOFAvg)},...
+                {Logical2String(obj.FilesLoaded)},...
+                {Logical2String(obj.FFCDone)},...
+                {Logical2String(obj.MaskDone)},...
+                {Logical2String(obj.OFDone)},...
+                {Logical2String(obj.ObjectDetectionDone)},...
+                {Logical2String(obj.LocalSBDone)},...
+                {Logical2String(obj.ObjectAzimuthDone)},...
+                'VariableNames',varNames,...
+                'RowNames',"Image");
+
+            ImageSummaryDisplayTable = rows2vars(ImageSummaryDisplayTable,"VariableNamingRule","preserve");
+
+            ImageSummaryDisplayTable.Properties.RowNames = varNames;
+
+        end
+
+
 %% dependent get methods for output images
 
         function OFImageRGB = get.OFImageRGB(obj)
@@ -686,7 +751,11 @@ classdef PODSImage < handle
 
         % get current Object (PODSObject)
         function CurrentObject = get.CurrentObject(obj)
-            CurrentObject = obj.Object(obj.CurrentObjectIdx);
+            try
+                CurrentObject = obj.Object(obj.CurrentObjectIdx);
+            catch
+                CurrentObject = PODSObject.empty();
+            end
         end
 
         % get ObjectProperties
@@ -722,7 +791,7 @@ classdef PODSImage < handle
 
             % get idxs to 'Image' and 'BoundingBox' fields
             fnames = fieldnames(ObjectProperties);
-            % conver ObjectProperties struct to cell array
+            % convert ObjectProperties struct to cell array
             C = struct2cell(ObjectProperties).';
             % get object images (using struct fieldnames to find idx to 'Image' column in cell array)
             ObjectImages = C(:,ismember(fnames,'Image'));
@@ -913,6 +982,34 @@ classdef PODSImage < handle
             end
         end
 
+%% filtered output values
+
+
+        function bw_filt = get.bw_filt(obj)
+        % returns a mask only containing objects with S/B >= 3
+        % this will be expanded to include more customization 
+        % of the filters and their values
+
+        % this could be done with a class, 'CutsomFilter', for example
+        %   myFilt = CustomFilt('Name','SBRatio','Relationship','>=','Value','3')
+        %   filtExpression = ['[obj.Object.',myFilt.Name,']',myFilt.Relationship,myFilt.Value,')'];
+        %   FilteredObjects = obj.Object(eval(filtExpression));
+
+            FilteredObjects = obj.Object([obj.Object.SBRatio]>=3);
+            PixelIdxList = vertcat(FilteredObjects(:).PixelIdxList);
+            bw_filt = false(size(obj.bw));
+            bw_filt(PixelIdxList) = true;
+
+        end
+
+        function FilteredOFAvg = get.FilteredOFAvg(obj)
+            % average OF of all pixels identified by the mask
+            try
+                FilteredOFAvg = mean(obj.OF_image(obj.bw_filt));
+            catch
+                FilteredOFAvg = NaN;
+            end
+        end
     end
 
     methods (Static)
@@ -978,7 +1075,11 @@ classdef PODSImage < handle
 
             obj.bw = replicate.bw;
 
-            obj.L = sparse(bwlabel(full(obj.bw),4));
+            try
+                obj.L = replicate.L;
+            catch
+                obj.L = sparse(bwlabel(full(obj.bw),4));
+            end
 
             obj.ThresholdAdjusted = replicate.ThresholdAdjusted; 
             obj.level = replicate.level;

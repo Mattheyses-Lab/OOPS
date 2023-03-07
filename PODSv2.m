@@ -1,5 +1,6 @@
 function PODSv2()
 
+% try to start the parallel pool 
 try
     parpool("threads");
 catch
@@ -107,7 +108,6 @@ PODSData.Handles.hGUITheme = uimenu(PODSData.Handles.hGUI,'Text','Theme');
 PODSData.Handles.hGUITheme_Dark = uimenu(PODSData.Handles.hGUITheme,'Text','Dark','Checked','off','Callback',@ChangeGUITheme);
 PODSData.Handles.hGUITheme_Dark2 = uimenu(PODSData.Handles.hGUITheme,'Text','Dark2','Checked','on','Callback',@ChangeGUITheme);
 PODSData.Handles.hGUITheme_Light = uimenu(PODSData.Handles.hGUITheme,'Text','Light','Checked','off','Callback',@ChangeGUITheme);
-PODSData.Handles.hGUITheme_Royal = uimenu(PODSData.Handles.hGUITheme,'Text','Royal','Checked','off','Callback',@ChangeGUITheme);
 % GUI colors options
 PODSData.Handles.hGUIBackgroundColor = uimenu(PODSData.Handles.hGUI,'Text','Background Color','Separator','on','Tag','GUIBackgroundColor','Callback',@ChangeGUIColors);
 PODSData.Handles.hGUIForegroundColor = uimenu(PODSData.Handles.hGUI,'Text','Foreground Color','Tag','GUIForegroundColor','Callback',@ChangeGUIColors);
@@ -898,21 +898,39 @@ PODSData.Handles.LogWindow = uitextarea(PODSData.Handles.LogWindowGrid,...
 
 disp('Setting up summary table...')
 
-%% Summary table for current group/image/object
-
-PODSData.Handles.ProjectDataTableGrid = uigridlayout(PODSData.Handles.AppInfoPanel,[1,1],...
+%% Summary table for current project/group/image/object
+% summary table for the project
+PODSData.Handles.ProjectSummaryTableGrid = uigridlayout(PODSData.Handles.AppInfoPanel,[1,1],...
     'BackgroundColor',[0 0 0],...
-    'Padding',[10 10 10 10]);
-%PODSData.Handles.ProjectDataTableGrid.RowHeight = {'fit','1x'}
-PODSData.Handles.ProjectDataTable = uilabel(PODSData.Handles.ProjectDataTableGrid,...
-    'tag','ProjectDataTable',...
-    'FontColor','White',...
-    'FontName',PODSData.Settings.DefaultFont,...
-    'BackgroundColor','Black',...
-    'VerticalAlignment','Top',...
-    'Interpreter','html');
-PODSData.Handles.ProjectDataTable.Text = {'Start a new project first...'};
-
+    'Padding',[0 0 0 0],...
+    'Scrollable','on',...
+    'RowHeight',{'fit'},...
+    'Visible','off');
+PODSData.Handles.ProjectSummaryTable = uitable(PODSData.Handles.ProjectSummaryTableGrid);
+% summary table for the current group
+PODSData.Handles.GroupSummaryTableGrid = uigridlayout(PODSData.Handles.AppInfoPanel,[1,1],...
+    'BackgroundColor',[0 0 0],...
+    'Padding',[0 0 0 0],...
+    'Scrollable','on',...
+    'Visible','off',...
+    'RowHeight',{'fit'});
+PODSData.Handles.GroupSummaryTable = uitable(PODSData.Handles.GroupSummaryTableGrid);
+% summary table for the current image
+PODSData.Handles.ImageSummaryTableGrid = uigridlayout(PODSData.Handles.AppInfoPanel,[1,1],...
+    'BackgroundColor',[0 0 0],...
+    'Padding',[0 0 0 0],...
+    'Scrollable','on',...
+    'Visible','off',...
+    'RowHeight',{'fit'});
+PODSData.Handles.ImageSummaryTable = uitable(PODSData.Handles.ImageSummaryTableGrid);
+% summary table for current object
+PODSData.Handles.ObjectSummaryTableGrid = uigridlayout(PODSData.Handles.AppInfoPanel,[1,1],...
+    'BackgroundColor',[0 0 0],...
+    'Padding',[0 0 0 0],...
+    'Scrollable','on',...
+    'Visible','off',...
+    'RowHeight',{'fit'});
+PODSData.Handles.ObjectSummaryTable = uitable(PODSData.Handles.ObjectSummaryTableGrid);
 %% CHECKPOINT
 
 disp('Setting up context menus...')
@@ -1466,6 +1484,8 @@ disp('Setting up object image axes...')
 set(PODSData.Handles.AppInfoSelectorPanel,'Visible','On');
 set(PODSData.Handles.AppInfoSelector,'Visible','On');
 
+set(PODSData.Handles.ProjectSummaryTableGrid,'Visible','On');
+
 set(PODSData.Handles.AppInfoPanel,'Visible','On');
 set(PODSData.Handles.SettingsPanel,'Visible','On');
 
@@ -1517,6 +1537,8 @@ clear SplashScreenIcon
 
 disp('Opening...')
 
+% some functionality will work better if the MATLAB desktop window is minimized
+% uses the com.mathworks package, which will be removed in the future
 try
     minimizeMLDesktop();
 catch
@@ -2395,7 +2417,7 @@ pause(0.5)
             end
             
             ObjImgTiles{LabelIdx,1} = imtile(ObjImgs,...
-                'ThumbnailSize',[25 25],...
+                'ThumbnailSize',[50 50],...
                 'BorderSize',1,...
                 'BackgroundColor',PODSData.Settings.ObjectLabels(LabelIdx).Color,...
                 'GridSize',[NaN 30]);
@@ -2470,21 +2492,17 @@ pause(0.5)
 
         switch PODSData.Settings.GUITheme
             case 'Dark'
-                PODSData.Settings.GUIBackgroundColor = 'Black';
-                PODSData.Settings.GUIForegroundColor = 'White';
-                PODSData.Settings.GUIHighlightColor = 'White';
+                PODSData.Settings.GUIBackgroundColor = [0 0 0];
+                PODSData.Settings.GUIForegroundColor = [1 1 1];
+                PODSData.Settings.GUIHighlightColor = [1 1 1];
             case 'Dark2'
-                PODSData.Settings.GUIBackgroundColor = '#0E1117';
-                PODSData.Settings.GUIForegroundColor = 'White';
-                PODSData.Settings.GUIHighlightColor = '#999999';
+                PODSData.Settings.GUIBackgroundColor = [0.0549,0.0667,0.0902];
+                PODSData.Settings.GUIForegroundColor = [1,1,1];
+                PODSData.Settings.GUIHighlightColor = [0.6,0.6,0.6];
             case 'Light'
                 PODSData.Settings.GUIBackgroundColor = 'White';
                 PODSData.Settings.GUIForegroundColor = 'Black';
                 PODSData.Settings.GUIHighlightColor = 'Black';
-            case 'Royal'
-                PODSData.Settings.GUIBackgroundColor = '#337def';
-                PODSData.Settings.GUIForegroundColor = '#fcc729';
-                PODSData.Settings.GUIHighlightColor = '#fcc729';
         end
         
         UpdateGUITheme();
@@ -2506,24 +2524,43 @@ pause(0.5)
         set(findobj(PODSData.Handles.fH,'type','uilabel'),'FontColor',GUIForegroundColor);
         set(findobj(PODSData.Handles.fH,'type','uilabel'),'BackgroundColor',GUIBackgroundColor);
 
+        % set uitable colors
+        set(findobj(PODSData.Handles.fH,'type','uitable'),'BackgroundColor',GUIBackgroundColor);
+        set(findobj(PODSData.Handles.fH,'type','uitable'),'ForegroundColor',GUIForegroundColor);
+
+        % set uilistbox colors
         set(findobj(PODSData.Handles.fH,'type','uilistbox'),'BackgroundColor',GUIBackgroundColor);
         set(findobj(PODSData.Handles.fH,'type','uilistbox'),'FontColor',GUIForegroundColor);
 
+        % set uitree colors
         set(findobj(PODSData.Handles.fH,'type','uitree'),'BackgroundColor',GUIBackgroundColor);
         set(findobj(PODSData.Handles.fH,'type','uitree'),'FontColor',GUIForegroundColor);
 
-
+        % set swarm plot colors
         PODSData.Handles.ScatterPlotGrid.BackgroundColor = PODSData.Settings.SwarmPlotBackgroundColor;
         PODSData.Handles.ScatterPlotAxH.Color = PODSData.Settings.SwarmPlotBackgroundColor;
         PODSData.Handles.ScatterPlotAxH.XAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
         PODSData.Handles.ScatterPlotAxH.YAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
 
-
+        % set scatter plot colors
         PODSData.Handles.SwarmPlotGrid.BackgroundColor = PODSData.Settings.SwarmPlotBackgroundColor;
         PODSData.Handles.SwarmPlotAxH.Color = PODSData.Settings.SwarmPlotBackgroundColor;
         PODSData.Handles.SwarmPlotAxH.XAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
         PODSData.Handles.SwarmPlotAxH.YAxis.Color = PODSData.Settings.SwarmPlotForegroundColor;
 
+        % set intensity slider colors
+        set(PODSData.Handles.PrimaryIntensitySlider,...
+            'BackgroundColor',GUIBackgroundColor,...
+            'Knob1Color',GUIForegroundColor,...
+            'Knob2Color',GUIForegroundColor,...
+            'RangeColor',GUIForegroundColor,...
+            'MidLineColor',GUIForegroundColor);
+        set(PODSData.Handles.ReferenceIntensitySlider,...
+            'BackgroundColor',GUIBackgroundColor,...
+            'Knob1Color',GUIForegroundColor,...
+            'Knob2Color',GUIForegroundColor,...
+            'RangeColor',GUIForegroundColor,...
+            'MidLineColor',GUIForegroundColor);
 
         PODSData.Handles.CurrentThresholdLine.Color = GUIForegroundColor;
 
@@ -2690,11 +2727,20 @@ pause(0.5)
 %% Change summary display type
 
     function ChangeSummaryDisplay(source,~)
+        % update the summary display type
+        PODSData.Settings.SummaryDisplayType = PODSData.Handles.AppInfoSelector.Value;
 
-        %data = guidata(source);
-        PODSData.Settings.SummaryDisplayType = source.Value;
+
+        % % set the title of the summary panel
+        % PODSData.Handles.AppInfoPanel.Title = [PODSData.Settings.SummaryDisplayType,' summary'];
+        % % hide grid layout managers for all summary tables
+        % set(findobj(PODSData.Handles.AppInfoPanel.Children(),'type','uigridlayout'),'Visible','off');
+        % % show the grid layout manager for the summary type that is active
+        % PODSData.Handles.([PODSData.Settings.SummaryDisplayType,'SummaryTableGrid']).Visible = 'on';
+
+
+        % update the summary panel with the selected tabular data
         UpdateSummaryDisplay(source);
-
     end
 
 %% Local SB
@@ -2719,7 +2765,7 @@ pause(0.5)
         % update log to indicate we are done
         UpdateLog3(source,'Done.','append');
         % update summary table
-        UpdateSummaryDisplay(source,{'Image','Object'});
+        UpdateSummaryDisplay(source,{'Group','Image','Object'});
     end
 
 %% Object Azimuth Stats
@@ -2743,7 +2789,7 @@ pause(0.5)
             Counter = Counter+1;
         end
         % update summary table
-        UpdateSummaryDisplay(source,{'Image','Object'});
+        UpdateSummaryDisplay(source,{'Group','Image','Object'});
         % update log to indicate we are done
         UpdateLog3(source,'Done.','append');
     end
@@ -2778,7 +2824,7 @@ pause(0.5)
             UpdateImages(source);
         end
         % update summary table
-        UpdateSummaryDisplay(source,{'Image','Object'});
+        UpdateSummaryDisplay(source,{'Group','Image','Object'});
         % update log with time elapsed
         UpdateLog3(source,['Time elapsed: ',num2str(timeElapsed),' seconds'],'append');
         % update log to indicate we are done
@@ -2832,7 +2878,7 @@ pause(0.5)
         end
         % add the stored handles to the newly loaded project
         SavedPODSData.Handles = Handles;
-        % add the loaded project to the PODSData variable
+        % add the loaded project to the PODSData object
         PODSData = SavedPODSData;
         % add the project with handles to the gui
         guidata(PODSData.Handles.fH,PODSData);
@@ -2867,16 +2913,38 @@ pause(0.5)
         PODSData.Settings.CurrentTab = PreviousTab;
         % find the uimenu that would normally be used to switch to the tab indicated by 'CurrentTab' in the loaded project
         Menu2Pass = findobj(PODSData.Handles.hTabMenu.Children,'Text',Tab2Switch2);
-
         % update view and display with newly loaded project
+        % update group/image/object selection trees
         UpdateGroupTree(source);
         UpdateImageTree(source);
         UpdateLabelTree(source);
+        % update summary type selector and summary tables
+        PODSData.Handles.AppInfoSelector.Value = PODSData.Settings.SummaryDisplayType;
         UpdateSummaryDisplay(source);
+        % update image operations type selector and image operations panel
+        PODSData.Handles.ImageOperationsSelector.Value = PODSData.Settings.CurrentImageOperation;       
         UpdateImageOperationDisplay(source);
         % update current tab using uimenu object as the source
         TabSelection(Menu2Pass);
         UpdateImages(source);
+        % update menu bar items
+        % update mask type/name options context menu
+        % uncheck all mask names for each mask type
+        set(PODSData.Handles.hMaskType_CustomScheme.Children,'Checked','Off');
+        set(PODSData.Handles.hMaskType_Default.Children,'Checked','Off');
+        % check the currently selected mask name
+        switch PODSData.Settings.MaskType
+            case 'Default'
+                PODSData.Handles.(['hMaskType_Default_',PODSData.Settings.MaskName]).Checked = 'On';
+            case 'CustomScheme'
+                PODSData.Handles.(['hMaskType_CustomScheme_',PODSData.Settings.MaskName]).Checked = 'On';
+        end
+        % update object box type options context menu
+        set(PODSData.Handles.hObjectBoxType.Children,'Checked','off');
+        PODSData.Handles.(['hObjectBoxType_',PODSData.Settings.ObjectBoxType]).Checked = 'On';
+
+
+
         % restore old pointer
         PODSData.Handles.fH.Pointer = OldPointer;
         % update log to indicate completion
@@ -3194,6 +3262,14 @@ pause(0.5)
         S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_AvgOFPerImage'])) = full([CurrentGroup.Replicate(:).OFAvg]');
         save([SaveLocation,'_AvgOFPerImage','.mat'],'-struct','S');
         clear S
+
+        %% filtered OF - temporary until a better solution is written (need a way to specify object filters explicitly)
+        % create a struct with dynamic field name for unambiguous naming of the saved variable
+        S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_AvgFilteredOFPerImage'])) = full([CurrentGroup.Replicate(:).FilteredOFAvg]');
+        save([SaveLocation,'_AvgFilteredOFPerImage','.mat'],'-struct','S');
+        clear S
+
+
         
         UpdateLog3(source,['Done saving data for Group:',CurrentGroup.GroupName],'append');
         
@@ -3201,7 +3277,7 @@ pause(0.5)
 
 %% Toolbar callbacks
 
-    function [] = tbExportAxes(source,~)
+    function tbExportAxes(source,~)
         % get the toolbar parent of the calling button
         ctb = source.Parent;
         % get the axes parent of that toolbar, which we will export
@@ -3215,10 +3291,15 @@ pause(0.5)
 
         PODSData.Handles.fH.Visible = 'Off';
 
-        [filename,path] = uiputfile('*.png','Set directory and filename',PODSData.Settings.LastDirectory);
+        try
+            [filename,path] = uiputfile('*.png',...
+                'Set directory and filename',PODSData.Settings.LastDirectory);
+        catch
+            [filename,path] = uiputfile('*.png',...
+                'Set directory and filename');
+        end
 
         PODSData.Handles.fH.Visible = 'On';
-
         figure(PODSData.Handles.fH);
 
         if ~filename
@@ -3226,6 +3307,8 @@ pause(0.5)
             uialert(PODSData.Handles.fH,msg,'Error');
             return
         end
+
+        PODSData.Settings.LastDirectory = path;
 
         UpdateLog3(source,'Exporting axes...','append');
 
@@ -3254,7 +3337,7 @@ pause(0.5)
         
     end
 
-    function [] = tbApplyMaskStateChanged(source,event)
+    function tbApplyMaskStateChanged(source,event)
         
         cGroupIdx = PODSData.CurrentGroupIndex;
         cImageIdx = PODSData.Group(cGroupIdx).CurrentImageIndex;
@@ -3269,11 +3352,11 @@ pause(0.5)
         end
     end
 
-    function [] = tbShowAsOverlayStateChanged(source,~)
+    function tbShowAsOverlayStateChanged(source,~)
         UpdateImages(source);
     end
 
-    function [] = tbShowSelectionStateChanged(source,event)
+    function tbShowSelectionStateChanged(source,event)
         switch event.Value
             case 1
                 PODSData.Handles.ShowSelectionAverageIntensity.Value = 1;
@@ -3291,13 +3374,7 @@ pause(0.5)
         UpdateImages(source);
     end
 
-
-
-
-
-
-
-    function [] = tbShowReferenceImageStateChanged(source,~)
+    function tbShowReferenceImageStateChanged(source,~)
         if PODSData.CurrentImage.ReferenceImageLoaded
             UpdateImages(source);
         else
@@ -3306,7 +3383,7 @@ pause(0.5)
         end
     end
 
-    function [] = tbRectangularROI(source,~)
+    function tbRectangularROI(source,~)
         % original code here
         ctb = source.Parent;
         cax = ctb.Parent;
@@ -3337,7 +3414,7 @@ pause(0.5)
         UpdateImages(source);
     end
 
-    function [] = tbLassoROI(source,~)
+    function tbLassoROI(source,~)
         ctb = source.Parent;
         cax = ctb.Parent;
         % draw rectangular ROI
@@ -3350,7 +3427,7 @@ pause(0.5)
         UpdateImages(source);
     end
 
-    function [] = tbLineScan(source,~)
+    function tbLineScan(source,~)
 
         try
             delete(PODSData.Handles.LineScanROI);
