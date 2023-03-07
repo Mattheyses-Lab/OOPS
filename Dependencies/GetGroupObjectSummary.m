@@ -22,7 +22,8 @@ function TableOut = GetGroupObjectSummary(source)
                          'AzimuthAverage',0,...
                          'AzimuthStd',0,...
                          'MidlineRelativeAzimuth',0,...
-                         'NormalRelativeAzimuth',0);
+                         'NormalRelativeAzimuth',0,...
+                         'AzimuthAngularDeviation',0);
     
     CurrentGroup = PODSData.CurrentGroup;
 
@@ -53,6 +54,7 @@ function TableOut = GetGroupObjectSummary(source)
             PODSDataOut(MasterIdx).AzimuthStd =  CurrentGroup.Replicate(j).Object(k).AzimuthStd;
             PODSDataOut(MasterIdx).MidlineRelativeAzimuth = CurrentGroup.Replicate(j).Object(k).MidlineRelativeAzimuth;
             PODSDataOut(MasterIdx).NormalRelativeAzimuth = CurrentGroup.Replicate(j).Object(k).NormalRelativeAzimuth;
+            PODSDataOut(MasterIdx).AzimuthAngularDeviation = CurrentGroup.Replicate(j).Object(k).AzimuthAngularDeviation;
             
             MasterIdx = MasterIdx+1;
 
