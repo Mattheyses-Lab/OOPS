@@ -19,6 +19,11 @@ function NewProject2(source,~)
         if isnan(nGroups)||isempty(projectTitle)
             error('Invalid input')
         end
+
+        % set the project name
+        PODSData.ProjectName = projectTitle;
+
+
         % make group name labels for the dialog box
         groupNamesLabels = cell(nGroups,1);
         for i = 1:nGroups
