@@ -9,8 +9,17 @@ function TabSelection(source,~)
     
     % if ZoomToCursor is active, disable it before switching tabs
     if PODSData.Settings.Zoom.Active
+        % store the zoom properties so we can reactivate them after tab switching
+        RestoreProps.freezeState = PODSData.Settings.Zoom.Freeze;
+        RestoreProps.XLimState = PODSData.Settings.Zoom.DynamicAxes.XLim;
+        RestoreProps.YLimState = PODSData.Settings.Zoom.DynamicAxes.YLim;
+        % unclick the currently pressed zoom toolbar button
         PODSData.Settings.Zoom.CurrentButton.Value = 0;
+        % invoke the callback as if user had just unchecked the button
         ZoomToCursor(PODSData.Settings.Zoom.CurrentButton);
+        % add the zoom properties to the zoom settings struct and set the restore flag
+        PODSData.Settings.Zoom.RestoreProps = RestoreProps;
+        PODSData.Settings.Zoom.Restore = true;
     end
     
     % indicate tab selection in log
@@ -228,6 +237,7 @@ function TabSelection(source,~)
                 PODSData.Handles.SmallPanels(1,i).Visible = 'On';
                 PODSData.Handles.SmallPanels(2,i).Visible = 'On';
             end
+
             PODSData.Handles.ImgPanel1.Visible = 'Off';
             PODSData.Handles.ImgPanel2.Visible = 'Off';
     
@@ -255,7 +265,7 @@ function TabSelection(source,~)
             try
                 linkaxes([PODSData.Handles.AverageIntensityAxH,PODSData.Handles.MaskAxH],'xy');
             catch
-                % do nothing
+                warning('Failed to link average intensity and mask axes');
             end
     
         case 'Order Factor'
@@ -282,7 +292,11 @@ function TabSelection(source,~)
                 PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
             end
     
-            linkaxes([PODSData.Handles.AverageIntensityAxH,PODSData.Handles.OrderFactorAxH],'xy');
+            try
+                linkaxes([PODSData.Handles.AverageIntensityAxH,PODSData.Handles.OrderFactorAxH],'xy');
+            catch
+                warning('Failed to link average intensity and order factor axes');
+            end
     
         case 'Azimuth'
     
@@ -308,7 +322,11 @@ function TabSelection(source,~)
                 PODSData.Handles.SmallPanels(2,i).Visible = 'Off';
             end
     
-            linkaxes([PODSData.Handles.AverageIntensityAxH,PODSData.Handles.AzimuthAxH],'xy');
+            try
+                linkaxes([PODSData.Handles.AverageIntensityAxH,PODSData.Handles.AzimuthAxH],'xy');
+            catch
+                warning('Failed to link average intensity and azimuth axes')
+            end
     
         case 'Plots'
     
@@ -370,8 +388,19 @@ function TabSelection(source,~)
             end
     
             PODSData.Handles.ImgPanel1.Visible = 'Off';
-    
+
     end
+
+    % if the restore flag is set and the selected tab is zoomable
+    if PODSData.Settings.Zoom.Restore && ismember(PODSData.Settings.CurrentTab,{'Mask','Order Factor','Azimuth'})
+        % set the button to active in the axes for which we will activate zoom (average intensity axes)
+        PODSData.Handles.ZoomToCursorAverageIntensity.Value = 1;
+        % restore zoom on the average intensity axes (easiest for now as it is in all zoomable tabs)
+        ZoomToCursor(PODSData.Handles.ZoomToCursorAverageIntensity);
+    end
+    % now remove the restore properties and unset the restore flag
+    PODSData.Settings.Zoom.RestoreProps = [];
+    PODSData.Settings.Zoom.Restore = false;
 
     UpdateImages(source);
     UpdateSummaryDisplay(source,{'Project'});

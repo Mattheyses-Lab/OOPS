@@ -31,17 +31,13 @@ function UpdateImageOperationDisplay(source)
 
             if cImage.ManualThreshEnabled
                 PODSData.Handles.ThreshAxH.HitTest = 'On';
-            else
-                PODSData.Handles.ThreshAxH.HitTest = 'Off';
-            end
-    
-            try
                 [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
                 PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
                 PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
                 PODSData.Handles.CurrentThresholdLine.Value = cImage.level;
                 PODSData.Handles.CurrentThresholdLine.Label = {[cImage.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
-            catch
+            else
+                PODSData.Handles.ThreshAxH.HitTest = 'Off';
                 % build histogram from random data
                 [BinCtrs,HistPlot] = BuildHistogram(rand(1024,1024));
                 PODSData.Handles.ThreshBar.XData = BinCtrs;
@@ -52,6 +48,24 @@ function UpdateImageOperationDisplay(source)
                 PODSData.Handles.CurrentThresholdLine.Label = '';
                 return
             end
+    
+            % try
+            %     [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
+            %     PODSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
+            %     PODSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
+            %     PODSData.Handles.CurrentThresholdLine.Value = cImage.level;
+            %     PODSData.Handles.CurrentThresholdLine.Label = {[cImage.ThreshStatisticName,' = ',num2str(PODSData.Handles.CurrentThresholdLine.Value)]};
+            % catch
+            %     % build histogram from random data
+            %     [BinCtrs,HistPlot] = BuildHistogram(rand(1024,1024));
+            %     PODSData.Handles.ThreshBar.XData = BinCtrs;
+            %     PODSData.Handles.ThreshBar.YData = HistPlot;
+            %     % set thresh line to 0
+            %     PODSData.Handles.CurrentThresholdLine.Value = 0;
+            %     % don't display a label
+            %     PODSData.Handles.CurrentThresholdLine.Label = '';
+            %     return
+            % end
     
         case 'Intensity Display'
             PODSData.Handles.IntensitySlidersGrid.Visible = 'On';

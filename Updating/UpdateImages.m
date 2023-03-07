@@ -109,7 +109,7 @@ function [] = UpdateImages(source)
                         for ObjIdx = 1:cImage.nObjects
                             PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
                             hold on
-                            Boundary = cImage.Object(ObjIdx).Boundary;
+                            Boundary = cImage.Object(ObjIdx).SimplifiedBoundary;
                             PODSData.Handles.ObjectBoxes(ObjIdx,1) = plot(Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
@@ -123,7 +123,7 @@ function [] = UpdateImages(source)
         
                             PODSData.Handles.fH.CurrentAxes = PODSData.Handles.MaskAxH;
                             hold on
-                            Boundary = cImage.Object(ObjIdx).Boundary;
+                            Boundary = cImage.Object(ObjIdx).SimplifiedBoundary;
                             PODSData.Handles.ObjectBoxes(ObjIdx,2) = plot(Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
@@ -186,7 +186,7 @@ function [] = UpdateImages(source)
                                 'Tag','ObjectBox',...
                                 'FaceVertexCData',UnselectedCData,...
                                 'EdgeColor','Flat',...
-                                'FaceColor','none',...
+                                'FaceColor','None',...
                                 'HitTest','On',...
                                 'ButtonDownFcn',@SelectSingleObjects,...
                                 'PickableParts','all',...
@@ -200,7 +200,7 @@ function [] = UpdateImages(source)
                                 'Tag','ObjectBox',...
                                 'FaceVertexCData',SelectedCData,...
                                 'EdgeColor','Flat',...
-                                'FaceColor','none',...
+                                'FaceColor','Flat',...
                                 'HitTest','On',...
                                 'ButtonDownFcn',@SelectSingleObjects,...
                                 'PickableParts','all',...
@@ -280,14 +280,21 @@ function [] = UpdateImages(source)
                     %OverlayIntensity = Scale0To1(imadjust(cImage.I.*cImage.OF_image));
 
                     OverlayIntensity = cImage.I;
-                    stretchlim(OverlayIntensity)
-                    OverlayIntensity = imadjust(OverlayIntensity,stretchlim(OverlayIntensity));
+                    % stretchlim(OverlayIntensity)
+                    % OverlayIntensity = imadjust(OverlayIntensity,stretchlim(OverlayIntensity));
+                    OF = cImage.OF_image;
+                    maxOF = max(max(OF));
 
-                    OFRGB = ind2rgb(im2uint8(cImage.OF_image),PODSData.Settings.OrderFactorColormap);
+                    OFRGB = ind2rgb(im2uint8(OF./maxOF),PODSData.Settings.OrderFactorColormap);
                     OFRGB = MaskRGB(OFRGB,OverlayIntensity);
                     PODSData.Handles.OrderFactorImgH.CData = OFRGB;
+                    PODSData.Handles.OFCbar.Ticks = 0:0.1:1;
+                    PODSData.Handles.OFCbar.TickLabels = round(linspace(0,maxOF,11),2);
+
                 catch
-                    PODSData.Handles.AzimuthImgH.CData = EmptyImage;
+                    PODSData.Handles.OrderFactorImgH.CData = EmptyImage;
+                    PODSData.Handles.OFCbar.Ticks = 0:0.1:1;
+                    PODSData.Handles.OFCbar.TickLabels = 0:0.1:1;
                     disp('Warning: Error displaying OF-intensity composite image')
                 end
             else
@@ -298,6 +305,8 @@ function [] = UpdateImages(source)
                         PODSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
                         PODSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
                     end
+                    PODSData.Handles.OFCbar.Ticks = 0:0.1:1;
+                    PODSData.Handles.OFCbar.TickLabels = 0:0.1:1;
                 catch
                     PODSData.Handles.OrderFactorImgH.CData = EmptyImage;
                 end
@@ -407,19 +416,39 @@ function [] = UpdateImages(source)
                 try
 
                     % no enhancement
-                    % OverlayIntensity = cImage.I;
+                    OverlayIntensity = cImage.I;
 
-                    % using adjusted contrast intensity image and denoised azimuth image
-                    % OverlayIntensity = imadjust(cImage.I,stretchlim(cImage.I));
+                    % auto-stretch contrast
+                    %OverlayIntensity = imadjust(OverlayIntensity,stretchlim(OverlayIntensity));
 
-                    OverlayIntensity = cImage.I .* cImage.OF_image;
-                    OverlayIntensity = imadjust(OverlayIntensity,stretchlim(OverlayIntensity));
+                    %overlay intensity-weighted-OF, auto-contrast adjusted
+                    % OverlayIntensity = cImage.I .* cImage.OF_image;
+                    % OverlayIntensity = imadjust(OverlayIntensity,stretchlim(OverlayIntensity));
 
-                     
-                     AzimuthRGB = MaskRGB(MakeAzimuthRGB(...
-                         getAverageAzimuthImage(cImage.AzimuthImage),...
-                         PODSData.Settings.AzimuthColormap),...
-                         OverlayIntensity);
+                    % overlay intensity-weighted-OF, scaled to fall between 0 and 1
+                    %OverlayIntensity = Scale0To1(cImage.I .* cImage.OF_image);
+                   
+                    % AzimuthRGB = MaskRGB(MakeAzimuthRGB(...
+                    %     getAverageAzimuthImage(cImage.AzimuthImage),...
+                    %     PODSData.Settings.AzimuthColormap),...
+                    %     OverlayIntensity);
+
+                    % AzimuthRGB = MaskRGB(MakeAzimuthRGB(...
+                    %     cImage.AzimuthImage,...
+                    %     PODSData.Settings.AzimuthColormap),...
+                    %     OverlayIntensity);
+
+
+                    % BEST WORKING HSV DISPLAY
+                    % HSV image with H,S,V = azimuth,OF,intensity
+                    Az = cImage.AzimuthImage;
+                    Az(Az<0) = Az(Az<0)+pi;
+                    Az = Az./pi;
+
+                    OF = cImage.OF_image;
+                    OF = OF./max(max(OF));
+
+                    AzimuthRGB = makeHSVSpecial(Az,OF,OverlayIntensity,[]);
 
                     PODSData.Handles.AzimuthImgH.CData = AzimuthRGB;
                 catch
@@ -496,7 +525,7 @@ function [] = UpdateImages(source)
                     case 'Mono'
                         Colormap = [1 1 1];
                 end
-    
+
                 PODSData.Handles.AzimuthLines = QuiverPatch2(PODSData.Handles.AverageIntensityAxH,...
                     x,...
                     y,...
@@ -507,6 +536,7 @@ function [] = UpdateImages(source)
                     LineWidth,...
                     LineAlpha,...
                     LineScale);
+
             catch
                 disp('Warning: Error displaying azimuth sticks')
             end
