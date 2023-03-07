@@ -145,9 +145,13 @@ switch MaskType
                     cImage.bw = sparse(bwtemp);
                     %% end fill
 
-                    % NOTE: connectivity changed from 8 to 4, make sure it didn't mess anything up
+                    % testing below
+                    % remove any "nearly" h-connected pixels (and the h connected ones)
+                    cImage.bw = sparse(quasihbreak(full(cImage.bw)));
+                    % end testing
 
-                    % remove small objects one final time
+                    % NOTE: connectivity changed from 8 to 4, make sure it didn't mess anything up
+                    % remove small or rounded objects
                     CC = bwconncomp(full(cImage.bw),4);
                     S = regionprops(CC, 'Area','Eccentricity','Circularity');
                     L = labelmatrix(CC);
@@ -155,10 +159,20 @@ switch MaskType
                         [S.Eccentricity] > 0.5 & ...
                         [S.Circularity] < 0.5)));
 
+                    % testing below
+                    % remove any pixels that have a diagonal 8-connection
+                    % this is very useful and not built into matlab, consider writing separate function
+                    % fill in gaps to remove diagonally connected pixels, keep only the pixels we added
+                    diagFill = bwmorph(full(cImage.bw),'diag',1)-full(cImage.bw);
+                    % now get an image with just the pixels that were originally connected
+                    diagFill = bwmorph(diagFill,'diag',1)-diagFill;
+                    % set those pixels to 0
+                    cImage.bw(diagFill==1) = 0;
+                    % end testing
 
-                    % label individual branches
+
+                    % label individual branches (this has to be the last step if we want individually labeled branches)
                     [~,cImage.L] = labelBranches(full(cImage.bw));
-
 
                     % update log with masking output
                     UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
