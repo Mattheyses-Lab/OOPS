@@ -20,36 +20,57 @@ function [] = ZoomToCursor(source,~)
 % (Written by Brett Shoelson, Ph.D. (shoelson@helix.nih.gov,
 % shoelson@hotmail.com))
 
+    % get the GUI data
     PODSData = guidata(source);
-    
+    % get the handles structure
     Handles = PODSData.Handles;
-    
+    % get the zoom settings structure
     Zoom = PODSData.Settings.Zoom;
 
-    % If ZoomToCursor is already active, check that the axes that called the callback
-    %   is the current zoom axes. If so, continue as normal. If not, disable 
-    %   zoom on current axes before continuing
-    if Zoom.Active
-        % get the tag to axes where ZoomToCursor is currently enabled
-        CurrentButtonTag = Zoom.CurrentButton.Tag;
-        % get the tag of the button that called the callback
-        CallingButtonTag = source.Tag;
-        % the tag of the ZoomToCursor axes toolbar button is formatted like:
-        %   ['ZoomToCursor',ax.Tag]
-        %   where ax is the axes containing the button
 
-        % If the axes calling the callback is not the current zoom axes
-        if ~strcmp(CurrentButtonTag,CallingButtonTag)
-            % then disable zoom before continuing
-            % use tag to index the Handles structure and change state of button
-            Handles.(CurrentButtonTag).Value = 0;
-            % call ZoomToCursor with current button to deactivate the zoom
-            ZoomToCursor(Handles.(CurrentButtonTag));
+    % default freeze status
+    freezeState = false;
+    % default axes limits
+    XLimState = Zoom.OldXLim;
+    YLimState = Zoom.OldYLim;
+
+    if Zoom.Restore
+
+        freezeState = Zoom.RestoreProps.freezeState;
+        XLimState = Zoom.RestoreProps.XLimState;
+        YLimState = Zoom.RestoreProps.YLimState;
+
+    else
+
+        % If ZoomToCursor is already active, check that the axes that called the callback
+        %   is the current zoom axes. If so, continue as normal. If not, disable 
+        %   zoom on current axes before continuing
+        if Zoom.Active
+            % get the tag to axes where ZoomToCursor is currently enabled
+            CurrentButtonTag = Zoom.CurrentButton.Tag;
+            % get the tag of the button that called the callback
+            CallingButtonTag = source.Tag;
+            % the tag of the ZoomToCursor axes toolbar button is a char array formatted like:
+            %   ['ZoomToCursor',ax.Tag]
+            %   where ax is the axes containing the button
+            % If the axes calling the callback is not the current zoom axes
+            if ~strcmp(CurrentButtonTag,CallingButtonTag)
+                % before disabling, store whether the axes zoom was frozen
+                freezeState = Zoom.Freeze;
+                XLimState = Zoom.DynamicAxes.XLim;
+                YLimState = Zoom.DynamicAxes.YLim;
+                % then disable zoom before continuing
+                % use tag to index the Handles structure and change state of button
+                Handles.(CurrentButtonTag).Value = 0;
+                % call ZoomToCursor with current button to deactivate the zoom
+                ZoomToCursor(Handles.(CurrentButtonTag));
+                % get the freeze state of the previous zoom axes we just deactivated
+            end
         end
-        
+
     end
 
-    Zoom.Freeze = false;
+    Zoom.Freeze = freezeState;
 
     % try and delete previous CursorPositionLabel, this is necessary in
     % case the user activates the Toolbar state button (ZoomToCursor) in an
@@ -86,7 +107,6 @@ function [] = ZoomToCursor(source,~)
             Zoom.StaticAxes.Toolbar.Visible = 'Off';
             % Hide the static axes
             Zoom.StaticAxes.Visible = 'Off';
-
             try
                 Zoom.DynamicAxes.addprop('CursorPositionLabel');
             catch
@@ -113,21 +133,22 @@ function [] = ZoomToCursor(source,~)
             Zoom.StaticImage.Visible = 'Off';
 
             axes(Zoom.StaticAxes);
-            
-            Zoom.XRange = diff(Zoom.DynamicAxes.XLim);
-            Zoom.YRange = diff(Zoom.DynamicAxes.YLim);
-            Zoom.ZRange = diff(Zoom.DynamicAxes.ZLim);
-%             Zoom.XDist = 0.5*Zoom.XRange;
-%             Zoom.YDist = 0.5*Zoom.YRange;
-%             Zoom.ZDist = 0.5*Zoom.ZRange;
-            Zoom.XDist = Zoom.pct*Zoom.XRange;
-            Zoom.YDist = Zoom.pct*Zoom.YRange;
-            Zoom.ZDist = Zoom.pct*Zoom.ZRange;
-
 
             Zoom.OldXLim = Zoom.DynamicAxes.XLim;
             Zoom.OldYLim = Zoom.DynamicAxes.YLim;
-            Zoom.OldZLim = Zoom.DynamicAxes.ZLim;
+
+            Zoom.XRange = diff(Zoom.DynamicAxes.XLim);
+            Zoom.YRange = diff(Zoom.DynamicAxes.YLim);
+
+            % % account for the possibility of a clicked zoom tb button when
+            % % another axes was already active and the freeze was on
+            if Zoom.Freeze
+                Zoom.DynamicAxes.XLim = XLimState;
+                Zoom.DynamicAxes.YLim = YLimState;
+            end
+
+            Zoom.XDist = Zoom.pct*Zoom.XRange;
+            Zoom.YDist = Zoom.pct*Zoom.YRange;
 
             Zoom.OldWindowButtonMotionFcn = Handles.fH.WindowButtonMotionFcn;
             Zoom.OldImageButtonDownFcn = Zoom.DynamicImage.ButtonDownFcn;
@@ -165,28 +186,23 @@ function [] = ZoomToCursor(source,~)
             Zoom.DynamicAxes.XLim = Zoom.OldXLim;
             Zoom.DynamicAxes.YLim = Zoom.OldYLim;
 
-%             %% TESTING BELOW - RESET ALPHA DATA
-%             Zoom.DynamicImage.AlphaData = 1;
-%             %% END TEST
-
-            % reset original zoom levels
-            Zoom.XDist = 0.5*Zoom.XRange;
-            Zoom.YDist = 0.5*Zoom.YRange;
-            Zoom.ZDist = 0.5*Zoom.ZRange;
-            Zoom.ZoomLevelIdx = 6;
-            Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
+            % testing leaving out these lines, uncomment if bad behavior
+            % % reset original zoom levels
+            % Zoom.XDist = 0.5*Zoom.XRange;
+            % Zoom.YDist = 0.5*Zoom.YRange;
+            % Zoom.ZDist = 0.5*Zoom.ZRange;
+            % Zoom.ZoomLevelIdx = 6;
+            % Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
+            % end testing
     end  
     
     PODSData.Settings.Zoom = Zoom;
     PODSData.Handles = Handles;
     
-    %guidata(source,PODSData);    
 
 end
 
 function [] = CursorMoving(~,PODSData)
-
-    %PODSData = guidata(source);
 
     Zoom = PODSData.Settings.Zoom;
     DynamicAxes = PODSData.Settings.Zoom.DynamicAxes;
@@ -195,26 +211,19 @@ function [] = CursorMoving(~,PODSData)
 
     x = posn(1,1);
     y = posn(1,2);
-    z = posn(1,3);
     
-%     % x and y are already in expressed in proper pixel coordinates
-%     x1 = min(max(1,x-0.5*Zoom.XDist),Zoom.XRange-Zoom.XDist) + 0.5;
-%     y1 = min(max(1,y-0.5*Zoom.YDist),Zoom.YRange-Zoom.YDist) + 0.5;
-%     z1 = min(max(1,z-0.5*Zoom.ZDist),Zoom.ZRange-Zoom.ZDist) + 0.5;
 
     % 0 instead of one works better to be able to go over all pixel values
     % x and y are already in expressed in proper pixel coordinates
     x1 = min(max(0,x-0.5*Zoom.XDist),Zoom.XRange-Zoom.XDist) + 0.5;
     y1 = min(max(0,y-0.5*Zoom.YDist),Zoom.YRange-Zoom.YDist) + 0.5;
-    z1 = min(max(0,z-0.5*Zoom.ZDist),Zoom.ZRange-Zoom.ZDist) + 0.5;
+
     x2 = x1 + Zoom.XDist;
     y2 = y1 + Zoom.YDist;
-    z2 = z1 + Zoom.ZDist;
     
     % if cursor is still within axes limits
     if x >= Zoom.OldXLim(1) && x <= Zoom.OldXLim(2) && ...
-            y >= Zoom.OldYLim(1) && y <= Zoom.OldYLim(2) && ...
-        z >= Zoom.OldZLim(1) && z <= Zoom.OldZLim(2)
+            y >= Zoom.OldYLim(1) && y <= Zoom.OldYLim(2)
 
         ZoomPct = round((Zoom.XRange/Zoom.XDist)*100);
         posn2 = Zoom.DynamicAxes.CurrentPoint(1,:);
@@ -300,13 +309,12 @@ function [] = ChangeZoomLevel(source,PODSData)
     
     Zoom.XDist = Zoom.pct*Zoom.XRange;
     Zoom.YDist = Zoom.pct*Zoom.YRange;
-    Zoom.ZDist = Zoom.pct*Zoom.ZRange;
 
     PODSData.Settings.Zoom = Zoom;   
     
-     if ~strcmp(PODSData.Handles.fH.SelectionType,'extend')
-         CursorMoving(source,PODSData);
-     end
+    if ~strcmp(PODSData.Handles.fH.SelectionType,'extend')
+        CursorMoving(source,PODSData);
+    end
 end
 
 function [axH] = restore_axis_defaults(axH,OriginalPlotBoxAspectRatio,OriginalTag)
