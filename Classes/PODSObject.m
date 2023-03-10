@@ -5,6 +5,7 @@ classdef PODSObject < handle
         % parent image
         Parent PODSImage
         
+        % morphological properties from regionprops()
         Area
         BoundingBox
         Centroid
@@ -35,7 +36,7 @@ classdef PODSObject < handle
         % index to the subimage such that L(idx{:}) extracts the elements
         SubarrayIdx
 
-        % coordinates to trace object boundary
+        % coordinates if the object boundary
         Boundary
 
         % coordinates of the object midline

@@ -155,7 +155,7 @@ classdef PODSSettings < handle
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
             % optimum font size
-            obj.FontSize = round(obj.ScreenSize(4)*.009);
+            obj.FontSize = ceil(obj.ScreenSize(4)*.01);
             % set up default object label (PODSLabel object)
             obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],obj);
             % get list of supported fonts
@@ -167,7 +167,7 @@ classdef PODSSettings < handle
                 obj.DefaultFont = 'Courier New';  % otherwise, use 'Courier New'
             end
 
-            if ismac
+            if ismac || isunix
                 % get the path to this .m file (two levels below the directory we want)
                 CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
                 % get the "MainPath" (path to main gui driver)
@@ -289,7 +289,7 @@ classdef PODSSettings < handle
         end
 
         function LoadCustomMaskSchemes(obj)
-            if ismac
+            if ismac || isunix
                 SchemeFilesList = dir(fullfile([obj.MainPath,'/CustomMasks/Schemes'],'*.mat'));
             elseif ispc
                 SchemeFilesList = dir(fullfile([obj.MainPath,'\CustomMasks\Schemes'],'*.mat'));
@@ -298,7 +298,7 @@ classdef PODSSettings < handle
             for i = 1:numel(SchemeFilesList)
                 SplitName = strsplit(SchemeFilesList(i).name,'.');
                 obj.SchemeNames{i} = SplitName{1};
-                if ismac
+                if ismac || isunix
                     obj.SchemePaths{i} = [SchemeFilesList(i).folder,'/',SchemeFilesList(i).name];
                 elseif ispc
                     obj.SchemePaths{i} = [SchemeFilesList(i).folder,'\',SchemeFilesList(i).name];

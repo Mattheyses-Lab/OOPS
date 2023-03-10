@@ -6,7 +6,6 @@ function [smoothX,smoothY] = sgolayfilt_closedcurve(x,y,polynomialOrder, windowW
     % original number of points
     n = length(x);
 
-    
     wrappedX = [x(end-windowWidth:end); x(2:end-1) ; x(1:windowWidth)];
     wrappedY = [y(end-windowWidth:end); y(2:end-1) ; y(1:windowWidth)];
 

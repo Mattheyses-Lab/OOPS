@@ -460,6 +460,8 @@ classdef PODSImage < handle
                 %   for each object:
                 %       find buffer and BG pixels and store in
                 %       SBObjectProperties struct
+                tic
+
                 for i = 1:N
                     % empty logical matrix
                     object_bw = false(size(obj.bw));
@@ -500,13 +502,16 @@ classdef PODSImage < handle
                     all_BG_pixels(obj.Object(i).BGIdxList) = 1;
                 end
 
-%                 logmsg = ['Summing signal and BG intensities, computing SB ratio...'];
-%                 UpdateLog3(source,logmsg,'append');    
+                elapsedTime = toc;
+                disp(['S and B identification: ',num2str(elapsedTime),' s'])
 
                 %% Second Step: Filter pixels found in step 1
                 %   for each object: 
                 %       remove any buffer pxs overlapping with object or buffer pxs
                 %       remove BG pixels that overlap with object or buffer pixels 
+
+                tic
+
                 for i = 1:obj.nObjects
                     buffer_count = 0;
                     BG_count = 0;
@@ -553,6 +558,9 @@ classdef PODSImage < handle
                 end
                 
                 obj.LocalSBDone = true;
+
+                elapsedTime = toc;
+                disp(['S and B pixel filtering: ',num2str(elapsedTime),' s'])
 
             else
                 error('Cannot calculate local S:B until objects are detected');
@@ -734,13 +742,13 @@ classdef PODSImage < handle
         end
 
         function AzimuthRGB = get.AzimuthRGB(obj)
-            AzimuthImage = obj.AzimuthImage;
+            AzimuthData = obj.AzimuthImage;
             % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
-            AzimuthImage(AzimuthImage<0) = AzimuthImage(AzimuthImage<0)+pi;
+            AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
             % scale values to [0 1]
-            AzimuthImage = AzimuthImage./pi;
+            AzimuthData = AzimuthData./pi;
             % convert to uint8 then to RGB
-            AzimuthRGB = ind2rgb(im2uint8(AzimuthImage),obj.Settings.AzimuthColormap);
+            AzimuthRGB = ind2rgb(im2uint8(AzimuthData),obj.Settings.AzimuthColormap);
         end
 
         function MaskedAzimuthRGB = get.MaskedAzimuthRGB(obj)
@@ -762,7 +770,7 @@ classdef PODSImage < handle
         function ObjectProperties = get.ObjectProperties(obj)
             % label matrix should be 4-connected, so ObjectProperties
             % should as well
-            %ObjectProperties = regionprops(full(obj.L),full(obj.bw),'all');
+
             % properties from ObjectProps struct
             ObjectProperties = regionprops(full(obj.L),full(obj.bw),...
                 {'Area',...
@@ -788,7 +796,7 @@ classdef PODSImage < handle
                 'SubarrayIdx',...
                 'MaxFeretProperties',...
                 'MinFeretProperties'});
-
+            
             % get idxs to 'Image' and 'BoundingBox' fields
             fnames = fieldnames(ObjectProperties);
             % convert ObjectProperties struct to cell array

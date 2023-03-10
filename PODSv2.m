@@ -14,12 +14,10 @@ PODSData = PODSProject;
 %% set up splash screen
 
 % get the splash screen image
-if ismac
+if ismac || isunix
     SplashIconPath = fullfile([PODSData.Settings.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
 elseif ispc
     SplashIconPath = fullfile([PODSData.Settings.MainPath,'\SplashScreenIcon\AppSplashScreen.png']);
-elseif isunix
-    SplashIconPath = fullfile([PODSData.Settings.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
 end
 SplashScreenIcon = java.awt.Toolkit.getDefaultToolkit.createImage(SplashIconPath);
 
@@ -1696,7 +1694,7 @@ pause(0.5)
         % which will be loaded in future sessions by PODSSettings
         UpdateLog3(source,'Saving azimuth display settings...','append');
         AzimuthDisplaySettings = PODSData.Settings.AzimuthDisplaySettings;
-        if ismac
+        if ismac || isunix
             CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
             SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
             save([SavePath,'/Settings/AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');        
@@ -1730,7 +1728,7 @@ pause(0.5)
         % which will be loaded in future sessions by PODSSettings
         UpdateLog3(source,'Saving swarmplot settings...','append');
         SwarmPlotSettings = PODSData.Settings.SwarmPlotSettings;
-        if ismac
+        if ismac || isunix
             CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
             SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
             save([SavePath,'/Settings/SwarmPlotSettings.mat'],'SwarmPlotSettings');        
@@ -1756,7 +1754,7 @@ pause(0.5)
         % which will be loaded in future sessions by PODSSettings
         UpdateLog3(source,'Saving scatterplot settings...','append');
         ScatterPlotSettings = PODSData.Settings.ScatterPlotSettings;
-        if ismac
+        if ismac || isunix
             CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
             SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
             save([SavePath,'/Settings/ScatterPlotSettings.mat'],'ScatterPlotSettings');        
@@ -1844,7 +1842,7 @@ pause(0.5)
         % which will be loaded in future sessions by PODSSettings
         UpdateLog3(source,'Saving colormaps settings...','append');
         ColormapsSettings = PODSData.Settings.ColormapsSettings;
-        if ismac
+        if ismac || isunix
             CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
             SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
             save([SavePath,'/Settings/ColormapsSettings.mat'],'ColormapsSettings');        
@@ -2631,7 +2629,7 @@ pause(0.5)
         waitfor(MaskMakerFig);
 
         % continue to saving
-        if ismac
+        if ismac || isunix
             SchemeFilesPath = [PODSData.Settings.MainPath,'/CustomMasks/Schemes/'];
         elseif ispc
             SchemeFilesPath = [PODSData.Settings.MainPath,'\CustomMasks\Schemes\'];
@@ -3118,7 +3116,7 @@ pause(0.5)
         for cImage = PODSData.CurrentImage
             
             % control for mac vs pc
-            if ismac
+            if ismac || isunix
                 loc = [folder_name '/' cImage.pol_shortname];
             elseif ispc
                 loc = [folder_name '\' cImage.pol_shortname];
@@ -3243,7 +3241,7 @@ pause(0.5)
         end
         
         % control for mac vs pc
-        if ismac
+        if ismac || isunix
             SaveLocation = [UserChoice '/' CurrentGroup.GroupName];
         elseif ispc
             SaveLocation = [UserChoice '\' CurrentGroup.GroupName];

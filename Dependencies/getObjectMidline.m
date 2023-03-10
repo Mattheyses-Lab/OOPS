@@ -238,7 +238,7 @@ G.Nodes.Ycoord = nodeycoord;
 % [~,ia,~] = unique(round([G.Nodes.Xcoord G.Nodes.Ycoord],4),'rows');
 % G = subgraph(G,ia);
 
-
+% number of nodes with degree > 2
 nDegreeGT2 = numel(find(degree(G)>2));
 % attempt to prune the graph
 while nDegreeGT2 > 0
