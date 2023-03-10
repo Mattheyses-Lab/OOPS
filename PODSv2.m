@@ -18,6 +18,8 @@ if ismac
     SplashIconPath = fullfile([PODSData.Settings.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
 elseif ispc
     SplashIconPath = fullfile([PODSData.Settings.MainPath,'\SplashScreenIcon\AppSplashScreen.png']);
+elseif isunix
+    SplashIconPath = fullfile([PODSData.Settings.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
 end
 SplashScreenIcon = java.awt.Toolkit.getDefaultToolkit.createImage(SplashIconPath);
 
