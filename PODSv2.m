@@ -2500,9 +2500,9 @@ pause(0.5)
                 PODSData.Settings.GUIForegroundColor = [1,1,1];
                 PODSData.Settings.GUIHighlightColor = [0.6,0.6,0.6];
             case 'Light'
-                PODSData.Settings.GUIBackgroundColor = 'White';
-                PODSData.Settings.GUIForegroundColor = 'Black';
-                PODSData.Settings.GUIHighlightColor = 'Black';
+                PODSData.Settings.GUIBackgroundColor = [1 1 1];
+                PODSData.Settings.GUIForegroundColor = [0 0 0];
+                PODSData.Settings.GUIHighlightColor = [0 0 0];
         end
         
         UpdateGUITheme();
