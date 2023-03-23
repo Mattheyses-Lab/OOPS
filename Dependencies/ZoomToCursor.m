@@ -16,7 +16,7 @@ function [] = ZoomToCursor(source,~)
 %
 %
 %
-% This function is a modified version of zoom2cursor
+% This function is a heavily modified version of zoom2cursor
 % (Written by Brett Shoelson, Ph.D. (shoelson@helix.nih.gov,
 % shoelson@hotmail.com))
 
@@ -34,12 +34,12 @@ function [] = ZoomToCursor(source,~)
     XLimState = Zoom.OldXLim;
     YLimState = Zoom.OldYLim;
 
+    % if the callback was invoked manually with the Zoom.Restore flag
     if Zoom.Restore
-
+        % then restore the prior freeze ststus and axes limits
         freezeState = Zoom.RestoreProps.freezeState;
         XLimState = Zoom.RestoreProps.XLimState;
         YLimState = Zoom.RestoreProps.YLimState;
-
     else
 
         % If ZoomToCursor is already active, check that the axes that called the callback
@@ -81,7 +81,7 @@ function [] = ZoomToCursor(source,~)
     catch
         % no cursor position label exists for these axes
     end
-    
+
     % check if ZoomToCursor button was pressed on or off
     switch source.Value
         case 1 % on
@@ -118,11 +118,21 @@ function [] = ZoomToCursor(source,~)
                 'BackgroundColor','Black',...
                 'FontColor','Yellow',...
                 'Text','');
+
+            % add dynamic prop to hold active object boundary
+            try
+                Zoom.DynamicAxes.addprop('ActiveObjectBoundary');
+            catch
+                % property already exists
+            end
+            % placeholder for display of object boundary
+            Zoom.DynamicAxes.ActiveObjectBoundary = gobjects(1,1);
             
             % get original axes values
             pbarOriginal = Zoom.StaticAxes.PlotBoxAspectRatio;
             tagOriginal = Zoom.StaticAxes.Tag;
             
+            % get the handle to the image that will be changing sizes
             Zoom.DynamicImage = findobj(Zoom.DynamicAxes,'Type','image');
             % placeholder image in the reference (static) axes
             Zoom.StaticImage = imshow(Zoom.DynamicImage.CData,'Parent',Zoom.StaticAxes);
@@ -130,18 +140,22 @@ function [] = ZoomToCursor(source,~)
             % restore axis defaults for consistent display
             Zoom.StaticAxes = restore_axis_defaults(Zoom.StaticAxes,pbarOriginal,tagOriginal);
 
+            % hide the static image
             Zoom.StaticImage.Visible = 'Off';
 
+            % make static axes active
             axes(Zoom.StaticAxes);
 
+            % store the old axes limits in the event we need to restore them
             Zoom.OldXLim = Zoom.DynamicAxes.XLim;
             Zoom.OldYLim = Zoom.DynamicAxes.YLim;
 
+            % get the current axes ranges by taking the difference of each axis limit
             Zoom.XRange = diff(Zoom.DynamicAxes.XLim);
             Zoom.YRange = diff(Zoom.DynamicAxes.YLim);
 
-            % % account for the possibility of a clicked zoom tb button when
-            % % another axes was already active and the freeze was on
+            % account for the possibility of a clicked zoom tb button when
+            % another axes was already active and the freeze was on
             if Zoom.Freeze
                 Zoom.DynamicAxes.XLim = XLimState;
                 Zoom.DynamicAxes.YLim = YLimState;
@@ -150,6 +164,7 @@ function [] = ZoomToCursor(source,~)
             Zoom.XDist = Zoom.pct*Zoom.XRange;
             Zoom.YDist = Zoom.pct*Zoom.YRange;
 
+            % store the old 'windowsbuttonmotionfcn' and image 'buttondownfcn' handles
             Zoom.OldWindowButtonMotionFcn = Handles.fH.WindowButtonMotionFcn;
             Zoom.OldImageButtonDownFcn = Zoom.DynamicImage.ButtonDownFcn;
 
@@ -171,6 +186,15 @@ function [] = ZoomToCursor(source,~)
             catch
                 error('Failed to delete cursor label');
             end
+
+            % try and delete the object boundary
+            try
+                ObjectBoundary = findobj(Zoom.DynamicAxes,'Tag','ActiveObjectBoundary');
+                delete(ObjectBoundary);
+            catch
+                warning('Failed to delete active object boundary');
+            end
+
             try
                 delete(Zoom.StaticAxes)
             catch
@@ -186,14 +210,6 @@ function [] = ZoomToCursor(source,~)
             Zoom.DynamicAxes.XLim = Zoom.OldXLim;
             Zoom.DynamicAxes.YLim = Zoom.OldYLim;
 
-            % testing leaving out these lines, uncomment if bad behavior
-            % % reset original zoom levels
-            % Zoom.XDist = 0.5*Zoom.XRange;
-            % Zoom.YDist = 0.5*Zoom.YRange;
-            % Zoom.ZDist = 0.5*Zoom.ZRange;
-            % Zoom.ZoomLevelIdx = 6;
-            % Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
-            % end testing
     end  
     
     PODSData.Settings.Zoom = Zoom;
@@ -212,7 +228,6 @@ function [] = CursorMoving(~,PODSData)
     x = posn(1,1);
     y = posn(1,2);
     
-
     % 0 instead of one works better to be able to go over all pixel values
     % x and y are already in expressed in proper pixel coordinates
     x1 = min(max(0,x-0.5*Zoom.XDist),Zoom.XRange-Zoom.XDist) + 0.5;
@@ -227,21 +242,108 @@ function [] = CursorMoving(~,PODSData)
 
         ZoomPct = round((Zoom.XRange/Zoom.XDist)*100);
         posn2 = Zoom.DynamicAxes.CurrentPoint(1,:);
-        realx = posn2(1,1);
-        realy = posn2(1,2);
+        realx = round(posn2(1,1));
+        realy = round(posn2(1,2));
 
         if ~Zoom.Freeze
             DynamicAxes.XLim = [x1 x2];
             DynamicAxes.YLim = [y1 y2];
         end
 
-        try
-            DynamicAxes.CursorPositionLabel.Text = [' (X,Y) = (',num2str(round(realx)),...
-                ',',num2str(round(realy)),') | Zoom: ',...
-                num2str(ZoomPct),'%',...
-                ' | Value: ',num2str(Zoom.StaticImage.CData(round(realy),round(realx),:))];
-        catch
-            disp('Warning: Error updating cursor position label')
+        % set the inspection label based on the type of axes we are in and the location of the cursor
+        switch DynamicAxes.Tag
+            case 'OrderFactor'
+
+                try
+                    DynamicAxes.CursorPositionLabel.Text = ...
+                        [' (X,Y) = (',num2str(realx),...
+                        ',',num2str(realy),') | Zoom: ',...
+                        num2str(ZoomPct),'%',...
+                        ' | OF: ',num2str(PODSData.CurrentImage(1).OF_image(realy,realx))];
+                catch
+                    disp('Warning: Error updating cursor position label')
+                end
+
+            case 'AverageIntensity'
+
+                try
+                    DynamicAxes.CursorPositionLabel.Text = ...
+                        [' (X,Y) = (',num2str(realx),...
+                        ',',num2str(realy),') | Zoom: ',...
+                        num2str(ZoomPct),'%',...
+                        ' | Norm. average intensity: ',num2str(PODSData.CurrentImage(1).I(realy,realx))];
+                catch
+                    disp('Warning: Error updating cursor position label')
+                end
+
+            case 'Azimuth'
+
+                try
+                    DynamicAxes.CursorPositionLabel.Text = ...
+                        [' (X,Y) = (',num2str(realx),...
+                        ',',num2str(realy),') | Zoom: ',...
+                        num2str(ZoomPct),'%',...
+                        ' | Azimuth: ',num2str(PODSData.CurrentImage(1).AzimuthImage(realy,realx)),' radians, '...
+                        num2str(rad2deg(PODSData.CurrentImage(1).AzimuthImage(realy,realx))),' °'];
+                catch
+                    disp('Warning: Error updating cursor position label')
+                end
+
+            case 'Mask'
+
+                % if cursor is on an object
+                if PODSData.CurrentImage(1).bw(realy,realx)
+                    % get the idx of the object
+                    ObjIdx = PODSData.CurrentImage(1).L(realy,realx);
+                    % display in the label
+                    DynamicAxes.CursorPositionLabel.Text = ...
+                        [' (X,Y) = (',num2str(realx),',',num2str(realy),...
+                        ') | Zoom: ',num2str(ZoomPct),'%',...
+                        ' | Object ',num2str(ObjIdx)];
+
+                    % if the cursor has moved to a new object
+                    if ObjIdx~=Zoom.ActiveObjectIdx
+                        % delete any ActiveObjectBoundary (important in case our objects are "touching" in the mask)
+                        delete(findobj(DynamicAxes,'Tag','ActiveObjectBoundary'));
+                        % retrieve the new object
+                        Object = PODSData.CurrentImage(1).Object(ObjIdx);
+                        % and its boundary
+                        Boundary = Object.Boundary;
+                        % plot the boundary as a primitive line colored by object label
+                        DynamicAxes.ActiveObjectBoundary = line(DynamicAxes,...
+                            Boundary(:,2),Boundary(:,1),...
+                            'Color',Object.Label.Color,...
+                            'Linewidth',2,...
+                            'Tag','ActiveObjectBoundary',...
+                            'ButtonDownFcn',@SelectSingleObjects);
+                        % store the new object idx in the Zoom struct
+                        Zoom.ActiveObjectIdx = ObjIdx;
+                    end
+
+                else
+                    % just display the (x,y) position and zoom level
+                    DynamicAxes.CursorPositionLabel.Text = ...
+                        [' (X,Y) = (',num2str(realx),',',num2str(realy),...
+                        ') | Zoom: ',num2str(ZoomPct),'%',...
+                        ' | No object'];
+                    % delete the ActiveObjectBoundary
+                    ObjectBoundary = findobj(DynamicAxes,'Tag','ActiveObjectBoundary');
+                    delete(ObjectBoundary);
+                    % set ActiveObjectIdx to NaN, as there is no object under the cursor
+                    Zoom.ActiveObjectIdx = NaN;
+                end
+
+            otherwise
+
+                try
+                    DynamicAxes.CursorPositionLabel.Text = [' (X,Y) = (',num2str(realx),...
+                        ',',num2str(realy),') | Zoom: ',...
+                        num2str(ZoomPct),'%',...
+                        ' | Value: ',num2str(Zoom.StaticImage.CData(realy,realx,:))];
+                catch
+                    disp('Warning: Error updating cursor position label')
+                end
+
         end
         
         PODSData.Handles.fH.Pointer = 'crosshair';
@@ -273,24 +375,31 @@ function [] = ChangeZoomLevel(source,PODSData)
         case 'normal'
             % click
             % increases zoom level until maximum is reached
-            if Zoom.ZoomLevelIdx == 1
-                Zoom.ZoomLevelIdx = length(Zoom.ZoomLevels);
-            else
-                Zoom.ZoomLevelIdx = Zoom.ZoomLevelIdx - 1;
+            % unless Freeze is on
+            if ~Zoom.Freeze
+                if Zoom.ZoomLevelIdx == 1
+                    Zoom.ZoomLevelIdx = length(Zoom.ZoomLevels);
+                else
+                    Zoom.ZoomLevelIdx = Zoom.ZoomLevelIdx - 1;
+                end
+    
+                Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
             end
-
-            Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
             
         case 'alt'
             % ctrl-click or right-click
             % decreases zoom level until minimum (1X) is reached
-            if Zoom.ZoomLevelIdx == length(Zoom.ZoomLevels)
-                Zoom.ZoomLevelIdx = 1;
-            else
-                Zoom.ZoomLevelIdx = Zoom.ZoomLevelIdx + 1;
-            end
+            % unless freeze is on
 
-            Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
+            if ~Zoom.Freeze
+                if Zoom.ZoomLevelIdx == length(Zoom.ZoomLevels)
+                    Zoom.ZoomLevelIdx = 1;
+                else
+                    Zoom.ZoomLevelIdx = Zoom.ZoomLevelIdx + 1;
+                end
+    
+                Zoom.pct = Zoom.ZoomLevels(Zoom.ZoomLevelIdx);
+            end
 
         case 'extend'
             % shift-click
@@ -304,7 +413,10 @@ function [] = ChangeZoomLevel(source,PODSData)
         case 'open'
             % double click
             %   shows default zoom
-            Zoom.pct = 1;
+            % unless Freeze is on
+            if ~Zoom.Freeze
+                Zoom.pct = 1;
+            end
     end
     
     Zoom.XDist = Zoom.pct*Zoom.XRange;
