@@ -1,17 +1,17 @@
 function NameOut = ExpandVariableName(NameIn)
     switch NameIn
         case 'OFAvg'
-            NameOut = 'Object-Average Order Factor';
+            NameOut = 'Order Factor Average';
         case 'SBRatio'
-            NameOut = 'Local Signal to Background Ratio';
+            NameOut = 'Local S/B';
         case 'Area'
-            NameOut = 'Object Pixel Area';
+            NameOut = 'Area';
         case 'Perimeter'
-            NameOut = 'Object Perimeter';
+            NameOut = 'Perimeter';
         case 'Circularity'
-            NameOut = 'Object Circularity';
+            NameOut = 'Circularity';
         case 'SignalAverage'
-            NameOut = 'Average Raw Intensity';
+            NameOut = 'Raw Intensity Average';
         case 'MaxFeretDiameter'
             NameOut = 'Maximum Feret Diameter';
         case 'MinFeretDiameter'
@@ -22,26 +22,30 @@ function NameOut = ExpandVariableName(NameIn)
             NameOut = 'Minor Axis Length';
         case 'Eccentricity'
             NameOut = 'Eccentricity';
-        case 'AvgColocIntensity'
-            NameOut = 'Average Colocalization Channel Intensity';
-        case 'ROIPearsons'
-            NameOut = 'Single Object (ROI) Pearsons';
         case 'AvgReferenceChannelIntensity'
-            NameOut = 'Average Reference Channel Intensity';
+            NameOut = 'Reference Channel Average Intensity';
         case 'IntegratedReferenceChannelIntensity'
-            NameOut = 'Integrated Reference Channel Intensity';
+            NameOut = 'Reference Channel Integrated Intensity';
         case 'BGAverage'
-            NameOut = 'Average BG Intensity';
+            NameOut = 'BG Intensity Average';
         case 'AzimuthAverage'
-            NameOut = 'Average Azimuth';
+            NameOut = 'Azimuth Average';
         case 'AzimuthStd'
-            NameOut = 'Azimuth Standard Deviation';
+            NameOut = 'Azimuth Circular Standard Deviation';
         case 'Orientation'
             NameOut = 'Orientation';
         case 'EquivDiameter'
             NameOut = 'Equivalent Diameter';
         case 'ConvexArea'
             NameOut = 'Convex Area';
+        case 'MidlineRelativeAzimuth'
+            NameOut = 'Azimuth Relative to Midline';
+        case 'NormalRelativeAzimuth'
+            NameOut = 'Azimuth Relative to Midline Normal';
+        case 'MidlineLength'
+            NameOut = 'Midline Length';
+        case 'AzimuthAngularDeviation'
+            NameOut = 'Azimuth Angular Deviation';
         otherwise
             NameOut = NameIn;
     end
