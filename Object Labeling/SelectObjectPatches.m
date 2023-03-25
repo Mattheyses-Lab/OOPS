@@ -4,6 +4,8 @@ function SelectObjectPatches(source,~)
 %% get the location of the clicked point and the object corresponding to it
     % get (x,y) coordinates of most recent cursor position on axes
     CurrentPoint = source.Parent.CurrentPoint(1,1:2);
+    % store this handle so we can use it to update after deleting an object box
+    hAx = source.Parent;
     % get the main data structure
     PODSData = guidata(source);
     % get the handle to the active image in the GUI
