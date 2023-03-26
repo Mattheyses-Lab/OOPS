@@ -13,7 +13,6 @@ function UpdateImageTree(source)
     
     % if we have at least one replicate
     if CurrentGroup.nReplicates >= 1
-        Replicate = CurrentGroup.CurrentImage;
         % delete previous nodes
         delete(PODSData.Handles.ImageTree.Children);
         % make new nodes
