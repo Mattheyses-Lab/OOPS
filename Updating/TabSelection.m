@@ -155,6 +155,9 @@ function TabSelection(source,~)
     
         case 'View Objects'
     
+            % delete the object boundary plot
+            delete(PODSData.Handles.ObjectBoundaryPlot);
+
             % delete the object Azimuth lines
             delete(PODSData.Handles.ObjectAzimuthLines);
 
