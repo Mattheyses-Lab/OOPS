@@ -1,86 +1,68 @@
 function [branchesLabeled,dilatedL] = labelBranches(I)
     % skeletonizes, then labels individual branches in skeletonized 
     % binary image and returns unskeletonized label matrix
-    
-    % skeletonize the binary image
-    
 
-    % testing below - alternative skeletonization method
+    % skeletonize the binary image (works better if we thin first)
     binarySkeleton = bwmorph(I,"thin",inf);
     binarySkeleton = bwskel(binarySkeleton);
-
     % get the branchpoints from the skeletonized binary image
-    branchPoints=bwmorph(binarySkeleton,'branchpoints');
-    
+    branchPoints = bwmorph(binarySkeleton,'branchpoints');
     % remove branchpoints so we are left with only branches
     branches = imsubtract(binarySkeleton,branchPoints);
-    
-    % label the branches (8-connectivity)
-    branchesLabeled = bwlabel(branches); % label connected components
-    
+    % label the individual 8-connected branches (this is the first output)
+    branchesLabeled = bwlabel(branches);
     % create an image where every unlabeled pixel = NaN
     nanL = branchesLabeled;
     nanL(nanL==0) = NaN;
-    
     % initialize the output image which will hold our full labeled image
     dilatedL = zeros(size(nanL));
-
-    % get the pixel idx list for each 8-connected object in the input binary image
+    % preallocate mask image of just the branches
+    branchMask = false(size(branchesLabeled));
+    % set branch pixels to true
+    branchMask(branchesLabeled>0) = 1;
+    % get the linear pixel idx list for each 8-connected object in the input binary image
     props = regionprops(I,{'PixelIdxList'});
-    
+    % cell array of labels for each pixel in the mask
+    pixelLabels = cell(length(props),1);
+    % cell array of linear idxs for each pixel in the mask
+    pixelLinearIdxs = cell(length(props),1);
+    % the number of 8-connected objects in the input mask
+    nObjects = length(props);
+
     % for each object
-    for i = 1:size(props)
-        % get the branch labels for just this object
-        temp_nanL = zeros(size(nanL));
-        temp_nanL(:) = NaN;
-        temp_nanL(props(i).PixelIdxList) = nanL(props(i).PixelIdxList);
-        % get the mask of just this object
-        temp_mask = false(size(I));
-        temp_mask(props(i).PixelIdxList) = 1;
-        % get the label image for this object
-        temp_dilatedL = replacenansinmask(temp_nanL,temp_mask);
-        % add those labels to the full label image
-        dilatedL(props(i).PixelIdxList) = temp_dilatedL(props(i).PixelIdxList);
+    parfor i = 1:nObjects
+        % initialize array of NaNs, same size as input
+        objectnanL = nan(size(nanL));
+        % get the list of linear idxs for each pixel in the object
+        objectPixels = props(i).PixelIdxList;
+        % get the branch labels for this object
+        objectnanL(objectPixels) = nanL(objectPixels);
+        % get the unique labels in the object
+        labelsInObject = unique(objectnanL(~isnan(objectnanL)));
+        % add the object pixel idxs to our cell array
+        pixelLinearIdxs{i,1} = objectPixels;
+        % if only one unique label
+        if numel(labelsInObject)==1
+            % add labels to the cell array of pixel labels
+            pixelLabels{i,1} = repmat(labelsInObject,numel(objectPixels),1);
+        else
+            % get the mask of just this object
+            objectMask = false(size(I));
+            objectMask(objectPixels) = 1;
+            % the mask representing missing pixels we want to fill with fillmissing2()
+            objectMissingMask = objectMask & ~branchMask;
+            % get the label image for this object
+            objectDilatedL = fillmissing2(objectnanL,"nearest","MissingLocations",objectMissingMask);
+            % add labels to the cell array of pixel labels
+            pixelLabels{i,1} = objectDilatedL(objectPixels);
+        end
+
     end
 
-end
-
-
-function out = replacenansinmask(in,mask)
-
-    out = in;
-    
-    inSize = size(in);
-    
-    % Now find the nan's
-    nanLocations = isnan(in) & mask;
-    nanLinearIndexes = find(nanLocations);
-    
-    % and non-nans (only inside the mask)
-    nonNanLocations = ~isnan(in) & mask;
-    nonNanLinearIndexes = find(nonNanLocations);
-    
-    % Get the row and column locations of non-nan elements
-    [R, C] = ind2sub(inSize, nonNanLinearIndexes);
-    
-    for index = 1 : length(nanLinearIndexes)
-        thisLinearIndex = nanLinearIndexes(index);
-        % convert linear idx to row and col coordinates
-        [r,c] = ind2sub(inSize, thisLinearIndex);
-        % Get distances of this location to all the other locations
-        distances = sqrt((r-R).^2 + (c-C).^ 2);
-        % ascending sort
-        %[~, sortedIndexes] = sort(distances, 'ascend');
-    
-        [~,minIdx] = min(distances);
-    
-        % The closest non-nan value will be located at index sortedIndexes(1)
-        r2 = R(minIdx);
-        c2 = C(minIdx);
-    
-        newIdx = sub2ind(inSize,r2,c2);
-        % Replace the bad nan value in out with the good value in 'in'
-        out(thisLinearIndex) = in(newIdx);
-    end
+    % concatenate cell arrays of pixel idxs and labels into column vectors
+    pixelLinearIdxsVec = cat(1,pixelLinearIdxs{:});
+    pixelLabelsVec = cat(1,pixelLabels{:});
+    % add the labels to their corresponding pixels
+    dilatedL(pixelLinearIdxsVec) = pixelLabelsVec;
 
 end
