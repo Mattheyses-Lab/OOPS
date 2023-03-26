@@ -31,26 +31,23 @@ orig_boundariesy = boundariesy;
 % convert to polyshape, don't keep collinear points (won't take effect unless we simplify)
 boundarypoly = polyshape(boundariesx(1:end),boundariesy(1:end),"KeepCollinearPoints",false,"Simplify",false);
 
-%boundarypoly = simplify(boundarypoly);
-
 % testing below, get buffer around polygon for larger boundary
 d = 0.7071;
-%boundarypoly = polybuffer(boundarypoly,d);
 boundarypoly = polybuffer(boundarypoly,d,"JointType","round");
-% % boundarypoly = simplify(boundarypoly);
-% % end testing
+% end testing
 
 % extract coordinates of the polyshape vertices, these are our new boundaries
 boundariesx = [boundarypoly.Vertices(1:end,1);boundarypoly.Vertices(1,1)];
 boundariesy = [boundarypoly.Vertices(1:end,2);boundarypoly.Vertices(1,2)];
 % n points in the original boundary (subtract one to account for overlapping endpoints)
-boundaryPoints = length(boundariesx)-1;
+% boundaryPoints = length(boundariesx)-1;
 % get the perimeter of the boundary
 boundaryPerimeter = boundarypoly.perimeter;
-% same number of edges as number of unique vertices
-boundaryEdges = boundaryPoints;
-% determine the length of each edge of the boundary
-lengthPerEdge = boundaryPerimeter/boundaryEdges;
+
+% % same number of edges as number of unique vertices
+% boundaryEdges = boundaryPoints;
+% % determine the average length of each edge of the boundary
+% lengthPerEdge = boundaryPerimeter/boundaryEdges;
 
 %% interpolate and respace the boundary coordinates
 
@@ -126,25 +123,6 @@ smooth_boundariesy = boundariesy;
 % end respace
 
 %% Delaunay triangulation and Voronoi tesselation to find edges
-
-
-%% testing below
-% % convert to polyshape, don't keep collinear points (won't take effect unless we simplify)
-% boundarypoly = polyshape(boundariesx(1:end),boundariesy(1:end),"KeepCollinearPoints",false,"Simplify",false);
-% 
-% % testing below, get buffer around polygon for larger boundary
-% d = 0.7071;
-% %boundarypoly = polybuffer(boundarypoly,d);
-% boundarypoly = polybuffer(boundarypoly,d,"JointType","round");
-% %boundarypoly = simplify(boundarypoly);
-% % end testing
-% 
-% % extract coordinates of the polyshape vertices, these are our new boundaries
-% boundariesx = [boundarypoly.Vertices(1:end,1);boundarypoly.Vertices(1,1)];
-% boundariesy = [boundarypoly.Vertices(1:end,2);boundarypoly.Vertices(1,2)];
-%% end testing
-
-
 
 % extracting unique coordinates of the boundary for 
 % Voronoi tesselation & Delaunay triangulation
