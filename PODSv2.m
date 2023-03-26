@@ -159,7 +159,9 @@ PODSData.Handles.hObjectBoxType = uimenu(PODSData.Handles.hObjectBoxMenu,'Text',
 % options for box type
 PODSData.Handles.hObjectBoxType_Box = uimenu(PODSData.Handles.hObjectBoxType,'Text','Box','Checked','On','Callback',@ChangeObjectBoxType);
 PODSData.Handles.hObjectBoxType_Boundary = uimenu(PODSData.Handles.hObjectBoxType,'Text','Boundary','Checked','Off','Callback',@ChangeObjectBoxType);
-PODSData.Handles.hObjectBoxType_NewBoxes = uimenu(PODSData.Handles.hObjectBoxType,'Text','NewBoxes','Checked','Off','Callback',@ChangeObjectBoxType);
+PODSData.Handles.hObjectBoxType_Patch = uimenu(PODSData.Handles.hObjectBoxType,'Text','Patch','Checked','Off','Callback',@ChangeObjectBoxType);
+PODSData.Handles.hObjectBoxType_Polygon = uimenu(PODSData.Handles.hObjectBoxType,'Text','Polygon','Checked','Off','Callback',@ChangeObjectBoxType);
+PODSData.Handles.hObjectBoxType_Development = uimenu(PODSData.Handles.hObjectBoxType,'Text','Development','Checked','Off','Callback',@ChangeObjectBoxType);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
 
@@ -464,8 +466,8 @@ PODSData.Handles.ScatterPlotXVarGrid = uigridlayout(PODSData.Handles.ScatterPlot
 PODSData.Handles.ScatterPlotXVarGrid.Padding = [0 0 0 0];
 
 PODSData.Handles.ScatterPlotXVarSelectBox = uilistbox(PODSData.Handles.ScatterPlotXVarGrid,...
-    'Items', PODSData.Settings.ScatterPlotVariablesLong,...
-    'ItemsData', PODSData.Settings.ScatterPlotVariablesShort,...
+    'Items', PODSData.Settings.ObjectPlotVariablesLong,...
+    'ItemsData', PODSData.Settings.ObjectPlotVariables,...
     'Value',PODSData.Settings.ScatterPlotXVariable,...
     'Tag','XVariable',...
     'ValueChangedFcn',@ScatterPlotVariablesChanged,...
@@ -481,8 +483,8 @@ PODSData.Handles.ScatterPlotYVarGrid = uigridlayout(PODSData.Handles.ScatterPlot
 PODSData.Handles.ScatterPlotYVarGrid.Padding = [0 0 0 0];
 
 PODSData.Handles.ScatterPlotYVarSelectBox = uilistbox(PODSData.Handles.ScatterPlotYVarGrid,...
-    'Items', PODSData.Settings.ScatterPlotVariablesLong,...
-    'ItemsData', PODSData.Settings.ScatterPlotVariablesShort,...
+    'Items', PODSData.Settings.ObjectPlotVariablesLong,...
+    'ItemsData', PODSData.Settings.ObjectPlotVariables,...
     'Value',PODSData.Settings.ScatterPlotYVariable,...
     'Tag','YVariable',...
     'ValueChangedFcn',@ScatterPlotVariablesChanged,...
@@ -508,8 +510,8 @@ PODSData.Handles.SwarmPlotYVarGrid = uigridlayout(PODSData.Handles.SwarmPlotYVar
 PODSData.Handles.SwarmPlotYVarGrid.Padding = [0 0 0 0];
 
 PODSData.Handles.SwarmPlotYVarSelectBox = uilistbox(PODSData.Handles.SwarmPlotYVarGrid,...
-    'Items', PODSData.Settings.SwarmPlotVariablesLong,...
-    'ItemsData', PODSData.Settings.SwarmPlotVariablesShort,...
+    'Items', PODSData.Settings.ObjectPlotVariablesLong,...
+    'ItemsData', PODSData.Settings.ObjectPlotVariables,...
     'Value',PODSData.Settings.SwarmPlotYVariable,...
     'Tag','YVariable',...
     'ValueChangedFcn',@SwarmPlotYVariableChanged,...
@@ -1093,16 +1095,13 @@ disp('Setting up large image axes...')
     
     % set axis title
     PODSData.Handles.OrderFactorAxH = SetAxisTitle(PODSData.Handles.OrderFactorAxH,'Pixel-by-pixel Order Factor');
-    % change active axis so we can make custom colorbar/colormap
-    %axes(PODSData.Handles.OrderFactorAxH)
-    % custom colormap/colorbar
-    %[mycolormap,mycolormap_noblack] = MakeRGB;
+
+    % make colorbar and set colormap for the axes, hide the colorbar and disable interactions with it
     PODSData.Handles.OFCbar = colorbar(PODSData.Handles.OrderFactorAxH,'location','east','color','white','tag','OFCbar');
     PODSData.Handles.OrderFactorAxH.Colormap = PODSData.Settings.OrderFactorColormap;
-    
     PODSData.Handles.OFCbar.Visible = 'Off';
     PODSData.Handles.OFCbar.HitTest = 'Off';
-    
+    % hide axes toolbar and title, disable click interactivity, disable all default interactivity
     PODSData.Handles.OrderFactorAxH.Toolbar.Visible = 'Off';
     PODSData.Handles.OrderFactorAxH.Title.Visible = 'Off';
     PODSData.Handles.OrderFactorAxH.HitTest = 'Off';
@@ -1252,11 +1251,11 @@ disp('Setting up large image axes...')
     PODSData.Handles.MaskImgH.HitTest = 'Off';
     
     %% Azimuth
-    % create an axis, child of a panel, to fill the container
+    % azimuth image axes
     PODSData.Handles.AzimuthAxH = uiaxes(PODSData.Handles.ImgPanel2,...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
-        'Tag','AzimuthImage',...
+        'Tag','Azimuth',...
         'XTick',[],...
         'YTick',[],...
         'Color','Black');
@@ -1285,7 +1284,6 @@ disp('Setting up large image axes...')
     PODSData.Handles.PhaseBarComponents = PODSData.Handles.PhaseBarAxH.Children;
     set(PODSData.Handles.PhaseBarComponents,'Visible','Off');
     PODSData.Handles.PhaseBarAxH.Colormap = vertcat(tempmap,tempmap);
-    %colormap(gca,vertcat(tempmap,tempmap));
 
     PODSData.Handles.AzimuthAxH.YDir = 'Reverse';
     PODSData.Handles.AzimuthAxH.Visible = 'Off';
@@ -1516,6 +1514,8 @@ PODSData.Handles.SelectedObjectBoxes = gobjects(1,1);
 PODSData.Handles.AzimuthLines = gobjects(1,1);
 PODSData.Handles.ObjectAzimuthLines = gobjects(1,1);
 PODSData.Handles.ObjectMidlinePlot = gobjects(1,1);
+PODSData.Handles.ObjectBoundaryPlot = gobjects(1,1);
+
 
 % add PODSData to the gui using guidata
 % (this is how we will retain access to the data across different functions)
@@ -1529,11 +1529,7 @@ UpdateSummaryDisplay(PODSData.Handles.fH);
 
 % delete the splash screen and clear out java components so we don't run into issues when saving
 Splash.dispose();
-clear Splash
-clear label
-clear icon
-clear SplashImage
-clear SplashScreenIcon
+clear Splash label icon SplashImage SplashScreenIcon
 
 disp('Opening...')
 
@@ -1788,14 +1784,12 @@ pause(0.5)
 
             case 'Intensity'
                 IntensityMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
-                PODSData.Settings.IntensityColormap = IntensityMap;
                 PODSData.Handles.AverageIntensityAxH.Colormap = IntensityMap;
                 [PODSData.Handles.FFCAxH.Colormap] = deal(IntensityMap);
                 [PODSData.Handles.RawIntensityAxH.Colormap] = deal(IntensityMap);
                 [PODSData.Handles.PolFFCAxH.Colormap] = deal(IntensityMap);
                 PODSData.Handles.ObjectPolFFCAxH.Colormap = IntensityMap;
                 PODSData.Handles.ObjectNormIntStackAxH.Colormap = IntensityMap;
-%                 [PODSData.Handles.MStepsAxH.Colormap] = deal(IntensityMap);
                 PODSData.Handles.ObjectAzimuthOverlayAxH.Colormap = IntensityMap;
                 if ~isempty(PODSData.CurrentImage)
                     if PODSData.CurrentImage(1).ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value
@@ -1804,7 +1798,6 @@ pause(0.5)
                 end
             case 'OrderFactor'
                 OrderFactorMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
-                PODSData.Settings.OrderFactorColormap = OrderFactorMap;
                 PODSData.Handles.OrderFactorAxH.Colormap = OrderFactorMap;
                 PODSData.Handles.ObjectOFAxH.Colormap = OrderFactorMap;
                 PODSData.Handles.ObjectOFContourAxH.Colormap = OrderFactorMap;
@@ -1814,8 +1807,6 @@ pause(0.5)
                     UpdateImages(PODSData.Handles.fH);
                 end
             case 'Reference'
-                ReferenceMap = PODSData.Settings.ColormapsSettings.(ImageTypeName){3};
-                PODSData.Settings.ReferenceColormap = ReferenceMap;
                 if ~isempty(PODSData.CurrentImage)
                     if PODSData.CurrentImage(1).ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value
                         UpdateCompositeRGB();
@@ -1826,7 +1817,6 @@ pause(0.5)
 %                 % test below (making uniform cyclic colormap)
 %                  AzimuthMap = MakeCircularColormap(AzimuthMap);
 %                 % end test
-                PODSData.Settings.AzimuthColormap = AzimuthMap;
                 PODSData.Handles.AzimuthAxH.Colormap = vertcat(AzimuthMap,AzimuthMap);
                 PODSData.Handles.PhaseBarAxH.Colormap = vertcat(AzimuthMap,AzimuthMap);
                 if strcmp(PODSData.Settings.CurrentTab,'Azimuth') && ...
@@ -1852,23 +1842,20 @@ pause(0.5)
             save([SavePath,'\Settings\ColormapsSettings.mat'],'ColormapsSettings');        
         end
         UpdateLog3(source,'Done.','append');
-        % update the settings object with these settings - maybe not necessary since we do that dynamically
-        % as the listbox selections change??
-        PODSData.Settings.UpdateColormapsSettings();
     end
 
 %% Labels settings
 
-    function LabelTreeNodeTextChanged(source,event)
+    function LabelTreeNodeTextChanged(~,event)
         event.Node.NodeData.Name = event.Node.Text;
     end
 
-    function DeleteLabel(source,event,fH)
+    function DeleteLabel(source,~,fH)
         % get the selected nodes (to delete)
         SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
         % if no nodes in the tree are truly 'selected', get the right-clicked node instead
         if numel(SelectedNodes)==0
-            SelectedNodes = fH.CurrentObject
+            SelectedNodes = fH.CurrentObject;
         end
         % handle possible error (we always need at least one label)
         if PODSData.Settings.nLabels==1 || PODSData.Settings.nLabels == numel(SelectedNodes)
@@ -1878,12 +1865,10 @@ pause(0.5)
 
         % loop through and delete the labels corresponding to each node
         for NodeIdx = 1:numel(SelectedNodes)
-%             SelectedNode = fH.CurrentObject;
-%             cLabel = SelectedNode.NodeData;
+            % get the next label
             cLabel = SelectedNodes(NodeIdx).NodeData;
             % update log to indicate progress for each label
             UpdateLog3(fH,['Deleting [Label:',cLabel.Name,']...'],'append');
-            %delete(SelectedNode)
             % before deleting the label, we need to check for any objects that would end up unlabeled
             ObjectsWithOldLabel = PODSData.getObjectsByLabel(cLabel);
             % delete the old label
@@ -1920,7 +1905,7 @@ pause(0.5)
         UpdateLog3(fH,'Done.','append');
     end
 
-    function DeleteLabelAndObjects(source,event,fH)
+    function DeleteLabelAndObjects(source,~,fH)
         % get the selected nodes (to delete)
         SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
         % if no nodes in the tree are truly 'selected', get the right-clicked node instead
@@ -1957,7 +1942,7 @@ pause(0.5)
         UpdateLog3(fH,'Done.','append');
     end
 
-    function ApplyLabelToSelectedObjects(source,event,fH)
+    function ApplyLabelToSelectedObjects(source,~,fH)
         % get the node that was right-clicked
         SelectedNode = fH.CurrentObject;
         % get the label we are going to apply to the objects
@@ -1970,7 +1955,7 @@ pause(0.5)
         UpdateLog3(fH,'Done.','append');
     end
 
-    function SelectLabeledObjects(source,event,fH)
+    function SelectLabeledObjects(source,~,fH)
         % get the selected nodes
         SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
         % if no nodes in the tree are truly 'selected', get the right-clicked node instead
@@ -1990,7 +1975,7 @@ pause(0.5)
         UpdateLog3(fH,'Done.','append');
     end
 
-    function MergeLabels(source,event,fH)
+    function MergeLabels(source,~,fH)
         % get the selected nodes
         SelectedNodes = PODSData.Handles.LabelTree.SelectedNodes;
         % get the node that was right-clicked
@@ -2023,7 +2008,7 @@ pause(0.5)
         UpdateLog3(fH,'Done.','append');
     end
 
-    function AddNewLabel(source,event)
+    function AddNewLabel(~,~)
         PODSData.Settings.AddNewObjectLabel([],[]);
         NewLabel = PODSData.Settings.ObjectLabels(end);
         newNode = uitreenode(PODSData.Handles.LabelTree,...
@@ -2033,7 +2018,7 @@ pause(0.5)
         newNode.ContextMenu = PODSData.Handles.LabelContextMenu;
     end
 
-    function EditLabelColor(source,event,fH)
+    function EditLabelColor(source,~,fH)
         SelectedNode = fH.CurrentObject;
         cLabel = SelectedNode.NodeData;
         cLabel.Color = uisetcolor();
@@ -2127,15 +2112,13 @@ pause(0.5)
     function [axH] = restore_axis_defaults(axH,OriginalPlotBoxAspectRatio,OriginalTag)
         % restore axis defaults that were changed by imshow()
         axH.YDir = 'reverse';
-        %axH.PlotBoxAspectRatioMode = 'manual';
-        %axH.DataAspectRatioMode = 'auto';
         axH.PlotBoxAspectRatio = OriginalPlotBoxAspectRatio;
         axH.XTick = [];
         axH.YTick = [];
         axH.Tag = OriginalTag;
-        
+        % create a custom toolbar for the axes
         tb = axtoolbar(axH,{});
-
+        % clear all of the default interactions
         axH.Interactions = [];
         
         % add relevant custom toolbars to specific axes
@@ -2161,7 +2144,7 @@ pause(0.5)
                 addShowReferenceImageToolbarBtn;
                 addLineScanToolbarBtn;
                 addExportAxesToolbarBtn;
-            case 'AzimuthImage'
+            case 'Azimuth'
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
                 addShowAsOverlayToolbarBtn;
@@ -2169,7 +2152,6 @@ pause(0.5)
                 addExportAxesToolbarBtn;
         end
         
-        % Adding custom toolbar to allow ZoomToCursor
         function addZoomToCursorToolbarBtn
             btn = axtoolbarbtn(tb,'state');
             btn.Icon = 'MagnifyingGlassBlackAndYellow.png';
@@ -2304,9 +2286,8 @@ pause(0.5)
 
         % get the object data table
         T = SavePODSData(source);
-        % the variables we can cluster on
-        %VarLongList = PODSData.Settings.SwarmPlotVariablesLong;
-        VarShortList = PODSData.Settings.SwarmPlotVariablesShort;
+        % the variables we can use to cluster
+        VarShortList = PODSData.Settings.ObjectPlotVariables;
         % get user settings for the clustering
         ClusterSettings = GetClusterSettings(VarShortList);
         % make sure the output is valid
@@ -2394,7 +2375,7 @@ pause(0.5)
 
     end
 
-    function mbShowObjectImagesByLabel(source,~)
+    function mbShowObjectImagesByLabel(~,~)
 
         fH_ObjectImages = uifigure(...
             'Name','Object images by label',...
@@ -2459,21 +2440,9 @@ pause(0.5)
     function ChangeObjectBoxType(source,~)
         PODSData.Settings.ObjectBoxType = source.Text;
         UpdateLog3(source,['Object Box Type Changed to ',source.Text],'append');
-        
-        switch PODSData.Settings.ObjectBoxType
-            case 'Box'
-                PODSData.Handles.hObjectBoxType_Box.Checked = 'On';
-                PODSData.Handles.hObjectBoxType_Boundary.Checked = 'Off';
-                PODSData.Handles.hObjectBoxType_NewBoxes.Checked = 'Off';
-            case 'Boundary'
-                PODSData.Handles.hObjectBoxType_Boundary.Checked = 'On';
-                PODSData.Handles.hObjectBoxType_Box.Checked = 'Off';
-                PODSData.Handles.hObjectBoxType_NewBoxes.Checked = 'Off';
-            case 'NewBoxes'
-                PODSData.Handles.hObjectBoxType_NewBoxes.Checked = 'On';
-                PODSData.Handles.hObjectBoxType_Boundary.Checked = 'Off';
-                PODSData.Handles.hObjectBoxType_Box.Checked = 'Off';
-        end
+
+        set(PODSData.Handles.hObjectBoxType.Children(),'Checked','Off');
+        set(PODSData.Handles.(['hObjectBoxType_',source.Text]),'Checked','On');
 
         % only update summary overview if 'Project' is selected
         UpdateSummaryDisplay(source,{'Project'});
@@ -3319,17 +3288,17 @@ pause(0.5)
 
         tempax = copyobj(cax,tempfig);
         tempax.Visible = 'On';
-        tempax.XColor = 'White';
-        tempax.YColor = 'White';
+        tempax.XColor = 'Black';
+        tempax.YColor = 'Black';
         tempax.Box = 'On';
-        tempax.LineWidth = 2;
+        tempax.LineWidth = 0.5;
         tempax.Color = 'Black';
 
         tempax.Title.String = '';
         tempax.Units = 'Normalized';
         tempax.InnerPosition = [0 0 1 1];
 
-        export_fig([path,filename],tempfig);
+        export_fig([path,filename],tempfig,'-nocrop');
 
         close(tempfig)
 
@@ -3344,6 +3313,18 @@ pause(0.5)
         ctb = source.Parent;
         cax = ctb.Parent;
         im = findobj(cax,'Type','image');
+
+        % if strcmp(cax.Tag,'OrderFactor')
+        %     switch event.Value
+        %         case 1
+        %             im.CData = PODSData.Group(cGroupIdx).Replicate(cImageIdx).MaskedOFImageRGB;
+        %         case 0
+        %             im.CData = PODSData.Group(cGroupIdx).Replicate(cImageIdx).OF_image;
+        %     end
+        % 
+        %     return
+        % end
+
         switch event.Value
             case 1 % 'On'
                 im.AlphaData = PODSData.Group(cGroupIdx).Replicate(cImageIdx).bw;

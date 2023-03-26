@@ -4,36 +4,49 @@ classdef PODSImage < handle
     properties
 %% Parent/Child
 
+        % handle to the PODSGroup to which this PODSImage belongs
         Parent PODSGroup
+
+        % array of handles to the objects detected for this PODSImage
         Object PODSObject
         
 %% Input Image Properties
-        % image info
+        
+        % file name of the original input image
         filename char
+
+        % shortened file name (no path)
         pol_shortname char
         pol_fullname char
-        
-        % size of image
+
+        % width of the image (number of columns in the image matrix)
         Width double
+
+        % height of the image (number of the rows in this image)
         Height double
         
 %% Raw data stack and various normalized/averaged versions
         % raw image stack - pol_rawdata(y/row,x/col,PolIdx)
         %   PolIdx: 1 = 0 deg | 2 = 45 deg | 3 = 90 deg | 4 = 135 deg
         pol_rawdata
+
         % average intensity of the raw data
         RawPolAvg
+
         % flat-field corrected image stack - same indexing as raw
         pol_ffc
+
         % average image stack - Pol_ImAvg(y/row,x/col)
         Pol_ImAvg
+
         % pixel-normalized image stack - same indexing as raw
         norm
+
         % logical array of the pixels with intensity > 0 (should be true for all)
         r1
         
-%% Status Tracking        
-        % status parameters - false by default as we haven't started yet
+%% Status Tracking    
+
         FilesLoaded = false
         FFCDone = false
         MaskDone = false
@@ -43,22 +56,28 @@ classdef PODSImage < handle
         ObjectAzimuthDone = false
         ReferenceImageLoaded = false
         
-%% Masking            
-        % masks
+%% Masking      
+
+        % image mask
         bw logical
         
-        % label matrices
+        % label matrix that defines the objects
         L
 
-        % threshhold
-        ThresholdAdjusted logical
+        % whether the mask intensity threshold has been manually adjusted
+        ThresholdAdjusted logical = false
+
+        % the intensity threshold used to generate the mask (only for certain mask types)
         level double
         
         % masking steps
         I double
         EnhancedImg double
 
+        % the type of mask applied to this image ('Default', 'Custom')
         MaskType = 'Default'
+
+        % the name of the mask applied to this image (various)
         MaskName = 'Legacy'
         
         % mask threshold adjustment (for display purposes)
@@ -74,9 +93,6 @@ classdef PODSImage < handle
         ReferenceImage double
         ReferenceImageEnhanced double
         
-%%
-        AzimuthLineData double
-        
 %% Output Images
 
         AzimuthImage double
@@ -89,56 +105,71 @@ classdef PODSImage < handle
         % output values
         SBAvg double
         
-%%
+%% Intensity display limits
+
         PrimaryIntensityDisplayLimits = [0 1];
         ReferenceIntensityDisplayLimits = [0 1];
-        
-%% Settings
-        % store handle to settings object to speed up retrieval of various settings
-        %Settings PODSSettings
  
     end
     
-    % dependent properties
+    % dependent properties (not stored in memory, calculated each time they are retrieved)
     properties (Dependent = true)
         
-        % other output images that we don't need in memory
-        OFImageRGB        
+        % OF image in RGB format
+        OFImageRGB
+
+        % OF image with mask applied | masked pixels = 0
         MaskedOFImage
+
+        % OF image in RGB format with mask applied | masked pixels = [0 0 0] (black)
         MaskedOFImageRGB
+
+        % azimuth image in RGB format
         AzimuthRGB
+
+        % masked azimuth image in RGB format | masked pixels = [0 0 0] (black)
         MaskedAzimuthRGB
 
-        % no need to keep this in memory, calculating is pretty fast and it will change frequently
+        % struct() of morphological properties returned by regionprops(), see get() method for full list
         ObjectProperties struct
 
-
+        % 4-connected object boundaries
         ObjectBoundaries4
+
+        % 8-connected object boundaries
         ObjectBoundaries8
         
-        % only the individual PODSObject objects themselves will store their names in memory
+        % cell array of the names of all of the objects in this PODSImage
         ObjectNames cell
         
-        % image stacks normalized to the stack-max. again, quick to calculate, expensive to store
+        % flat-field corrected image stack, normalized to the maximum value among all pixels in the stack
         pol_ffc_normalizedbystack
+
+        % raw image stack, normalized to the maximum value among all pixels in the stack
         pol_rawdata_normalizedbystack
         
-        % depends on the size of PODSObject
+        % number of objects detected in this PODSImage
         nObjects uint16
         
-        % depends on user-selected index
+        % currently selected object in this PODSImage
         CurrentObject PODSObject
         
-        % image dimensions, returned as char array for display purposes: 'dim1xdim2'
+        % image dimensions as a char array for display purposes: 'dim1xdim2'
         Dimensions char
         
         % 2-element vector describing the limits of the image in real-world coordinates
         RealWorldLimits double        
         
-        % depend on objects
+        % average OF among all objects
         OFAvg double
+
+        % maximum OF among all objects
         OFMax double
+
+        % minimum OF among all objects
         OFMin double
+
+        % list of pixel OFs for all of the pixels in the image mask
         OFList double
 
         % various filtered output
@@ -148,29 +179,28 @@ classdef PODSImage < handle
         % index of this image in [obj.Parent.Replicate()]
         SelfIdx
 
-        % some display properties specific to this image
+        % title of the threshold adjustment panel in the GUI
         ThreshPanelTitle char
+
+        % name of the threshold statistic being adjusted, depends on MaskType/MaskName
         ThreshStatisticName char
+
+        % whether or not manual image thresholding is enabled, depends on MaskType/MaskName
         ManualThreshEnabled logical
 
-        % quick access to project settings
+        % handle to the PODSSettings object, shared across the entire data structure
         Settings PODSSettings
 
+        % table used to build the image summary uitable shown in the GUI
         ImageSummaryDisplayTable
 
     end
     
     methods
         
-        % class constructor
+        % constructor
         function obj = PODSImage(Group)
             obj.Parent = Group;
-
-            % if ~isempty(obj.Parent)
-            %     obj.Settings = Group.Settings;
-            % else
-            %     obj.Settings = PODSSettings.empty();
-            % end
             
             % image name (minus path and file extension)
             obj.pol_shortname = '';
@@ -190,7 +220,7 @@ classdef PODSImage < handle
             obj.CurrentObjectIdx = 0;
         end
         
-        % destructor method
+        % destructor
         function delete(obj)
             % delete obj.Object first
             obj.deleteObjects();
@@ -198,7 +228,7 @@ classdef PODSImage < handle
             delete(obj);
         end
 
-        % saveobj method
+        % saveobj() method
         function replicate = saveobj(obj)
 
             replicate.filename = obj.filename;
@@ -401,8 +431,11 @@ classdef PODSImage < handle
             nLabels = length(obj.Settings.ObjectLabels);
             ObjectDataByLabel = cell(1,nLabels);
             for i = 1:nLabels
-                % find objects with LabelIdx i
-                ObjectLabelIdxs = find([obj.Object.LabelIdx]==i);
+                % % find objects with LabelIdx i
+                % ObjectLabelIdxs = find([obj.Object.LabelIdx]==i);
+                % testing new method below
+                ObjectLabelIdxs = find([obj.Object.Label]==obj.Settings.ObjectLabels(i));
+                % end testing
                 % add [Var2Get] from those objects to cell i of ObjectDataByLabel
                 ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
             end
@@ -768,10 +801,14 @@ classdef PODSImage < handle
 
         % get ObjectProperties
         function ObjectProperties = get.ObjectProperties(obj)
-            % label matrix should be 4-connected, so ObjectProperties
-            % should as well
 
-            % properties from ObjectProps struct
+            % if no objects identified by the label matrix, return empty
+            if max(max(obj.L))==0
+                ObjectProperties = [];
+                return
+            end
+
+            % get morphological properties from regionprops()
             ObjectProperties = regionprops(full(obj.L),full(obj.bw),...
                 {'Area',...
                 'BoundingBox',...
@@ -797,6 +834,24 @@ classdef PODSImage < handle
                 'MaxFeretProperties',...
                 'MinFeretProperties'});
             
+            % % get idxs to 'Image' and 'BoundingBox' fields
+            % fnames = fieldnames(ObjectProperties);
+            % % convert ObjectProperties struct to cell array
+            % C = struct2cell(ObjectProperties).';
+            % % get object images (using struct fieldnames to find idx to 'Image' column in cell array)
+            % ObjectImages = C(:,ismember(fnames,'Image'));
+            % % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
+            % ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
+            % % get boundaries from ObjectImages
+            % B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes'),ObjectImages,'UniformOutput',0);
+            % % add bounding box offsets to boundary coordinates from ObjectImages
+            % % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
+            % B = cellfun(@(b,box) bsxfun(@plus,b{1},box([2 1]) - 0.5),B,ObjectBBox,'UniformOutput',0);
+            % % add object boundaries cell to props struct
+            % ObjectProperties(end).BWBoundary = [];
+            % [ObjectProperties(:).BWBoundary] = deal(B{:});
+
+            %% testing below - new method to get "perfect" binary boundaries
             % get idxs to 'Image' and 'BoundingBox' fields
             fnames = fieldnames(ObjectProperties);
             % convert ObjectProperties struct to cell array
@@ -806,10 +861,10 @@ classdef PODSImage < handle
             % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
             ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
             % get boundaries from ObjectImages
-            B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes'),ObjectImages,'UniformOutput',0);
+            B = cellfun(@(obj_img)perfectBinaryBoundaries(padarray(obj_img,[1,1])),ObjectImages,'UniformOutput',0);
             % add bounding box offsets to boundary coordinates from ObjectImages
             % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
-            B = cellfun(@(b,box) bsxfun(@plus,b{1},box([2 1]) - 0.5),B,ObjectBBox,'UniformOutput',0);
+            B = cellfun(@(b,box) bsxfun(@plus,b,box([2 1]) - 1.5),B,ObjectBBox,'UniformOutput',0);
             % add object boundaries cell to props struct
             ObjectProperties(end).BWBoundary = [];
             [ObjectProperties(:).BWBoundary] = deal(B{:});
@@ -916,6 +971,78 @@ classdef PODSImage < handle
                         % update total number of vertices
                         TotalUnselectedVertices = TotalUnselectedVertices+nvertices;
                 end
+            end
+        end
+
+        function [...
+                AllVertices,...
+                AllCData,...
+                SelectedFaces,...
+                UnselectedFaces...
+                ] = getObjectPatchData2(obj)
+
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+
+            % get list of unselected objects
+            Unselected = AllObjects(~[obj.Object.Selected]);
+            % get list of selected objects
+            Selected = AllObjects([obj.Object.Selected]);
+
+            totalnObjects = numel(Unselected)+numel(Selected);
+
+            % highest number of boundary vertices among all objects
+            AllVerticesMax = 0;
+
+            % total number of boundary vertices among all objects
+            AllVerticesSum = 0;
+
+            % for each object
+            for cObject = obj.Object
+                % get the number of vertices in the boundary
+                nVertices = size(cObject.SimplifiedBoundary,1);
+                % determine the total and max number of vertices
+                AllVerticesSum = AllVerticesSum + nVertices;
+                AllVerticesMax = max(AllVerticesMax,nVertices);
+            end
+
+            % initialize unselected faces matrix (each row is a vector of vertex idxs)
+            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
+            % initialize selected faces matrix (each row is a vector of vertex idxs)
+            SelectedFaces = nan(totalnObjects,AllVerticesMax);
+            % list of boundary coordinates for all objects
+            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
+            % object/face counter
+            Counter = 0;
+            % list of FaceVertexCData for the patch objects we are going to draw
+            AllCData = zeros(AllVerticesSum+totalnObjects,3);
+            % total number of vertices we have created faces for
+            TotalVertices = 0;
+
+            for cObject = obj.Object
+                % increment the object/face counter
+                Counter = Counter + 1;
+                % get the boundary
+                thisObjectBoundary = cObject.SimplifiedBoundary;
+                % determine number of vertices
+                nvertices = size(thisObjectBoundary,1);
+                % obtain vertices idx
+                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
+                % add boundary coordinates to list of vertices
+                AllVertices(AllVerticesIdx,:) = [thisObjectBoundary(:,2) thisObjectBoundary(:,1)];
+                % add CData for each vertex
+                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                % set object faces depending on their selection status
+                switch cObject.Selected
+                    case true
+                        % add vertex idxs to selected faces list
+                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                    case false
+                        % add vertex idxs to unselected faces list
+                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                end
+                % increment the total number of vertices
+                TotalVertices = TotalVertices + nvertices;
             end
         end
 

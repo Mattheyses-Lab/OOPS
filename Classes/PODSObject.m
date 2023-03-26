@@ -6,26 +6,26 @@ classdef PODSObject < handle
         Parent PODSImage
         
         % morphological properties from regionprops()
-        Area
-        BoundingBox
-        Centroid
-        Circularity
-        ConvexArea
-        ConvexHull
-        ConvexImage
-        Eccentricity
-        EquivDiameter
-        Extent
-        Extrema
-        FilledArea
+        Area = NaN
+        BoundingBox = NaN
+        Centroid = NaN
+        Circularity = NaN
+        ConvexArea = NaN
+        ConvexHull = NaN
+        ConvexImage = NaN
+        Eccentricity = NaN
+        EquivDiameter = NaN
+        Extent = NaN
+        Extrema = NaN
+        FilledArea = NaN
         Image
-        MajorAxisLength
-        MinorAxisLength
-        Orientation
-        Perimeter
-        Solidity
-        MaxFeretDiameter
-        MinFeretDiameter
+        MajorAxisLength = NaN
+        MinorAxisLength = NaN
+        Orientation = NaN
+        Perimeter = NaN
+        Solidity = NaN
+        MaxFeretDiameter = NaN
+        MinFeretDiameter = NaN
         
         % linear pixel indices to object pixels in full-sized image
         PixelIdxList
@@ -34,9 +34,10 @@ classdef PODSObject < handle
         PixelList
         
         % index to the subimage such that L(idx{:}) extracts the elements
+        % (2x1 cell | each cell is a 1xm or 1xn double for y and x subarray idxs, respectively)
         SubarrayIdx
 
-        % coordinates if the object boundary
+        % coordinates of the object boundary (mx2 double | m = number of boundary points)
         Boundary
 
         % coordinates of the object midline
@@ -45,9 +46,9 @@ classdef PODSObject < handle
         % S/B properties
         BGIdxList
         BufferIdxList
-        SignalAverage
-        BGAverage
-        SBRatio
+        SignalAverage = NaN
+        BGAverage = NaN
+        SBRatio = NaN
         
         % Selection and labeling
         Label PODSLabel
@@ -55,10 +56,9 @@ classdef PODSObject < handle
 
         % object azimuth stats
         % (currently somewhat slow to calculate, so store them in memory)
-        %AzimuthAverage
-        AzimuthStd
-        MidlineRelativeAzimuth
-        NormalRelativeAzimuth
+        AzimuthStd = NaN
+        MidlineRelativeAzimuth = NaN
+        NormalRelativeAzimuth = NaN
 
 
     end % end properties
@@ -70,8 +70,14 @@ classdef PODSObject < handle
         % list of azimuth pixel values
         AzimuthPixelValues
 
-        % rarely used for now, so we don't need to store it constantly
+        % name of the group that to which this object's image belongs
         GroupName
+
+        % name of this object's parent image
+        ImageName
+
+        % name of this object's parent image, but with some special characters preceeded by '\'
+        InterpreterFriendlyImageName
 
         % various object images
         OFSubImage 
@@ -97,8 +103,7 @@ classdef PODSObject < handle
         OFMax
         OFPixelValues
         
-        % need to make some dependent properties for object labels so
-        % we can search for objects by the properties of their labels
+        % object label properties, depend on currently applied label (PODSLabel object)
         LabelIdx
         LabelName
         LabelColor
@@ -115,6 +120,15 @@ classdef PODSObject < handle
 
         % simplified boundary (may store in memory if becomes useful)
         SimplifiedBoundary
+
+        % boundary coordinates w.r.t. the object's padded subarray idx
+        PaddedSubIdxBoundary
+
+        % 2-element adjustment vector to translate object coordinates w.r.t. the object's padded subarray idx
+        PaddedSubarrayIdxCoordinateAdjustment
+
+        % boundary coordinates w.r.t. the object's subarray idx
+        SubIdxBoundary
 
         % other stats !IN DEVELOPMENT!
         Tortuosity
@@ -245,7 +259,7 @@ classdef PODSObject < handle
             [obj(:).Selected] = deal(NewSelectionStatus{:});
         end
 
-        %% Dependent 'get' methods
+        %% Dependent get() methods
 
         function SelfIdx = get.SelfIdx(obj)
             SelfIdx = find(obj.Parent.Object==obj);
@@ -259,15 +273,41 @@ classdef PODSObject < handle
             % get x and y coordinates of the object boundary
             x = obj.Boundary(:,2);
             y = obj.Boundary(:,1);
-            % create polygon from boundary coordinates
-            temp_poly = polyshape(x,y,"Simplify",false,"KeepCollinearPoints",false);
-            % simplify it
-            %temp_poly = simplify(temp_poly);
-            % extract the simplified coordinates (with duplicated endpoint)
-            newX = [temp_poly.Vertices(:,1);temp_poly.Vertices(1,1)];
-            newY = [temp_poly.Vertices(:,2);temp_poly.Vertices(1,2)];
+
+            try
+                % create polygon from boundary coordinates
+                temp_poly = polyshape(x,y,"Simplify",false,"KeepCollinearPoints",false);
+                % simplify it
+                %temp_poly = simplify(temp_poly);
+                % extract the simplified coordinates (with duplicated endpoint)
+                newX = [temp_poly.Vertices(:,1);temp_poly.Vertices(1,1)];
+                newY = [temp_poly.Vertices(:,2);temp_poly.Vertices(1,2)];
+            catch
+                newX = x;
+                newY = y;
+            end
 
             SimplifiedBoundary = [newY newX];
+        end
+
+        function SubIdxBoundary = get.SubIdxBoundary(obj)
+            % shift the boundary coordinates to match the subarray idx of the object
+            SubIdxBoundary = obj.Boundary - [obj.SubarrayIdx{1,1}(1), obj.SubarrayIdx{1,2}(1)] + 1;
+        end
+
+        function PaddedSubIdxBoundary = get.PaddedSubIdxBoundary(obj)
+
+            PaddedSubIdxBoundary = obj.SubIdxBoundary + obj.PaddedSubarrayIdxCoordinateAdjustment;
+        end
+
+        function PaddedSubarrayIdxCoordinateAdjustment = get.PaddedSubarrayIdxCoordinateAdjustment(obj)
+            % get the padded subarray idx
+            paddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
+            % determine how many pxs of padding were added to top and left of subarray idx
+            topAdjust = obj.SubarrayIdx{1,1}(1) - paddedSubarrayIdx{1,1}(1);
+            leftAdjust = obj.SubarrayIdx{1,2}(1) - paddedSubarrayIdx{1,2}(1);
+            % return the 2-element output vector
+            PaddedSubarrayIdxCoordinateAdjustment = [topAdjust, leftAdjust];
         end
 
         function OFAvg = get.OFAvg(obj)
@@ -280,7 +320,7 @@ classdef PODSObject < handle
         end
         
         function OFMax = get.OFMax(obj)
-            % max OF of all pixels identified by the mask
+            % max OF of all pixels in the object mask
             try
                 OFMax = max(obj.Parent.OF_image(obj.PixelIdxList));
             catch
@@ -289,7 +329,7 @@ classdef PODSObject < handle
         end
         
         function OFMin = get.OFMin(obj)
-            % min OF of all object pixels
+            % min OF of all pixels in the object mask
             try
                 OFMin = min(obj.Parent.OF_image(obj.PixelIdxList));
             catch
@@ -332,7 +372,8 @@ classdef PODSObject < handle
         end
         
         function LabelName = get.LabelName(obj)
-            LabelName = obj.Label.Name;
+            % convert the name of this object's label to a string, return
+            LabelName = convertCharsToStrings(obj.Label.Name);
         end
         
         function LabelColor = get.LabelColor(obj)
@@ -340,8 +381,21 @@ classdef PODSObject < handle
         end
 
         function GroupName = get.GroupName(obj)
-            % get the name of the group this object belongs to
-            GroupName = obj.Parent.Parent.GroupName;
+            % convert the name of this object's group to a string, return
+            GroupName = convertCharsToStrings(obj.Parent.Parent.GroupName);
+        end
+
+        function ImageName = get.ImageName(obj)
+            ImageName = categorical({obj.Parent.pol_shortname});
+        end
+
+        function InterpreterFriendlyImageName = get.InterpreterFriendlyImageName(obj)
+            % nameSplit = strsplit(obj.Parent.pol_shortname,'_');
+            % InterpreterFriendlyImageName = categorical({strjoin(nameSplit,"\_")});
+
+            % testing below
+            nameSplit = strsplit(obj.Parent.pol_shortname,'_');
+            InterpreterFriendlyImageName = convertCharsToStrings(strjoin(nameSplit,"\_"));
         end
 
         function OFPixelValues = get.OFPixelValues(obj)
@@ -517,7 +571,7 @@ classdef PODSObject < handle
 
             try
                 midline = obj.Midline;
-                Tortuosity = 1-(getCurveLength([midline(1,:);midline(end,:)])/obj.MidlineLength);
+                Tortuosity = obj.MidlineLength/(getCurveLength([midline(1,:);midline(end,:)]));
             catch
                 Tortuosity = NaN;
             end

@@ -2,13 +2,13 @@ classdef PODSGroup < handle
     % experimental groups class
     properties
 
-        % handle to the PODS project containing this group
+        % handle to the PODSProject containing this group
         Parent PODSProject
 
-        % group info
+        % the user-defined name of this group
         GroupName char        
 
-        % replicates within group, no problem storing in memory (handle class)
+        % array of handles to the PODSImages in this group
         Replicate PODSImage
 
         % indexing group members (Replicate/PODSImage objects)
@@ -16,8 +16,6 @@ classdef PODSGroup < handle
         PreviousImageIndex double
         
         % FFC info for group
-        %FFCData struct
-
         FFCLoaded = false
 
         FFC_cal_shortname
@@ -31,9 +29,6 @@ classdef PODSGroup < handle
         FFC_Width
 
         FPMFilesLoaded = false
-        
-        % store handle to the master GUI settings
-        %Settings PODSSettings
         
         % group color for plots, etc.
         Color double
@@ -406,9 +401,17 @@ classdef PODSGroup < handle
         
         function VariableObjectData = GetAllObjectData(obj,Var2Get)
             % return a list of Var2Get for all objects in the group
+
+            % return if no images exist
+            if obj.nReplicates == 0
+                VariableObjectData = [];
+                return
+            end
+
             count = 0;
             last = 1;
-            VariableObjectData = [];
+            % line below causes issues with categorical data
+            %VariableObjectData = [];
             for i = 1:obj.nReplicates
                 count = count + obj.Replicate(i).nObjects;
                 % column 1 holds x data

@@ -25,13 +25,14 @@ classdef PODSSettings < handle
             'StaticAxes',gobjects(1,1),...
             'StaticImage',gobjects(1,1),...
             'DynamicAxes',gobjects(1,1),...
-            'DynamicAxesParent',gobjects(1,1));
+            'DynamicAxesParent',gobjects(1,1),...
+            'ActiveObjectIdx',NaN);
         
         InputFileType = '.nd2';
 
         LastDirectory = pwd;
 
-        % path to main code file directory (path with PODSv2.m)
+        % path to main code directory (path with PODSv2.m)
         MainPath char
 
         SummaryDisplayType = 'Project';
@@ -68,13 +69,6 @@ classdef PODSSettings < handle
         % colormaps settings
         Colormaps struct
         ColormapsSettings struct
-
-        % currently selected colormaps for each image type
-        % must be 256x3 double with values in the range [0 1]
-        IntensityColormap double
-        OrderFactorColormap double
-        ReferenceColormap double
-        AzimuthColormap double
         
         % Azimuth display settings
         AzimuthDisplaySettings struct
@@ -90,10 +84,10 @@ classdef PODSSettings < handle
         SwarmPlotBackgroundColor = [0 0 0];
         SwarmPlotForegroundColor = [1 1 1];
         SwarmPlotErrorBarColor = [1 1 1];
-        
-        % Group Colors
-        DefaultGroupColors cell
 
+        % variables for object plots (swarm and scatter plots for now)
+        ObjectPlotVariables cell
+        
         % object labeling
         ObjectLabels PODSLabel
         
@@ -132,19 +126,25 @@ classdef PODSSettings < handle
         % Scatterplot settings
         ScatterPlotXVariable
         ScatterPlotYVariable
-        ScatterPlotVariablesLong
-        ScatterPlotVariablesShort
 
         % SwarmPlot settings
-        SwarmPlotVariablesLong
-        SwarmPlotVariablesShort
         SwarmPlotYVariable
         SwarmPlotGroupingType
         SwarmPlotColorMode
 
+        % Object variables "long" names
+        ObjectPlotVariablesLong
+
         % for adding/deleting/adjusting labels
         nLabels
         LabelColors
+
+        % selected colormaps for different image types
+        % must be 256x3 double with values in the range [0 1]
+        IntensityColormap double
+        OrderFactorColormap double
+        ReferenceColormap double
+        AzimuthColormap double
 
     end
     
@@ -177,50 +177,15 @@ classdef PODSSettings < handle
                 obj.MainPath = strjoin(CurrentPathSplit(1:end-2),'\');
             end
 
-            try
-                Colormaps_mat_file = load('Colormaps.mat');
-                obj.Colormaps = Colormaps_mat_file.Colormaps;
-                obj.IntensityColormap = obj.Colormaps.Turbo;
-                obj.OrderFactorColormap = obj.Colormaps.OFMapNew;
-                obj.ReferenceColormap = obj.Colormaps.Gray;
-            catch
-                warning('Unable to load "Colormaps.mat"...');
-            end
-            
-            try
-                obj.UpdateColormapsSettings();
-            catch
-                warning('Unable to load "ColormapsSettings.mat"...');
-            end
-            
-            try
-                obj.UpdateSwarmPlotSettings();
-            catch
-                warning('Unable to load "SwarmPlotSettings.mat"...');
-            end
-            
-            try
-                obj.UpdateAzimuthDisplaySettings();
-            catch
-                warning('Unable to load "AzimuthDisplaySettings.mat"...');
-            end
-            
-            try
-                obj.UpdateScatterPlotSettings();
-            catch
-                warning('Unable to load "ScatterPlotSettings.mat"...');
-            end
-            
-            try
-                load DefaultColors.mat DefaultColors
-                fnames = fieldnames(DefaultColors);
-                nColors = length(fnames);
-                for i = 1:nColors
-                    obj.DefaultGroupColors{i} = DefaultColors.(fnames{i});
-                end
-            catch
-                warning('Unable to load "DefaultColors.mat"...')
-            end
+            settingsFiles = {...
+                'ObjectPlotVariables.mat',...
+                'Colormaps.mat',...
+                'ColormapsSettings.mat',...
+                'ScatterPlotSettings.mat',...
+                'SwarmPlotSettings.mat',...
+                'AzimuthDisplaySettings.mat'};
+
+            obj.updateSettingsFromFiles(settingsFiles);
 
             try 
                 obj.LoadCustomMaskSchemes();
@@ -255,20 +220,12 @@ classdef PODSSettings < handle
             settings.SESize = obj.SESize;
             settings.SELines = obj.SELines;
 
-            % currently selected colormaps for each image type
-            % must be 256x3 double with values in the range [0 1]
-            settings.IntensityColormap = obj.IntensityColormap;
-            settings.OrderFactorColormap = obj.OrderFactorColormap;
-            settings.ReferenceColormap = obj.ReferenceColormap;
-            settings.AzimuthColormap = obj.AzimuthColormap;
-
             % ScatterPlot Settings
             settings.ScatterPlotBackgroundColor = obj.ScatterPlotBackgroundColor;
             settings.ScatterPlotForegroundColor = obj.ScatterPlotForegroundColor;
             settings.ScatterPlotLegendVisible = obj.ScatterPlotLegendVisible;
 
             % SwarmPlot Settings
-            % SwarmPlotSettings struct
             settings.SwarmPlotBackgroundColor = obj.SwarmPlotBackgroundColor;
             settings.SwarmPlotForegroundColor = obj.SwarmPlotForegroundColor;
             settings.SwarmPlotErrorBarColor = obj.SwarmPlotErrorBarColor;
@@ -305,29 +262,22 @@ classdef PODSSettings < handle
                 end
             end
         end
-        
-        function UpdateColormapsSettings(obj)
-            ColormapsSettings_mat_file = load('ColormapsSettings.mat');
-            obj.ColormapsSettings = ColormapsSettings_mat_file.ColormapsSettings;
-            obj.IntensityColormap = obj.ColormapsSettings.Intensity{3};
-            obj.OrderFactorColormap = obj.ColormapsSettings.OrderFactor{3};
-            obj.ReferenceColormap = obj.ColormapsSettings.Reference{3};
-            obj.AzimuthColormap = obj.ColormapsSettings.Azimuth{3};
-        end
 
-        function UpdateSwarmPlotSettings(obj)
-            SwarmPlotSettings_mat_file = load('SwarmPlotSettings.mat');
-            obj.SwarmPlotSettings = SwarmPlotSettings_mat_file.SwarmPlotSettings;
-        end
-        
-        function UpdateAzimuthDisplaySettings(obj)
-            AzimuthSettings_mat_file = load('AzimuthDisplaySettings.mat');
-            obj.AzimuthDisplaySettings = AzimuthSettings_mat_file.AzimuthDisplaySettings;
-        end
-        
-        function UpdateScatterPlotSettings(obj)
-            ScatterPlotSettings_mat_file = load('ScatterPlotSettings.mat');
-            obj.ScatterPlotSettings = ScatterPlotSettings_mat_file.ScatterPlotSettings;
+        function updateSettingsFromFiles(obj,fileNames)
+            % generalized function to update various settings by loading the indicated file(s)
+            % fileNames is a cell array of char vectors with names of settings mat files
+            for fileIdx = 1:numel(fileNames)
+                try
+                    % load the mat file indicated by fileNames{fileIdx} as a struct
+                    file = load(fileNames{fileIdx});
+                    % get the filedName of the loaded struct, not hardcoded in case it changes or we add more settings
+                    fieldName = fieldnames(file);
+                    % store the settings in the associated class property
+                    obj.(fieldName{1}) = file.(fieldName{1});
+                catch ME
+                    warning(['Error loading file "',fileNames{fileIdx},'": ',ME.getReport]);
+                end
+            end
         end
     
         function AddNewObjectLabel(obj,LabelName,LabelColor)
@@ -360,6 +310,29 @@ classdef PODSSettings < handle
             delete(Label2Delete);
         end
 
+        function ObjectPlotVariablesLong = get.ObjectPlotVariablesLong(obj)
+            ObjectPlotVariablesLong = cell(size(obj.ObjectPlotVariables));
+            for varIdx = 1:numel(obj.ObjectPlotVariables)
+                ObjectPlotVariablesLong{varIdx} = ExpandVariableName(obj.ObjectPlotVariables{varIdx});
+            end
+        end
+
+        function IntensityColormap = get.IntensityColormap(obj)
+            IntensityColormap = obj.ColormapsSettings.Intensity{3};
+        end
+
+        function OrderFactorColormap = get.OrderFactorColormap(obj)
+            OrderFactorColormap = obj.ColormapsSettings.OrderFactor{3};
+        end
+
+        function ReferenceColormap = get.ReferenceColormap(obj)
+            ReferenceColormap = obj.ColormapsSettings.Reference{3};
+        end
+
+        function AzimuthColormap = get.AzimuthColormap(obj)
+            AzimuthColormap = obj.ColormapsSettings.Azimuth{3};
+        end
+
         function AzimuthLineAlpha = get.AzimuthLineAlpha(obj)
             AzimuthLineAlpha = obj.AzimuthDisplaySettings.LineAlpha;
         end
@@ -386,22 +359,6 @@ classdef PODSSettings < handle
 
         function ScatterPlotYVariable = get.ScatterPlotYVariable(obj)
             ScatterPlotYVariable = obj.ScatterPlotSettings.YVariable;
-        end
-
-        function ScatterPlotVariablesLong = get.ScatterPlotVariablesLong(obj)
-            ScatterPlotVariablesLong = obj.ScatterPlotSettings.VariablesLong;
-        end
-
-        function ScatterPlotVariablesShort = get.ScatterPlotVariablesShort(obj)
-            ScatterPlotVariablesShort = obj.ScatterPlotSettings.VariablesShort;
-        end
-
-        function SwarmPlotVariablesLong = get.SwarmPlotVariablesLong(obj)
-            SwarmPlotVariablesLong = obj.SwarmPlotSettings.VariablesLong;
-        end
-
-        function SwarmPlotVariablesShort = get.SwarmPlotVariablesShort(obj)
-            SwarmPlotVariablesShort = obj.SwarmPlotSettings.VariablesShort;
         end
 
         function SwarmPlotYVariable = get.SwarmPlotYVariable(obj)
@@ -460,13 +417,6 @@ classdef PODSSettings < handle
             obj.SEShape = settings.SEShape;
             obj.SESize = settings.SESize;
             obj.SELines = settings.SELines;
-
-            % currently selected colormaps for each image type
-            % must be 256x3 double with values in the range [0 1]
-            obj.IntensityColormap = settings.IntensityColormap;
-            obj.OrderFactorColormap = settings.OrderFactorColormap;
-            obj.ReferenceColormap = settings.ReferenceColormap;
-            obj.AzimuthColormap = settings.AzimuthColormap;
 
             % ScatterPlot Settings
             obj.ScatterPlotBackgroundColor = settings.ScatterPlotBackgroundColor;
