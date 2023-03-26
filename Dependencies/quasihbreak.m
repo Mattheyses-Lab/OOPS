@@ -93,7 +93,8 @@ quasihlutfun = @(x) checkMatch(x);
 % create 3x3 lut using function handle above
 quasihlut = makelut(quasihlutfun,3);
 
-% locations of pixels at centers of 3x3 nhoods that match at least one of the reference nhoods (or their 90° rotation)
+% image representing locations of pixels at centers of 3x3 nhoods that 
+% match at least one of the reference nhoods (or their 90° rotation)
 quasihlocations = bwlookup(I,quasihlut);
 
 % remove those pixels from the original binary image
