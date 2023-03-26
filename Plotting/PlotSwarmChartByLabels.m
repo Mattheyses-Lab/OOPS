@@ -1,123 +1,158 @@
 function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
+% get the main project data structure
+PODSData = guidata(source);
+% get the current group
+CurrentGroup = PODSData.CurrentGroup;
+% the number of different object labels in the project
+nLabels = length(PODSData.Settings.ObjectLabels);
+% make an x axis tick for each label
+axH.XTick = 1:1:nLabels;
+% get the color of the swarm plot error bar
+ErrorBarColor = PODSData.Settings.SwarmPlotErrorBarColor;
+% for each object label, make an x axis tick label
+for ii = 1:nLabels
+    axH.XTickLabel{ii} = [CurrentGroup.GroupName,' (',PODSData.Settings.ObjectLabels(ii).Name,')'];
+end
+% the object variable for which we are going to retrieve data
+Var2Plot = PODSData.Settings.SwarmPlotYVariable;
+% cell array of Var2Plot values, one cell per label
+LabelObjectData = CurrentGroup.GetObjectDataByLabel(Var2Plot);
+% get object SelfIdxs for data tips
+LabelObjectSelfIdxs = CurrentGroup.GetObjectDataByLabel('SelfIdx');
+% get object GroupName for data tips
+LabelObjectGroupNames = CurrentGroup.GetObjectDataByLabel('GroupName');
+% get object ImageName for data tips
+LabelObjectImageNames = CurrentGroup.GetObjectDataByLabel('InterpreterFriendlyImageName');
+% get object LabelName for data tips
+LabelObjectLabelNames = CurrentGroup.GetObjectDataByLabel('LabelName');
 
-    PODSData = guidata(source);
-    
-    CurrentGroup = PODSData.CurrentGroup;
-    
-    nLabels = length(PODSData.Settings.ObjectLabels);
-    
-    axH.XTick = 1:1:nLabels;
+% determine the number of plots (i.e. number of labels)
+nPlots = length(LabelObjectData);
+% cell arrays to hold X and Y data
+Y = cell(nPlots,1);
+X = cell(nPlots,1);
 
-    % use GUI foreground color as error bar color
-    ErrorBarColor = PODSData.Settings.SwarmPlotErrorBarColor;
+% empty array to hold the swarm plots
+hSwarmPlot = gobjects(nPlots,1);
+mean_marker = gobjects(nPlots,1);
 
-    for ii = 1:nLabels
-        axH.XTickLabel{ii} = [CurrentGroup.GroupName,' (',PODSData.Settings.ObjectLabels(ii).Name,')'];
-    end
+globalMax = [];
+globalMin = [];
 
-    Var2Get = PODSData.Settings.SwarmPlotYVariable;
-    
-    % cell array of Var2Get values, one cell per label
-    LabelObjectData = CurrentGroup.GetObjectDataByLabel(Var2Get);
+LabelIdxs = 1:1:nLabels;
 
-    % determine the number of plots (i.e. number of labels)
-    nPlots = length(LabelObjectData);
-
-    % cell arrays to hold X and Y data
-    Y = cell(nPlots,1);
-    X = cell(nPlots,1);
-
-    % empty array to hold the swarm plots
-    hSwarmPlot = gobjects(nPlots,1);
-    mean_marker = gobjects(nPlots,1);
-
-    globalMax = 0;
-    globalMin = 0;
-    
-    LabelIdxs = 1:1:nLabels;
-
-    for i = 1:nPlots
-        % Y data is just the vector of object values for selected variable
-        Y{i} = rmmissing(LabelObjectData{i});
-        % generate X data of the same size, multiply by the index of the current group
-        X{i} = LabelIdxs(i)*ones(size(Y{i}));
-        
-        try
-            % throw error if we have any NaNs
-            if isempty(Y{i})
-                error("Object data missing");
-            end
-            
-            switch PODSData.Settings.SwarmPlotColorMode
-                case 'Magnitude'
-                    % color by value
-                    hSwarmPlot(i) = swarmchart(axH,X{i},Y{i},Y{i},'Filled','HitTest','Off','MarkerEdgeColor',[0 0 0]);
-                case 'ID'
-                    % color by group (label)
-                    hSwarmPlot(i) = swarmchart(axH,X{i},Y{i},'Filled',...
-                        'HitTest','Off',...
-                        'MarkerEdgeColor',[0 0 0],...
-                        'MarkerFaceColor',PODSData.Settings.ObjectLabels(i).Color);
-            end
-
-            globalMax = max(globalMax,max(Y{i}));
-            globalMin = min(globalMin,min(Y{i}));
-
-            GroupMean = mean(Y{i});
-            GroupStd = std(Y{i});
-            % plot a horizontal line showing the group mean
-            line(axH,[i-0.25 i+0.25],[GroupMean GroupMean],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
-            % plot horizontal lines showing the mean +/- SD
-            line(axH,[i-0.15 i+0.15],[GroupMean-GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
-            line(axH,[i-0.15 i+0.15],[GroupMean+GroupStd GroupMean+GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
-            % plot a vertical line orthogonal to the three lines above
-            line(axH,[i i],[GroupMean+GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
-
-            mean_marker(i) = plot(axH,i,GroupMean,'Marker','o','MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',ErrorBarColor);
-            mean_marker(i).DataTipTemplate.DataTipRows(1) = dataTipTextRow("Mean",GroupMean);
-            mean_marker(i).DataTipTemplate.DataTipRows(2) = dataTipTextRow("Standard Deviation",GroupStd);
-            
-        catch me
-            switch me.message
-                case "Object data missing"
-                    UpdateLog3(source,['Warning: ',ExpandVariableName(Var2Get),' data missing or incomplete for objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
-                otherwise
-                    UpdateLog3(source,['Warning: Unable to find objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
-            end
-            
-
-        end
-        
-    end
-
-    axH.YTickMode = 'Auto';
-    axH.YTickLabelMode = 'Auto';
-    
-    % set X limits to 0.5 below and above the max
-    axH.XLim = [LabelIdxs(1)-1 nLabels+1];
-
-    if globalMax > 1
-        UpperLim = round(globalMax)+round(0.1*globalMax);
-    else
-        UpperLim = round(globalMax,1);
-        if UpperLim < globalMax;UpperLim = UpperLim+0.1;end
-    end
-
-    if globalMin < 0
-        LowerLim = (UpperLim)*(-1);
-    else
-        LowerLim = 0;
-    end
-
+for i = 1:nPlots
+    % Y data is just the vector of object values for selected variable
+    [Y{i},TF] = rmmissing(LabelObjectData{i});
+    % the number of objects for which Var2Plot data was missing
+    nRemoved = numel(find(TF));
+    % adjust data tip variables to account for any data removed above
+    LabelObjectSelfIdxs{i} = LabelObjectSelfIdxs{i}(~TF);
+    LabelObjectGroupNames{i} = LabelObjectGroupNames{i}(~TF);
+    LabelObjectImageNames{i} = LabelObjectImageNames{i}(~TF);
+    LabelObjectLabelNames{i} = LabelObjectLabelNames{i}(~TF);
+    % generate X data of the same size, multiply by the index of the current group
+    X{i} = LabelIdxs(i)*ones(size(Y{i}));
+    % try and draw the plot, catch errors
     try
-        axH.YLim = [LowerLim UpperLim];
-        axH.CLim = axH.YLim;
-    catch
-        axH.YLim = [0 1];
-        axH.CLim = [0 1];
+        if isempty(Y{i})
+            % if data missing for all objects, throw error
+            error("Object data missing");
+        elseif nRemoved > 0
+            % if data were missing some (but not all) objects, warn the user by sending an update to the log window
+            UpdateLog3(source,['Warning: ',...
+                ExpandVariableName(Var2Plot),...
+                ' data missing for ',...
+                num2str(nRemoved),...
+                ' objects with [Label:',...
+                PODSData.Settings.ObjectLabels(i).Name,...
+                '] in [Group:',...
+                CurrentGroup.GroupName,...
+                ']'],...
+                'append');
+        end
+        % build swarm chart based on selected color mode
+        switch PODSData.Settings.SwarmPlotColorMode
+            case 'Magnitude'
+                % color by value
+                hSwarmPlot(i) = swarmchart(...
+                    axH,...
+                    X{i},Y{i},...
+                    Y{i},...
+                    'Filled',...
+                    'HitTest','Off',...
+                    'MarkerEdgeColor',[0 0 0]);
+            case 'ID'
+                % color by group (label)
+                hSwarmPlot(i) = swarmchart(...
+                    axH,...
+                    X{i},Y{i},...
+                    'Filled',...
+                    'HitTest','Off',...
+                    'MarkerEdgeColor',[0 0 0],...
+                    'MarkerFaceColor',PODSData.Settings.ObjectLabels(i).Color);
+        end
+        % build data tips for each plot marker of the swarm chart
+        hSwarmPlot(i).DataTipTemplate.DataTipRows(1) = dataTipTextRow("Group",categorical(LabelObjectGroupNames{i}));
+        hSwarmPlot(i).DataTipTemplate.DataTipRows(2) = dataTipTextRow("Image",categorical(LabelObjectImageNames{i}));
+        hSwarmPlot(i).DataTipTemplate.DataTipRows(3) = dataTipTextRow("Object",LabelObjectSelfIdxs{i});
+        hSwarmPlot(i).DataTipTemplate.DataTipRows(4) = dataTipTextRow("Label",categorical(LabelObjectLabelNames{i}));
+        hSwarmPlot(i).DataTipTemplate.DataTipRows(5) = dataTipTextRow(ExpandVariableName(Var2Plot),Y{i});
+        hSwarmPlot(i).HitTest = 'On';
+        % get the mean, std, and n of this group
+        GroupMean = mean(Y{i});
+        GroupStd = std(Y{i});
+        Groupn = numel(Y{i});
+        GroupMin = min(Y{i});
+        GroupMax = max(Y{i});
+        % get the maximum value among all groups
+        if isempty(globalMax)
+            globalMax = GroupMax;
+        else
+            globalMax = max(globalMax,GroupMax);
+        end
+        % get the minimum value among all groups
+        if isempty(globalMin)
+            globalMin = GroupMin;
+        else
+            globalMin = min(globalMin,GroupMin);
+        end
+        % plot a horizontal line showing the group mean
+        line(axH,[i-0.25 i+0.25],[GroupMean GroupMean],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
+        % plot horizontal lines showing the mean +/- SD
+        line(axH,[i-0.15 i+0.15],[GroupMean-GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
+        line(axH,[i-0.15 i+0.15],[GroupMean+GroupStd GroupMean+GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
+        % plot a vertical line orthogonal to the three lines above
+        line(axH,[i i],[GroupMean+GroupStd GroupMean-GroupStd],'LineStyle','-','LineWidth',3,'HitTest','Off','Color',ErrorBarColor,'PickableParts','none');
+        % plot a point at the group mean
+        mean_marker(i) = plot(axH,i,GroupMean,'Marker','o','MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',ErrorBarColor);
+        % add custom data tip rows
+        mean_marker(i).DataTipTemplate.DataTipRows(1) = dataTipTextRow("Group",categorical(axH.XTickLabel(i)));
+        mean_marker(i).DataTipTemplate.DataTipRows(2) = dataTipTextRow("n",Groupn);
+        mean_marker(i).DataTipTemplate.DataTipRows(3) = dataTipTextRow("Mean",GroupMean);
+        mean_marker(i).DataTipTemplate.DataTipRows(4) = dataTipTextRow("Standard Deviation",GroupStd);
+        mean_marker(i).DataTipTemplate.DataTipRows(5) = dataTipTextRow("Max",GroupMax);
+        mean_marker(i).DataTipTemplate.DataTipRows(6) = dataTipTextRow("Min",GroupMin);
+    catch me
+        switch me.message
+            case "Object data missing"
+                UpdateLog3(source,['Warning: [',ExpandVariableName(Var2Plot),'] data missing for objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
+            otherwise
+                UpdateLog3(source,['Warning: ',me.message],'append');
+        end
     end
+end
 
-    % color the points according to magnitude using the currently selected Order factor colormap
-    colormap(axH,PODSData.Settings.OrderFactorColormap);
+axH.YTickMode = 'Auto';
+axH.YTickLabelMode = 'Auto';
+
+% set X limits to 1 below and above the max
+axH.XLim = [LabelIdxs(1)-1 nLabels+1];
+
+axH.YLimMode = 'auto';
+axH.CLim = axH.YLim;
+
+% color the points according to magnitude using the currently selected Order factor colormap
+colormap(axH,PODSData.Settings.OrderFactorColormap);
 
 end
