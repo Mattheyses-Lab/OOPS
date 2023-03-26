@@ -77,7 +77,7 @@ function [] = UpdateImages(source)
             %% VIEW MASK
             %UpdateSliders();
             
-            % Mask
+            % display mask image
             try
                 PODSData.Handles.MaskImgH.CData = cImage.bw;
                 if ~PODSData.Settings.Zoom.Active
@@ -106,11 +106,16 @@ function [] = UpdateImages(source)
                 switch PODSData.Settings.ObjectBoxType
                     % simple lines showing the boundaries
                     case 'Boundary'
+
                         for ObjIdx = 1:cImage.nObjects
-                            PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
-                            hold on
+
+                            % new method below (using primitive lines instead of plot()
+                            % retrieve the boundary coordinates
                             Boundary = cImage.Object(ObjIdx).SimplifiedBoundary;
-                            PODSData.Handles.ObjectBoxes(ObjIdx,1) = plot(Boundary(:,2),...
+
+                            PODSData.Handles.ObjectBoxes(ObjIdx,1) = line(...
+                                PODSData.Handles.AverageIntensityAxH,...
+                                Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
                                 'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
@@ -119,12 +124,10 @@ function [] = UpdateImages(source)
                                 'ButtonDownFcn',@SelectObjectRectangles,...
                                 'PickableParts','all',...
                                 'UserData',ObjIdx);
-                            hold off
-        
-                            PODSData.Handles.fH.CurrentAxes = PODSData.Handles.MaskAxH;
-                            hold on
-                            Boundary = cImage.Object(ObjIdx).SimplifiedBoundary;
-                            PODSData.Handles.ObjectBoxes(ObjIdx,2) = plot(Boundary(:,2),...
+
+                            PODSData.Handles.ObjectBoxes(ObjIdx,2) = line(...
+                                PODSData.Handles.MaskAxH,...
+                                Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
                                 'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
@@ -133,8 +136,8 @@ function [] = UpdateImages(source)
                                 'ButtonDownFcn',@SelectObjectRectangles,...
                                 'PickableParts','all',...
                                 'UserData',ObjIdx);
-                            hold off
                         end
+
                     % simple rectangles
                     case 'Box'
                         for ObjIdx = 1:cImage.nObjects
@@ -162,8 +165,8 @@ function [] = UpdateImages(source)
                                 'Visible','On',...
                                 'UserData',ObjIdx);
                         end
-                    % in development - various mathods
-                    case 'NewBoxes'
+                    % in development - various methods
+                    case 'Patch'
 
                         %% using patch objects
                         % plotting obj patches with faces/vertices
@@ -186,7 +189,7 @@ function [] = UpdateImages(source)
                                 'Tag','ObjectBox',...
                                 'FaceVertexCData',UnselectedCData,...
                                 'EdgeColor','Flat',...
-                                'FaceColor','None',...
+                                'FaceColor','none',...
                                 'HitTest','On',...
                                 'ButtonDownFcn',@SelectSingleObjects,...
                                 'PickableParts','all',...
@@ -200,6 +203,7 @@ function [] = UpdateImages(source)
                                 'Tag','ObjectBox',...
                                 'FaceVertexCData',SelectedCData,...
                                 'EdgeColor','Flat',...
+                                'FaceAlpha',0.5,...
                                 'FaceColor','Flat',...
                                 'HitTest','On',...
                                 'ButtonDownFcn',@SelectSingleObjects,...
@@ -209,56 +213,100 @@ function [] = UpdateImages(source)
                         end
                         hold off
 
-%                         %% using polygons
-%                         shape = polyshape.empty(cImage.nObjects,0);
-% 
-%                         for ObjIdx = 1:cImage.nObjects
-% %                             PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
-% %                             hold on
-%                             Boundary = cImage.Object(ObjIdx).Boundary;
-% 
-%                             % build the poly shape
-%                             shape(ObjIdx,1) = polyshape(Boundary(:,2),Boundary(:,1),"KeepCollinearPoints",false);
-%                             shape(ObjIdx,1) = shape(ObjIdx,1).simplify();
-%                         end
-% 
-%                         PODSData.Handles.ObjectBoxes = gobjects(cImage.nObjects,2);
-% 
-%                         PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
-%                         hold on
-%                         % plot the polyshapes
-%                         PODSData.Handles.ObjectBoxes(:,1) = plot(shape,...
-%                             'Tag','ObjectBox',...
-%                             'HitTest','On',...
-%                             'ButtonDownFcn',@SelectObjectRectangles,...
-%                             'PickableParts','all',...
-%                             'FaceColor','none',...
-%                             'Visible','off');
-%                         hold off
-% 
-%                         PODSData.Handles.fH.CurrentAxes = PODSData.Handles.MaskAxH;
-%                         hold on
-%                         PODSData.Handles.ObjectBoxes(:,2) = plot(shape,...
-%                             'Tag','ObjectBox',...
-%                             'HitTest','On',...
-%                             'ButtonDownFcn',@SelectObjectRectangles,...
-%                             'PickableParts','all',...
-%                             'FaceColor','none',...
-%                             'Visible','off');
-%                         hold off
-% 
-%                         EdgeColor = repmat({cImage.Object(:).LabelColor}',1,2);
-%                         %set(PODSData.Handles.ObjectBoxes(:),{'EdgeColor'},EdgeColor(:))
-% 
-%                         LineWidth = repmat({cImage.Object(:).SelectionBoxLineWidth}',1,2);
-%                         %set(PODSData.Handles.ObjectBoxes(:),{'LineWidth'},LineWidth(:))
-% 
-%                         UserData = repmat({cImage.Object(:).SelfIdx}',1,2);
-%                         %set(PODSData.Handles.ObjectBoxes(:),{'UserData'},UserData(:))
-% 
-%                         set(PODSData.Handles.ObjectBoxes(:),{'EdgeColor'},EdgeColor(:),{'LineWidth'},LineWidth(:),{'UserData'},UserData(:))
-%                         set(PODSData.Handles.ObjectBoxes,'Visible','on')
+                    case 'Polygon'
 
+                        %% using polygons
+                        shape = polyshape.empty(cImage.nObjects,0);
+
+                        for ObjIdx = 1:cImage.nObjects
+                            % get the object boundary
+                            Boundary = cImage.Object(ObjIdx).SimplifiedBoundary;
+                            % build the poly shape
+                            shape(ObjIdx,1) = polyshape(Boundary(:,2),Boundary(:,1),"KeepCollinearPoints",false);
+                        end
+
+                        PODSData.Handles.ObjectBoxes = gobjects(cImage.nObjects,2);
+
+                        PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
+                        hold on
+                        % plot the polyshapes
+                        PODSData.Handles.ObjectBoxes(:,1) = plot(shape,...
+                            'Tag','ObjectBox',...
+                            'HitTest','On',...
+                            'ButtonDownFcn',@SelectObjectRectangles,...
+                            'PickableParts','all',...
+                            'FaceColor','none',...
+                            'Visible','off');
+                        hold off
+
+                        PODSData.Handles.fH.CurrentAxes = PODSData.Handles.MaskAxH;
+                        hold on
+                        PODSData.Handles.ObjectBoxes(:,2) = plot(shape,...
+                            'Tag','ObjectBox',...
+                            'HitTest','On',...
+                            'ButtonDownFcn',@SelectObjectRectangles,...
+                            'PickableParts','all',...
+                            'FaceColor','none',...
+                            'Visible','off');
+                        hold off
+
+                        EdgeColor = repmat({cImage.Object(:).LabelColor}',1,2);
+
+                        LineWidth = repmat({cImage.Object(:).SelectionBoxLineWidth}',1,2);
+
+                        UserData = repmat({cImage.Object(:).SelfIdx}',1,2);
+
+                        set(PODSData.Handles.ObjectBoxes(:),{'EdgeColor'},EdgeColor(:),{'LineWidth'},LineWidth(:),{'UserData'},UserData(:))
+                        set(PODSData.Handles.ObjectBoxes,'Visible','on')
+
+                    case 'Development'
+
+                        %% using patch objects
+                        % plotting obj patches with faces/vertices
+                        % (we could also pass in the object boundary coordinates as XData and YData)
+                        [AllVertices,...
+                            AllCData,...
+                            SelectedFaces,...
+                            UnselectedFaces...
+                            ] = getObjectPatchData2(cImage);
+
+                        % change the current axes of the main window
+                        PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
+
+                        % hold on so we can preserve our images/other objects
+                        hold on
+
+                        % plot a patch object containing the unselected objects
+                        PODSData.Handles.ObjectBoxes = patch(PODSData.Handles.AverageIntensityAxH,...
+                            'Faces',UnselectedFaces,...
+                            'Vertices',AllVertices,...
+                            'Tag','ObjectBox',...
+                            'FaceVertexCData',AllCData,...
+                            'EdgeColor','Flat',...
+                            'FaceColor','none',...
+                            'HitTest','On',...
+                            'ButtonDownFcn',@SelectObjectPatches,...
+                            'PickableParts','all',...
+                            'Interruptible','off');
+                        PODSData.Handles.ObjectBoxes.LineWidth = 1;
+
+                        % plot a patch object containing the selected objects
+                        PODSData.Handles.SelectedObjectBoxes = patch(PODSData.Handles.AverageIntensityAxH,...
+                            'Faces',SelectedFaces,...
+                            'Vertices',AllVertices,...
+                            'Tag','ObjectBox',...
+                            'FaceVertexCData',AllCData,...
+                            'EdgeColor','Flat',...
+                            'FaceAlpha',0.5,...
+                            'FaceColor','Flat',...
+                            'HitTest','On',...
+                            'ButtonDownFcn',@SelectObjectPatches,...
+                            'PickableParts','all',...
+                            'Interruptible','off');
+                        PODSData.Handles.SelectedObjectBoxes.LineWidth = 2;
+
+                        % remove the hold
+                        hold off
 
                 end
             end
@@ -266,7 +314,7 @@ function [] = UpdateImages(source)
             UpdateAverageIntensity();            
             %UpdateThreshholdSlider();
 
-            drawnow
+            %drawnow
 
         case 'Order Factor'
             %% Order Factor Tab
@@ -326,6 +374,9 @@ function [] = UpdateImages(source)
             if PODSData.Handles.ApplyMaskOrderFactor.Value == 1
                 % ...then apply current mask by setting image AlphaData
                 PODSData.Handles.OrderFactorImgH.AlphaData = cImage.bw;
+
+                % % testing below: applying the mask in a different way
+                % PODSData.Handles.OrderFactorImgH.CData = cImage.MaskedOFImageRGB;
             end
 
             if any(isvalid(PODSData.Handles.ObjectBoxes))
@@ -346,10 +397,14 @@ function [] = UpdateImages(source)
                 switch PODSData.Settings.ObjectBoxType
                     case 'Boundary'
                         for ObjIdx = 1:cImage.nObjects
-                            PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
-                            hold on
-                            Boundary = cImage.Object(ObjIdx).Boundary;
-                            PODSData.Handles.ObjectBoxes(ObjIdx,1) = plot(Boundary(:,2),...
+
+                            % new method below (using primitive lines instead of plot()
+                            % retrieve the boundary coordinates
+                            Boundary = cImage.Object(ObjIdx).SimplifiedBoundary;
+
+                            PODSData.Handles.ObjectBoxes(ObjIdx,1) = line(...
+                                PODSData.Handles.AverageIntensityAxH,...
+                                Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
                                 'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
@@ -358,12 +413,10 @@ function [] = UpdateImages(source)
                                 'ButtonDownFcn',@SelectObjectRectangles,...
                                 'PickableParts','all',...
                                 'UserData',ObjIdx);
-                            hold off
-        
-                            PODSData.Handles.fH.CurrentAxes = PODSData.Handles.OrderFactorAxH;
-                            hold on
-                            Boundary = cImage.Object(ObjIdx).Boundary;
-                            PODSData.Handles.ObjectBoxes(ObjIdx,2) = plot(Boundary(:,2),...
+
+                            PODSData.Handles.ObjectBoxes(ObjIdx,2) = line(...
+                                PODSData.Handles.OrderFactorAxH,...
+                                Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
                                 'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
@@ -372,7 +425,7 @@ function [] = UpdateImages(source)
                                 'ButtonDownFcn',@SelectObjectRectangles,...
                                 'PickableParts','all',...
                                 'UserData',ObjIdx);
-                            hold off
+
                         end
                     case 'Box'
                         for ObjIdx = 1:cImage.nObjects
@@ -412,7 +465,7 @@ function [] = UpdateImages(source)
             UpdateAverageIntensity();
             %UpdateThreshholdSlider();
 
-            if PODSData.Handles.ShowAsOverlayAzimuthImage.Value == 1
+            if PODSData.Handles.ShowAsOverlayAzimuth.Value == 1
                 try
 
                     % no enhancement
@@ -470,7 +523,7 @@ function [] = UpdateImages(source)
             end
 
             % show or hide the azimuth colorbar
-            if PODSData.Handles.ShowColorbarAzimuthImage.Value == 1
+            if PODSData.Handles.ShowColorbarAzimuth.Value == 1
                 set(PODSData.Handles.PhaseBarComponents,'Visible','on');
             else
                 set(PODSData.Handles.PhaseBarComponents,'Visible','off');
@@ -484,7 +537,7 @@ function [] = UpdateImages(source)
             colormap(PODSData.Handles.AzimuthAxH,circmap);
             
             % if ApplyMask state button set to true, apply current mask by setting AlphaData
-            if PODSData.Handles.ApplyMaskAzimuthImage.Value == 1
+            if PODSData.Handles.ApplyMaskAzimuth.Value == 1
                 try
                     PODSData.Handles.AzimuthImgH.AlphaData = cImage.bw;
                 catch
@@ -560,9 +613,9 @@ function [] = UpdateImages(source)
             end
 
 
-            if isempty(cImage)
-                return
-            end
+            % if isempty(cImage)
+            %     return
+            % end
 
             PODSData.Handles.hScatterPlot = PlotGroupScatterPlot(source,...
                 PODSData.Handles.ScatterPlotAxH,...
@@ -571,7 +624,6 @@ function [] = UpdateImages(source)
                 PODSData.Settings.ScatterPlotForegroundColor);
 
 
-            
             switch PODSData.Settings.SwarmPlotGroupingType
                 case 'Group'
                     % plot the swarm chart and save the plot handle
@@ -594,7 +646,7 @@ function [] = UpdateImages(source)
             try
                 % get handle to the current object
                 cObject = cImage.CurrentObject;
-                % get object mask image, restrictive -> does not include nearby objects
+                % get object mask image, restricted -> does not include nearby objects
                 % within padded object bounding box
                 RestrictedPaddedObjMask = cObject.RestrictedPaddedMaskSubImage;
                 % pad the object subarrayidx with 5 pixels per side
@@ -637,6 +689,7 @@ function [] = UpdateImages(source)
                 PODSData.Handles.ObjectMaskImgH.CData = EmptyImage;
             end
             
+            % display object OF image
             try
                 ObjectOFImg = cObject.PaddedOFSubImage;
                 PODSData.Handles.ObjectOFImgH.CData = ObjectOFImg;
@@ -669,96 +722,75 @@ function [] = UpdateImages(source)
                 disp('Warning: Could not delete object midline plot');
             end
 
+            try
+                delete(PODSData.Handles.ObjectBoundaryPlot);
+            catch
+                disp('Warning: Could not delete object boundary plot');
+            end
 
             try
                 % create 'circular' colormap by vertically concatenating 2 hsv maps
                 tempmap = hsv;
                 circmap = vertcat(tempmap,tempmap);
-                % get padded object Azimuth image
-                PaddedAzimuthImage = cObject.PaddedAzimuthSubImage;
-                % get y and x coordinates from 'On' pixels in the object mask image
-                [y,x] = find(RestrictedPaddedObjMask==1);
-                % theta (direction) values are azimuth values from the pixels above
-                theta = PaddedAzimuthImage(RestrictedPaddedObjMask);
-                % rho (magnitude) values come from the OF image
-                rho = ObjectOFImg(RestrictedPaddedObjMask);
-                % convert to cartesian coordinates
-                [u,v] = pol2cart(theta,rho);
-                % transpose each set of endpoint coordinates
-                x = x';
-                y = y';
-                u = u';
-                v = v';
-                % scaling factor of each 'half-line'
-                HalfLineScale = PODSData.Settings.AzimuthLineScale/2;
-                % x and y coordinates for each 'half-line'
-                xnew = [x+HalfLineScale*u;x-HalfLineScale*u];
-                ynew = [y-HalfLineScale*v;y+HalfLineScale*v];
-                % 'bin' the x and y coords if desired,
-                %   sometimes useful if plotting many lines
-                xnew = xnew(:,1:PODSData.Settings.AzimuthScaleDownFactor:end);
-                ynew = ynew(:,1:PODSData.Settings.AzimuthScaleDownFactor:end);
-                rho = rho(1:PODSData.Settings.AzimuthScaleDownFactor:end);
-                theta = theta(1:PODSData.Settings.AzimuthScaleDownFactor:end);
-                % determine how many lines we will plot
-                nLines = length(xnew);
-                % preallocate line colors array
-                PatchColors = zeros(nLines,3);
-                % transparency of the azimuth lines
-                LineAlpha = PODSData.Settings.AzimuthLineAlpha;
-                % mode by which to color the lines
-                ColorMode = PODSData.Settings.AzimuthColorMode;
+
+                LineMask = cObject.RestrictedPaddedMaskSubImage;
+                LineScaleDown = PODSData.Settings.AzimuthScaleDownFactor;
     
-                % calculate colors for each line based on ColorMode
+                if LineScaleDown > 1
+                    ScaleDownMask = makeSpacedCheckerboard(size(LineMask),LineScaleDown);
+                    LineMask = LineMask & logical(ScaleDownMask);
+                end
+
+                [y,x] = find(LineMask==1);
+                theta = cObject.PaddedAzimuthSubImage(LineMask);
+                rho = cObject.PaddedOFSubImage(LineMask);
+    
+                ColorMode = PODSData.Settings.AzimuthColorMode;
+                LineWidth = PODSData.Settings.AzimuthLineWidth;
+                LineAlpha = PODSData.Settings.AzimuthLineAlpha;
+                LineScale = PODSData.Settings.AzimuthLineScale;
+    
                 switch ColorMode
                     case 'Magnitude'
-                        % colormap used to color azimuth lines by magnitude
-                        MagnitudeColorMap = PODSData.Settings.OrderFactorColormap;
-                        % number of colors in the map (for indexing)
-                        nColors = length(MagnitudeColorMap);
-                        % determine the colormap idx of each line based on its pixel's OF (range 0-1)
-                        ColorIdx = round(rho.*(nColors-1))+1;
-                        % preallocate the line colors array
-                        PatchColors = zeros(nLines,3);
-                        % fill the array with colors based on idxs in ColorIdx
-                        PatchColors(:,:) = MagnitudeColorMap(ColorIdx,:);
+                        Colormap = PODSData.Settings.OrderFactorColormap;
                     case 'Direction'
-                        % determine how many colors in the full map
-                        nColors = length(circmap);
-                        % get the region of the circular map from
-                        % -pi/2 to pi/2 (the range of our values)
-                        % (pi/2)/(2pi) = 0.25
-                        % (3pi/2)/(2pi) = 0.75
-                        halfcircmap = circmap(0.25*nColors:0.75*nColors,:);
-                        % how many colors in the truncated map
-                        nColors = length(halfcircmap);
-                        % normalize our theta values and convert to idxs
-                        % theta is in the range [-pi/2,pi/2]...
-                        % (theta+pi/2)./(pi) will scale theta to 0-1...
-                        % thus: 0 -> -pi/2, 1 -> pi/2
-                        ColorIdxsNorm = round(((theta+pi/2)./(pi))*(nColors-1))+1;
-                        % preallocate the line colors array
-                        PatchColors = zeros(nLines,3);
-                        % fill the array with colors based on idxs in ColorIdxsNorm
-                        PatchColors(:,:) = halfcircmap(ColorIdxsNorm,:);
+                        Colormap = circmap;
                     case 'Mono'
-                        MonoColor = [1 1 1];
-                        % replicate the MonoColor nLines times since each line is the same color
-                        PatchColors = repmat(MonoColor,nLines,1);
+                        Colormap = [1 1 1];
                 end
-    
-                PODSData.Handles.ObjectAzimuthLines = QuiverPatch(PODSData.Handles.ObjectAzimuthOverlayAxH,...
-                    xnew,ynew,...
-                    PatchColors,...
-                    PODSData.Settings.AzimuthLineWidth,...
-                    LineAlpha);
+
+                % plot pixel azimuth sticks for the object
+                PODSData.Handles.ObjectAzimuthLines = QuiverPatch2(PODSData.Handles.ObjectAzimuthOverlayAxH,...
+                    x,...
+                    y,...
+                    theta,...
+                    rho,...
+                    ColorMode,...
+                    Colormap,...
+                    LineWidth,...
+                    LineAlpha,...
+                    LineScale);
+
+
+                objectPaddedSize = size(cObject.RestrictedPaddedMaskSubImage);
+
+                PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
+                PODSData.Handles.ObjectAzimuthOverlayAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
+                
+            catch ME
+                msg = getReport(ME);
+                warning(['Error displaying object azimuth sticks: ', msg]);
+                % because setting the axes limits will change lim mode to 'manual', we need to set the limits
+                % if the sticks don't display properly in the try statement above. Otherwise, the limits of 
+                % the axes could be larger than the CData of the image object it holds
                 PODSData.Handles.ObjectAzimuthOverlayAxH.XLim = PODSData.Handles.ObjectPolFFCAxH.XLim;
                 PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = PODSData.Handles.ObjectPolFFCAxH.YLim;
+            end
 
-                % now show the object midline overlayed
-                %[~,~,Midline] = getObjectMidline(RestrictedPaddedObjMask,"DisplayResults",false);
 
-                
+            % try and plot the object midline
+            try
+                % gather and plot the estimated object midline
                 Midline = cObject.Midline;
                 PODSData.Handles.ObjectMidlinePlot = line(PODSData.Handles.ObjectAzimuthOverlayAxH,...
                     'XData',Midline(:,1),...
@@ -767,15 +799,29 @@ function [] = UpdateImages(source)
                     'LineStyle','-',...
                     'LineWidth',2,...
                     'Color',[0 0 0]);
-                
-            catch
-                disp('Warning: Error displaying object azimuth sticks');
-                % because setting the axes limits will change lim mode to 'manual', we need to set the limits
-                % if the sticks don't display properly in the try statement above. Otherwise, the limits of 
-                % the axes could be larger than the CData of the image object it holds
+            catch ME
+                UpdateLog3(source,['Warning: Error displaying object midline: ', ME.message],'append');
+                % reset the axes limits to match the object image size
                 PODSData.Handles.ObjectAzimuthOverlayAxH.XLim = PODSData.Handles.ObjectPolFFCAxH.XLim;
                 PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = PODSData.Handles.ObjectPolFFCAxH.YLim;
             end
+
+
+            % try and plot the object boundary
+            try
+                % get the object boundary coordinates w.r.t. the padded intensity image
+                paddedBoundary = cObject.PaddedSubIdxBoundary;
+
+                PODSData.Handles.ObjectBoundaryPlot = line(PODSData.Handles.ObjectPolFFCAxH,...
+                    paddedBoundary(:,2),...
+                    paddedBoundary(:,1),...
+                    'Color',cObject.Label.Color,...
+                    'LineWidth',2);
+            catch ME
+                msg = getReport(ME);
+                warning(['Error displaying object boundary: ', msg]);
+            end
+
 
             try
                 % initialize stack-normalized intensity stack for display
@@ -823,6 +869,7 @@ function [] = UpdateImages(source)
                         PODSData.Handles.AverageIntensityAxH.CLim = [0 255];
                     catch
                         disp('Warning: Failed to make composite RGB')
+                        PODSData.Handles.AverageIntensityImgH.CData = EmptyImage;
                     end
                 else % just show avg intensity
                     try
