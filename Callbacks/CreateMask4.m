@@ -32,7 +32,7 @@ switch MaskType
                     cImage.EnhancedImg = medfilt2(BGSubtractedImg);
                     % scale so that max intensity is 1
                     cImage.EnhancedImg = cImage.EnhancedImg./max(max(cImage.EnhancedImg));
-                    % initial threshold guess using graythresh()
+                    % initial threshold guess using graythresh() (Otsu's method)
                     [cImage.level,~] = graythresh(cImage.EnhancedImg);
                     %% Build mask
                     nObjects = 500;
@@ -103,13 +103,14 @@ switch MaskType
 
                     %% test
 
+                    % the normalized, average intensity image
                     I = cImage.I;
-                    %             I = imflatfield(imtophat(I,strel('disk',3,0)),30,'FilterSize',129);
 
+                    % enhance the contrast of fibrous structures
                     C = maxhessiannorm(I,4);
                     I = fibermetric(I,4,'StructureSensitivity',0.5*C);
 
-                    % initialize super open image
+                    % preallocate super open image
                     I_superopen = zeros(size(I),'like',I);
                     % max opening with rotating line segment
                     % lower length will pick up smaller objects
@@ -118,9 +119,11 @@ switch MaskType
                         I_superopen = max(I_superopen,imopen(I,SEline));
                     end
 
+
                     I = I_superopen;
                     cImage.EnhancedImg = I;
 
+                    % clear a 10 px wide region around the image border
                     temp = ClearImageBorder(I,10);
 
                     %% Detect edges
@@ -128,8 +131,9 @@ switch MaskType
                     % mask is the edge pixels
                     cImage.bw = sparse(IEdges);
 
-                    % BUILD 8-CONNECTED LABEL MATRIX
+                    % build 8-connected label matrix
                     cImage.L = sparse(bwlabel(full(cImage.bw),8));
+
                     % fill in outlines and recreate mask
                     bwtemp = zeros(size(cImage.bw));
                     bwempty = zeros(size(cImage.bw));
@@ -145,10 +149,8 @@ switch MaskType
                     cImage.bw = sparse(bwtemp);
                     %% end fill
 
-                    % testing below
                     % remove any "nearly" h-connected pixels (and the h connected ones)
                     cImage.bw = sparse(quasihbreak(full(cImage.bw)));
-                    % end testing
 
                     % NOTE: connectivity changed from 8 to 4, make sure it didn't mess anything up
                     % remove small or rounded objects
@@ -170,18 +172,14 @@ switch MaskType
                     cImage.bw(diagFill==1) = 0;
                     % end testing
 
-
                     % label individual branches (this has to be the last step if we want individually labeled branches)
                     [~,cImage.L] = labelBranches(full(cImage.bw));
 
                     % update log with masking output
-                    UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
                     UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
 
                     %% BUILD NEW OBJECTS
-                    % delete old objects for current replicate...
-                    delete(cImage.Object);
-                    % ...so we can detect the new ones (requires bw and L to be computed previously)
+                    % detect objects from the mask
                     cImage.DetectObjects();
                     % indicates mask was generated automatically
                     cImage.ThresholdAdjusted = 0;
@@ -220,7 +218,9 @@ switch MaskType
 
                     I = cImage.EnhancedImg;
 
-                    I = imflatfield(I,30,"FilterSize",129);
+                    %I = imflatfield(I,30,"FilterSize",129);
+
+                    I = imflatfield(I,30,"FilterSize",7);
 
                     C = maxhessiannorm(I,6);
                     I = fibermetric(I,6,"ObjectPolarity","bright","StructureSensitivity",0.5*C);
@@ -236,15 +236,21 @@ switch MaskType
 
                     I = I_superopen;
 
-                    cImage.EnhancedImg = imadjust(imflatfield(I,30,"FilterSize",nhoodsize));
+                    %cImage.EnhancedImg = imadjust(imflatfield(I,30,"FilterSize",nhoodsize));
+
+                    cImage.EnhancedImg = imadjust(imflatfield(I,30,"FilterSize",7));
 
                     % GUESS THRESHOLD WITH OTSU'S METHOD
                     [cImage.level,~] = graythresh(cImage.EnhancedImg);
                     % ADAPTIVE THRESHOLD
 
-                    AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,cImage.level,...
+                    % AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,cImage.level,...
+                    %     'Statistic','gaussian',...
+                    %     'NeighborhoodSize',nhoodsize);
+
+                    AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,0,...
                         'Statistic','gaussian',...
-                        'NeighborhoodSize',nhoodsize);
+                        'NeighborhoodSize',7);
 
                     %% Build mask
 
@@ -264,8 +270,8 @@ switch MaskType
                         CC = bwconncomp(BWtemp,4);
                         S = regionprops(CC, 'Area','Eccentricity','Circularity');
                         L = labelmatrix(CC);
-                        BWtemp = sparse(ismember(L, find([S.Area] >= 40 & ...
-                            [S.Eccentricity] > 0.8 & ...
+                        BWtemp = sparse(ismember(L, find([S.Area] >= 5 & ...
+                            [S.Eccentricity] > 0.5 & ...
                             [S.Circularity] < 0.5)));
 
                         %BWtemp = imclose(full(BWtemp),SEline2);
@@ -286,23 +292,28 @@ switch MaskType
                     S = regionprops(CC, 'Area','Eccentricity','Circularity');
                     L = labelmatrix(CC);
                     cImage.bw = sparse(ismember(L, find([S.Area] >= 40 & ...
-                        [S.Eccentricity] > 0.8 & ...
+                        [S.Eccentricity] > 0.5 & ...
                         [S.Circularity] < 0.5)));
 
-%                     % BUILD 8-CONNECTED LABEL MATRIX
-%                     cImage.L = sparse(bwlabel(full(cImage.bw),8));
+                    % testing below
+                    % remove any pixels that have a diagonal 8-connection
+                    % this is very useful and not built into matlab, consider writing separate function
+                    % fill in gaps to remove diagonally connected pixels, keep only the pixels we added
+                    diagFill = bwmorph(full(cImage.bw),'diag',1)-full(cImage.bw);
+                    % now get an image with just the pixels that were originally connected
+                    diagFill = bwmorph(diagFill,'diag',1)-diagFill;
+                    % set those pixels to 0
+                    cImage.bw(diagFill==1) = 0;
+                    % end testing
 
-                    % BUILD 4-CONNECTED LABEL MATRIX
-                    cImage.L = sparse(bwlabel(full(cImage.bw),4));
+
+                    [~,cImage.L] = labelBranches(full(cImage.bw));
 
                     % update log with masking output
-                    UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
                     UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
 
                     %% BUILD NEW OBJECTS
-                    % delete old objects for current replicate...
-                    delete(cImage.Object);
-                    % ...so we can detect the new ones (requires bw and L to be computed previously)
+                    % detect objects from the mask
                     cImage.DetectObjects();
                     % indicates mask was generated automatically
                     cImage.ThresholdAdjusted = 0;
