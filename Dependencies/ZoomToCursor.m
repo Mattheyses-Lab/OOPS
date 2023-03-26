@@ -27,7 +27,6 @@ function [] = ZoomToCursor(source,~)
     % get the zoom settings structure
     Zoom = PODSData.Settings.Zoom;
 
-
     % default freeze status
     freezeState = false;
     % default axes limits
