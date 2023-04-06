@@ -160,8 +160,8 @@ PODSData.Handles.hObjectBoxType = uimenu(PODSData.Handles.hObjectBoxMenu,'Text',
 PODSData.Handles.hObjectBoxType_Box = uimenu(PODSData.Handles.hObjectBoxType,'Text','Box','Checked','On','Callback',@ChangeObjectBoxType);
 PODSData.Handles.hObjectBoxType_Boundary = uimenu(PODSData.Handles.hObjectBoxType,'Text','Boundary','Checked','Off','Callback',@ChangeObjectBoxType);
 PODSData.Handles.hObjectBoxType_Patch = uimenu(PODSData.Handles.hObjectBoxType,'Text','Patch','Checked','Off','Callback',@ChangeObjectBoxType);
-PODSData.Handles.hObjectBoxType_Polygon = uimenu(PODSData.Handles.hObjectBoxType,'Text','Polygon','Checked','Off','Callback',@ChangeObjectBoxType);
-PODSData.Handles.hObjectBoxType_Development = uimenu(PODSData.Handles.hObjectBoxType,'Text','Development','Checked','Off','Callback',@ChangeObjectBoxType);
+% PODSData.Handles.hObjectBoxType_Polygon = uimenu(PODSData.Handles.hObjectBoxType,'Text','Polygon','Checked','Off','Callback',@ChangeObjectBoxType);
+% PODSData.Handles.hObjectBoxType_Development = uimenu(PODSData.Handles.hObjectBoxType,'Text','Development','Checked','Off','Callback',@ChangeObjectBoxType);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
 
@@ -335,6 +335,17 @@ PODSData.Handles.ColormapsSelector = uilistbox(PODSData.Handles.ColormapsSetting
     'Tag','ColormapSelectBox',...
     'ValueChangedFcn',@ColormapSelectionChanged,...
     'FontName',PODSData.Settings.DefaultFont);
+
+% testing below
+colormapIconStyles = matlab.ui.style.Style;
+colormapIconStyles = repmat(colormapIconStyles,numel(PODSData.Handles.ColormapsSelector.Items),1);
+% add icon styles to each item in the colormap selector listbox to give a colormap preview
+for colormapIdx = 1:numel(PODSData.Handles.ColormapsSelector.Items)
+    mapImage = ind2rgb(im2uint8(repmat(linspace(0,1,256),1,1)),PODSData.Settings.Colormaps.(ColormapNames{colormapIdx}));
+    colormapIconStyles(colormapIdx).Icon = mapImage;
+    addStyle(PODSData.Handles.ColormapsSelector,colormapIconStyles(colormapIdx),"item",colormapIdx);
+end
+% end testing
 
 % panel to hold example colormap axes
 PODSData.Handles.ExampleColormapPanel = uipanel(PODSData.Handles.ColormapsSettingsGrid);
@@ -2537,6 +2548,9 @@ pause(0.5)
         PODSData.Handles.AverageIntensityAxH.Color = 'Black';
         PODSData.Handles.AzimuthAxH.Color = 'Black';
         PODSData.Handles.MaskAxH.Color = 'Black';
+
+        UpdateSummaryDisplay(PODSData.Handles.fH);
+
     end
 
     function ChangeGUIColors(source,~)
@@ -2591,22 +2605,40 @@ pause(0.5)
             return
         end
 
+        % open the CustomMaskMaker app so user can build a masking scheme
         NewScheme = CustomMaskMaker(PODSData.CurrentImage(1).I,[],PODSData.Settings.IntensityColormap);
-
+        % get the handle to the mask maker app window
         MaskMakerFig = findobj(groot,'Name','Mask Maker');
-
+        % and wait until it is closed
         waitfor(MaskMakerFig);
 
-        % continue to saving
-        if ismac || isunix
-            SchemeFilesPath = [PODSData.Settings.MainPath,'/CustomMasks/Schemes/'];
-        elseif ispc
-            SchemeFilesPath = [PODSData.Settings.MainPath,'\CustomMasks\Schemes\'];
+        % attempt to save the new mask scheme
+        try
+            % if not a valid masking scheme, throw error
+            if ~NewScheme.isValidMaskingScheme
+                error('Invalid scheme');
+            end
+            % the path to the directory in which we will save the scheme
+            if ismac || isunix
+                SchemeFilesPath = [PODSData.Settings.MainPath,'/CustomMasks/Schemes/'];
+            elseif ispc
+                SchemeFilesPath = [PODSData.Settings.MainPath,'\CustomMasks\Schemes\'];
+            end
+            % save the new scheme
+            temp_scheme_struct.(NewSchemeName) = NewScheme;
+            save([SchemeFilesPath,NewSchemeName,'.mat'],'-struct','temp_scheme_struct');
+        catch ME
+            % depending on the error caught, update user, return
+            switch ME.message
+                case 'Invalid scheme'
+                    uialert(PODSData.Handles.fH,'Not a valid masking scheme','Error');
+                    return
+                otherwise
+                    report = getReport(ME);
+                    uialert(PODSData.Handles.fH,['Unable to load project: ',report],'Error');
+                    return
+            end
         end
-
-        % save the new scheme
-        temp_scheme_struct.(NewSchemeName) = NewScheme;
-        save([SchemeFilesPath,NewSchemeName,'.mat'],'-struct','temp_scheme_struct');
 
         % update PODSSettings with new scheme
         PODSData.Settings.LoadCustomMaskSchemes;
@@ -2614,6 +2646,7 @@ pause(0.5)
         % update uimenu to show newly saved scheme
         delete(PODSData.Handles.hMaskType_CustomScheme);
 
+        % rebuild the menu bar options for custom mask schemes
         PODSData.Handles.hMaskType_CustomScheme = uimenu(PODSData.Handles.hMaskType,'Text','CustomScheme');
 
         for SchemeIdx = 1:numel(PODSData.Settings.SchemeNames)
@@ -3372,27 +3405,30 @@ pause(0.5)
 
         cimg = findobj(cax.Children,'Type','image');
 
-        hTool = imcontrast(cimg);
+        % image contrast tool
+        %hTool = imcontrast(cimg);
+        %waitfor(hTool)
 
-        %figure(PODSData.Handles.fH);
 
-        %hTool.WindowStyle = "modal";
+        % pixel region tool
 
+        pixelRegionFig = uifigure("WindowStyle","alwaysontop","AutoResizeChildren","off");
+        hTool = impixelregionpanel(pixelRegionFig,cimg);
         waitfor(hTool)
         
         return
         % end test
 
-        % below is original code
-        % draw rectangular ROI
-        ROI = drawrectangle(cax);
-        % find and 'select' objects within ROI
-        %SelectObjectsInRectangularROI(source,ROI);
-        SelectObjectsInROI(source,ROI);
-        % delete the ROI
-        delete(ROI);
-        % update display
-        UpdateImages(source);
+        % % below is original code
+        % % draw rectangular ROI
+        % ROI = drawrectangle(cax);
+        % % find and 'select' objects within ROI
+        % %SelectObjectsInRectangularROI(source,ROI);
+        % SelectObjectsInROI(source,ROI);
+        % % delete the ROI
+        % delete(ROI);
+        % % update display
+        % UpdateImages(source);
     end
 
     function tbLassoROI(source,~)

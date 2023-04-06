@@ -1,7 +1,7 @@
 function [] = LoadReferenceImages(source,~)
 % main data structure
 PODSData = guidata(source);
-% group that we will be loading data for
+% idx to the group that we will be loading data for
 GroupIndex = PODSData.CurrentGroupIndex;
 % user-selected input file type (.nd2 or .tif)
 InputFileType = PODSData.Settings.InputFileType;
@@ -15,7 +15,7 @@ switch InputFileType
         uialert(PODSData.Handles.fH,'Select .nd2 reference images','Load Reference Images',...
             'Icon','',...
             'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
-        
+        % call uiwait() on the main figure window
         uiwait(PODSData.Handles.fH);
         % hide main window
         PODSData.Handles.fH.Visible = 'Off';

@@ -217,7 +217,6 @@ function [] = pb_LoadFPMFiles(source,~)
         feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
     end
     
-    %UpdateListBoxes(source);
     UpdateImageTree(source);
     UpdateImages(source);
     UpdateSummaryDisplay(source);

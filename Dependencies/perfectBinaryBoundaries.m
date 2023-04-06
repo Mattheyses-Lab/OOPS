@@ -5,6 +5,7 @@ arguments
     I {mustBeA(I,'logical')}
     Options.method (1,:) char {mustBeMember(Options.method,{'loose','tight','tightest','cornersonly'})} = 'tightest'
     Options.interpResolution (1,1) double {mustEvenlyDivideIntoOne(Options.interpResolution)} = 1
+    Options.conn (1,1) double {mustBeMember(Options.conn,[4,8])} = 8
 end
 
 % size of the input
@@ -283,8 +284,8 @@ try
     boundaries = traceFromEndpoint(boundaries(1,:),boundaries(2:end,:));
     % switch back to [y,x] format
     boundaries = [boundaries(:,2) boundaries(:,1)];
-catch
-    blah = 0;
+catch ME
+    warning(['Warning: ',ME.getReport]);
 end
 
 %% adjust which coordinates we keep based on method chosen
@@ -315,8 +316,12 @@ switch Options.method
         curveLength = getCurveLength([boundaries(:,2),boundaries(:,1)]);
         interpResolution = Options.interpResolution;
 
-        boundariesXY = interparc((curveLength/interpResolution)+1,boundaries(:,2),boundaries(:,1),'linear');
-        boundaries = [boundariesXY(:,2) boundariesXY(:,1)];
+        try
+            boundariesXY = interparc((curveLength/interpResolution)+1,boundaries(:,2),boundaries(:,1),'linear');
+            boundaries = [boundariesXY(:,2) boundariesXY(:,1)];
+        catch ME
+            warning(['Warning: ',ME.getReport]);
+        end
 
     case 'cornersonly'
         % get coordinates to the outer corners
@@ -330,6 +335,9 @@ switch Options.method
         % set new endpoints
         boundaries(end+1,:) = boundaries(1,:);
 end
+
+% round to 2 decimal places
+boundaries = round(boundaries,2);
 
 
     function innerCorners = getInnerCorners()

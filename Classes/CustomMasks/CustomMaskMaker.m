@@ -512,7 +512,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","Filter size (positive #)",...
         "Tag",'ImageFilterOperations',...
         "Visible","off",...
-        "UserData",'ImageFilterALL');
+        "UserData",{'Median','Gaussian','Average','Wiener','Bilateral','LaplacianOfGaussian'});
     ImageFilterOptionsFilterSizeLabel.Layout.Row = 2;
     ImageFilterOptionsFilterSizeLabel.Layout.Column = 1;
 
@@ -521,7 +521,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag",'ImageFilterOperations',...
         "ValueChangedFcn",@UpdateImageFilterOptions,...
         "Visible","off",...
-        "UserData",'ImageFilterALL');
+        "UserData",{'Median','Gaussian','Average','Wiener','Bilateral','LaplacianOfGaussian'});
     ImageFilterOptionsFilterSizeEditfield.Layout.Row = 2;
     ImageFilterOptionsFilterSizeEditfield.Layout.Column = 2;
 
@@ -530,7 +530,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","Sigma",...
         "Tag",'ImageFilterOperations',...
         "Visible","off",...
-        "UserData",'Gaussian');
+        "UserData",{'Gaussian','LaplacianOfGaussian'});
     ImageFilterOptionsSigmaLabel.Layout.Row = 3;
     ImageFilterOptionsSigmaLabel.Layout.Column = 1;
 
@@ -539,7 +539,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag",'ImageFilterOperations',...
         "ValueChangedFcn",@UpdateImageFilterOptions,...
         "Visible","off",...
-        "UserData",'Gaussian');
+        "UserData",{'Gaussian','LaplacianOfGaussian'});
     ImageFilterOptionsSigmaEditfield.Layout.Row = 3;
     ImageFilterOptionsSigmaEditfield.Layout.Column = 2;
 
@@ -548,7 +548,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","Spatial sigma (positive #)",...
         "Tag",'ImageFilterOperations',...
         "Visible","off",...
-        "UserData",'Bilateral');
+        "UserData",{'Bilateral'});
     ImageFilterOptionsSpatialSigmaLabel.Layout.Row = 3;
     ImageFilterOptionsSpatialSigmaLabel.Layout.Column = 1;
 
@@ -557,7 +557,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag",'ImageFilterOperations',...
         "ValueChangedFcn",@UpdateImageFilterOptions,...
         "Visible","off",...
-        "UserData",'Bilateral');
+        "UserData",{'Bilateral'});
     ImageFilterOptionsSpatialSigmaEditfield.Layout.Row = 3;
     ImageFilterOptionsSpatialSigmaEditfield.Layout.Column = 2;
 
@@ -1010,6 +1010,14 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
                             'FilterSize',FilterSize,...
                             'SpatialSigma',SpatialSigma...
                             };
+                    case 'LaplacianOfGaussian'
+                        Sigma = CurrentOp.ParamsMap('Sigma');
+                        ImageFilterOptions = {FilterSize,Sigma};
+                        ImageFilterOptionsSigmaEditfield.Value = num2str(Sigma);
+                        NamedParams = {...
+                            'FilterSize',FilterSize,...
+                            'Sigma',Sigma...
+                            };
                 end
 
             case 'ContrastEnhancement'
@@ -1269,14 +1277,14 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
                 set(findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']),"Visible","off");
                 % turn back on objects for the specific selected operation (indicated by UserData property)
                 set(findobj(fHMaskMaker,"UserData",OperationNameSelector.Value),"Visible","on");
-            case {'ImageFilter','BWMorphology'}
+            case 'BWMorphology'
                 % hide all operation parameters for currently seleted operation type (indicated by Tag property)
                 set(findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']),"Visible","off");
                 % turn back on objects used by all image filter operations (indicated by UserData property)
                 set(findobj(fHMaskMaker,"UserData",[OperationTypeSelector.Value,'ALL']),"Visible","on");
                 % turn back on objects for the specific selected operation (indicated by UserData property)
                 set(findobj(fHMaskMaker,"UserData",OperationNameSelector.Value),"Visible","on");
-            case 'Special'
+            case {'Special','ImageFilter'}
                 SpecialOperationsObjects = findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']);
                 set(SpecialOperationsObjects,'Visible','Off');
                 for j = 1:numel(SpecialOperationsObjects)
@@ -1372,6 +1380,11 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
                 SpatialSigma = abs(str2double(ImageFilterOptionsSpatialSigmaEditfield.Value));
                 ImageFilterOptions{2} = SpatialSigma;
                 NamedParams = {'FilterSize',FilterSize,'SpatialSigma',SpatialSigma};
+            case 'LaplacianOfGaussian' % same as gaussian?
+                ImageFilterOptions = {FilterSize};
+                Sigma = abs(str2double(ImageFilterOptionsSigmaEditfield.Value));
+                ImageFilterOptions{2} = Sigma;
+                NamedParams = {'FilterSize',FilterSize,'Sigma',Sigma};
         end
     end
 

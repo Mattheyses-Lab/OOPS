@@ -2,6 +2,7 @@ function biaxialMean = getBiaxialMean(angles)
 % returns the average direction of a vector of biaxial angles
 % input and output in radians
 
+    % angle() is equivalent to the mathematical Arg function
     biaxialMean = angle(mean(exp(1i*angles*2)))/2;
 
 %% step-by-step version shown commented for understanding

@@ -471,6 +471,20 @@ switch MaskType
             CustomScheme.Execute();
             % get the final output image (should be a logical mask image)
             cImage.bw = sparse(CustomScheme.Images(end).ImageData);
+
+            % testing below, various adjustments to the custom mask
+            % fill in gaps to remove diagonally connected pixels, keep only the pixels we added
+            diagFill = bwmorph(full(cImage.bw),'diag',1)-full(cImage.bw);
+            % now get an image with just the pixels that were originally connected
+            diagFill = bwmorph(diagFill,'diag',1)-diagFill;
+            % set those pixels to 0
+            cImage.bw(diagFill==1) = 0;
+
+            
+            cImage.bw = sparse(ClearImageBorder(full(cImage.bw),10));
+            % end testing
+
+
             % use the mask to build the label matrix
             cImage.L = sparse(bwlabel(full(cImage.bw),4));
 

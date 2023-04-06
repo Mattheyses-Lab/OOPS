@@ -371,8 +371,6 @@ classdef PODSImage < handle
                 obj.L(obj.Object(i).PixelIdxList) = obj.Object(i).SelfIdx;
             end
 
-            % % compute a new label matrix
-            % obj.L = bwlabel(full(obj.bw),4);
         end
 
         % delete objects with a specific label
@@ -631,7 +629,6 @@ classdef PODSImage < handle
                     catch me
                         switch me.message
                             case 'Failed to detect object midline'
-                                %disp(['Warning: ',me.message]);
                                 cObject.MidlineRelativeAzimuth = NaN;
                                 cObject.NormalRelativeAzimuth = NaN;
                             otherwise
@@ -852,6 +849,25 @@ classdef PODSImage < handle
             % [ObjectProperties(:).BWBoundary] = deal(B{:});
 
             %% testing below - new method to get "perfect" binary boundaries
+
+            % % get idxs to 'Image' and 'BoundingBox' fields
+            % fnames = fieldnames(ObjectProperties);
+            % % convert ObjectProperties struct to cell array
+            % C = struct2cell(ObjectProperties).';
+            % % get object images (using struct fieldnames to find idx to 'Image' column in cell array)
+            % ObjectImages = C(:,ismember(fnames,'Image'));
+            % % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
+            % ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
+            % % get boundaries from ObjectImages
+            % B = cellfun(@(obj_img)perfectBinaryBoundaries(padarray(obj_img,[1,1])),ObjectImages,'UniformOutput',0);
+            % % add bounding box offsets to boundary coordinates from ObjectImages
+            % % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
+            % B = cellfun(@(b,box) bsxfun(@plus,b,box([2 1]) - 1.5),B,ObjectBBox,'UniformOutput',0);
+            % % add object boundaries cell to props struct
+            % ObjectProperties(end).BWBoundary = [];
+            % [ObjectProperties(:).BWBoundary] = deal(B{:});
+
+            %% third method below
             % get idxs to 'Image' and 'BoundingBox' fields
             fnames = fieldnames(ObjectProperties);
             % convert ObjectProperties struct to cell array
@@ -861,10 +877,10 @@ classdef PODSImage < handle
             % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
             ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
             % get boundaries from ObjectImages
-            B = cellfun(@(obj_img)perfectBinaryBoundaries(padarray(obj_img,[1,1])),ObjectImages,'UniformOutput',0);
+            B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes','TraceStyle','pixeledge'),ObjectImages,'UniformOutput',0);
             % add bounding box offsets to boundary coordinates from ObjectImages
             % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
-            B = cellfun(@(b,box) bsxfun(@plus,b,box([2 1]) - 1.5),B,ObjectBBox,'UniformOutput',0);
+            B = cellfun(@(b,box) bsxfun(@plus,b{1},box([2 1]) - 0.5),B,ObjectBBox,'UniformOutput',0);
             % add object boundaries cell to props struct
             ObjectProperties(end).BWBoundary = [];
             [ObjectProperties(:).BWBoundary] = deal(B{:});

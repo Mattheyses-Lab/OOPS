@@ -155,7 +155,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                 obj.RangeAxes.XColor = obj.TickColor;
 
                 %%
-                obj.RangeAxes.Title.String = [obj.Title,' (',num2str(obj.Value(1)),' - ',num2str(obj.Value(2)),')'];
+                obj.RangeAxes.Title.String = [obj.Title,' (',num2str(round(obj.Value(1),2)),' - ',num2str(round(obj.Value(2),2)),')'];
                 obj.RangeAxes.Title.Color = obj.TitleColor;
                 %%
 

@@ -61,10 +61,10 @@ classdef PODSSettings < handle
         SESize = 3;
         SELines = 0;
         
-        % for now, just 'One-Color'
-        ExperimentType = 'One-Color';
-        % for now, just 1
-        nChannels = 1;
+        % % for now, just 'One-Color'
+        % ExperimentType = 'One-Color';
+        % % for now, just 1
+        % nChannels = 1;
         
         % colormaps settings
         Colormaps struct
@@ -98,8 +98,7 @@ classdef PODSSettings < handle
         % default px size (um/px)
         PixelSize = 0.1083;
 
-        % type of mask to generate and use for object detection
-        % Default, CustomScheme, or CustomUpload
+        % type of mask to generate and use for object detection (Default, CustomScheme, or CustomUpload)
         MaskType = 'Default';
 
         % various names

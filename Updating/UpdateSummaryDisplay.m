@@ -27,6 +27,38 @@ function [] = UpdateSummaryDisplay(source,varargin)
             PODSData.Handles.ProjectSummaryTable.ColumnName = {};
             PODSData.Handles.ProjectSummaryTable.RowName = {};
 
+            % testing adding styles to cells
+
+            % first remove all styles
+            removeStyle(PODSData.Handles.ProjectSummaryTable);
+
+            % color cell based on selected GUI background color
+            % get row and col coordinates to the cell corresponding to 'GUI background color'
+            [r,c] = find(ismember(projectTable.Variables,'GUI background color'));
+            % create an icon color style for the cell
+            s = uistyle('Icon',makeRGBColorSquare(PODSData.Settings.GUIBackgroundColor,1));
+            % add the style to the table
+            addStyle(PODSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
+
+            % color cell based on selected GUI foreground color
+            % get row and col coordinates to the cell corresponding to 'GUI background color'
+            [r,c] = find(ismember(projectTable.Variables,'GUI foreground color'));
+            % create an icon color style for the cell
+            s = uistyle('Icon',makeRGBColorSquare(PODSData.Settings.GUIForegroundColor,1));
+            % add the style to the table
+            addStyle(PODSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
+
+            % color cell based on selected GUI foreground color
+            % get row and col coordinates to the cell corresponding to 'GUI background color'
+            [r,c] = find(ismember(projectTable.Variables,'GUI highlight color'));
+            % create an icon color style for the cell
+            s = uistyle('Icon',makeRGBColorSquare(PODSData.Settings.GUIHighlightColor,1));
+            % add the style to the table
+            addStyle(PODSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
+
+            % end testing
+
+
         case 'Group'
 
             cGroup = PODSData.CurrentGroup;

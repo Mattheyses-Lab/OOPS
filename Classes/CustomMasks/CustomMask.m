@@ -63,7 +63,8 @@ classdef CustomMask < handle
             'Average',...
             'Gaussian',...
             'Wiener',...
-            'Bilateral'...
+            'Bilateral',...
+            'LaplacianOfGaussian',...
             };
 
         ArithmeticOperations = {...
@@ -116,6 +117,8 @@ classdef CustomMask < handle
         nOperations
         CurrentOperation
         CurrentImage
+
+        isValidMaskingScheme
 
     end
     
@@ -210,6 +213,12 @@ classdef CustomMask < handle
             for i = 1:obj.nImages
                 obj.Images(1).ImageData = [];
             end
+        end
+
+        function isValidMaskingScheme = get.isValidMaskingScheme(obj)
+    
+            isValidMaskingScheme = strcmp(obj.Images(end).ImageClass,'logical');
+
         end
 
         function DeleteOperation(obj,operation)

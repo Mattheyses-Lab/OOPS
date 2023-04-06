@@ -14,8 +14,6 @@ classdef CustomOperation < handle
 
         ParamsMap
 
-        %NamedParams containers.Map
-
         % structuring element
         SE
 
@@ -94,8 +92,9 @@ classdef CustomOperation < handle
                             case 'Average'
                                 OutputImage = imfilter(obj.Target.ImageData,fspecial('average',FilterSize));
                             case 'Gaussian'
+                                Sigma = obj.OperationParams{2};
                                 OutputImage = imgaussfilt(obj.Target.ImageData,...
-                                    obj.OperationParams{2},...
+                                    Sigma,...
                                     'FilterSize',FilterSize,...
                                     'FilterDomain','spatial');
                             case 'Wiener'
@@ -107,15 +106,19 @@ classdef CustomOperation < handle
                                     DegreeOfSmoothing,...
                                     SpatialSigma,...
                                     'NeighborhoodSize',FilterSize);
+                            case 'LaplacianOfGaussian'
+                                Sigma = obj.OperationParams{2};
+                                logFilter=fspecial('log',[FilterSize FilterSize],Sigma); 
+                                OutputImage=imfilter(I,logFilter,'replicate');
                         end
                     case 'ContrastEnhancement'
                         switch obj.OperationName
                             case 'EnhanceFibers'
                                 FiberWidth = obj.OperationParams{1};
+                                ObjectPolarity = "Bright";
                                 C = maxhessiannorm(obj.Target.ImageData,FiberWidth);
                                 OutputImage = fibermetric(obj.Target.ImageData,FiberWidth,...
-                                    "ObjectPolarity","bright","StructureSensitivity",0.5*C);
-                                %OutputImage = fibermetric(obj.Target.ImageData,FiberWidth);
+                                    "ObjectPolarity",ObjectPolarity,"StructureSensitivity",0.5*C);
                             case 'LocalBrighten'
                                 OutputImage = imlocalbrighten(obj.Target.ImageData);
                             case 'AdaptiveHistogramEqualization'
@@ -138,15 +141,6 @@ classdef CustomOperation < handle
                                 OutputImage = imreducehaze(obj.Target.ImageData);
                             case 'Scale0To1'
                                 I = obj.Target.ImageData;
-                                % if any(I<0)
-                                %     % set all < 0 to 0
-                                %     %I(I<0) = 0;
-                                %     I = I-min(min(I));
-                                %     warning('Negative pixel values');
-                                % end
-                                % max_val = max(I,[],'all');
-                                % min_val = min(I,[],'all');
-                                % OutputImage = (I-min_val)./(max_val-min_val);
                                 OutputImage = rescale(I,0,1);
                         end
                     case 'Special'

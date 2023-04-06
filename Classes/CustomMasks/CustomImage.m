@@ -35,9 +35,4 @@ classdef CustomImage < handle
     end
 
     
-
-
-
-
-
 end
