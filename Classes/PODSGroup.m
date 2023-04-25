@@ -78,6 +78,9 @@ classdef PODSGroup < handle
         Settings PODSSettings
 
         GroupSummaryDisplayTable table
+
+        % nImages x nLabels array of the number of objects with each label in this group
+        labelCounts double
     
     end
     
@@ -212,7 +215,11 @@ classdef PODSGroup < handle
         end
             
         function nReplicates = get.nReplicates(obj)
-            nReplicates = length(obj.Replicate);
+            if isvalid(obj.Replicate)
+                nReplicates = length(obj.Replicate);
+            else
+                nReplicates = 0;
+            end
         end
         
         function TotalObjects = get.TotalObjects(obj)
@@ -366,11 +373,6 @@ classdef PODSGroup < handle
             ObjectAzimuthAllDone = true;
         end
 
-
-
-
-
-           
         function OFAvg = get.OFAvg(obj)
             OFAvg = mean([obj.Replicate(find([obj.Replicate.OFDone])).OFAvg]);
         end
@@ -457,23 +459,33 @@ classdef PODSGroup < handle
                 "Azimuth stats calculated"];
 
             GroupSummaryDisplayTable = table(...
-                {Logical2String(obj.FFCLoaded)},...
-                {Logical2String(obj.FPMFilesLoaded)},...
-                {num2str(obj.nReplicates)},...
-                {num2str(obj.OFAvg)},...
-                {num2str(obj.TotalObjects)},...
-                {Logical2String(obj.FFCAllDone)},...
-                {Logical2String(obj.MaskAllDone)},...
-                {Logical2String(obj.OFAllDone)},...
-                {Logical2String(obj.ObjectDetectionAllDone)},...
-                {Logical2String(obj.LocalSBAllDone)},...
-                {Logical2String(obj.ObjectAzimuthAllDone)},...
+                {obj.FFCLoaded},...
+                {obj.FPMFilesLoaded},...
+                {obj.nReplicates},...
+                {obj.OFAvg},...
+                {obj.TotalObjects},...
+                {obj.FFCAllDone},...
+                {obj.MaskAllDone},...
+                {obj.OFAllDone},...
+                {obj.ObjectDetectionAllDone},...
+                {obj.LocalSBAllDone},...
+                {obj.ObjectAzimuthAllDone},...
                 'VariableNames',varNames,...
                 'RowNames',"Group");
 
             GroupSummaryDisplayTable = rows2vars(GroupSummaryDisplayTable,"VariableNamingRule","preserve");
 
             GroupSummaryDisplayTable.Properties.RowNames = varNames;
+        end
+
+        function labelCounts = get.labelCounts(obj)
+            % preallocate our array of label counts
+            labelCounts = zeros(obj.nReplicates,obj.Settings.nLabels);
+            % get the counts for each group in the project
+            for iIdx = 1:obj.nReplicates
+                % for each group, get the label counts by summing the label counts for each image
+                labelCounts(iIdx,:) = sum(obj.Replicate(iIdx).labelCounts,1);
+            end
         end
 
     end

@@ -4,7 +4,7 @@ classdef PODSSettings < handle
     %   settings for a single run of PODS GUI
     
     properties
-        
+
         Zoom = struct('XRange',0,...
             'YRange',0,...
             'ZRange',0,...
@@ -21,11 +21,11 @@ classdef PODSSettings < handle
             'Freeze',false,...
             'Restore',false,...
             'RestoreProps',[],...
-            'CurrentButton',gobjects(1,1),...
-            'StaticAxes',gobjects(1,1),...
-            'StaticImage',gobjects(1,1),...
-            'DynamicAxes',gobjects(1,1),...
-            'DynamicAxesParent',gobjects(1,1),...
+            'CurrentButton',[],...
+            'StaticAxes',[],...
+            'StaticImage',[],...
+            'DynamicAxes',[],...
+            'DynamicAxesParent',[],...
             'ActiveObjectIdx',NaN);
         
         InputFileType = '.nd2';
@@ -61,13 +61,9 @@ classdef PODSSettings < handle
         SESize = 3;
         SELines = 0;
         
-        % % for now, just 'One-Color'
-        % ExperimentType = 'One-Color';
-        % % for now, just 1
-        % nChannels = 1;
-        
         % colormaps settings
         Colormaps struct
+        xColormaps struct
         ColormapsSettings struct
         
         % Azimuth display settings
@@ -81,9 +77,9 @@ classdef PODSSettings < handle
 
         % SwarmPlot Settings
         SwarmPlotSettings struct
-        SwarmPlotBackgroundColor = [0 0 0];
-        SwarmPlotForegroundColor = [1 1 1];
-        SwarmPlotErrorBarColor = [1 1 1];
+        % SwarmPlotBackgroundColor = [0 0 0];
+        % SwarmPlotForegroundColor = [1 1 1];
+        % SwarmPlotErrorBarColor = [1 1 1];
 
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
@@ -130,6 +126,9 @@ classdef PODSSettings < handle
         SwarmPlotYVariable
         SwarmPlotGroupingType
         SwarmPlotColorMode
+        SwarmPlotBackgroundColor
+        SwarmPlotForegroundColor
+        SwarmPlotErrorBarColor
 
         % Object variables "long" names
         ObjectPlotVariablesLong
@@ -154,7 +153,7 @@ classdef PODSSettings < handle
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
             % optimum font size
-            obj.FontSize = ceil(obj.ScreenSize(4)*.01);
+            obj.FontSize = max(ceil(obj.ScreenSize(4)*.01),11);
             % set up default object label (PODSLabel object)
             obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],obj);
             % get list of supported fonts
@@ -281,7 +280,7 @@ classdef PODSSettings < handle
     
         function AddNewObjectLabel(obj,LabelName,LabelColor)
             if isempty(LabelColor)
-                BGColors = [0 0 0;1 1 1];
+                BGColors = [0 0 0];
                 LabelColor = distinguishable_colors(1,[obj.LabelColors;BGColors]);
             end
 
@@ -317,19 +316,23 @@ classdef PODSSettings < handle
         end
 
         function IntensityColormap = get.IntensityColormap(obj)
-            IntensityColormap = obj.ColormapsSettings.Intensity{3};
+            %IntensityColormap = obj.ColormapsSettings.Intensity{3};
+            IntensityColormap = obj.ColormapsSettings.Intensity.Map;
         end
 
         function OrderFactorColormap = get.OrderFactorColormap(obj)
-            OrderFactorColormap = obj.ColormapsSettings.OrderFactor{3};
+            %OrderFactorColormap = obj.ColormapsSettings.OrderFactor{3};
+            OrderFactorColormap = obj.ColormapsSettings.OrderFactor.Map;
         end
 
         function ReferenceColormap = get.ReferenceColormap(obj)
-            ReferenceColormap = obj.ColormapsSettings.Reference{3};
+            %ReferenceColormap = obj.ColormapsSettings.Reference{3};
+            ReferenceColormap = obj.ColormapsSettings.Reference.Map;
         end
 
         function AzimuthColormap = get.AzimuthColormap(obj)
-            AzimuthColormap = obj.ColormapsSettings.Azimuth{3};
+            %AzimuthColormap = obj.ColormapsSettings.Azimuth{3};
+            AzimuthColormap = obj.ColormapsSettings.Azimuth.Map;
         end
 
         function AzimuthLineAlpha = get.AzimuthLineAlpha(obj)
@@ -370,6 +373,18 @@ classdef PODSSettings < handle
 
         function SwarmPlotGroupingType = get.SwarmPlotGroupingType(obj)
             SwarmPlotGroupingType = obj.SwarmPlotSettings.GroupingType;
+        end
+
+        function SwarmPlotBackgroundColor = get.SwarmPlotBackgroundColor(obj)
+            SwarmPlotBackgroundColor = obj.SwarmPlotSettings.BackgroundColor;
+        end
+
+        function SwarmPlotForegroundColor = get.SwarmPlotForegroundColor(obj)
+            SwarmPlotForegroundColor = obj.SwarmPlotSettings.ForegroundColor;
+        end
+
+        function SwarmPlotErrorBarColor = get.SwarmPlotErrorBarColor(obj)
+            SwarmPlotErrorBarColor = obj.SwarmPlotSettings.ErrorBarColor;
         end
 
         function nLabels = get.nLabels(obj)
@@ -422,10 +437,10 @@ classdef PODSSettings < handle
             obj.ScatterPlotForegroundColor = settings.ScatterPlotForegroundColor;
             obj.ScatterPlotLegendVisible = settings.ScatterPlotLegendVisible;
 
-            % SwarmPlot Settings
-            obj.SwarmPlotBackgroundColor = settings.SwarmPlotBackgroundColor;
-            obj.SwarmPlotForegroundColor = settings.SwarmPlotForegroundColor;
-            obj.SwarmPlotErrorBarColor = settings.SwarmPlotErrorBarColor;
+            % % SwarmPlot Settings
+            % obj.SwarmPlotBackgroundColor = settings.SwarmPlotBackgroundColor;
+            % obj.SwarmPlotForegroundColor = settings.SwarmPlotForegroundColor;
+            % obj.SwarmPlotErrorBarColor = settings.SwarmPlotErrorBarColor;
 
             % object labeling
             obj.ObjectLabels = settings.ObjectLabels;

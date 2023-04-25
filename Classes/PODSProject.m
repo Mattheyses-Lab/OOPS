@@ -23,6 +23,9 @@ classdef PODSProject < handle
 
         ProjectSummaryDisplayTable
 
+        % nGroups x nLabels array of the number of objects with each label in this project
+        labelCounts
+
     end
 
     methods
@@ -85,7 +88,7 @@ classdef PODSProject < handle
         % find unique group color based on existing group colors
         function NewColor = getUniqueGroupColor(obj)
             % we want to avoid having these colors set as group colors
-            BGColors = [0 0 0;1 1 1];
+            BGColors = [1 1 1];
             if obj.nGroups>0
                 CurrentColors = zeros(obj.nGroups,3);    
                 for i = 1:obj.nGroups
@@ -258,6 +261,16 @@ classdef PODSProject < handle
             ProjectSummaryDisplayTable = rows2vars(ProjectSummaryDisplayTable,"VariableNamingRule","preserve");
 
             ProjectSummaryDisplayTable.Properties.RowNames = varNames;
+        end
+
+        function labelCounts = get.labelCounts(obj)
+            % preallocate our array of label counts
+            labelCounts = zeros(obj.nGroups,obj.Settings.nLabels);
+            % get the counts for each group in the project
+            for gIdx = 1:obj.nGroups
+                % for each group, get the label counts by summing the label counts for each image
+                labelCounts(gIdx,:) = sum(obj.Group(gIdx).labelCounts,1);
+            end
         end
 
     end
