@@ -2,7 +2,12 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
 
     try
         Colormaps_mat_file = load('Colormaps.mat');
-        Colormaps = Colormaps_mat_file.Colormaps;
+        tempColormaps = Colormaps_mat_file.Colormaps;
+        colormapNames = fieldnames(tempColormaps);
+        Colormaps = struct();
+        for colormapIdx = 1:numel(colormapNames)
+            Colormaps.(colormapNames{colormapIdx}) = tempColormaps.(colormapNames{colormapIdx}).Map;
+        end
     catch
         warning("Failed to load colormaps...");
     end
@@ -165,22 +170,35 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     ImageDisplayAxes.YTick = [];
     ImageDisplayAxes.Tag = OriginalTag;
 
-    % test below
+    % create an empty custom toolbar for the axes
+    tb = axtoolbar(ImageDisplayAxes,{});
+    % clear all of the default interactions
+    ImageDisplayAxes.Interactions = [];
+
+    % add a custom toolbar button for pan/zoom to cursor behavior 
+    btn = axtoolbarbtn(tb,'state');
+    btn.Icon = 'MagnifyingGlassBlackAndYellow.png';
+    btn.ValueChangedFcn = @generalZoomToCursor;
+    btn.Tag = ['ZoomToCursor',ImageDisplayAxes.Tag];
+    btn.Tooltip = 'Zoom to cursor';
+
+    % disable default interactivity for the axes
     disableDefaultInteractivity(ImageDisplayAxes);
 
 %% Right panel
 
-    NewOperationGrid = uigridlayout(MainGrid,[4,1],'BackgroundColor','Black');
+    NewOperationGrid = uigridlayout(MainGrid,[4,2],'BackgroundColor','Black');
     NewOperationGrid.Layout.Column = 3;
     NewOperationGrid.Layout.Row = [1 2];
     NewOperationGrid.RowHeight = {'fit','fit','1x',20};
-    NewOperationGrid.ColumnWidth = {'1x'};
+    NewOperationGrid.ColumnWidth = {'1x','1x'};
     NewOperationGrid.Padding = [0 0 0 0];
     NewOperationGrid.RowSpacing = 5;
 
     OperationTypeSelectorPanel = uipanel(NewOperationGrid,...
         "Title","Operation Type");
     OperationTypeSelectorPanel.Layout.Row = 1;
+    OperationTypeSelectorPanel.Layout.Column = [1 2];
 
     OperationTypeSelectorPanelGrid = uigridlayout(OperationTypeSelectorPanel,[1 1]);
     OperationTypeSelectorPanelGrid.Padding = [0 0 0 0];
@@ -192,6 +210,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     OperationNameSelectorPanel = uipanel(NewOperationGrid,...
         "Title","Operation Name");
     OperationNameSelectorPanel.Layout.Row = 2;
+    OperationNameSelectorPanel.Layout.Column = [1 2];
 
     OperationNameSelectorPanelGrid = uigridlayout(OperationNameSelectorPanel,[1 1]);
     OperationNameSelectorPanelGrid.Padding = [0 0 0 0];
@@ -203,6 +222,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     OperationParamsPanel = uipanel(NewOperationGrid,...
         "Title","TopHat Options");
     OperationParamsPanel.Layout.Row = 3;
+    OperationParamsPanel.Layout.Column = [1 2];
 
 %% From here up until the nested functions are all graphics objects needed to adjust parameters of each operation
 
@@ -333,7 +353,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     MorphologicalOptionsHeightEditfield.Layout.Row = 3;
     MorphologicalOptionsHeightEditfield.Layout.Column = 2;
 
-   % rectangle width
+    % rectangle width
     MorphologicalOptionsWidthLabel = uilabel(MorphologicalOptionsGrid,...
         "Text","Rectangle width (pixels, positive integer)",...
         "Tag",'MorphologicalOperations',...
@@ -397,6 +417,12 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     AddOperationButton.Layout.Row = 4;
     AddOperationButton.Layout.Column = 1;
 
+    EditOperationButton = uibutton(NewOperationGrid,...
+        "Text","Edit operation",...
+        "ButtonPushedFcn",@EditOperation);
+    EditOperationButton.Layout.Row = 4;
+    EditOperationButton.Layout.Column = 2;
+
 %% Binarize operation parameters
 
     % default options for binarization operations ('Adaptive')
@@ -431,7 +457,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","Neighborhood size (positive odd integer)",...
         "Tag",'BinarizeOperations',...
         "Visible","off",...
-        "UserData",'Adaptive');
+        "UserData",{'Adaptive'});
     BinarizeOptionsNeighborhoodSizeLabel.Layout.Row = 2;
     BinarizeOptionsNeighborhoodSizeLabel.Layout.Column = 1;
 
@@ -440,7 +466,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag",'BinarizeOperations',...
         "ValueChangedFcn",@UpdateBinarizeOptions,...
         "Visible","off",...
-        "UserData",'Adaptive');
+        "UserData",{'Adaptive'});
     BinarizeOptionsNeighborhoodSizeEditfield.Layout.Row = 2;
     BinarizeOptionsNeighborhoodSizeEditfield.Layout.Column = 2;
 
@@ -448,7 +474,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     BinarizeOptionsStatisticLabel = uilabel(BinarizeOptionsGrid,...
         "Text","Statistic",...
         "Tag",'BinarizeOperations',...
-        "UserData",'Adaptive');
+        "UserData",{'Adaptive'});
     BinarizeOptionsStatisticLabel.Layout.Row = 3;
     BinarizeOptionsStatisticLabel.Layout.Column = 1;
 
@@ -457,7 +483,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Value",'mean',...
         "ValueChangedFcn",@UpdateBinarizeOptions,...
         "Tag",'BinarizeOperations',...
-        "UserData",'Adaptive');    
+        "UserData",{'Adaptive'});    
     BinarizeOptionsStatisticDropdown.Layout.Row = 3;
     BinarizeOptionsStatisticDropdown.Layout.Column = 2;
 
@@ -466,7 +492,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","Sensitivity (number in range [0 1])",...
         "Tag",'BinarizeOperations',...
         "Visible","off",...
-        "UserData",'Adaptive');
+        "UserData",{'Adaptive'});
     BinarizeOptionsSensitivityLabel.Layout.Row = 4;
     BinarizeOptionsSensitivityLabel.Layout.Column = 1;
 
@@ -475,7 +501,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag",'BinarizeOperations',...
         "ValueChangedFcn",@UpdateBinarizeOptions,...
         "Visible","off",...
-        "UserData",'Adaptive');
+        "UserData",{'Adaptive'});
     BinarizeOptionsSensitivityEditfield.Layout.Row = 4;
     BinarizeOptionsSensitivityEditfield.Layout.Column = 2;
 
@@ -598,7 +624,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","Fiber width (positive integer)",...
         "Tag",'ContrastEnhancementOperations',...
         "Visible","off",...
-        "UserData",'EnhanceFibers');
+        "UserData",{'EnhanceFibers'});
     ContrastEnhancementOptionsFiberWidthLabel.Layout.Row = 2;
     ContrastEnhancementOptionsFiberWidthLabel.Layout.Column = 1;
 
@@ -607,7 +633,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag",'ContrastEnhancementOperations',...
         "ValueChangedFcn",@UpdateContrastEnhancementOptions,...
         "Visible","off",...
-        "UserData",'EnhanceFibers');
+        "UserData",{'EnhanceFibers'});
     ContrastEnhancementOptionsFiberWidthEditfield.Layout.Row = 2;
     ContrastEnhancementOptionsFiberWidthEditfield.Layout.Column = 2;
 
@@ -616,7 +642,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","Sigma (positive number)",...
         "Tag",'ContrastEnhancementOperations',...
         "Visible","off",...
-        "UserData",'Flatfield');
+        "UserData",{'Flatfield'});
     ContrastEnhancementOptionsSigmaLabel.Layout.Row = 2;
     ContrastEnhancementOptionsSigmaLabel.Layout.Column = 1;
 
@@ -625,7 +651,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag",'ContrastEnhancementOperations',...
         "ValueChangedFcn",@UpdateContrastEnhancementOptions,...
         "Visible","off",...
-        "UserData",'Flatfield');
+        "UserData",{'Flatfield'});
     ContrastEnhancementOptionsSigmaEditfield.Layout.Row = 2;
     ContrastEnhancementOptionsSigmaEditfield.Layout.Column = 2;
 
@@ -634,7 +660,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","FilterSize (positive odd integer)",...
         "Tag",'ContrastEnhancementOperations',...
         "Visible","off",...
-        "UserData",'Flatfield');
+        "UserData",{'Flatfield'});
     ContrastEnhancementOptionsFilterSizeLabel.Layout.Row = 3;
     ContrastEnhancementOptionsFilterSizeLabel.Layout.Column = 1;
 
@@ -643,7 +669,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag",'ContrastEnhancementOperations',...
         "ValueChangedFcn",@UpdateContrastEnhancementOptions,...
         "Visible","off",...
-        "UserData",'Flatfield');
+        "UserData",{'Flatfield'});
     ContrastEnhancementOptionsFilterSizeEditfield.Layout.Row = 3;
     ContrastEnhancementOptionsFilterSizeEditfield.Layout.Column = 2;
 
@@ -764,7 +790,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
             "Text",Scheme.ArithmeticOperations{i},...
             "Visible","off",...
             "Tag","ArithmeticOperations",...
-            "UserData",Scheme.ArithmeticOperations{i},...
+            "UserData",Scheme.ArithmeticOperations(i),...
             "HorizontalAlignment","center");
         ArithmeticOptionsOperationLabel(i,1).Layout.Row = 2;
         ArithmeticOptionsOperationLabel(i,1).Layout.Column = 2;
@@ -848,7 +874,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Text","n",...
         "Visible","off",...
         "Tag","BWMorphologyOperations",...
-        "UserData",'BWMorphologyALL');
+        "UserData",{'Skeletonize'});
     BWMorphologyOptionsNLabel.Layout.Row = 2;
     BWMorphologyOptionsNLabel.Layout.Column = 1;
 
@@ -859,7 +885,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         "Tag","BWMorphologyOperations",...
         "ValueChangedFcn",@UpdateBWMorphologyOptions,...
         "Visible","off",...
-        "UserData",'BWMorphologyALL');
+        "UserData",{'Skeletonize'});
     BWMorphologyOptionsNEditfield.Layout.Row = 2;
     BWMorphologyOptionsNEditfield.Layout.Column = 2;
 
@@ -884,7 +910,6 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         
         UpdateMainImage();
         UpdateDisplayWithSelectedOperation();
-
     end
 
     function UpdateDisplayWithSelectedOperation()
@@ -1241,26 +1266,20 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     end
 
     function OperationTypeChanged(source,event)
-
         % hide the previous options grid
         PreviousTypeGrid = findobj(fHMaskMaker,'Tag',[event.PreviousValue,'OptionsGrid']);
         PreviousTypeGrid.Visible = 'Off';
-
         % show the options grid for newly selected OperationType
         CurrentTypeGrid = findobj(fHMaskMaker,'Tag',[event.Value,'OptionsGrid']);
         CurrentTypeGrid.Visible = 'On';
-
         % hide previous operation Target options
         PreviousTargetObjects = findobj(fHMaskMaker,'Tag',[event.PreviousValue,'Target']);
         set(PreviousTargetObjects,'Visible','Off');
-
         % hide previous operation Target options
         CurrentTargetObjects = findobj(fHMaskMaker,'Tag',[event.Value,'Target']);
         set(CurrentTargetObjects,'Visible','On');
-
         % change items in OperationNameSelector selector to the subtypes of the selected operation in OperationTypeSelector
         OperationNameSelector.Items = Scheme.([source.Value,'Operations']);
-
         % invoke the OperationNameSelector ValueChangedFcn callback
         OperationNameChanged(OperationNameSelector);
     end
@@ -1272,24 +1291,29 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
 
         % hide/show graphics objects based on selected operation
         switch OperationTypeSelector.Value
-            case {'Binarize','ContrastEnhancement','Arithmetic'}
-                % hide all operation parameters for currently seleted operation type (indicated by Tag property)
-                set(findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']),"Visible","off");
-                % turn back on objects for the specific selected operation (indicated by UserData property)
-                set(findobj(fHMaskMaker,"UserData",OperationNameSelector.Value),"Visible","on");
-            case 'BWMorphology'
-                % hide all operation parameters for currently seleted operation type (indicated by Tag property)
-                set(findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']),"Visible","off");
-                % turn back on objects used by all image filter operations (indicated by UserData property)
-                set(findobj(fHMaskMaker,"UserData",[OperationTypeSelector.Value,'ALL']),"Visible","on");
-                % turn back on objects for the specific selected operation (indicated by UserData property)
-                set(findobj(fHMaskMaker,"UserData",OperationNameSelector.Value),"Visible","on");
-            case {'Special','ImageFilter'}
-                SpecialOperationsObjects = findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']);
-                set(SpecialOperationsObjects,'Visible','Off');
-                for j = 1:numel(SpecialOperationsObjects)
-                    if ismember(OperationNameSelector.Value,SpecialOperationsObjects(j).UserData)
-                        SpecialOperationsObjects(j).Visible = 'On';
+            % case {'test'}
+            %     % hide all operation parameters for currently seleted operation type (indicated by Tag property)
+            %     set(findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']),"Visible","off");
+            %     % turn back on objects for the specific selected operation (indicated by UserData property)
+            %     set(findobj(fHMaskMaker,"UserData",OperationNameSelector.Value),"Visible","on");
+            % case 'test2'
+            %     % hide all operation parameters for currently seleted operation type (indicated by Tag property)
+            %     set(findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']),"Visible","off");
+            %     % turn back on objects used by all image filter operations (indicated by UserData property)
+            %     set(findobj(fHMaskMaker,"UserData",[OperationTypeSelector.Value,'ALL']),"Visible","on");
+            %     % turn back on objects for the specific selected operation (indicated by UserData property)
+            %     set(findobj(fHMaskMaker,"UserData",OperationNameSelector.Value),"Visible","on");
+            case {'Special','ImageFilter','ContrastEnhancement','Binarize','Arithmetic','BWMorphology'}
+                % get all objects associated with the operation type specified by OperationTypeSelector.Value
+                OperationTypeObjects = findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']);
+                % set Visibiity to 'off'
+                set(OperationTypeObjects,'Visible','Off');
+                % for each object associated with the selected operation type
+                for j = 1:numel(OperationTypeObjects)
+                    % check if the associated operation name (in UserData) matches the object
+                    if ismember(OperationNameSelector.Value,OperationTypeObjects(j).UserData)
+                        % if so, make it visible
+                        OperationTypeObjects(j).Visible = 'On';
                     end
                 end
         end
@@ -1469,6 +1493,102 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
 
     end
 
+%% Edit the currently selected operation
+
+    function EditOperation(~,~)
+        % type of CustomOperation we need to make
+        OperationType = OperationTypeSelector.Value;
+        % name of specific operation we need to make
+        OperationName = OperationNameSelector.Value;
+
+        CurrentOperationIdx = find(Scheme.CurrentOperation==Scheme.Operations);
+
+        switch OperationType
+            case 'Morphological'
+                Target = MorphologicalOptionsTargetDropdown.Value;
+                if isValidEditTarget(Target)
+                    UpdateSE();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,{SE},NamedParams{:});
+                end
+            case 'Binarize'
+                Target = BinarizeOptionsTargetDropdown.Value;
+                if isValidEditTarget(Target)
+                    UpdateBinarizeOptions();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,BinarizeOptions,NamedParams{:});
+                end
+            case 'ImageFilter'
+                Target = ImageFilterOptionsTargetDropdown.Value;
+                if isValidEditTarget(Target)
+                    UpdateImageFilterOptions();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,ImageFilterOptions,NamedParams{:});
+                end
+            case 'Arithmetic'
+                Target(1) = ArithmeticOptionsTargetDropdown1.Value;
+                Target(2) = ArithmeticOptionsTargetDropdown2.Value;
+                if isValidEditTarget(Target(1)) && isValidEditTarget(Target(2))
+                    UpdateArithmeticOptions();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,ArithmeticOptions,NamedParams{:});
+                end
+            case 'ContrastEnhancement'
+                Target = ContrastEnhancementOptionsTargetDropdown.Value;
+                if isValidEditTarget(Target)
+                    UpdateContrastEnhancementOptions();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,ContrastEnhancementOptions,NamedParams{:});
+                end
+            case 'Special'
+                Target = SpecialOptionsTargetDropdown.Value;
+                if isValidEditTarget(Target)
+                    UpdateSpecialOptions();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,SpecialOptions,NamedParams{:});
+                end
+            case 'EdgeDetection'
+                Target = EdgeDetectionOptionsTargetDropdown.Value;
+                if isValidEditTarget(Target)
+                    UpdateEdgeDetectionOptions();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,EdgeDetectionOptions,NamedParams{:});
+                end
+            case 'BWMorphology'
+                Target = BWMorphologyOptionsTargetDropdown.Value;
+                if isValidEditTarget(Target)
+                    UpdateBWMorphologyOptions();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,BWMorphologyOptions,NamedParams{:});
+                end
+        end
+
+        % execute the step that we just added
+        Scheme.ExecuteFromStep(CurrentOperationIdx);
+
+        Scheme.CurrentImageIdx = CurrentOperationIdx;
+        Scheme.CurrentOperationIdx = CurrentOperationIdx;
+
+        % update various listboxes
+        ImageSelector.Items = Scheme.ImagesTextDisplay;
+        ImageSelector.ItemsData = 1:Scheme.nImages;
+        ImageSelector.Value = CurrentOperationIdx;
+
+        OperationSelector.Items = Scheme.OperationsTextDisplay;
+        OperationSelector.ItemsData = 1:Scheme.nOperations;
+        OperationSelector.Value = CurrentOperationIdx;
+
+        % update image display
+        UpdateMainImage();
+
+    end
+
+    function TF = isValidEditTarget(Target)
+    % check if a given Target image is valid to edit the current operation
+    % to be valid, the Target must be an existing image in the scheme with 
+    % an idx < idx of the operation targeting it
+        % find the idx of the currently selected Target in the scheme
+        TargetIdx = find(Target==Scheme.Images);
+        % find the index of the currently selected image (or operation, should be the same)
+        ImageIdx = ImageSelector.Value;
+        % return true if the target idx is less than the image idx, false otherwise
+        TF = TargetIdx < ImageIdx;
+    end
+
+%% Add a new operation to the scheme
+
     function AddOperationToScheme(~,~)
         % type of CustomOperation we need to make
         OperationType = OperationTypeSelector.Value;
@@ -1580,7 +1700,6 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         %drawnow limitrate
         drawnow
         %ImageDisplayAxes.InnerPosition = [0 0 1 1];
-
     end
 
 end

@@ -136,6 +136,7 @@ classdef CustomMask < handle
             obj.Operations(1) = CustomOperation('Empty','Empty',obj.Images(1),{},{});
         end
         
+        % execute the entire scheme
         function Execute(obj)
             % set starting image data
             obj.Images(1).ImageData = obj.StartingImage;
@@ -145,8 +146,16 @@ classdef CustomMask < handle
             end
         end
 
+        % execute a specific operation (obj.Operations(StepIdx))
         function ExecuteStep(obj,StepIdx)
             obj.Images(StepIdx).ImageData = obj.Operations(StepIdx).Execute();
+        end
+
+        % execute the scheme starting from a specific step (idx)
+        function ExecuteFromStep(obj,StepIdx)
+            for step = StepIdx:obj.nOperations
+                obj.ExecuteStep(step);
+            end
         end
 
         function AddOperation(obj,OperationType,OperationName,Target,OperationParams,varargin)
@@ -154,6 +163,16 @@ classdef CustomMask < handle
             obj.Operations(end+1) = CustomOperation(OperationType,OperationName,Target,OperationParams,varargin{:});
             % add empty CustomImage to hold the image data when we call obj.execute()
             obj.Images(end+1) = CustomImage([]);
+        end
+
+        function EditOperation(obj,OperationIdx,OperationType,OperationName,Target,OperationParams,varargin)
+            % we cannot simply replace the operation without preserving its output image
+            % we need to save the image object in case any other operations depend on it
+            imageToEdit = obj.Images(OperationIdx);
+            % edit an existing operation
+            obj.Operations(OperationIdx) = CustomOperation(OperationType,OperationName,Target,OperationParams,varargin{:});
+            % add empty CustomImage to hold the image data when we call obj.Execute()
+            obj.Images(OperationIdx) = imageToEdit;
         end
 
         function nImages = get.nImages(obj)
