@@ -15,8 +15,8 @@ function Iout = quasihbreak(I)
 %
 % ASSUMPTIONS AND LIMITATIONS:
 %   I think I have accounted for all possible "near h's" here but, as I manually defined them,
-%   I may have missed some. This should be updated to automatically generate the set of 
-%   reference matrices
+%   I may have missed some. This could be updated to automatically generate the set of 
+%   reference matrices more elegantly
 %
 % REVISION HISTORY:
 %   03/02/2023 - Will Dean
