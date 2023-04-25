@@ -31,7 +31,7 @@ orig_boundariesy = boundariesy;
 % convert to polyshape, don't keep collinear points (won't take effect unless we simplify)
 boundarypoly = polyshape(boundariesx(1:end),boundariesy(1:end),"KeepCollinearPoints",false,"Simplify",false);
 
-% testing below, get buffer around polygon for larger boundary
+% testing below, get buffer around polygon for slightly expanded boundary
 d = 0.7071;
 boundarypoly = polybuffer(boundarypoly,d,"JointType","round");
 % end testing
@@ -39,49 +39,28 @@ boundarypoly = polybuffer(boundarypoly,d,"JointType","round");
 % extract coordinates of the polyshape vertices, these are our new boundaries
 boundariesx = [boundarypoly.Vertices(1:end,1);boundarypoly.Vertices(1,1)];
 boundariesy = [boundarypoly.Vertices(1:end,2);boundarypoly.Vertices(1,2)];
-% n points in the original boundary (subtract one to account for overlapping endpoints)
-% boundaryPoints = length(boundariesx)-1;
+
 % get the perimeter of the boundary
 boundaryPerimeter = boundarypoly.perimeter;
-
-% % same number of edges as number of unique vertices
-% boundaryEdges = boundaryPoints;
-% % determine the average length of each edge of the boundary
-% lengthPerEdge = boundaryPerimeter/boundaryEdges;
 
 %% interpolate and respace the boundary coordinates
 
 if Options.BoundaryInterpolation
     % desired spacing between points after interpolation (we want less interpolation as the object gets larger)
     boundary_interp_res = log(nthroot(boundaryPerimeter,4))*1.5;
-
     % determine the number of edges to draw in the interpolated curve
     nEdgesDesired = ceil(boundaryPerimeter/boundary_interp_res);
-    % if odd, make even (seems to work better for small objects)
-
-    % % check if this helps or not
-    % if mod(nEdgesDesired,2)
-    %     nEdgesDesired = nEdgesDesired+1;
-    % end
-
     % rescale the edge length to perfectly fit nEdgesDesired edges in our original boundary
     length1 = nEdgesDesired*boundary_interp_res;
     length2 = boundaryPerimeter;
     interpScale = length1/length2;
     boundary_interp_res = boundary_interp_res/interpScale;
-
     % using interparc interpolation method - seems to work better but need to tweak params
     nPointsDesired = round(boundaryPerimeter/boundary_interp_res)+1;
-
-    % check which method is best
-    %nPointsDesired = round(boundaryPerimeter/boundary_interp_res);
-
     % working method
     newPoints = interparc(nPointsDesired,boundariesx,boundariesy,'linear');
-
     boundariesx = newPoints(:,1);
     boundariesy = newPoints(:,2);
-
 end
 
 % save the interpolated boundaries for plotting
@@ -102,25 +81,17 @@ if Options.BoundarySmoothing
     end
     % smooth out the boundaries so that the majority of vertices within the mask are at the approximate centerline
     [boundariesx,boundariesy] = sgolayfilt_closedcurve(boundariesx,boundariesy,polynomialOrder,boundarySmoothWidth);
-
-
     % !important step! if we do not re-space boundary points after smoothing, we could end up with a very jagged midline
-    %boundaryPerimeter = getCurveLength([boundariesx,boundariesy]);
     % we want the respaced boundary to have the same number of points
     nPointsDesired = numel(boundariesx);
     % now re-interpolate
     newPoints = interparc(nPointsDesired,boundariesx,boundariesy,'linear');
     boundariesx = newPoints(:,1);
     boundariesy = newPoints(:,2);
-
 end
 
 smooth_boundariesx = boundariesx;
 smooth_boundariesy = boundariesy;
-
-% could interpolate/respace again here, as smoothing changes the positions of coordinates
-% -- code to respace here --
-% end respace
 
 %% Delaunay triangulation and Voronoi tesselation to find edges
 
@@ -136,12 +107,23 @@ DT = delaunayTriangulation(x,y);
 [V,C] = DT.voronoiDiagram;
 % get the triangle edges
 dt_ed = DT.edges;
-% indices to nodes representing the endpoints of edges of Delaunay traingles
+% indices to nodes representing the endpoints of edges of Delaunay triangles
 istr = dt_ed(dt_ed(:,1)<=nstr,1);
 neigh = dt_ed(dt_ed(:,1)<=nstr,2);
 
-% initialize edge array
+% preallocate edge array - holds all shared edges
 edge = nan(numel(istr),2);
+
+% get idxs to Voronoi nodes within the object boundary
+v_inobj_idx = find(inpolygon(V(:,1),V(:,2),boundariesx,boundariesy));
+% using those idxs, get the actual (x,y) coordinates of each Voronoi node
+v_inobj = V(v_inobj_idx,:);
+
+% preallocate array of edges and weights, should be one less edge than there are nodes in the object
+edges = nan(numel(v_inobj_idx)-1,2);
+weights = nan(numel(v_inobj_idx)-1,1);
+edgeCounter = 1;
+
 % for each triangle edge
 for i = 1:numel(istr)
     % get the two polygons linked by the triangle edge
@@ -151,70 +133,37 @@ for i = 1:numel(istr)
     sharedEdge = poly1(ismember(poly1,poly2));
     % we only want the last two vertices if there are more than 2
     edge(i,:) = sharedEdge(:,end-1:end);
-    % clear temps
-    clear poly1 poly2 sharedEdge
-end
-
-%% find only edges within the object boundary
-
-% get only those voronoi vertices within the object boundary
-% v_inobj_idx = idxs to nodes inside object
-v_inobj_idx = find(inpolygon(V(:,1),V(:,2),boundariesx,boundariesy));
-% v_inobj = (x,y) coordinates of nodes inside object
-v_inobj = V(v_inobj_idx,:);
-% only keep unique values and do not sort
-v_inobj = unique(v_inobj,'rows','stable');
-% arrays to hold all edges and edge weights within the object boundary
-edges = [];
-weights = [];
-% for each Voronoi edge
-for i = 1:length(edge)
     % get the node idxs to the edge endpoints
     endIdx1 = edge(i,1);
     endIdx2 = edge(i,2);
-    % get the endpoint coordinates (x,y)
-    v1 = V(endIdx1,:);
-    v2 = V(endIdx2,:);
-    % if vertices are equivalent or non-finite
-    if all(v1==v2) || any(v1==inf) || any(v2==inf)
-        % then do not save the edge
-        continue
-    end
-    % vertically concatenate the endpoint coords
-    edgeLine = [v1;v2];
+    % try to find those edge endpoints in our list of Voronoi nodes within the object
+    NEWendIdx1 = find(v_inobj_idx==endIdx1);
+    NEWendIdx2 = find(v_inobj_idx==endIdx2);
 
-    if ismember(endIdx1,v_inobj_idx) && ismember(endIdx2,v_inobj_idx)
-        % find idxs to the two nodes with respect to the list of nodes inside the object 
-        NEWendIdx1 = find(ismember(v_inobj,v1,'rows'));
-        NEWendIdx2 = find(ismember(v_inobj,v2,'rows'));
-        % the edge is a 2-element row vector of those nodes
-        NEWedge = [NEWendIdx1 NEWendIdx2];
-        % add it to the list
-        edges(end+1,:) = NEWedge;
-        % calculate the edge weight (euclidean distances between nodes)
-        weights(end+1,1) = sqrt((v1(1,1)-v2(1,1))^2+(v1(1,2)-v2(1,2))^2);
+    % if both found
+    if ~(isempty(NEWendIdx1) || isempty(NEWendIdx2))
+        % get (x,y) coordinates to the two endpoints of the edge
+        v1 = V(endIdx1,:);
+        v2 = V(endIdx2,:);
+        % add a new edge to our list
+        edges(edgeCounter,:) = [NEWendIdx1 NEWendIdx2];
+        % compute the edge weight as the Euclidean distance between them
+        weights(edgeCounter,1) = sqrt((v1(1,1)-v2(1,1))^2+(v1(1,2)-v2(1,2))^2);
+        % increment the edge counter
+        edgeCounter = edgeCounter+1;
     end
 end
+
 
 %% construct an undirected graph, find the endpoints, then trace the shortest path between them
 
-% create the undirected graph object
+% create an undirected graph using the edges and edge weights we jsut found
 G = graph(edges(:,1),edges(:,2),weights);
-% add a name for each node
-nodenames = cell(size(v_inobj,1),1);
-nodexcoord = [];
-nodeycoord = [];
-for i = 1:numel(nodenames)
-    nodenames{i,1} = num2str(i);
-    nodexcoord(i,1) = v_inobj(i,1);
-    nodeycoord(i,1) = v_inobj(i,2);
-end
-G.Nodes.Name = nodenames;
-G.Nodes.Xcoord = nodexcoord;
-G.Nodes.Ycoord = nodeycoord;
-
-% [~,ia,~] = unique(round([G.Nodes.Xcoord G.Nodes.Ycoord],4),'rows');
-% G = subgraph(G,ia);
+% create a cell array of character vectors from the node idxs to use as the node names for the graph
+G.Nodes.Name = arrayfun(@num2str, (1:G.numnodes).', 'UniformOutput', 0);
+% add x and y coordinate information for each node in the graph
+G.Nodes.Xcoord = v_inobj(:,1);
+G.Nodes.Ycoord = v_inobj(:,2);
 
 % number of nodes with degree > 2
 nDegreeGT2 = numel(find(degree(G)>2));
@@ -239,14 +188,9 @@ G = rmnode(G,find(degree(G)==0));
 if numel(G.Nodes)==0
     G = [];
     edges = [];
-    Midline = [];
+    Midline = [NaN NaN];
     return
 end
-
-% % get the largest connected component if there is more than 1 graph component
-% [bin,binsize] = conncomp(G,'Type','weak');
-% idx = binsize(bin) == max(binsize);
-% G = subgraph(G, idx);
 
 % get the shortest distance between all nodes
 d = distances(G);
@@ -256,7 +200,7 @@ d = distances(G);
 [end1,end2] = ind2sub(size(d),maxIdx);
 
 
-try    
+try
     % get the ordered list of nodes representing the midline
     midlinePathNodes = shortestpath(G,end1,end2);
 
@@ -293,13 +237,6 @@ Midline = [G.Nodes.Xcoord G.Nodes.Ycoord];
 endNode1 = Midline(1,:);
 endNode2 = Midline(end,:);
 
-
-% % now get the (x,y) coordinates of those nodes
-% endNode1 = v_inobj(end1,:);
-% endNode2 = v_inobj(end2,:);
-% 
-% % finally, convert the node list to midline coordinates
-% Midline = [v_inobj(midlinePathNodes,1),v_inobj(midlinePathNodes,2)];
 % due to the use of floating point coordinates, there is a chance for "near duplicate" vertices
 % so we will round the vertex coordinates and only keep the unique values
 Midline = unique(round(Midline,8),'rows','stable');
@@ -309,29 +246,23 @@ curveLength = getCurveLength(Midline);
 %% interpolate the midline curve
 
 if Options.MidlineInterpolation && curveLength > 0.2
-    % desired spacing between points after interpolation (we want less interpolation as the object gets larger)
-
     % how many edges desired in our final curve assuming the given interpolation resolution
     nEdgesDesired = ceil(curveLength/midline_interp_res);
-
     % rescale the edge length to perfectly fit nEdgesDesired edges in our original boundary
     length1 = nEdgesDesired*midline_interp_res;
     length2 = curveLength;
     interpScale = length1/length2;
     midline_interp_res = midline_interp_res/interpScale;
-
     % get the number of desired points
     nPointsDesired = round(curveLength/midline_interp_res)+1;
-
     % using interparc interpolation method - seems to work better but need to tweak params
     Midline = interparc(nPointsDesired,Midline(:,1),Midline(:,2),'linear');
-
 end
 
 %% smooth out the midline curve
 
 if Options.MidlineSmoothing && curveLength > 1
-
+    % split Midline into column vectors of x and y coordinates
     xPoints = Midline(:,1);
     yPoints = Midline(:,2);
     % get number of points to compute windowWidth
@@ -345,7 +276,7 @@ if Options.MidlineSmoothing && curveLength > 1
     end
     % smooth out the boundaries so that the majority of vertices within the mask are at the approximate centerline
     [xPoints,yPoints] = sgolayfilt_opencurve(xPoints,yPoints,polynomialOrder,midlineSmoothWidth);
-
+    % rebuild the midline by concatenating x and y
     Midline = [xPoints, yPoints];
 end
 
@@ -369,7 +300,7 @@ if Options.DisplayResults
         v2 = V(v2idx,:);
         plot([v1(1,1) v2(1,1)],[v1(1,2) v2(1,2)],...
             'LineStyle','-',...
-            'Color',[0 0 1],...
+            'Color',[0.0745 0.6235 1],...
             'LineWidth',2,...
             'DisplayName','');
     end
@@ -379,7 +310,7 @@ if Options.DisplayResults
         v2idx = edges(i,2);
         v1 = v_inobj(v1idx,:);
         v2 = v_inobj(v2idx,:);
-        plot([v1(1,1) v2(1,1)],[v1(1,2) v2(1,2)],'LineStyle','-','Color',[1 0 0],'LineWidth',2,'Marker','o');
+        plot([v1(1,1) v2(1,1)],[v1(1,2) v2(1,2)],'LineStyle','-','Color',[1 0 0],'LineWidth',2,'Marker','none');
     end
 
     % plot the original boundary
