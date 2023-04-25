@@ -29,11 +29,11 @@ switch nClustersMode
             Sums(1,i) = sum(S);
         end
 
-        % plot Sums of within-cluster point-to-centroid distances
-        figure('Name','Within-Cluster Sums');
-        plot(1:10,Sums);
-        xlabel('Number of clusters (k)');
-        ylabel('Sum of within-cluster point-to-centroid distances');
+        % % plot Sums of within-cluster point-to-centroid distances
+        % figure('Name','Within-Cluster Sums');
+        % plot(1:10,Sums);
+        % xlabel('Number of clusters (k)');
+        % ylabel('Sum of within-cluster point-to-centroid distances');
 
         % evaluate the clusters using the user-selected criterion
         ClusterEvalObj = evalclusters(ObjectData,clust,Criterion);
@@ -47,13 +47,13 @@ end
     ClusterIdxs = cidx3;
     % 3rd output, sumd3, contains sum of distance within each cluster for the best solution
 
-    figure('Name',['Silhouette (Euclidean Distance,',num2str(nReplicates),' replicates)'])
-    
-    % use silhouette plot to visualize cluster separation
-    [silh3,h] = silhouette(ObjectData,cidx3,'sqeuclidean');
+    % % figure to show silhouette plots
+    % figure('Name',['Silhouette (Euclidean Distance,',num2str(nReplicates),' replicates)'])
+    % % use silhouette plot to visualize cluster separation
+    % [silh3,h] = silhouette(ObjectData,cidx3,'sqeuclidean');
 
     % display average silhouette width
-    disp(['Mean Silhouette Width (Euclidean Distance, ',num2str(nReplicates),' replicates): ',num2str(mean(silh3))])
+    %disp(['Mean Silhouette Width (Euclidean Distance, ',num2str(nReplicates),' replicates): ',num2str(mean(silh3))])
 
 %% Cosine distance k-means clustering
 
