@@ -23,7 +23,11 @@ function [] = UpdateLog3(source,msg,operation)
         if length(PODSData.Handles.LogWindow.Value) > 199
             PODSData.Handles.LogWindow.Value = {PODSData.Handles.LogWindow.Value{end-199:end},msg};
         else
-            PODSData.Handles.LogWindow.Value{end+1} = msg;
+            if strcmp(PODSData.Handles.LogWindow.Value{1},'')
+                PODSData.Handles.LogWindow.Value{end} = msg;
+            else
+                PODSData.Handles.LogWindow.Value{end+1} = msg;
+            end
         end
     else
         PODSData.Handles.LogWindow.Value{end} = msg;
