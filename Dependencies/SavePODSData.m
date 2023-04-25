@@ -31,7 +31,8 @@ function TableOut = SavePODSData(source)
                          'MidlineRelativeAzimuth',0,...
                          'NormalRelativeAzimuth',0,...
                          'Tortuosity',0,...
-                         'MidlineLength',0);
+                         'MidlineLength',0,...
+                         'AzimuthAngularDeviation',0);
 
     MasterIdx = 1;
                
@@ -68,6 +69,7 @@ function TableOut = SavePODSData(source)
                 PODSDataOut(MasterIdx).NormalRelativeAzimuth = PODSData.Group(i).Replicate(j).Object(k).NormalRelativeAzimuth;
                 PODSDataOut(MasterIdx).Tortuosity = PODSData.Group(i).Replicate(j).Object(k).Tortuosity;
                 PODSDataOut(MasterIdx).MidlineLength = PODSData.Group(i).Replicate(j).Object(k).MidlineLength;
+                PODSDataOut(MasterIdx).AzimuthAngularDeviation = PODSData.Group(i).Replicate(j).Object(k).AzimuthAngularDeviation;
                 MasterIdx = MasterIdx+1;
             end % end objects
         end % end images
