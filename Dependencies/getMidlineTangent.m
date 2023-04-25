@@ -17,5 +17,4 @@ function midlineTangent = getMidlineTangent(Midline)
     
     % wrap values to fall in the range [-pi/2, pi/2]
     midlineTangent(midlineTangent>(pi/2)) = midlineTangent(midlineTangent>(pi/2))-pi;
-
 end
