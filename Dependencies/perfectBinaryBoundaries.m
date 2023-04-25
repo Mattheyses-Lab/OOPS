@@ -11,11 +11,14 @@ end
 % size of the input
 Isz = size(I);
 
+% algorithm unlikely to work correctly if there are holes -> fill them
+I = bwfill(I,'holes');
+
 % initialize boundaries coordinate list (1x2 double | [y,x])
 boundaries = [];
 edgeMidpoints = [];
 
-%% define the types of neighborhoods we are searching for to locate our edge pixels
+%% define the types of neighborhoods we are searching for to locate our boundary pixels
 % first the outer corners
 % upper left corner (also shows target pixel for each of our 2x2 luts, see below)
 corners{1} = [...
