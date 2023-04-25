@@ -6,6 +6,7 @@ function ScreenSize = GetMaximizedScreenSize(WithMenu)
     % keep invisible so it doesn't flash
     TempFig = uifigure('Visible','Off','Units','Normalized','Position',[0 0 1 1]);
     TempFig.WindowState = 'Maximized';
+
     % draw it
     drawnow
     % give time for drawnow
@@ -19,11 +20,11 @@ function ScreenSize = GetMaximizedScreenSize(WithMenu)
         % give time for drawnow
         pause(0.5)
     end
+
     % change units to pixels
     TempFig.Units = 'Pixels';
     % get the pixel position of the figure w/ or w/o MenuBar
     ScreenSize = TempFig.Position;
     % close the figure
     close(TempFig)
-
 end
