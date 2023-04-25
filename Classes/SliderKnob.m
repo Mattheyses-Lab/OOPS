@@ -1,11 +1,17 @@
 classdef SliderKnob < handle
     
+    properties
+        KnobFcn
+    end
+
+
     properties (Dependent = true, SetObservable, AbortSet)
         Value
         YPosition
         Color
         EdgeColor
         KnobSize
+        ButtonDownFcn
     end    
     
     properties (Access = private, Transient, NonCopyable)
@@ -23,6 +29,7 @@ classdef SliderKnob < handle
                 'MarkerEdgeColor',EdgeColor,...
                 'MarkerSize',KnobSize,...
                 'Marker',KnobShape);
+            obj.KnobFcn = ButtonDownFcn;
         end
 
         function Value = get.Value(obj)
@@ -32,6 +39,15 @@ classdef SliderKnob < handle
         function set.Value(obj,val)
             obj.Knob.XData = val;
         end
+
+        function set.ButtonDownFcn(obj,val)
+            obj.Knob.ButtonDownFcn = val;
+        end
+
+        function ButtonDownFcn = get.ButtonDownFcn(obj)
+            ButtonDownFcn = obj.Knob.ButtonDownFcn;
+        end
+
         
         function Color = get.Color(obj)
             Color = obj.Knob.MarkerFaceColor;

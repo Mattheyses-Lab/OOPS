@@ -4,7 +4,6 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
         OldWindowButtonMotionFcn = '';
         OldWindowButtonUpFcn = '';
         StartUp = true;
-        %Limits = [0 1];
         Knob1Color = [1 1 1];
         Knob1EdgeColor = [0 0 0];
         Knob2Color = [1 1 1];
@@ -132,7 +131,16 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
         end
         
         function update(obj)
-            %disp('updating range slider')
+
+            switch obj.HitTest
+                case 'on'
+                    obj.Knob(1).ButtonDownFcn = obj.Knob(1).KnobFcn;
+                    obj.Knob(2).ButtonDownFcn = obj.Knob(2).KnobFcn;
+                case 'off'
+                    obj.Knob(1).ButtonDownFcn = '';
+                    obj.Knob(2).ButtonDownFcn = '';
+            end
+
             if obj.StartUp
                 obj.RangeAxes.XLim = obj.Limits;
                 obj.RangeAxes.FontSize = obj.FontSize;
