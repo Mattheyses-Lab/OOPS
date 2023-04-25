@@ -68,9 +68,9 @@ switch MaskType
                     % detect objects from the mask
                     cImage.DetectObjects();
                     % indicates mask was generated automatically
-                    cImage.ThresholdAdjusted = 0;
+                    cImage.ThresholdAdjusted = false;
                     % a mask exists for this replicate
-                    cImage.MaskDone = 1;
+                    cImage.MaskDone = true;
                     % store the type/name of the mask used
                     cImage.MaskName = MaskName;
                     cImage.MaskType = MaskType;
@@ -90,19 +90,6 @@ switch MaskType
                     % UPDATE LOG
                     UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
 
-                    %% Enhance and find threshold
-                    I = cImage.I;
-                    % MORPHOLOGICAL OPENING
-                    BGImg = imopen(I,SE);
-                    % SUBTRACT OPENED IMAGE
-                    BGSubtractedImg = I - BGImg;
-                    % apply median filter
-                    cImage.EnhancedImg = medfilt2(BGSubtractedImg);
-                    % normalize to max
-                    cImage.EnhancedImg = medfilt2(cImage.EnhancedImg./max(max(cImage.EnhancedImg)));
-
-                    %% test
-
                     % the normalized, average intensity image
                     I = cImage.I;
 
@@ -110,15 +97,22 @@ switch MaskType
                     C = maxhessiannorm(I,4);
                     I = fibermetric(I,4,'StructureSensitivity',0.5*C);
 
-                    % preallocate super open image
-                    I_superopen = zeros(size(I),'like',I);
-                    % max opening with rotating line segment
-                    % lower length will pick up smaller objects
-                    for phi = 1:180
-                        SEline = strel('line',40,phi);
-                        I_superopen = max(I_superopen,imopen(I,SEline));
+                    % preallocate superopen images
+                    I_superopen = zeros([size(I), 12],'like',I);
+                    % create array of phi values
+                    phiValues = reshape(1:180,15,12);
+                    % do 12 independent super openings in a parallel loop
+                    parfor phiIdx = 1:12
+                        % get the phi values
+                        phis = phiValues(:,phiIdx);
+                        % compute the super opening for each set of phi
+                        for idx = 1:15
+                            I_superopen(:,:,phiIdx) = max(I_superopen(:,:,phiIdx),imopen(I,strel('line',40,phis(idx))))
+                        end
                     end
-
+                    % get the overall max
+                    I_superopen = max(I_superopen,[],3);
+                    % end test
 
                     I = I_superopen;
                     cImage.EnhancedImg = I;
@@ -182,9 +176,9 @@ switch MaskType
                     % detect objects from the mask
                     cImage.DetectObjects();
                     % indicates mask was generated automatically
-                    cImage.ThresholdAdjusted = 0;
+                    cImage.ThresholdAdjusted = false;
                     % a mask exists for this replicate
-                    cImage.MaskDone = 1;
+                    cImage.MaskDone = true;
                     % store the name of the mask used
                     cImage.MaskName = MaskName;
                     cImage.MaskType = MaskType;                    
@@ -195,7 +189,7 @@ switch MaskType
                     % increment loop counter
                     i = i+1;
                 end % end iteration through images
-            case 'Filament' % BEST FILAMENT SO FAR %
+            case 'AdaptiveFilament'
                 SE = strel('disk',2,0);
                 % main masking loop, iterates through each selected image
                 for cImage = PODSData.CurrentImage
@@ -204,96 +198,26 @@ switch MaskType
                     % UPDATE LOG
                     UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
 
-                    % the default neighborhood size
-                    nhoodsize = 2*floor(size(cImage.I)/16)+1;
+                    I = cImage.I;
 
-                    % MORPHOLOGICAL OPENING
-                    BGImg = imopen(cImage.I,SE);
-                    % SUBTRACT OPENED IMAGE
-                    BGSubtractedImg = cImage.I - BGImg;
+                    %% Enhance intensity
 
-                    I = BGSubtractedImg;
-
-                    cImage.EnhancedImg = Scale0To1(medfilt2(I));
-
-                    I = cImage.EnhancedImg;
-
-                    %I = imflatfield(I,30,"FilterSize",129);
-
-                    I = imflatfield(I,30,"FilterSize",7);
-
-                    C = maxhessiannorm(I,6);
-                    I = fibermetric(I,6,"ObjectPolarity","bright","StructureSensitivity",0.5*C);
-
-                    % initialize super open image
-                    I_superopen = zeros(size(I),'like',I);
-                    % max opening with rotating line segment
-                    % lower length will pick up smaller objects
-                    for phi = 1:180
-                        SEline = strel('line',40,phi);
-                        I_superopen = max(I_superopen,imopen(I,SEline));
-                    end
-
-                    I = I_superopen;
-
-                    %cImage.EnhancedImg = imadjust(imflatfield(I,30,"FilterSize",nhoodsize));
-
-                    cImage.EnhancedImg = imadjust(imflatfield(I,30,"FilterSize",7));
+                    % enhance fibers
+                    I = fibermetric(I,6,"ObjectPolarity","bright","StructureSensitivity",0.5*maxhessiannorm(I,6));
+                    I = Scale0To1(imflatfield(I,30,'FilterSize',129));
+                    cImage.EnhancedImg = I;
 
                     % GUESS THRESHOLD WITH OTSU'S METHOD
                     [cImage.level,~] = graythresh(cImage.EnhancedImg);
-                    % ADAPTIVE THRESHOLD
 
-                    % AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,cImage.level,...
-                    %     'Statistic','gaussian',...
-                    %     'NeighborhoodSize',nhoodsize);
 
-                    AdaptiveThreshLevel = adaptthresh(cImage.EnhancedImg,0,...
-                        'Statistic','gaussian',...
-                        'NeighborhoodSize',7);
-
-                    %% Build mask
+                    %% Build mask and label matrix
 
                     % BINARIZE
-                    cImage.bw = sparse(imbinarize(cImage.EnhancedImg,AdaptiveThreshLevel));
+                    cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
 
                     % CLEAR 10 PX BORDER
                     cImage.bw = ClearImageBorder(cImage.bw,10);
-
-                    BW = false(size(cImage.bw));
-
-                    for k = 1:1:180
-                        SEline = strel('line',20,k);
-                        %SEline2 = strel('line',10,k);
-                        BWtemp = imopen(full(cImage.bw),SEline);
-                        % FILTER SLIGHTLY LARGER OBJECTS
-                        CC = bwconncomp(BWtemp,4);
-                        S = regionprops(CC, 'Area','Eccentricity','Circularity');
-                        L = labelmatrix(CC);
-                        BWtemp = sparse(ismember(L, find([S.Area] >= 5 & ...
-                            [S.Eccentricity] > 0.5 & ...
-                            [S.Circularity] < 0.5)));
-
-                        %BWtemp = imclose(full(BWtemp),SEline2);
-
-                        BW = BW+BWtemp;
-                    end
-
-                    cImage.bw = BW;
-
-                    % dilation followed by erosion
-                    %cImage.bw = imclose(full(cImage.bw),strel('disk',1,0));
-
-                    % CLEAR 10 PX BORDER
-                    cImage.bw = ClearImageBorder(cImage.bw,10);
-
-                    % remove small objects one final time
-                    CC = bwconncomp(full(cImage.bw),4);
-                    S = regionprops(CC, 'Area','Eccentricity','Circularity');
-                    L = labelmatrix(CC);
-                    cImage.bw = sparse(ismember(L, find([S.Area] >= 40 & ...
-                        [S.Eccentricity] > 0.5 & ...
-                        [S.Circularity] < 0.5)));
 
                     % testing below
                     % remove any pixels that have a diagonal 8-connection
@@ -307,6 +231,7 @@ switch MaskType
                     % end testing
 
 
+                    % label individual branches in the mask
                     [~,cImage.L] = labelBranches(full(cImage.bw));
 
                     % update log with masking output
@@ -316,9 +241,9 @@ switch MaskType
                     % detect objects from the mask
                     cImage.DetectObjects();
                     % indicates mask was generated automatically
-                    cImage.ThresholdAdjusted = 0;
+                    cImage.ThresholdAdjusted = false;
                     % a mask exists for this replicate
-                    cImage.MaskDone = 1;
+                    cImage.MaskDone = true;
                     % store the name of the mask used
                     cImage.MaskName = MaskName;
                     cImage.MaskType = MaskType;
@@ -485,8 +410,8 @@ switch MaskType
             % end testing
 
 
-            % use the mask to build the label matrix
-            cImage.L = sparse(bwlabel(full(cImage.bw),4));
+            % % use the mask to build the label matrix
+            % cImage.L = sparse(bwlabel(full(cImage.bw),4));
 
 
             % label individual branches
