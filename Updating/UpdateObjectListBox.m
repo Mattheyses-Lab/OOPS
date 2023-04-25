@@ -21,6 +21,22 @@ function UpdateObjectListBox(source)
             PODSData.Handles.ObjectSelector.ItemsData = 1:Replicate.nObjects;
             PODSData.Handles.ObjectSelector.Value = Replicate.CurrentObjectIdx;
             scroll(PODSData.Handles.ObjectSelector,PODSData.Handles.ObjectSelector.Value);
+            % % testing below - adding object label color icons to each list item
+            % % first remove all styles
+            % removeStyle(PODSData.Handles.ObjectSelector);
+            % % preallocate our styles
+            % objectIconStyles = matlab.ui.style.Style;
+            % objectIconStyles = repmat(objectIconStyles,Replicate.nObjects,1);
+            % % get label color icons for each object
+            % labelColors = cell(Replicate.nObjects,1);
+            % [labelColors{1:end,1}] = deal(Replicate.Object.LabelColorSquare);
+            % % deal the icons into our preallocated styles array
+            % [objectIconStyles(:).Icon] = deal([labelColors{1:end,1}]);
+            % % add the styles to each list item
+            % for i = 1:Replicate.nObjects
+            %     addStyle(PODSData.Handles.ObjectSelector,objectIconStyles(i),'item',i);
+            % end
+            % % end testing
             return
         end
     end
