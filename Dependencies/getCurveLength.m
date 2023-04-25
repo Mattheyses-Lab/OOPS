@@ -25,6 +25,11 @@ function curveLength = getCurveLength(Curve)
 %       * Initial implementation
 %
 %% --------------------------------------------------------------------------------------%
+% return NaN if Curve contains any NaNs
+if any(isnan(Curve(:)))
+    curveLength = NaN;
+    return
+end
 % split into x and y coordinates
 curveX = Curve(:,1);
 curveY = Curve(:,2);
