@@ -444,12 +444,10 @@ classdef PODSImage < handle
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
             nLabels = length(obj.Settings.ObjectLabels);
             ObjectDataByLabel = cell(1,nLabels);
+            % for each label
             for i = 1:nLabels
-                % % find objects with LabelIdx i
-                % ObjectLabelIdxs = find([obj.Object.LabelIdx]==i);
-                % testing new method below
+                % find idx to all object with that label
                 ObjectLabelIdxs = find([obj.Object.Label]==obj.Settings.ObjectLabels(i));
-                % end testing
                 % add [Var2Get] from those objects to cell i of ObjectDataByLabel
                 ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
             end
@@ -457,9 +455,9 @@ classdef PODSImage < handle
 
         % return all objects in this PODSImage with the PODSLabel:Label
         function Objects = getObjectsByLabel(obj,Label)
-
+            % preallocate empty array of objects
             Objects = PODSObject.empty();
-
+            % as long as we have at least one object
             if obj.nObjects >= 1
                 ObjIdxs = find([obj.Object.Label]==Label);
                 Objects = obj.Object(ObjIdxs);
