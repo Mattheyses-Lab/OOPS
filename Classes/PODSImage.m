@@ -286,6 +286,7 @@ classdef PODSImage < handle
             SelfIdx = find(obj.Parent.Replicate==obj);
         end
 
+        % dependent 'get' method for project settings so we do not store multiple copies
         function Settings = get.Settings(obj)
             try
                 Settings = obj.Parent.Settings;
@@ -489,105 +490,114 @@ classdef PODSImage < handle
 
         % detect local S/B ratio for each object in this PODSImage
         function obj = FindLocalSB(obj)
-            
+
+            % subfunction that returns linear idxs (w.r.t. full image) to buffer and BG regions for an object
+            function [bufferIdxs, BGIdxs] = getBufferAndBGLists(I,BBox,adjustment,fullSize)
+                % dilate to form the buffer
+                objectBuffer = imdilate(I,ones(7));
+                % dilate further to form the BG
+                objectBG = imdilate(objectBuffer,ones(5));
+                % remove non-BG pixels
+                objectBG(objectBuffer) = 0;
+                % remove non-buffer pixels
+                objectBuffer(I) = 0;
+                % get row and column coordinates of the buffer pixels
+                [bufferR,bufferC] = find(objectBuffer);
+                bufferCoords = [bufferR,bufferC] + BBox([2 1]) - 0.5 - adjustment;
+                % get linear idxs of those pixels
+                bufferIdxs = sub2ind(fullSize,bufferCoords(:,1),bufferCoords(:,2));
+                % get row and column coordinates of the BG pixels
+                [BGR,BGC] = find(objectBG);
+                BGCoords = [BGR,BGC] + BBox([2 1]) - 0.5 - adjustment;
+                % get linear idxs of those pixels
+                BGIdxs = sub2ind(fullSize,BGCoords(:,1),BGCoords(:,2));
+            end
+
+
             % can't detect local S/B until we detect the objects!
             if obj.ObjectDetectionDone
-                
-                % square structuring element for object dilation
-                se = ones(3,3);
-                all_object_pixels = obj.bw;
-                all_buffer_pixels = false(size(all_object_pixels));
-                all_BG_pixels = false(size(all_object_pixels));
-                
-                N = obj.nObjects;
-                
-                
-                %% First Step: Treat each object individually, ignoring others.
-                %   for each object:
-                %       find buffer and BG pixels and store in
-                %       SBObjectProperties struct
+
                 tic
 
-                for i = 1:N
-                    % empty logical matrix
-                    object_bw = false(size(obj.bw));
-                    % get object pixels for current object
-                    %object_pixels = obj.Object(i).PixelIdxList;
-                    % set object pixels to 1
-                    object_bw(obj.Object(i).PixelIdxList) = 1;
+                % get nObjects x 1 cell array of padded object subimages
+                paddedObjectImages = {obj.Object(:).RestrictedPaddedMaskSubImage}';
 
-                    % new logical matrix to hold buffer pixels
-                    buffer_bw = object_bw;
+                % get nObjects x 1 cell of object bounding boxes
+                objectBBoxes = {obj.Object(:).BoundingBox}';
 
-                    % dilate the object matrix to create the object buffer
-                    for j = 1:3
-                        buffer_bw = sparse(imdilate(full(buffer_bw),se));
-                    end
+                % get nObjects x 1 cell of object padded subarray idx coordinate adjustments
+                objectSubIdxAdjusts = {obj.Object(:).PaddedSubarrayIdxCoordinateAdjustment}';
 
-                    % new logical matrix to hold BG pixels
-                    BG_bw = buffer_bw;
+                % get 1 x 2 cell array of object buffer and BG coordinates
+                [bufferIdxs,BGIdxs] = cellfun(@(I,BBox,adjustment,fullSize) getBufferAndBGLists(I,BBox,adjustment,fullSize),...
+                    paddedObjectImages,objectBBoxes,objectSubIdxAdjusts,repmat({[obj.Height obj.Width]},numel(paddedObjectImages),1),'UniformOutput',0);
 
-                    % dilate the buffer matrix to locate local BG pixels
-                    for j = 1:2
-                        BG_bw = sparse(imdilate(full(BG_bw),se));
-                    end
 
-                    % remove buffer and object pixels from BG matrix
-                    BG_bw = BG_bw & ~buffer_bw;
+                [obj.Object(:).BufferIdxList] = deal(bufferIdxs{:});
+                [obj.Object(:).BGIdxList] = deal(BGIdxs{:});
 
-                    % remove object pixels from the buffer matrix
-                    buffer_bw = buffer_bw & ~object_bw;
+                all_object_pixels = obj.bw;
+                all_buffer_pixels = cell2mat(bufferIdxs);
+                all_BG_pixels = cell2mat(BGIdxs);
 
-                    % store buffer pixels 
-                    obj.Object(i).BufferIdxList = find(buffer_bw==1);
-                    
-                    % store BG pixels
-                    obj.Object(i).BGIdxList = find(BG_bw==1);
-
-                    all_buffer_pixels(obj.Object(i).BufferIdxList) = 1;
-                    all_BG_pixels(obj.Object(i).BGIdxList) = 1;
-                end
 
                 elapsedTime = toc;
                 disp(['S and B identification: ',num2str(elapsedTime),' s'])
 
-                %% Second Step: Filter pixels found in step 1
-                %   for each object: 
-                %       remove any buffer pxs overlapping with object or buffer pxs
-                %       remove BG pixels that overlap with object or buffer pixels 
+                %% testing below - show a label matrix to test identification of S and B
+                % SBLabels = zeros(obj.Height,obj.Width);
+                %
+                % SBLabels(all_object_pixels) = 1;
+                % SBLabels(all_buffer_pixels) = 2;
+                % SBLabels(all_BG_pixels) = 3;
+                %
+                % SBLabels = label2rgb(SBLabels);
+                %
+                % imshow2(SBLabels)
+                %% end testing
+                %% now filter the pixels found above
 
                 tic
 
+                % for each object
                 for i = 1:obj.nObjects
-                    buffer_count = 0;
-                    BG_count = 0;
+                    %% first, we remove any buffer pixels that overlap with any object pixels
 
-                    % check each buffer pixel for overlap with objects (i = 1 object, j = 1 buffer px)
-                    for j = 1:length(obj.Object(i).BufferIdxList)
-                        if ~(all_object_pixels(obj.Object(i).BufferIdxList(j)) == 1)
-                            buffer_count = buffer_count+1;
-                            new_buffer(buffer_count) = obj.Object(i).BufferIdxList(j);
-                        end
-                    end
+                    % object pixels are linear idxs from the mask (from all objects)
+                    allObjectPixels = find(all_object_pixels);
 
-                    % check each BG pixel for overlap with objects or object buffers
-                    for j = 1:length(obj.Object(i).BGIdxList)
-                        if ~(all_object_pixels(obj.Object(i).BGIdxList(j)) == 1 || all_buffer_pixels(obj.Object(i).BGIdxList(j)) == 1)
-                            BG_count = BG_count+1;
-                            new_BG(BG_count) = obj.Object(i).BGIdxList(j);
-                        end            
-                    end
+                    % get the buffer pixels of this object
+                    objectBufferPixels = obj.Object(i).BufferIdxList;
 
-                    %% BUG IDENTIFIED HERE: If there are too many objects within a small region, code may fail to identify 
-                        % any BG or buffer pixels. In that case new_buffer and/or new_BG will be empty. Still need to 
-                        % implement a fix for this... (maybe delete the object then re-index if no BG pxs found?)
-                        % however, this is a very rare bug that only causes issues in cases of very low S/N, in which 
-                        % DetectObjects() labels most of the BG pixels as objects
+                    % keep only the elements in bufferPixels that are not in allObjectPixels
+                    newObjectBufferPixels = setdiff(objectBufferPixels,allObjectPixels);
+
+
+                    %% next, we remove any BG pixels that overlap with any object or buffer pixels
+
+                    % get linear idxs of all buffer pixels
+                    allBufferPixels = all_buffer_pixels;
+
+                    % get the BG pixels of this object
+                    objBGPixels = obj.Object(i).BGIdxList;
+
+                    % keep only the elements in BGPixels that are not in allBufferPixels
+                    newObjectBGPixels = setdiff(objBGPixels,allBufferPixels);
+
+                    % now keep only the elements in newObjectPixels that are not in allObjectPixels
+                    newObjectBGPixels2 = setdiff(newObjectBGPixels,allObjectPixels);
+
+
+                    %% BUG IDENTIFIED HERE: If there are too many objects within a small region, code may fail to identify
+                    % any BG or buffer pixels. In that case new_buffer and/or new_BG will be empty. Still need to
+                    % implement a fix for this... (maybe delete the object then re-index if no BG pxs found?)
+                    % however, this is a very rare bug that only causes issues in cases of very low S/N, in which
+                    % DetectObjects() labels most of the BG pixels as objects
                     % update buffer and BG pixel lists
-                    obj.Object(i).BufferIdxList = new_buffer;
+                    obj.Object(i).BufferIdxList = newObjectBufferPixels;
 
                     try
-                        obj.Object(i).BGIdxList = new_BG;
+                        obj.Object(i).BGIdxList = newObjectBGPixels2;
                         obj.Object(i).BGAverage = mean(obj.RawPolAvg(obj.Object(i).BGIdxList));
                     catch
                         obj.Object(i).BGIdxList = [];
@@ -596,22 +606,18 @@ classdef PODSImage < handle
 
                     % calculate signal and BG levels
                     obj.Object(i).SignalAverage = mean(obj.RawPolAvg(obj.Object(i).PixelIdxList));
-%                     obj.Object(i).BGAverage = mean(obj.RawPolAvg(obj.Object(i).BGIdxList));
                     obj.Object(i).SBRatio = obj.Object(i).SignalAverage / obj.Object(i).BGAverage;
 
-                    clear new_buffer new_BG
-
                 end
-                
+
                 obj.LocalSBDone = true;
 
                 elapsedTime = toc;
                 disp(['S and B pixel filtering: ',num2str(elapsedTime),' s'])
-
             else
                 error('Cannot calculate local S:B until objects are detected');
             end
-            
+
         end
         
         function ComputeObjectAzimuthStats(obj)
@@ -905,6 +911,8 @@ classdef PODSImage < handle
             ObjectImages = C(:,ismember(fnames,'Image'));
             % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
             ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
+
+
             % get boundaries from ObjectImages
             B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes','TraceStyle','pixeledge'),ObjectImages,'UniformOutput',0);
             % add bounding box offsets to boundary coordinates from ObjectImages
@@ -927,7 +935,7 @@ classdef PODSImage < handle
 
             % get the object midline coordinates w.r.t. the object image (with 1 px padding)
             M = cellfun(@(obj_img)getObjectMidlines(padarray(obj_img,[1,1])),ObjectImages,'UniformOutput',0);
-            % adjust the coordinates to the frame of the full image
+            % adjust the coordinates to the frame of the full image (-1.5 instead of -0.5 because of 1 px padding)
             M = cellfun(@(b,box) bsxfun(@plus,b,box([1 2]) - 1.5),M,ObjectBBox,'UniformOutput',0);
             % add object midline coordinates cell to props struct
             ObjectProperties(end).Midline = [];
