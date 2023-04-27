@@ -58,15 +58,15 @@ OOPSData.Handles.fH = uifigure('Name','OOPS GUI',...
 %% set some defaults to save time and improve readability
 
 % panel properties
-set(gcf,'defaultUipanelFontName',OOPSData.Settings.DefaultFont);
-set(gcf,'defaultUipanelFontWeight','Bold');
-set(gcf,'defaultUipanelBackgroundColor','Black');
-set(gcf,'defaultUipanelForegroundColor','White');
-set(gcf,'defaultUipanelAutoResizeChildren','Off');
+set(OOPSData.Handles.fH,'defaultUipanelFontName',OOPSData.Settings.DefaultFont);
+set(OOPSData.Handles.fH,'defaultUipanelFontWeight','Bold');
+set(OOPSData.Handles.fH,'defaultUipanelBackgroundColor','Black');
+set(OOPSData.Handles.fH,'defaultUipanelForegroundColor','White');
+set(OOPSData.Handles.fH,'defaultUipanelAutoResizeChildren','Off');
 
 % text properties
-set(gcf,'defaultTextFontName',OOPSData.Settings.DefaultFont);
-set(gcf,'defaultTextFontWeight','bold');
+set(OOPSData.Handles.fH,'defaultTextFontName',OOPSData.Settings.DefaultFont);
+set(OOPSData.Handles.fH,'defaultTextFontWeight','bold');
 
 % turn off any warning that do not adversely affect computation
 warning('off','MATLAB:polyshape:repairedBySimplify');
@@ -2265,7 +2265,6 @@ pause(0.5)
             case 'Mask'
                 addZoomToCursorToolbarBtn;
                 addShowSelectionToolbarBtn;
-                %addRectangularROIToolbarBtn;
                 addLassoROIToolbarBtn;
             case 'OrderFactor'
                 addZoomToCursorToolbarBtn;
@@ -2279,7 +2278,6 @@ pause(0.5)
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
                 addShowSelectionToolbarBtn;
-                %addRectangularROIToolbarBtn;
                 addLassoROIToolbarBtn;
                 addShowReferenceImageToolbarBtn;
                 addLineScanToolbarBtn;
@@ -2317,15 +2315,6 @@ pause(0.5)
             btn.ValueChangedFcn = @tbShowSelectionStateChanged;
             btn.Tag = ['ShowSelection',axH.Tag];
             btn.Tooltip = 'Show objects';
-            OOPSData.Handles.(btn.Tag) = btn;
-        end
-        
-        function addRectangularROIToolbarBtn
-            btn = axtoolbarbtn(tb,'push');
-            btn.Icon = 'RectangularROIIcon.png';
-            btn.ButtonPushedFcn = @tbRectangularROI;
-            btn.Tag = ['RectangularROI',axH.Tag];
-            btn.Tooltip = 'Select objects (rectangle)';
             OOPSData.Handles.(btn.Tag) = btn;
         end
 
