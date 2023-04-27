@@ -1,7 +1,7 @@
-classdef PODSSettings < handle
-    %PODSSettings - PODSGUI project & display settings
+classdef OOPSSettings < handle
+    %OOPSSettings - OOPSGUI project & display settings
     %   An instance of this class holds and determines various 
-    %   settings for a single run of PODS GUI
+    %   settings for a single run of OOPS GUI
     
     properties
 
@@ -32,7 +32,7 @@ classdef PODSSettings < handle
 
         LastDirectory = pwd;
 
-        % path to main code directory (path with PODSv2.m)
+        % path to main code directory (path with OOPSv2.m)
         MainPath char
 
         SummaryDisplayType = 'Project';
@@ -85,7 +85,7 @@ classdef PODSSettings < handle
         ObjectPlotVariables cell
         
         % object labeling
-        ObjectLabels PODSLabel
+        ObjectLabels OOPSLabel
         
         % Fonts
         DefaultFont char
@@ -149,13 +149,13 @@ classdef PODSSettings < handle
     methods
         
         % constructor method
-        function obj = PODSSettings()
+        function obj = OOPSSettings()
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
             % optimum font size
             obj.FontSize = max(ceil(obj.ScreenSize(4)*.01),11);
-            % set up default object label (PODSLabel object)
-            obj.ObjectLabels(1) = PODSLabel('Default',[1 1 0],obj);
+            % set up default object label (OOPSLabel object)
+            obj.ObjectLabels(1) = OOPSLabel('Default',[1 1 0],obj);
             % get list of supported fonts
             FontList = listfonts();
             % check if 'Consolas' is in list of supported fonts
@@ -288,7 +288,7 @@ classdef PODSSettings < handle
                 LabelName = ['Untitled Label ',num2str(obj.nLabels+1)];
             end
 
-            obj.ObjectLabels(end+1,1) = PODSLabel(LabelName,LabelColor,obj);
+            obj.ObjectLabels(end+1,1) = OOPSLabel(LabelName,LabelColor,obj);
         end
 
         function DeleteObjectLabel(obj,Label)
@@ -298,7 +298,7 @@ classdef PODSSettings < handle
                 if obj.nLabels > 1
                     obj.ObjectLabels = obj.ObjectLabels(2:end);
                 else
-                    obj.ObjectLabels = PODSLabel.empty();
+                    obj.ObjectLabels = OOPSLabel.empty();
                 end
             elseif LabelIdx == obj.nLabels
                 obj.ObjectLabels = obj.ObjectLabels(1:end-1);
@@ -408,7 +408,7 @@ classdef PODSSettings < handle
         function obj = loadobj(settings)
 
             % create the default settings object, to which we will add our saved settings
-            obj = PODSSettings();
+            obj = OOPSSettings();
 
             obj.InputFileType = settings.InputFileType;
 

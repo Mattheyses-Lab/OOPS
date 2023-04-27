@@ -1,10 +1,10 @@
-classdef PODSLabel < handle
+classdef OOPSLabel < handle
 % simple class used for labeling objects
     
     properties
         Name char
         Color double
-        Settings PODSSettings
+        Settings OOPSSettings
     end
     
     properties(Dependent = true)
@@ -19,7 +19,7 @@ classdef PODSLabel < handle
     
     methods
         
-        function obj = PODSLabel(Name,Color,Settings)
+        function obj = OOPSLabel(Name,Color,Settings)
             obj.Name = Name;
             obj.Color = Color;
             obj.Settings = Settings;

@@ -6,9 +6,9 @@ function SelectSingleObjects(source,~)
     % store this handle so we can use it to update after deleting an object box
     hAx = source.Parent;
 
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
 
-    CurrentImage = PODSData.CurrentImage(1);
+    CurrentImage = OOPSData.CurrentImage(1);
 
     x = round(CurrentPoint(1));
     y = round(CurrentPoint(2));
@@ -20,7 +20,7 @@ function SelectSingleObjects(source,~)
     end
 
 
-    if strcmp(PODSData.Handles.fH.SelectionType,'extend')
+    if strcmp(OOPSData.Handles.fH.SelectionType,'extend')
         CurrentImage.CurrentObjectIdx = ObjIdx;
         UpdateSummaryDisplay(hAx,{'Object'});
         UpdateObjectListBox(hAx);

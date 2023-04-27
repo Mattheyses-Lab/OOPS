@@ -1,10 +1,10 @@
 function [] = UpdateImages(source)
     
     % get main data structure
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
     
     % get the current image
-    cImage = PODSData.CurrentImage;
+    cImage = OOPSData.CurrentImage;
 
     % if the current selection includes at least one image
     if ~isempty(cImage)
@@ -16,33 +16,33 @@ function [] = UpdateImages(source)
     EmptyImage = sparse(zeros(cImage.Height,cImage.Width));
     
     % get the current tab
-    CurrentTab = PODSData.Settings.CurrentTab;
+    CurrentTab = OOPSData.Settings.CurrentTab;
 
 %% Update CData of gui image objects to reflect user-specified group/image change 
 
     switch CurrentTab
         case 'Files'
             %% FILES
-            cGroup = PODSData.CurrentGroup;
+            cGroup = OOPSData.CurrentGroup;
             try
                 for i = 1:4
-                    PODSData.Handles.FFCImgH(i).CData = cGroup.FFC_cal_norm(:,:,i);
+                    OOPSData.Handles.FFCImgH(i).CData = cGroup.FFC_cal_norm(:,:,i);
                 end
             catch
                 for i = 1:4
-                    PODSData.Handles.FFCImgH(i).CData = EmptyImage;
+                    OOPSData.Handles.FFCImgH(i).CData = EmptyImage;
                 end
             end
 
             try
                 images = cImage.pol_rawdata_normalizedbystack;
                 for i = 1:4
-                    PODSData.Handles.RawIntensityImgH(i).CData = images(:,:,i);
+                    OOPSData.Handles.RawIntensityImgH(i).CData = images(:,:,i);
                 end
                 clear images
             catch
                 for i = 1:4
-                    PODSData.Handles.RawIntensityImgH(i).CData = EmptyImage;
+                    OOPSData.Handles.RawIntensityImgH(i).CData = EmptyImage;
                 end                
             end
         case 'FFC'
@@ -51,12 +51,12 @@ function [] = UpdateImages(source)
             try
                 images = cImage.pol_ffc_normalizedbystack;
                 for i = 1:4
-                    PODSData.Handles.PolFFCImgH(i).CData = images(:,:,i);
+                    OOPSData.Handles.PolFFCImgH(i).CData = images(:,:,i);
                 end
                 clear images
             catch
                 for i = 1:4
-                    PODSData.Handles.PolFFCImgH(i).CData = EmptyImage;
+                    OOPSData.Handles.PolFFCImgH(i).CData = EmptyImage;
                 end                      
             end
 
@@ -64,12 +64,12 @@ function [] = UpdateImages(source)
             try
                 images = cImage.pol_rawdata_normalizedbystack;
                 for i = 1:4
-                    PODSData.Handles.RawIntensityImgH(i).CData = images(:,:,i);
+                    OOPSData.Handles.RawIntensityImgH(i).CData = images(:,:,i);
                 end
                 clear images
             catch
                 for i = 1:4
-                    PODSData.Handles.RawIntensityImgH(i).CData = EmptyImage;
+                    OOPSData.Handles.RawIntensityImgH(i).CData = EmptyImage;
                 end
             end         
 
@@ -79,43 +79,43 @@ function [] = UpdateImages(source)
             
             % display mask image
             try
-                PODSData.Handles.MaskImgH.CData = cImage.bw;
-                if ~PODSData.Settings.Zoom.Active
-                    PODSData.Handles.MaskAxH.XLim = [0.5 cImage.Width+0.5];
-                    PODSData.Handles.MaskAxH.YLim = [0.5 cImage.Height+0.5];
+                OOPSData.Handles.MaskImgH.CData = cImage.bw;
+                if ~OOPSData.Settings.Zoom.Active
+                    OOPSData.Handles.MaskAxH.XLim = [0.5 cImage.Width+0.5];
+                    OOPSData.Handles.MaskAxH.YLim = [0.5 cImage.Height+0.5];
                 end
             catch
-                PODSData.Handles.MaskImgH.CData = EmptyImage;
+                OOPSData.Handles.MaskImgH.CData = EmptyImage;
             end
 
-            if any(isvalid(PODSData.Handles.ObjectBoxes))
-                delete(PODSData.Handles.ObjectBoxes);
-                clear PODSData.Handles.ObjectBoxes
-                %PODSData.Handles.ObjectBoxes = gobjects(1,1);
+            if any(isvalid(OOPSData.Handles.ObjectBoxes))
+                delete(OOPSData.Handles.ObjectBoxes);
+                clear OOPSData.Handles.ObjectBoxes
+                %OOPSData.Handles.ObjectBoxes = gobjects(1,1);
             end
 
-            if any(isvalid(PODSData.Handles.SelectedObjectBoxes))
-                delete(PODSData.Handles.SelectedObjectBoxes);
-                clear PODSData.Handles.SelectedObjectBoxes
-                %PODSData.Handles.SelectedObjectBoxes = gobjects(1,1);
+            if any(isvalid(OOPSData.Handles.SelectedObjectBoxes))
+                delete(OOPSData.Handles.SelectedObjectBoxes);
+                clear OOPSData.Handles.SelectedObjectBoxes
+                %OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
             end
 
             % if ShowSelection toolbar state button is pressed,
             % show object selection boxes
-            if PODSData.Handles.ShowSelectionAverageIntensity.Value == 1
-                switch PODSData.Settings.ObjectBoxType
+            if OOPSData.Handles.ShowSelectionAverageIntensity.Value == 1
+                switch OOPSData.Settings.ObjectBoxType
                     % simple lines showing the boundaries
                     case 'Boundary'
 
                         % preallocate array of graphics placeholders to hold object boundary primitive lines
-                        PODSData.Handles.ObjectBoxes = gobjects(cImage.nObjects,2);
+                        OOPSData.Handles.ObjectBoxes = gobjects(cImage.nObjects,2);
 
                         for ObjIdx = 1:cImage.nObjects
                             % retrieve the boundary coordinates
                             Boundary = cImage.Object(ObjIdx).SimplifiedBoundary;
 
-                            PODSData.Handles.ObjectBoxes(ObjIdx,1) = line(...
-                                PODSData.Handles.AverageIntensityAxH,...
+                            OOPSData.Handles.ObjectBoxes(ObjIdx,1) = line(...
+                                OOPSData.Handles.AverageIntensityAxH,...
                                 Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
@@ -126,8 +126,8 @@ function [] = UpdateImages(source)
                                 'PickableParts','all',...
                                 'UserData',ObjIdx);
 
-                            PODSData.Handles.ObjectBoxes(ObjIdx,2) = line(...
-                                PODSData.Handles.MaskAxH,...
+                            OOPSData.Handles.ObjectBoxes(ObjIdx,2) = line(...
+                                OOPSData.Handles.MaskAxH,...
                                 Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
@@ -143,12 +143,12 @@ function [] = UpdateImages(source)
                     case 'Box'
 
                         % preallocate array of graphics placeholders to hold object rectangles
-                        PODSData.Handles.ObjectBoxes = gobjects(cImage.nObjects,2);
+                        OOPSData.Handles.ObjectBoxes = gobjects(cImage.nObjects,2);
 
                         for ObjIdx = 1:cImage.nObjects
                             % plot expanded bounding boxes of each object...
                             % on intensity image
-                            PODSData.Handles.ObjectBoxes(ObjIdx,1) = rectangle(PODSData.Handles.AverageIntensityAxH,...
+                            OOPSData.Handles.ObjectBoxes(ObjIdx,1) = rectangle(OOPSData.Handles.AverageIntensityAxH,...
                                 'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
                                 'EdgeColor',cImage.Object(ObjIdx).Label.Color,...
                                 'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
@@ -159,7 +159,7 @@ function [] = UpdateImages(source)
                                 'Visible','On',...
                                 'UserData',ObjIdx);
                             % and on mask image
-                            PODSData.Handles.ObjectBoxes(ObjIdx,2) = rectangle(PODSData.Handles.MaskAxH,...
+                            OOPSData.Handles.ObjectBoxes(ObjIdx,2) = rectangle(OOPSData.Handles.MaskAxH,...
                                 'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
                                 'EdgeColor',cImage.Object(ObjIdx).Label.Color,...
                                 'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
@@ -182,17 +182,17 @@ function [] = UpdateImages(source)
                             UnselectedFaces...
                             ] = getObjectPatchData(cImage);
 
-                        PODSData.Handles.ObjectBoxes = gobjects(1,1);
-                        PODSData.Handles.SelectedObjectBoxes = gobjects(1,1);
+                        OOPSData.Handles.ObjectBoxes = gobjects(1,1);
+                        OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
 
                         % change the current axes of the main window
-                        PODSData.Handles.fH.CurrentAxes = PODSData.Handles.AverageIntensityAxH;
+                        OOPSData.Handles.fH.CurrentAxes = OOPSData.Handles.AverageIntensityAxH;
 
                         % hold on so we can preserve our images/other objects
                         hold on
 
                         % plot a patch object containing the unselected objects
-                        PODSData.Handles.ObjectBoxes = patch(PODSData.Handles.AverageIntensityAxH,...
+                        OOPSData.Handles.ObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
                             'Faces',UnselectedFaces,...
                             'Vertices',AllVertices,...
                             'Tag','ObjectBox',...
@@ -203,10 +203,10 @@ function [] = UpdateImages(source)
                             'ButtonDownFcn',@SelectObjectPatches,...
                             'PickableParts','all',...
                             'Interruptible','off');
-                        PODSData.Handles.ObjectBoxes.LineWidth = 1;
+                        OOPSData.Handles.ObjectBoxes.LineWidth = 1;
 
                         % plot a patch object containing the selected objects
-                        PODSData.Handles.SelectedObjectBoxes = patch(PODSData.Handles.AverageIntensityAxH,...
+                        OOPSData.Handles.SelectedObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
                             'Faces',SelectedFaces,...
                             'Vertices',AllVertices,...
                             'Tag','ObjectBox',...
@@ -218,7 +218,7 @@ function [] = UpdateImages(source)
                             'ButtonDownFcn',@SelectObjectPatches,...
                             'PickableParts','all',...
                             'Interruptible','off');
-                        PODSData.Handles.SelectedObjectBoxes.LineWidth = 2;
+                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 2;
 
                         % remove the hold
                         hold off
@@ -234,7 +234,7 @@ function [] = UpdateImages(source)
         case 'Order Factor'
             %% Order Factor Tab
             % Order Factor
-            if PODSData.Handles.ShowAsOverlayOrderFactor.Value == 1
+            if OOPSData.Handles.ShowAsOverlayOrderFactor.Value == 1
                 % show the OF-intensity composite image
                 try
                     % get the average intensity image to use as an opacity mask
@@ -242,28 +242,28 @@ function [] = UpdateImages(source)
                     % get the raw OF image
                     OF = cImage.OF_image;
                     % depending on the selection state of the ScaleToMaxOrderFactor toolbar btn, get the value to scale to
-                    if PODSData.Handles.ScaleToMaxOrderFactor.Value == 1
+                    if OOPSData.Handles.ScaleToMaxOrderFactor.Value == 1
                         maxOF = max(max(OF));
                     else
                         maxOF = 1;
                     end
                     % now get the scaled or unscaled OF-intensity RGB overlay
-                    OFRGB = MaskRGB(ind2rgb(im2uint8(OF./maxOF),PODSData.Settings.OrderFactorColormap),OverlayIntensity);
+                    OFRGB = MaskRGB(ind2rgb(im2uint8(OF./maxOF),OOPSData.Settings.OrderFactorColormap),OverlayIntensity);
                     % set the image CData
-                    PODSData.Handles.OrderFactorImgH.CData = OFRGB;
+                    OOPSData.Handles.OrderFactorImgH.CData = OFRGB;
                     % set the colorbar tick locations
-                    PODSData.Handles.OFCbar.Ticks = 0:0.1:1;
+                    OOPSData.Handles.OFCbar.Ticks = 0:0.1:1;
                     % set the colorbar tick labels
-                    PODSData.Handles.OFCbar.TickLabels = round(linspace(0,maxOF,11),2);
+                    OOPSData.Handles.OFCbar.TickLabels = round(linspace(0,maxOF,11),2);
                     % reset the default axes limits if zoom is not active
-                    if ~PODSData.Settings.Zoom.Active
-                        PODSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
-                        PODSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
+                    if ~OOPSData.Settings.Zoom.Active
+                        OOPSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
+                        OOPSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
                     end
                 catch
-                    PODSData.Handles.OrderFactorImgH.CData = EmptyImage;
-                    PODSData.Handles.OFCbar.Ticks = 0:0.1:1;
-                    PODSData.Handles.OFCbar.TickLabels = 0:0.1:1;
+                    OOPSData.Handles.OrderFactorImgH.CData = EmptyImage;
+                    OOPSData.Handles.OFCbar.Ticks = 0:0.1:1;
+                    OOPSData.Handles.OFCbar.TickLabels = 0:0.1:1;
                     disp('Warning: Error displaying OF-intensity composite image')
                 end
             else
@@ -271,64 +271,64 @@ function [] = UpdateImages(source)
                 try
                     OF = cImage.OF_image;
                     % if ScaleToMaxOrderFactor toolbar btn is in the on state
-                    if PODSData.Handles.ScaleToMaxOrderFactor.Value == 1
+                    if OOPSData.Handles.ScaleToMaxOrderFactor.Value == 1
                         maxOF = max(max(OF));
                     else
                         maxOF = 1;
                     end
                     % set the image CData
-                    PODSData.Handles.OrderFactorImgH.CData = OF./maxOF;
+                    OOPSData.Handles.OrderFactorImgH.CData = OF./maxOF;
                     % set the colorbar tick locations
-                    PODSData.Handles.OFCbar.Ticks = 0:0.1:1;
+                    OOPSData.Handles.OFCbar.Ticks = 0:0.1:1;
                     % set the colorbar tick labels
-                    PODSData.Handles.OFCbar.TickLabels = round(linspace(0,maxOF,11),2);
+                    OOPSData.Handles.OFCbar.TickLabels = round(linspace(0,maxOF,11),2);
                     % reset the default axes limits if zoom is not active
-                    if ~PODSData.Settings.Zoom.Active
-                        PODSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
-                        PODSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
+                    if ~OOPSData.Settings.Zoom.Active
+                        OOPSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
+                        OOPSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
                     end
                 catch
-                    PODSData.Handles.OrderFactorImgH.CData = EmptyImage;
-                    PODSData.Handles.OFCbar.Ticks = 0:0.1:1;
-                    PODSData.Handles.OFCbar.TickLabels = 0:0.1:1;
+                    OOPSData.Handles.OrderFactorImgH.CData = EmptyImage;
+                    OOPSData.Handles.OFCbar.Ticks = 0:0.1:1;
+                    OOPSData.Handles.OFCbar.TickLabels = 0:0.1:1;
                 end
             end
 
             % show or hide the OF colorbar
-            if PODSData.Handles.ShowColorbarOrderFactor.Value == 1
-                PODSData.Handles.OFCbar.Visible = 'on';
+            if OOPSData.Handles.ShowColorbarOrderFactor.Value == 1
+                OOPSData.Handles.OFCbar.Visible = 'on';
             else
-                PODSData.Handles.OFCbar.Visible = 'off';
+                OOPSData.Handles.OFCbar.Visible = 'off';
             end
 
             % change colormap to currently selected Order factor colormap
-            PODSData.Handles.OrderFactorAxH.Colormap = PODSData.Settings.OrderFactorColormap;
+            OOPSData.Handles.OrderFactorAxH.Colormap = OOPSData.Settings.OrderFactorColormap;
 
             % if ApplyMask toolbar state button set to true...
-            if PODSData.Handles.ApplyMaskOrderFactor.Value == 1
+            if OOPSData.Handles.ApplyMaskOrderFactor.Value == 1
                 % ...then apply current mask by setting image AlphaData
-                PODSData.Handles.OrderFactorImgH.AlphaData = cImage.bw;
+                OOPSData.Handles.OrderFactorImgH.AlphaData = cImage.bw;
 
                 % % testing below: applying the mask in a different way
-                % PODSData.Handles.OrderFactorImgH.CData = cImage.MaskedOFImageRGB;
+                % OOPSData.Handles.OrderFactorImgH.CData = cImage.MaskedOFImageRGB;
             end
 
-            if any(isvalid(PODSData.Handles.ObjectBoxes))
-                delete(PODSData.Handles.ObjectBoxes);
-                clear PODSData.Handles.ObjectBoxes
-                PODSData.Handles.ObjectBoxes = gobjects(1,1);
+            if any(isvalid(OOPSData.Handles.ObjectBoxes))
+                delete(OOPSData.Handles.ObjectBoxes);
+                clear OOPSData.Handles.ObjectBoxes
+                OOPSData.Handles.ObjectBoxes = gobjects(1,1);
             end
 
-            if any(isvalid(PODSData.Handles.SelectedObjectBoxes))
-                delete(PODSData.Handles.SelectedObjectBoxes);
-                clear PODSData.Handles.SelectedObjectBoxes
-                PODSData.Handles.SelectedObjectBoxes = gobjects(1,1);
+            if any(isvalid(OOPSData.Handles.SelectedObjectBoxes))
+                delete(OOPSData.Handles.SelectedObjectBoxes);
+                clear OOPSData.Handles.SelectedObjectBoxes
+                OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
             end
 
             % if ShowSelection toolbar state button is pressed
-            if PODSData.Handles.ShowSelectionAverageIntensity.Value == 1
+            if OOPSData.Handles.ShowSelectionAverageIntensity.Value == 1
 
-                switch PODSData.Settings.ObjectBoxType
+                switch OOPSData.Settings.ObjectBoxType
                     case 'Boundary'
                         for ObjIdx = 1:cImage.nObjects
 
@@ -336,8 +336,8 @@ function [] = UpdateImages(source)
                             % retrieve the boundary coordinates
                             Boundary = cImage.Object(ObjIdx).SimplifiedBoundary;
 
-                            PODSData.Handles.ObjectBoxes(ObjIdx,1) = line(...
-                                PODSData.Handles.AverageIntensityAxH,...
+                            OOPSData.Handles.ObjectBoxes(ObjIdx,1) = line(...
+                                OOPSData.Handles.AverageIntensityAxH,...
                                 Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
@@ -348,8 +348,8 @@ function [] = UpdateImages(source)
                                 'PickableParts','all',...
                                 'UserData',ObjIdx);
 
-                            PODSData.Handles.ObjectBoxes(ObjIdx,2) = line(...
-                                PODSData.Handles.OrderFactorAxH,...
+                            OOPSData.Handles.ObjectBoxes(ObjIdx,2) = line(...
+                                OOPSData.Handles.OrderFactorAxH,...
                                 Boundary(:,2),...
                                 Boundary(:,1),...
                                 'Color',cImage.Object(ObjIdx).Label.Color,...
@@ -365,7 +365,7 @@ function [] = UpdateImages(source)
                         for ObjIdx = 1:cImage.nObjects
                             % plot expanded bounding boxes of each object...
                             % on intensity image
-                            PODSData.Handles.ObjectBoxes(ObjIdx,1) = rectangle(PODSData.Handles.AverageIntensityAxH,...
+                            OOPSData.Handles.ObjectBoxes(ObjIdx,1) = rectangle(OOPSData.Handles.AverageIntensityAxH,...
                                 'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
                                 'EdgeColor',cImage.Object(ObjIdx).Label.Color,...
                                 'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
@@ -376,7 +376,7 @@ function [] = UpdateImages(source)
                                 'Visible','On',...
                                 'UserData',ObjIdx);
                             % and on mask image
-                            PODSData.Handles.ObjectBoxes(ObjIdx,2) = rectangle(PODSData.Handles.OrderFactorAxH,...
+                            OOPSData.Handles.ObjectBoxes(ObjIdx,2) = rectangle(OOPSData.Handles.OrderFactorAxH,...
                                 'Position',ExpandBoundingBox(cImage.Object(ObjIdx).BoundingBox,4),...
                                 'EdgeColor',cImage.Object(ObjIdx).Label.Color,...
                                 'LineWidth',cImage.Object(ObjIdx).SelectionBoxLineWidth,...
@@ -399,7 +399,7 @@ function [] = UpdateImages(source)
             UpdateAverageIntensity();
             %UpdateThreshholdSlider();
 
-            if PODSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value == 1
+            if OOPSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value == 1
                 try
 
                     % no enhancement
@@ -417,12 +417,12 @@ function [] = UpdateImages(source)
                    
                     % AzimuthRGB = MaskRGB(MakeAzimuthRGB(...
                     %     getAverageAzimuthImage(cImage.AzimuthImage),...
-                    %     PODSData.Settings.AzimuthColormap),...
+                    %     OOPSData.Settings.AzimuthColormap),...
                     %     OverlayIntensity);
 
                     % AzimuthRGB = MaskRGB(MakeAzimuthRGB(...
                     %     cImage.AzimuthImage,...
-                    %     PODSData.Settings.AzimuthColormap),...
+                    %     OOPSData.Settings.AzimuthColormap),...
                     %     OverlayIntensity);
 
 
@@ -437,68 +437,68 @@ function [] = UpdateImages(source)
 
                     AzimuthRGB = makeHSVSpecial(Az,OF,OverlayIntensity,[]);
 
-                    PODSData.Handles.AzimuthImgH.CData = AzimuthRGB;
+                    OOPSData.Handles.AzimuthImgH.CData = AzimuthRGB;
                 catch
-                    PODSData.Handles.AzimuthImgH.CData = EmptyImage;
+                    OOPSData.Handles.AzimuthImgH.CData = EmptyImage;
                     disp('Warning: Error displaying azimuth-OF-intensity HSV overlay image')
                 end
-            elseif PODSData.Handles.ShowAsOverlayAzimuth.Value == 1
+            elseif OOPSData.Handles.ShowAsOverlayAzimuth.Value == 1
                 try
                     I = cImage.I;
                     AzimuthRGB = cImage.AzimuthRGB;
                     AzimuthRGBMasked = MaskRGB(AzimuthRGB,I);
-                    PODSData.Handles.AzimuthImgH.CData = AzimuthRGBMasked;
+                    OOPSData.Handles.AzimuthImgH.CData = AzimuthRGBMasked;
                 catch
-                    PODSData.Handles.AzimuthImgH.CData = EmptyImage;
+                    OOPSData.Handles.AzimuthImgH.CData = EmptyImage;
                     disp('Warning: Error displaying azimuth-intensity overlay image')
                 end
             else
                 try
-                    PODSData.Handles.AzimuthImgH.CData = cImage.AzimuthImage;
-                    PODSData.Handles.AzimuthAxH.CLim = [-pi,pi]; % very important to set for proper display colors
-                    if ~PODSData.Settings.Zoom.Active
-                        PODSData.Handles.AzimuthAxH.XLim = [0.5 cImage.Width+0.5];
-                        PODSData.Handles.AzimuthAxH.YLim = [0.5 cImage.Height+0.5];
+                    OOPSData.Handles.AzimuthImgH.CData = cImage.AzimuthImage;
+                    OOPSData.Handles.AzimuthAxH.CLim = [-pi,pi]; % very important to set for proper display colors
+                    if ~OOPSData.Settings.Zoom.Active
+                        OOPSData.Handles.AzimuthAxH.XLim = [0.5 cImage.Width+0.5];
+                        OOPSData.Handles.AzimuthAxH.YLim = [0.5 cImage.Height+0.5];
                     end
                 catch
-                    PODSData.Handles.AzimuthImgH.CData = EmptyImage;
+                    OOPSData.Handles.AzimuthImgH.CData = EmptyImage;
                     disp('Warning: Error displaying azimuth image')
                 end
             end
 
             % show or hide the azimuth colorbar
-            if PODSData.Handles.ShowColorbarAzimuth.Value == 1
-                set(PODSData.Handles.PhaseBarComponents,'Visible','on');
+            if OOPSData.Handles.ShowColorbarAzimuth.Value == 1
+                set(OOPSData.Handles.PhaseBarComponents,'Visible','on');
             else
-                set(PODSData.Handles.PhaseBarComponents,'Visible','off');
+                set(OOPSData.Handles.PhaseBarComponents,'Visible','off');
             end
 
             % create 'circular' colormap by vertically concatenating
             %   2 hsv maps and make it current
-            tempmap = PODSData.Settings.AzimuthColormap;
+            tempmap = OOPSData.Settings.AzimuthColormap;
             circmap = vertcat(tempmap,tempmap);
 
-            colormap(PODSData.Handles.AzimuthAxH,circmap);
+            colormap(OOPSData.Handles.AzimuthAxH,circmap);
             
             % if ApplyMask state button set to true, apply current mask by setting AlphaData
-            if PODSData.Handles.ApplyMaskAzimuth.Value == 1
+            if OOPSData.Handles.ApplyMaskAzimuth.Value == 1
                 try
-                    PODSData.Handles.AzimuthImgH.AlphaData = cImage.bw;
+                    OOPSData.Handles.AzimuthImgH.AlphaData = cImage.bw;
                 catch
-                    PODSData.Handles.AzimuthImgH.AlphaData = 1;
+                    OOPSData.Handles.AzimuthImgH.AlphaData = 1;
                     disp('Warning: Error applying mask to azimuth image')
                 end
             end
 
             try
-                delete(PODSData.Handles.AzimuthLines);
+                delete(OOPSData.Handles.AzimuthLines);
             catch
                 disp('Warning: Could not delete Azimuth lines')
             end
 
             try
                 LineMask = cImage.bw;
-                LineScaleDown = PODSData.Settings.AzimuthScaleDownFactor;
+                LineScaleDown = OOPSData.Settings.AzimuthScaleDownFactor;
     
                 if LineScaleDown > 1
                     ScaleDownMask = makeSpacedCheckerboard(size(LineMask),LineScaleDown);
@@ -509,21 +509,21 @@ function [] = UpdateImages(source)
                 theta = cImage.AzimuthImage(LineMask);
                 rho = cImage.OF_image(LineMask);
     
-                ColorMode = PODSData.Settings.AzimuthColorMode;
-                LineWidth = PODSData.Settings.AzimuthLineWidth;
-                LineAlpha = PODSData.Settings.AzimuthLineAlpha;
-                LineScale = PODSData.Settings.AzimuthLineScale;
+                ColorMode = OOPSData.Settings.AzimuthColorMode;
+                LineWidth = OOPSData.Settings.AzimuthLineWidth;
+                LineAlpha = OOPSData.Settings.AzimuthLineAlpha;
+                LineScale = OOPSData.Settings.AzimuthLineScale;
     
                 switch ColorMode
                     case 'Magnitude'
-                        Colormap = PODSData.Settings.OrderFactorColormap;
+                        Colormap = OOPSData.Settings.OrderFactorColormap;
                     case 'Direction'
                         Colormap = circmap;
                     case 'Mono'
                         Colormap = [1 1 1];
                 end
 
-                PODSData.Handles.AzimuthLines = QuiverPatch2(PODSData.Handles.AverageIntensityAxH,...
+                OOPSData.Handles.AzimuthLines = QuiverPatch2(OOPSData.Handles.AverageIntensityAxH,...
                     x,...
                     y,...
                     theta,...
@@ -545,13 +545,13 @@ function [] = UpdateImages(source)
         case 'Plots'
             %% Scatter and swarm plots
             try
-                delete(PODSData.Handles.ScatterPlotAxH.Children)
+                delete(OOPSData.Handles.ScatterPlotAxH.Children)
             catch
                 % do nothing
             end
             
             try
-                delete(PODSData.Handles.SwarmPlotAxH.Children)
+                delete(OOPSData.Handles.SwarmPlotAxH.Children)
             catch
                 % do nothing
             end
@@ -561,29 +561,29 @@ function [] = UpdateImages(source)
             %     return
             % end
 
-            PODSData.Handles.hScatterPlot = PlotGroupScatterPlot(source,...
-                PODSData.Handles.ScatterPlotAxH,...
-                PODSData.Settings.ScatterPlotLegendVisible,...
-                PODSData.Settings.ScatterPlotBackgroundColor,...
-                PODSData.Settings.ScatterPlotForegroundColor);
+            OOPSData.Handles.hScatterPlot = PlotGroupScatterPlot(source,...
+                OOPSData.Handles.ScatterPlotAxH,...
+                OOPSData.Settings.ScatterPlotLegendVisible,...
+                OOPSData.Settings.ScatterPlotBackgroundColor,...
+                OOPSData.Settings.ScatterPlotForegroundColor);
 
 
-            switch PODSData.Settings.SwarmPlotGroupingType
+            switch OOPSData.Settings.SwarmPlotGroupingType
                 case 'Group'
                     % plot the swarm chart and save the plot handle
-                    PODSData.Handles.hSwarmChart = PlotGroupSwarmChart(source,PODSData.Handles.SwarmPlotAxH);
-                    PODSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
+                    OOPSData.Handles.hSwarmChart = PlotGroupSwarmChart(source,OOPSData.Handles.SwarmPlotAxH);
+                    OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
                 case 'Label'
                     % plot the swarm chart and save the plot handle
-                    PODSData.Handles.hSwarmChart = PlotSwarmChartByLabels(source,PODSData.Handles.SwarmPlotAxH);
-                    PODSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Label";
+                    OOPSData.Handles.hSwarmChart = PlotSwarmChartByLabels(source,OOPSData.Handles.SwarmPlotAxH);
+                    OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Label";
                 case 'Both'
-                    PODSData.Handles.hSwarmChart = PlotSwarmChartByGroupAndLabels(source,PODSData.Handles.SwarmPlotAxH);
-                    PODSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group (Label)";
+                    OOPSData.Handles.hSwarmChart = PlotSwarmChartByGroupAndLabels(source,OOPSData.Handles.SwarmPlotAxH);
+                    OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group (Label)";
             end
             
-            PODSData.Handles.SwarmPlotAxH.Title.String = ExpandVariableName(PODSData.Settings.SwarmPlotYVariable);
-            PODSData.Handles.SwarmPlotAxH.YAxis.Label.String = ExpandVariableName(PODSData.Settings.SwarmPlotYVariable);            
+            OOPSData.Handles.SwarmPlotAxH.Title.String = ExpandVariableName(OOPSData.Settings.SwarmPlotYVariable);
+            OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = ExpandVariableName(OOPSData.Settings.SwarmPlotYVariable);            
             
         case 'View Objects'
             %% Object Viewer
@@ -599,8 +599,8 @@ function [] = UpdateImages(source)
                 disp('Warning: Error retrieving object data')
             end
             
-            if any(isvalid(PODSData.Handles.ObjectIntensityPlotAxH.Children))
-                delete(PODSData.Handles.ObjectIntensityPlotAxH.Children);
+            if any(isvalid(OOPSData.Handles.ObjectIntensityPlotAxH.Children))
+                delete(OOPSData.Handles.ObjectIntensityPlotAxH.Children);
             end      
 
             try
@@ -609,65 +609,65 @@ function [] = UpdateImages(source)
                 % get pixel-normalized intensity stack for curve fitting
                 PaddedObjPixelNormIntensity(:) = cObject.Parent.norm(PaddedSubarrayIdx{:},:);
                 % calculate and plot object intensity curve fits
-                PODSData.Handles.ObjectIntensityPlotAxH = PlotObjectIntensityProfile([0,pi/4,pi/2,3*(pi/4)],...
+                OOPSData.Handles.ObjectIntensityPlotAxH = PlotObjectIntensityProfile([0,pi/4,pi/2,3*(pi/4)],...
                     PaddedObjPixelNormIntensity,...
                     RestrictedPaddedObjMask,...
-                    PODSData.Handles.ObjectIntensityPlotAxH);
+                    OOPSData.Handles.ObjectIntensityPlotAxH);
             catch
                 disp('Warning: Error displaying object sinusoidal intensity fit curves');
             end
 
             % display the (padded) intensity image of the object
             try
-                PODSData.Handles.ObjectPolFFCImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
+                OOPSData.Handles.ObjectPolFFCImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
             catch
                 disp('Warning: Error displaying object intensity image');
-                PODSData.Handles.ObjectPolFFCImgH.CData = EmptyImage;
+                OOPSData.Handles.ObjectPolFFCImgH.CData = EmptyImage;
             end
 
             % display object binary image
             try
-                PODSData.Handles.ObjectMaskImgH.CData = cObject.RestrictedPaddedMaskSubImage;
+                OOPSData.Handles.ObjectMaskImgH.CData = cObject.RestrictedPaddedMaskSubImage;
             catch
                 disp('Warning: Error displaying object binary image');
-                PODSData.Handles.ObjectMaskImgH.CData = EmptyImage;
+                OOPSData.Handles.ObjectMaskImgH.CData = EmptyImage;
             end
             
             % display object OF image
             try
                 ObjectOFImg = cObject.PaddedOFSubImage;
-                PODSData.Handles.ObjectOFImgH.CData = ObjectOFImg;
+                OOPSData.Handles.ObjectOFImgH.CData = ObjectOFImg;
             catch
                 disp('Warning: Error displaying object OF image');
-                PODSData.Handles.ObjectOFImgH.CData = EmptyImage;
+                OOPSData.Handles.ObjectOFImgH.CData = EmptyImage;
             end
 
             % display the (padded) intensity image of the object
             try
-                PODSData.Handles.ObjectAzimuthOverlayImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
+                OOPSData.Handles.ObjectAzimuthOverlayImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
             catch
                 disp('Warning: Error displaying object intensity image');
-                PODSData.Handles.ObjectAzimuthOverlayImgH.CData = EmptyImage;
+                OOPSData.Handles.ObjectAzimuthOverlayImgH.CData = EmptyImage;
             end
 
-            if any(isvalid(PODSData.Handles.ObjectAzimuthLines))
-                delete(PODSData.Handles.ObjectAzimuthLines);
+            if any(isvalid(OOPSData.Handles.ObjectAzimuthLines))
+                delete(OOPSData.Handles.ObjectAzimuthLines);
             end
 
             try
-                delete(PODSData.Handles.ObjectAzimuthLines);
+                delete(OOPSData.Handles.ObjectAzimuthLines);
             catch
                 disp('Warning: Could not delete Object Azimuth lines');
             end
 
             try
-                delete(PODSData.Handles.ObjectMidlinePlot);
+                delete(OOPSData.Handles.ObjectMidlinePlot);
             catch
                 disp('Warning: Could not delete object midline plot');
             end
 
             try
-                delete(PODSData.Handles.ObjectBoundaryPlot);
+                delete(OOPSData.Handles.ObjectBoundaryPlot);
             catch
                 disp('Warning: Could not delete object boundary plot');
             end
@@ -678,7 +678,7 @@ function [] = UpdateImages(source)
                 circmap = vertcat(tempmap,tempmap);
 
                 LineMask = cObject.RestrictedPaddedMaskSubImage;
-                LineScaleDown = PODSData.Settings.AzimuthScaleDownFactor;
+                LineScaleDown = OOPSData.Settings.AzimuthScaleDownFactor;
     
                 if LineScaleDown > 1
                     ScaleDownMask = makeSpacedCheckerboard(size(LineMask),LineScaleDown);
@@ -689,14 +689,14 @@ function [] = UpdateImages(source)
                 theta = cObject.PaddedAzimuthSubImage(LineMask);
                 rho = cObject.PaddedOFSubImage(LineMask);
     
-                ColorMode = PODSData.Settings.AzimuthColorMode;
-                LineWidth = PODSData.Settings.AzimuthLineWidth;
-                LineAlpha = PODSData.Settings.AzimuthLineAlpha;
-                LineScale = PODSData.Settings.AzimuthLineScale;
+                ColorMode = OOPSData.Settings.AzimuthColorMode;
+                LineWidth = OOPSData.Settings.AzimuthLineWidth;
+                LineAlpha = OOPSData.Settings.AzimuthLineAlpha;
+                LineScale = OOPSData.Settings.AzimuthLineScale;
     
                 switch ColorMode
                     case 'Magnitude'
-                        Colormap = PODSData.Settings.OrderFactorColormap;
+                        Colormap = OOPSData.Settings.OrderFactorColormap;
                     case 'Direction'
                         Colormap = circmap;
                     case 'Mono'
@@ -704,7 +704,7 @@ function [] = UpdateImages(source)
                 end
 
                 % plot pixel azimuth sticks for the object
-                PODSData.Handles.ObjectAzimuthLines = QuiverPatch2(PODSData.Handles.ObjectAzimuthOverlayAxH,...
+                OOPSData.Handles.ObjectAzimuthLines = QuiverPatch2(OOPSData.Handles.ObjectAzimuthOverlayAxH,...
                     x,...
                     y,...
                     theta,...
@@ -718,8 +718,8 @@ function [] = UpdateImages(source)
 
                 objectPaddedSize = size(cObject.RestrictedPaddedMaskSubImage);
 
-                PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
-                PODSData.Handles.ObjectAzimuthOverlayAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
+                OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
+                OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
                 
             catch ME
                 msg = getReport(ME);
@@ -727,8 +727,8 @@ function [] = UpdateImages(source)
                 % because setting the axes limits will change lim mode to 'manual', we need to set the limits
                 % if the sticks don't display properly in the try statement above. Otherwise, the limits of 
                 % the axes might not match the size of CData of the image object it holds
-                PODSData.Handles.ObjectAzimuthOverlayAxH.XLim = PODSData.Handles.ObjectPolFFCAxH.XLim;
-                PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = PODSData.Handles.ObjectPolFFCAxH.YLim;
+                OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
+                OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
             end
 
             % retrieve the object midline coordinates
@@ -738,7 +738,7 @@ function [] = UpdateImages(source)
                 % then attempt to plot the midline coordinates
                 try
                     % plot as a primitive line
-                    PODSData.Handles.ObjectMidlinePlot = line(PODSData.Handles.ObjectMaskAxH,...
+                    OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectMaskAxH,...
                         'XData',Midline(:,1),...
                         'YData',Midline(:,2),...
                         'Marker','none',...
@@ -748,8 +748,8 @@ function [] = UpdateImages(source)
                 catch ME
                     UpdateLog3(source,['Warning: Error displaying object midline: ', ME.message],'append');
                     % reset the axes limits to match the object image size
-                    PODSData.Handles.ObjectAzimuthOverlayAxH.XLim = PODSData.Handles.ObjectPolFFCAxH.XLim;
-                    PODSData.Handles.ObjectAzimuthOverlayAxH.YLim = PODSData.Handles.ObjectPolFFCAxH.YLim;
+                    OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
+                    OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
                 end
             end
 
@@ -758,7 +758,7 @@ function [] = UpdateImages(source)
                 % get the object boundary coordinates w.r.t. the padded intensity image
                 paddedBoundary = cObject.PaddedSubIdxBoundary;
 
-                PODSData.Handles.ObjectBoundaryPlot = line(PODSData.Handles.ObjectPolFFCAxH,...
+                OOPSData.Handles.ObjectBoundaryPlot = line(OOPSData.Handles.ObjectPolFFCAxH,...
                     paddedBoundary(:,2),...
                     paddedBoundary(:,1),...
                     'Color',cObject.Label.Color,...
@@ -780,13 +780,13 @@ function [] = UpdateImages(source)
                 PaddedObjNormIntensity = Scale0To1(PaddedObjNormIntensity);
 
                 % show stack-normalized object intensity stack
-                PODSData.Handles.ObjectNormIntStackImgH.CData = [PaddedObjNormIntensity(:,:,1),...
+                OOPSData.Handles.ObjectNormIntStackImgH.CData = [PaddedObjNormIntensity(:,:,1),...
                     PaddedObjNormIntensity(:,:,2),...
                     PaddedObjNormIntensity(:,:,3),...
                     PaddedObjNormIntensity(:,:,4)];
             catch
                 disp('Warning: Error displaying stack-normalized object intensity')
-                PODSData.Handles.ObjectNormIntStackImgH.CData = repmat(EmptyImage,1,4);
+                OOPSData.Handles.ObjectNormIntStackImgH.CData = repmat(EmptyImage,1,4);
             end
 
             drawnow
@@ -796,35 +796,35 @@ function [] = UpdateImages(source)
     function UpdateAverageIntensity()
 
         if isempty(cImage)
-            PODSData.Handles.AverageIntensityImgH.CData = EmptyImage;
+            OOPSData.Handles.AverageIntensityImgH.CData = EmptyImage;
             return
         end
 
-        if ~PODSData.Settings.Zoom.Active
-            PODSData.Handles.AverageIntensityAxH.XLim = [0.5 cImage.Width+0.5];
-            PODSData.Handles.AverageIntensityAxH.YLim = [0.5 cImage.Height+0.5];
+        if ~OOPSData.Settings.Zoom.Active
+            OOPSData.Handles.AverageIntensityAxH.XLim = [0.5 cImage.Width+0.5];
+            OOPSData.Handles.AverageIntensityAxH.YLim = [0.5 cImage.Height+0.5];
         end
 
         % if ApplyMask state button set to true, apply current mask by setting AlphaData
-        if PODSData.Handles.ApplyMaskAverageIntensity.Value == 1
-            PODSData.Handles.AverageIntensityImgH.AlphaData = cImage.bw;
+        if OOPSData.Handles.ApplyMaskAverageIntensity.Value == 1
+            OOPSData.Handles.AverageIntensityImgH.AlphaData = cImage.bw;
         end
 
         % make avg intensity/reference composite RGB, if applicable
-        if cImage.ReferenceImageLoaded && PODSData.Handles.ShowReferenceImageAverageIntensity.Value == 1
+        if cImage.ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value == 1
             % get the intensity-reference overlay RGB image
-            PODSData.Handles.AverageIntensityImgH.CData = ...
+            OOPSData.Handles.AverageIntensityImgH.CData = ...
                 CompositeRGB(Scale0To1(cImage.I),...
-                PODSData.Settings.IntensityColormap,...
+                OOPSData.Settings.IntensityColormap,...
                 cImage.PrimaryIntensityDisplayLimits,...
                 Scale0To1(cImage.ReferenceImage),...
-                PODSData.Settings.ReferenceColormap,...
+                OOPSData.Settings.ReferenceColormap,...
                 cImage.ReferenceIntensityDisplayLimits);
             % set axes CLim
-            PODSData.Handles.AverageIntensityAxH.CLim = [0 255];
+            OOPSData.Handles.AverageIntensityAxH.CLim = [0 255];
         else % just show avg intensity
-            PODSData.Handles.AverageIntensityImgH.CData = Scale0To1(cImage.I);
-            PODSData.Handles.AverageIntensityAxH.CLim = cImage.PrimaryIntensityDisplayLimits;
+            OOPSData.Handles.AverageIntensityImgH.CData = Scale0To1(cImage.I);
+            OOPSData.Handles.AverageIntensityAxH.CLim = cImage.PrimaryIntensityDisplayLimits;
         end
 
     end

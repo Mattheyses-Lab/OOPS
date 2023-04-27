@@ -1,28 +1,28 @@
 function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
 % get the main project data structure
-PODSData = guidata(source);
+OOPSData = guidata(source);
 
 % hide the axes until we are done plotting
 axH.Visible = 'off';
 
 % get the current group
-CurrentGroup = PODSData.CurrentGroup;
+CurrentGroup = OOPSData.CurrentGroup;
 % the number of different object labels in the project
-nLabels = length(PODSData.Settings.ObjectLabels);
+nLabels = length(OOPSData.Settings.ObjectLabels);
 % make an x axis tick for each label
 axH.XTick = 1:1:nLabels;
 % get the color of the swarm plot error bar
-ErrorBarColor = PODSData.Settings.SwarmPlotErrorBarColor;
+ErrorBarColor = OOPSData.Settings.SwarmPlotErrorBarColor;
 % for each object label, make an x axis tick label
 for ii = 1:nLabels
-    axH.XTickLabel{ii} = [CurrentGroup.GroupName,' (',PODSData.Settings.ObjectLabels(ii).Name,')'];
+    axH.XTickLabel{ii} = [CurrentGroup.GroupName,' (',OOPSData.Settings.ObjectLabels(ii).Name,')'];
 end
 
 % set X limits to 1 below and above the max
 axH.XLim = [0 nLabels+1];
 
 % the object variable for which we are going to retrieve data
-Var2Plot = PODSData.Settings.SwarmPlotYVariable;
+Var2Plot = OOPSData.Settings.SwarmPlotYVariable;
 % cell array of Var2Plot values, one cell per label
 LabelObjectData = CurrentGroup.GetObjectDataByLabel(Var2Plot);
 % get object SelfIdxs for data tips
@@ -73,14 +73,14 @@ for i = 1:nPlots
                 ' data missing for ',...
                 num2str(nRemoved),...
                 ' objects with [Label:',...
-                PODSData.Settings.ObjectLabels(i).Name,...
+                OOPSData.Settings.ObjectLabels(i).Name,...
                 '] in [Group:',...
                 CurrentGroup.GroupName,...
                 ']'],...
                 'append');
         end
         % build swarm chart based on selected color mode
-        switch PODSData.Settings.SwarmPlotColorMode
+        switch OOPSData.Settings.SwarmPlotColorMode
             case 'Magnitude'
                 % color by value
                 hSwarmPlot(i) = swarmchart(...
@@ -99,7 +99,7 @@ for i = 1:nPlots
                     'Filled',...
                     'HitTest','Off',...
                     'MarkerEdgeColor',[0 0 0],...
-                    'MarkerFaceColor',PODSData.Settings.ObjectLabels(i).Color,...
+                    'MarkerFaceColor',OOPSData.Settings.ObjectLabels(i).Color,...
                     'Visible','off');
         end
         % build data tips for each plot marker of the swarm chart
@@ -175,7 +175,7 @@ for i = 1:nPlots
     catch me
         switch me.message
             case "Object data missing"
-                UpdateLog3(source,['Warning: [',ExpandVariableName(Var2Plot),'] data missing for objects with [Label:',PODSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
+                UpdateLog3(source,['Warning: [',ExpandVariableName(Var2Plot),'] data missing for objects with [Label:',OOPSData.Settings.ObjectLabels(i).Name,'] in [Group:',CurrentGroup.GroupName,']'],'append');
             otherwise
                 UpdateLog3(source,['Warning: ',me.message],'append');
         end
@@ -187,7 +187,7 @@ axH.YTickLabelMode = 'Auto';
 axH.YLimMode = 'Auto';
 
 % color the points according to magnitude using the currently selected Order factor colormap
-axH.Colormap = PODSData.Settings.OrderFactorColormap;
+axH.Colormap = OOPSData.Settings.OrderFactorColormap;
 
 % unhide all the plot elements
 set(findobj(axH,'type','scatter'),'Visible','on');

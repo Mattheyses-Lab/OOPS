@@ -1,13 +1,13 @@
 function ShowSummaryTable(source,event)
 
     % get the summary table
-    T = SavePODSData(source);
+    T = SaveOOPSData(source);
     
     % get handles
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
 
     % new figure to show summary table
-    SummaryFig = uifigure('Position',PODSData.Handles.fH.Position);
+    SummaryFig = uifigure('Position',OOPSData.Handles.fH.Position);
     
     % uitable to hold data
     uit = uitable(SummaryFig,'data',T);

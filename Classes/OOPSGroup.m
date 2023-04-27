@@ -1,17 +1,17 @@
-classdef PODSGroup < handle
+classdef OOPSGroup < handle
     % experimental groups class
     properties
 
-        % handle to the PODSProject containing this group
-        Parent PODSProject
+        % handle to the OOPSProject containing this group
+        Parent OOPSProject
 
         % the user-defined name of this group
         GroupName char        
 
-        % array of handles to the PODSImages in this group
-        Replicate PODSImage
+        % array of handles to the OOPSImages in this group
+        Replicate OOPSImage
 
-        % indexing group members (Replicate/PODSImage objects)
+        % indexing group members (Replicate/OOPSImage objects)
         CurrentImageIndex double
         PreviousImageIndex double
         
@@ -43,14 +43,14 @@ classdef PODSGroup < handle
         % total number of objects in this group, changes depending on user-defined mask
         TotalObjects uint16
         
-        % Only the PODSImage objects will store their name in memory, combining them is quick
+        % Only the OOPSImage objects will store their name in memory, combining them is quick
         ImageNames cell
         
         % currently selected image in GUI
-        CurrentImage PODSImage
+        CurrentImage OOPSImage
         
         % currently selected object - updates based on user selection
-        CurrentObject PODSObject
+        CurrentObject OOPSObject
         
         % don't want to store in memory for every group
         AllObjectData table
@@ -65,17 +65,17 @@ classdef PODSGroup < handle
         LocalSBAllDone logical
         ObjectAzimuthAllDone logical
         
-        % pixel-average OF for all images in this PODSGroup for which OF has been calculated
+        % pixel-average OF for all images in this OOPSGroup for which OF has been calculated
         OFAvg double
         
-        % name of the color of this PODSGroup
+        % name of the color of this OOPSGroup
         ColorString char
 
-        % index of this PODSGroup in [obj.Parent.Group(:)]
+        % index of this OOPSGroup in [obj.Parent.Group(:)]
         SelfIdx
 
         % quick access to project settings
-        Settings PODSSettings
+        Settings OOPSSettings
 
         GroupSummaryDisplayTable table
 
@@ -87,7 +87,7 @@ classdef PODSGroup < handle
     methods
         
         % class constructor method
-        function obj = PODSGroup(GroupName,Project)
+        function obj = OOPSGroup(GroupName,Project)
             if nargin > 0
                 obj.GroupName = GroupName;
                 %obj.Settings = Settings;
@@ -106,7 +106,7 @@ classdef PODSGroup < handle
         % saveobj method
         function group = saveobj(obj)
 
-            disp(['Saving PODSGroup: ',obj.GroupName])
+            disp(['Saving OOPSGroup: ',obj.GroupName])
 
             group.GroupName = obj.GroupName;
             group.CurrentImageIndex = obj.CurrentImageIndex;
@@ -132,7 +132,7 @@ classdef PODSGroup < handle
             group.nReplicates = obj.nReplicates;
 
             for i = 1:obj.nReplicates
-                disp(['Saving PODSImage: ',obj.Replicate(i).pol_shortname])
+                disp(['Saving OOPSImage: ',obj.Replicate(i).pol_shortname])
 %                 group.Replicate(i) = saveobj(obj.Replicate(i));
                 group.Replicate(i) = obj.Replicate(i).saveobj();
             end
@@ -146,7 +146,7 @@ classdef PODSGroup < handle
         function Objects = getObjectsByLabel(obj,Label)
 
             ObjsFound = 0;
-            Objects = PODSObject.empty();
+            Objects = OOPSObject.empty();
 
             if obj.nReplicates>=1
                 for i = 1:obj.nReplicates
@@ -161,7 +161,7 @@ classdef PODSGroup < handle
 
         end
 
-        % apply PODSLabel:Label to all selected objects in this PODSGroup
+        % apply OOPSLabel:Label to all selected objects in this OOPSGroup
         function LabelSelectedObjects(obj,Label)
             for i = 1:obj.nReplicates
                 obj.Replicate(i).LabelSelectedObjects(Label);
@@ -175,10 +175,10 @@ classdef PODSGroup < handle
             % clear the placeholders
             clear Replicates
             % reinitialize the obj.Replicate vector
-            obj.Replicate = PODSImage.empty();
+            obj.Replicate = OOPSImage.empty();
         end
 
-        % delete images from this PODSGroup based on selection status in GUI
+        % delete images from this OOPSGroup based on selection status in GUI
         function DeleteSelectedImages(obj)
             
             % get handles to all images in this group
@@ -205,7 +205,7 @@ classdef PODSGroup < handle
                 obj.CurrentImageIndex = obj.nReplicates;
             end
             
-            % delete the bad PODSImage objects
+            % delete the bad OOPSImage objects
             % set their pixel idxs to 0 in the mask
             for i = 1:length(Bad)
                 delete(Bad(i));
@@ -257,7 +257,7 @@ classdef PODSGroup < handle
             try
                 CurrentImage = obj.Replicate(obj.CurrentImageIndex);
             catch
-                CurrentImage = PODSImage.empty();
+                CurrentImage = OOPSImage.empty();
             end
         end
 
@@ -265,7 +265,7 @@ classdef PODSGroup < handle
             try
                 Settings = obj.Parent.Settings;
             catch
-                Settings = PODSSettings.empty();
+                Settings = OOPSSettings.empty();
             end
         end
         
@@ -274,7 +274,7 @@ classdef PODSGroup < handle
             if ~isempty(cImage)
                 CurrentObject = cImage(1).CurrentObject;
             else
-                CurrentObject = PODSObject.empty();
+                CurrentObject = OOPSObject.empty();
             end
         end
         
@@ -494,7 +494,7 @@ classdef PODSGroup < handle
 
         function obj = loadobj(group)
 
-            obj = PODSGroup(group.GroupName,PODSProject.empty());
+            obj = OOPSGroup(group.GroupName,OOPSProject.empty());
 
             obj.CurrentImageIndex = group.CurrentImageIndex;
 
@@ -562,7 +562,7 @@ classdef PODSGroup < handle
             % for each replicate in group
             for i = 1:group.nReplicates
                 % load the replicate
-                obj.Replicate(i) = PODSImage.loadobj(group.Replicate(i));
+                obj.Replicate(i) = OOPSImage.loadobj(group.Replicate(i));
                 % set its parent group (this group)
                 obj.Replicate(i).Parent = obj;
                 if obj.Replicate(i).FFCDone

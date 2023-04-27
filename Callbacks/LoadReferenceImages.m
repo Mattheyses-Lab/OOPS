@@ -1,31 +1,31 @@
 function [] = LoadReferenceImages(source,~)
 % main data structure
-PODSData = guidata(source);
+OOPSData = guidata(source);
 % idx to the group that we will be loading data for
-GroupIndex = PODSData.CurrentGroupIndex;
+GroupIndex = OOPSData.CurrentGroupIndex;
 % user-selected input file type (.nd2 or .tif)
-InputFileType = PODSData.Settings.InputFileType;
+InputFileType = OOPSData.Settings.InputFileType;
 
-cGroup = PODSData.Group(GroupIndex);
+cGroup = OOPSData.Group(GroupIndex);
 
 switch InputFileType
     %--------------------------------------------------------------------------
     case '.nd2'
         
-        uialert(PODSData.Handles.fH,'Select .nd2 reference images','Load Reference Images',...
+        uialert(OOPSData.Handles.fH,'Select .nd2 reference images','Load Reference Images',...
             'Icon','',...
-            'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
+            'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
         % call uiwait() on the main figure window
-        uiwait(PODSData.Handles.fH);
+        uiwait(OOPSData.Handles.fH);
         % hide main window
-        PODSData.Handles.fH.Visible = 'Off';
+        OOPSData.Handles.fH.Visible = 'Off';
 
         try
             % get reference image files (single or multiple)
             [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
                 'Select .nd2 reference images',...
                 'MultiSelect','on',...
-                PODSData.Settings.LastDirectory);
+                OOPSData.Settings.LastDirectory);
         catch
             % get reference image files (single or multiple)
             [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
@@ -34,12 +34,12 @@ switch InputFileType
         end
 
         % save recent directory
-        PODSData.Settings.LastDirectory = PolPath;
+        OOPSData.Settings.LastDirectory = PolPath;
 
         % show main window
-        PODSData.Handles.fH.Visible = 'On';
+        OOPSData.Handles.fH.Visible = 'On';
         % make it active
-        figure(PODSData.Handles.fH);
+        figure(OOPSData.Handles.fH);
 
         if(iscell(Pol_files) == 0)
             if(Pol_files==0)
@@ -58,7 +58,7 @@ switch InputFileType
         
         if n~=n_Pol
             msg = 'Number of reference images must match the number of polarization stacks...';
-            uialert(PODSData.Handles.fH,msg,'Error');
+            uialert(OOPSData.Handles.fH,msg,'Error');
             return
         end
 
@@ -87,7 +87,7 @@ switch InputFileType
                 end
             catch ME
                 report = getReport(ME);
-                uialert(PODSData.Handles.fH,report,'Error');
+                uialert(OOPSData.Handles.fH,report,'Error');
                 return
             end
             
@@ -105,7 +105,7 @@ end
 
 UpdateLog3(source,'Done.','append');
     
-PODSData.Handles.ShowReferenceImageAverageIntensity.Visible = 'On';
+OOPSData.Handles.ShowReferenceImageAverageIntensity.Visible = 'On';
 
 UpdateImages(source);
 UpdateSummaryDisplay(source);

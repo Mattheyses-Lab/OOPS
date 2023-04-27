@@ -1,32 +1,32 @@
 function [] = pb_LoadFPMFiles(source,~)
 
     % main data structure
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
     % group that we will be loading data for
-    GroupIndex = PODSData.CurrentGroupIndex;
+    GroupIndex = OOPSData.CurrentGroupIndex;
     % user-selected input file type (.nd2 or .tif)
-    InputFileType = PODSData.Settings.InputFileType;
+    InputFileType = OOPSData.Settings.InputFileType;
     % get the current group into which we will load the image files
-    cGroup = PODSData.Group(GroupIndex);
+    cGroup = OOPSData.Group(GroupIndex);
     
     switch InputFileType
         %--------------------------------------------------------------------------
         case '.nd2'
             % alert box to indicate required action, closing will resume interaction on main window
-            uialert(PODSData.Handles.fH,'Select .nd2 polarization stack(s)','Load FPM Data',...
+            uialert(OOPSData.Handles.fH,'Select .nd2 polarization stack(s)','Load FPM Data',...
                 'Icon','',...
-                'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
+                'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
             % prevent interaction with the main window until we finish
-            uiwait(PODSData.Handles.fH);
+            uiwait(OOPSData.Handles.fH);
             % hide main window
-            PODSData.Handles.fH.Visible = 'Off';
+            OOPSData.Handles.fH.Visible = 'Off';
             % try to get files from the most recent directory,
             % otherwise, just use default
             try
                 [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
                     'Select .nd2 polarization stack(s)',...
                     'MultiSelect','on',...
-                    PODSData.Settings.LastDirectory);
+                    OOPSData.Settings.LastDirectory);
             catch
                 [Pol_files, PolPath, ~] = uigetfile('*.nd2',...
                     'Select .nd2 polarization stack(s)',...
@@ -34,11 +34,11 @@ function [] = pb_LoadFPMFiles(source,~)
             end
 
             % save accessed directory
-            PODSData.Settings.LastDirectory = PolPath;
+            OOPSData.Settings.LastDirectory = PolPath;
             % show main window
-            PODSData.Handles.fH.Visible = 'On';
-            % make PODSGUI active figure
-            figure(PODSData.Handles.fH);
+            OOPSData.Handles.fH.Visible = 'On';
+            % make OOPSGUI active figure
+            figure(OOPSData.Handles.fH);
             
             if(iscell(Pol_files) == 0)
                 if(Pol_files==0)
@@ -60,8 +60,8 @@ function [] = pb_LoadFPMFiles(source,~)
             
             % for each stack (set of 4 polarization images)
             for i=1:n_Pol
-                % new PODSImage object
-                cGroup.Replicate(i+n) = PODSImage(cGroup);
+                % new OOPSImage object
+                cGroup.Replicate(i+n) = OOPSImage(cGroup);
                 
                 if iscell(Pol_files)
                     cGroup.Replicate(i+n).filename = Pol_files{1,i};
@@ -107,31 +107,31 @@ function [] = pb_LoadFPMFiles(source,~)
             %--------------------------------------------------------------------------
         case '.tif'
             % alert box to indicate required action
-            uialert(PODSData.Handles.fH,'Select .tif polarization stack(s)','Load FPM Data',...
+            uialert(OOPSData.Handles.fH,'Select .tif polarization stack(s)','Load FPM Data',...
                 'Icon','',...
-                'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
+                'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
             % prevent interaction with main window until we finish
-            uiwait(PODSData.Handles.fH);            
+            uiwait(OOPSData.Handles.fH);            
             % hide main window
-            PODSData.Handles.fH.Visible = 'Off';            
+            OOPSData.Handles.fH.Visible = 'Off';            
             % try to get files from the most recent directory,
             % otherwise, just use default
             try
                 [Pol_files, PolPath, ~] = uigetfile('*.tif',...
                     'Select .tif polarization stack(s)',...
                     'MultiSelect','on',...
-                    PODSData.Settings.LastDirectory);
+                    OOPSData.Settings.LastDirectory);
             catch
                 [Pol_files, PolPath, ~] = uigetfile('*.tif',...
                     'Select .tif polarization stack(s)',...
                     'MultiSelect','on');
             end
             % save accessed directory
-            PODSData.Settings.LastDirectory = PolPath;
+            OOPSData.Settings.LastDirectory = PolPath;
             % hide main window
-            PODSData.Handles.fH.Visible = 'On';
-            % make PODSGUI active figure
-            figure(PODSData.Handles.fH);            
+            OOPSData.Handles.fH.Visible = 'On';
+            % make OOPSGUI active figure
+            figure(OOPSData.Handles.fH);            
             % if no files selected, throw error
             if(iscell(Pol_files) == 0)
                 if(Pol_files==0)
@@ -150,8 +150,8 @@ function [] = pb_LoadFPMFiles(source,~)
             n = cGroup.nReplicates;
             % for each file, add a new replicate to the group
             for i=1:n_Pol
-                % new PODSImage object
-                cGroup.Replicate(i+n) = PODSImage(cGroup);
+                % new OOPSImage object
+                cGroup.Replicate(i+n) = OOPSImage(cGroup);
                 
                 if iscell(Pol_files)
                     cGroup.Replicate(i+n).filename = Pol_files{1,i+n};
@@ -195,17 +195,17 @@ function [] = pb_LoadFPMFiles(source,~)
     % update log to indicate completion
     UpdateLog3(source,'Done.','append');
     % set current image to first image of channel 1, by default
-    PODSData.Group(GroupIndex).CurrentImageIndex = 1;
+    OOPSData.Group(GroupIndex).CurrentImageIndex = 1;
     % if no FFC files loaded, simulate them with a matrix of ones
     if ~cGroup.FFCLoaded
         UpdateLog3(source,'Warning: No FFC files found. Simulating them with matrix of ones...','append');
         %FFCData = struct();
-        cGroup.FFC_all_cal = ones(size(PODSData.CurrentImage.pol_rawdata));
+        cGroup.FFC_all_cal = ones(size(OOPSData.CurrentImage.pol_rawdata));
         cGroup.FFC_n_cal = 1;
         cGroup.FFC_cal_average = sum(cGroup.FFC_all_cal,4)./cGroup.FFC_n_cal;
         cGroup.FFC_cal_norm = cGroup.FFC_cal_average/max(max(max(cGroup.FFC_cal_average)));
-        cGroup.FFC_Height = PODSData.CurrentImage.Height;
-        cGroup.FFC_Width = PODSData.CurrentImage.Width;
+        cGroup.FFC_Height = OOPSData.CurrentImage.Height;
+        cGroup.FFC_Width = OOPSData.CurrentImage.Width;
         cGroup.FFC_cal_size = size(cGroup.FFC_cal_norm);
         %cGroup.FFCData = FFCData;
         % update log to indicate completion
@@ -213,8 +213,8 @@ function [] = pb_LoadFPMFiles(source,~)
     end
     
     % if 'Files' isn't the current 'tab', switch to it
-    if ~strcmp(PODSData.Settings.CurrentTab,'Files')
-        feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
+    if ~strcmp(OOPSData.Settings.CurrentTab,'Files')
+        feval(OOPSData.Handles.hTabFiles.Callback,OOPSData.Handles.hTabFiles,[]);
     end
     
     UpdateImageTree(source);

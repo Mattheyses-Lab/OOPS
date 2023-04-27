@@ -1,7 +1,7 @@
 function NewProject2(source,~)
         
         % get the GUI data structure
-        PODSData = guidata(source);
+        OOPSData = guidata(source);
         % get the project name and number groups
         Outputs = SimpleFormFig('New project',...
             {'Project title',...
@@ -21,7 +21,7 @@ function NewProject2(source,~)
         end
 
         % set the project name
-        PODSData.ProjectName = projectTitle;
+        OOPSData.ProjectName = projectTitle;
 
 
         % make group name labels for the dialog box
@@ -44,11 +44,11 @@ function NewProject2(source,~)
         end
         % create new groups for each of the user-defined group names
         for i = 1:nGroups
-            PODSData.AddNewGroup(Outputs{i,1});
+            OOPSData.AddNewGroup(Outputs{i,1});
         end
         % update
-        PODSData.CurrentGroupIndex = 1;
-        UpdateLog3(source,['Started new project, "', PODSData.ProjectName,'", with ',num2str(PODSData.nGroups),' groups'],'append')
+        OOPSData.CurrentGroupIndex = 1;
+        UpdateLog3(source,['Started new project, "', OOPSData.ProjectName,'", with ',num2str(OOPSData.nGroups),' groups'],'append')
         UpdateSummaryDisplay(source,{'Project','Group'});
         UpdateGroupTree(source);
         UpdateImageTree(source);

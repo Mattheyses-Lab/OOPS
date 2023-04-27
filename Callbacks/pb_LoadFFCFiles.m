@@ -1,42 +1,42 @@
 function [] = pb_LoadFFCFiles(source,~)
 
-    PODSData = guidata(source);
-    Settings = PODSData.Settings;
-    GroupIndex = PODSData.CurrentGroupIndex;
+    OOPSData = guidata(source);
+    Settings = OOPSData.Settings;
+    GroupIndex = OOPSData.CurrentGroupIndex;
     InputFileType = Settings.InputFileType;
 
     FFCData = struct();
     
     % current group based on user selected group and channel idxs
-    cGroup = PODSData.Group(GroupIndex);
+    cGroup = OOPSData.Group(GroupIndex);
 
     %% This switch block should be its own function
     switch InputFileType
         %--------------------------.nd2 Files----------------------------------
         case '.nd2'
 
-            uialert(PODSData.Handles.fH,'Select .nd2 flat-field stack(s)','Load flat-field image stack(s)',...
+            uialert(OOPSData.Handles.fH,'Select .nd2 flat-field stack(s)','Load flat-field image stack(s)',...
                 'Icon','',...
-                'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
+                'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
             
-            uiwait(PODSData.Handles.fH);
+            uiwait(OOPSData.Handles.fH);
 
-            PODSData.Handles.fH.Visible = 'Off';
+            OOPSData.Handles.fH.Visible = 'Off';
             
             try
                 [cal_files, calPath, ~] = uigetfile('*.nd2',...
                     'Select .nd2 flat-field stack(s)',...
-                    'MultiSelect','on',PODSData.Settings.LastDirectory);
+                    'MultiSelect','on',OOPSData.Settings.LastDirectory);
             catch
                 [cal_files, calPath, ~] = uigetfile('*.nd2',...
                     'Select .nd2 flat-field stack(s)',...
                     'MultiSelect','on');
             end
 
-            PODSData.Handles.fH.Visible = 'On';
-            figure(PODSData.Handles.fH);
+            OOPSData.Handles.fH.Visible = 'On';
+            figure(OOPSData.Handles.fH);
 
-            PODSData.Settings.LastDirectory = calPath;
+            OOPSData.Settings.LastDirectory = calPath;
             
             if ~iscell(cal_files)
                 if cal_files == 0
@@ -86,27 +86,27 @@ function [] = pb_LoadFFCFiles(source,~)
             
         case '.tif'
             
-            uialert(PODSData.Handles.fH,'Select .tif flat-field stack(s)','Load flat-field image stack(s)',...
+            uialert(OOPSData.Handles.fH,'Select .tif flat-field stack(s)','Load flat-field image stack(s)',...
                 'Icon','',...
-                'CloseFcn',@(o,e) uiresume(PODSData.Handles.fH));
+                'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
             
-            uiwait(PODSData.Handles.fH);
+            uiwait(OOPSData.Handles.fH);
 
-            PODSData.Handles.fH.Visible = 'Off';
+            OOPSData.Handles.fH.Visible = 'Off';
 
             try
                 [cal_files, calPath, ~] = uigetfile('*.tif',...
                     'Select .tif flat-field stack(s)',...
-                    'MultiSelect','on',PODSData.Settings.LastDirectory);
+                    'MultiSelect','on',OOPSData.Settings.LastDirectory);
             catch
                 [cal_files, calPath, ~] = uigetfile('*.tif',...
                     'Select .tif flat-field stack(s)',...
                     'MultiSelect','on');
             end
 
-            PODSData.Handles.fH.Visible = 'On';
+            OOPSData.Handles.fH.Visible = 'On';
 
-            PODSData.Settings.LastDirectory = calPath;
+            OOPSData.Settings.LastDirectory = calPath;
 
             if(iscell(cal_files)==0)
                 if(cal_files==0)
@@ -173,8 +173,8 @@ function [] = pb_LoadFFCFiles(source,~)
     clear FFCData
 
     % if files tab is not current, invoke the callback we need to get there
-    if ~strcmp(PODSData.Settings.CurrentTab,'Files')
-        feval(PODSData.Handles.hTabFiles.Callback,PODSData.Handles.hTabFiles,[]);
+    if ~strcmp(OOPSData.Settings.CurrentTab,'Files')
+        feval(OOPSData.Handles.hTabFiles.Callback,OOPSData.Handles.hTabFiles,[]);
     end
     
     UpdateImages(source);

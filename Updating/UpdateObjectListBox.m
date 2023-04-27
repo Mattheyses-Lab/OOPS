@@ -1,11 +1,11 @@
 function UpdateObjectListBox(source)
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
 
-    if PODSData.nGroups>=1
-        CurrentGroup = PODSData.CurrentGroup;
+    if OOPSData.nGroups>=1
+        CurrentGroup = OOPSData.CurrentGroup;
     else
-        PODSData.Handles.ObjectSelector.Items = {};
-        PODSData.Handles.ObjectSelector.Enable = 0;
+        OOPSData.Handles.ObjectSelector.Items = {};
+        OOPSData.Handles.ObjectSelector.Enable = 0;
         return
     end
 
@@ -16,14 +16,14 @@ function UpdateObjectListBox(source)
         % and at least one object has been detected
         if Replicate.nObjects >= 1
             % enable/update object selection
-            PODSData.Handles.ObjectSelector.Enable = 1;
-            PODSData.Handles.ObjectSelector.Items = Replicate.ObjectNames;
-            PODSData.Handles.ObjectSelector.ItemsData = 1:Replicate.nObjects;
-            PODSData.Handles.ObjectSelector.Value = Replicate.CurrentObjectIdx;
-            scroll(PODSData.Handles.ObjectSelector,PODSData.Handles.ObjectSelector.Value);
+            OOPSData.Handles.ObjectSelector.Enable = 1;
+            OOPSData.Handles.ObjectSelector.Items = Replicate.ObjectNames;
+            OOPSData.Handles.ObjectSelector.ItemsData = 1:Replicate.nObjects;
+            OOPSData.Handles.ObjectSelector.Value = Replicate.CurrentObjectIdx;
+            scroll(OOPSData.Handles.ObjectSelector,OOPSData.Handles.ObjectSelector.Value);
             % % testing below - adding object label color icons to each list item
             % % first remove all styles
-            % removeStyle(PODSData.Handles.ObjectSelector);
+            % removeStyle(OOPSData.Handles.ObjectSelector);
             % % preallocate our styles
             % objectIconStyles = matlab.ui.style.Style;
             % objectIconStyles = repmat(objectIconStyles,Replicate.nObjects,1);
@@ -34,7 +34,7 @@ function UpdateObjectListBox(source)
             % [objectIconStyles(:).Icon] = deal([labelColors{1:end,1}]);
             % % add the styles to each list item
             % for i = 1:Replicate.nObjects
-            %     addStyle(PODSData.Handles.ObjectSelector,objectIconStyles(i),'item',i);
+            %     addStyle(OOPSData.Handles.ObjectSelector,objectIconStyles(i),'item',i);
             % end
             % % end testing
             return
@@ -42,7 +42,7 @@ function UpdateObjectListBox(source)
     end
 
     % if the above conditions are unmet, clear and disable the listbox
-    PODSData.Handles.ObjectSelector.Items = {};
-    PODSData.Handles.ObjectSelector.Enable = 0;
+    OOPSData.Handles.ObjectSelector.Items = {};
+    OOPSData.Handles.ObjectSelector.Enable = 0;
 
 end

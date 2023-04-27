@@ -1,14 +1,14 @@
-classdef PODSImage < handle
+classdef OOPSImage < handle
     
     % normal properties
     properties
 %% Parent/Child
 
-        % handle to the PODSGroup to which this PODSImage belongs
-        Parent PODSGroup
+        % handle to the OOPSGroup to which this OOPSImage belongs
+        Parent OOPSGroup
 
-        % array of handles to the objects detected for this PODSImage
-        Object PODSObject
+        % array of handles to the objects detected for this OOPSImage
+        Object OOPSObject
         
 %% Input Image Properties
         
@@ -139,7 +139,7 @@ classdef PODSImage < handle
         % 8-connected object boundaries
         ObjectBoundaries8
         
-        % cell array of the names of all of the objects in this PODSImage
+        % cell array of the names of all of the objects in this OOPSImage
         ObjectNames cell
         
         % flat-field corrected image stack, normalized to the maximum value among all pixels in the stack
@@ -148,11 +148,11 @@ classdef PODSImage < handle
         % raw image stack, normalized to the maximum value among all pixels in the stack
         pol_rawdata_normalizedbystack
         
-        % number of objects detected in this PODSImage
+        % number of objects detected in this OOPSImage
         nObjects uint16
         
-        % currently selected object in this PODSImage
-        CurrentObject PODSObject
+        % currently selected object in this OOPSImage
+        CurrentObject OOPSObject
         
         % image dimensions as a char array for display purposes: 'dim1xdim2'
         Dimensions char
@@ -188,8 +188,8 @@ classdef PODSImage < handle
         % whether or not manual image thresholding is enabled, depends on MaskType/MaskName
         ManualThreshEnabled logical
 
-        % handle to the PODSSettings object, shared across the entire data structure
-        Settings PODSSettings
+        % handle to the OOPSSettings object, shared across the entire data structure
+        Settings OOPSSettings
 
         % table used to build the image summary uitable shown in the GUI
         ImageSummaryDisplayTable
@@ -202,7 +202,7 @@ classdef PODSImage < handle
     methods
         
         % constructor
-        function obj = PODSImage(Group)
+        function obj = OOPSImage(Group)
             obj.Parent = Group;
             
             % image name (minus path and file extension)
@@ -281,7 +281,7 @@ classdef PODSImage < handle
 
         end
 
-        % get the index of this PODSImage in [obj.Parent.Replicate(:)]
+        % get the index of this OOPSImage in [obj.Parent.Replicate(:)]
         function SelfIdx = get.SelfIdx(obj)
             SelfIdx = find(obj.Parent.Replicate==obj);
         end
@@ -291,11 +291,11 @@ classdef PODSImage < handle
             try
                 Settings = obj.Parent.Settings;
             catch
-                Settings = PODSSettings.empty();
+                Settings = OOPSSettings.empty();
             end
         end
 
-        % performs flat field correction for 1 PODSImage
+        % performs flat field correction for 1 OOPSImage
         function FlatFieldCorrection(obj)
             % divide each raw data image by the corresponding flatfield image
             for i = 1:4
@@ -309,7 +309,7 @@ classdef PODSImage < handle
             obj.FFCDone = true;
         end
 
-        % detects objects in this PODSImage
+        % detects objects in this OOPSImage
         function DetectObjects(obj)
             % start by deleting any currently existing objects
             obj.deleteObjects();
@@ -324,8 +324,8 @@ classdef PODSImage < handle
                 DefaultLabel = obj.Settings.ObjectLabels(1);
 
                 for i = 1:length(props) % for each detected object
-                   % create an instance of PODSObject
-                   obj.Object(i) = PODSObject(props(i,1),...
+                   % create an instance of OOPSObject
+                   obj.Object(i) = OOPSObject(props(i,1),...
                        obj,...
                        DefaultLabel);
                 end
@@ -339,7 +339,7 @@ classdef PODSImage < handle
             
         end % end of DetectObjects
         
-        % delete all objects in this PODSImage
+        % delete all objects in this OOPSImage
         function deleteObjects(obj)
             % collect and delete the objects in this image
             Objects = obj.Object;
@@ -347,12 +347,12 @@ classdef PODSImage < handle
             % clear the placeholders
             clear Objects
             % reinitialize the obj.Object vector
-            obj.Object = PODSObject.empty();
+            obj.Object = OOPSObject.empty();
             % % delete again? CHECK THIS
             % delete(obj.Object);
         end
 
-        % delete seleted objects from one PODSImage
+        % delete seleted objects from one OOPSImage
         function DeleteSelectedObjects(obj)
             
             % get handles to all objects in this image
@@ -373,7 +373,7 @@ classdef PODSImage < handle
                 obj.CurrentObjectIdx = obj.nObjects;
             end
             
-            % delete the bad PODSObject objects
+            % delete the bad OOPSObject objects
             % set their pixel idxs to 0 in the mask
             for i = 1:length(Bad)
 %                 obj.bw(Bad(i).SubarrayIdx{:}) = 0;
@@ -410,7 +410,7 @@ classdef PODSImage < handle
                 % select the last object in the list
                 obj.CurrentObjectIdx = obj.nObjects;
             end
-            % delete the bad PODSObject objects
+            % delete the bad OOPSObject objects
             % set their pixel idxs to 0 in the mask
             for i = 1:length(Bad)
                 obj.bw(Bad(i).PixelIdxList) = 0;
@@ -428,7 +428,7 @@ classdef PODSImage < handle
 
         end
         
-        % apply PODSLabel:Label to all selected objects in this PODSImage
+        % apply OOPSLabel:Label to all selected objects in this OOPSImage
         function LabelSelectedObjects(obj,Label)
             % find indices of currently selected objects
             Selected = find([obj.Object.Selected]);
@@ -436,7 +436,7 @@ classdef PODSImage < handle
             [obj.Object(Selected).Label] = deal(Label);
         end
         
-        % clear selection status of objects in one PODSImage
+        % clear selection status of objects in one OOPSImage
         function ClearSelection(obj)
             [obj.Object.Selected] = deal(false);
         end
@@ -454,10 +454,10 @@ classdef PODSImage < handle
             end
         end
 
-        % return all objects in this PODSImage with the PODSLabel:Label
+        % return all objects in this OOPSImage with the OOPSLabel:Label
         function Objects = getObjectsByLabel(obj,Label)
             % preallocate empty array of objects
-            Objects = PODSObject.empty();
+            Objects = OOPSObject.empty();
             % as long as we have at least one object
             if obj.nObjects >= 1
                 ObjIdxs = find([obj.Object.Label]==Label);
@@ -488,7 +488,7 @@ classdef PODSImage < handle
             obj.OFDone = true;
         end
 
-        % detect local S/B ratio for each object in this PODSImage
+        % detect local S/B ratio for each object in this OOPSImage
         function obj = FindLocalSB(obj)
 
             % subfunction that returns linear idxs (w.r.t. full image) to buffer and BG regions for an object
@@ -822,12 +822,12 @@ classdef PODSImage < handle
 
 %% other dependent 'get' methods
 
-        % get current Object (PODSObject)
+        % get current Object (OOPSObject)
         function CurrentObject = get.CurrentObject(obj)
             try
                 CurrentObject = obj.Object(obj.CurrentObjectIdx);
             catch
-                CurrentObject = PODSObject.empty();
+                CurrentObject = OOPSObject.empty();
             end
         end
 
@@ -1049,7 +1049,7 @@ classdef PODSImage < handle
             end
         end
 
-        % return the number of objects in this PODSImage
+        % return the number of objects in this OOPSImage
         function nObjects = get.nObjects(obj)
             if isvalid(obj.Object)
                 nObjects = length(obj.Object);
@@ -1151,7 +1151,7 @@ classdef PODSImage < handle
     methods (Static)
         function obj = loadobj(replicate)
 
-            obj = PODSImage(PODSGroup.empty());
+            obj = OOPSImage(OOPSGroup.empty());
 
             % info about the image path and filename
             obj.filename = replicate.filename;
@@ -1235,8 +1235,8 @@ classdef PODSImage < handle
             obj.CurrentObjectIdx = replicate.CurrentObjectIdx;
 
             for i = 1:length(replicate.Object) % for each detected object
-                % create an instance of PODSObject
-                obj.Object(i) = PODSObject.loadobj(replicate.Object(i));
+                % create an instance of OOPSObject
+                obj.Object(i) = OOPSObject.loadobj(replicate.Object(i));
                 obj.Object(i).Parent = obj;
             end
         end

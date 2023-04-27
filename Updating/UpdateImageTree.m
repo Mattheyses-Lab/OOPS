@@ -1,12 +1,12 @@
 function UpdateImageTree(source)
 
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
 
-    if PODSData.nGroups >= 1
-        CurrentGroup = PODSData.CurrentGroup;
+    if OOPSData.nGroups >= 1
+        CurrentGroup = OOPSData.CurrentGroup;
     else
         % make sure tree contains no nodes
-        delete(PODSData.Handles.ImageTree.Children);
+        delete(OOPSData.Handles.ImageTree.Children);
         UpdateObjectListBox(source);
         return
     end
@@ -14,19 +14,19 @@ function UpdateImageTree(source)
     % if we have at least one replicate
     if CurrentGroup.nReplicates >= 1
         % delete previous nodes
-        delete(PODSData.Handles.ImageTree.Children);
+        delete(OOPSData.Handles.ImageTree.Children);
         % make new nodes
         for i = 1:CurrentGroup.nReplicates
-            uitreenode(PODSData.Handles.ImageTree,...
+            uitreenode(OOPSData.Handles.ImageTree,...
                 'Text',CurrentGroup.Replicate(i).pol_shortname,...
                 'NodeData',CurrentGroup.Replicate(i),...
-                'ContextMenu',PODSData.Handles.ImageContextMenu);
+                'ContextMenu',OOPSData.Handles.ImageContextMenu);
         end
-        PODSData.Handles.ImageTree.SelectedNodes = PODSData.Handles.ImageTree.Children(CurrentGroup.CurrentImageIndex);
+        OOPSData.Handles.ImageTree.SelectedNodes = OOPSData.Handles.ImageTree.Children(CurrentGroup.CurrentImageIndex);
         UpdateObjectListBox(source);
     else
         % make sure tree contains no nodes
-        delete(PODSData.Handles.ImageTree.Children);
+        delete(OOPSData.Handles.ImageTree.Children);
         UpdateObjectListBox(source);
     end
 

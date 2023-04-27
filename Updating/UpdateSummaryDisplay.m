@@ -1,6 +1,6 @@
 function [] = UpdateSummaryDisplay(source,varargin)
 
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
 
     dataOnly = false;
 
@@ -11,78 +11,78 @@ function [] = UpdateSummaryDisplay(source,varargin)
             dataOnly = true;
         end
         % if no choices match currently selected display type, don't update
-        if ~any(ismember(varargin{1},PODSData.Settings.SummaryDisplayType))
+        if ~any(ismember(varargin{1},OOPSData.Settings.SummaryDisplayType))
             return
         end
     end
 
     % set the title of the summary panel
-    PODSData.Handles.AppInfoPanel.Title = [PODSData.Settings.SummaryDisplayType,' summary'];
+    OOPSData.Handles.AppInfoPanel.Title = [OOPSData.Settings.SummaryDisplayType,' summary'];
     % hide grid layout managers for all summary tables
-    set(findobj(PODSData.Handles.AppInfoPanel.Children(),'type','uigridlayout'),'Visible','off');
+    set(findobj(OOPSData.Handles.AppInfoPanel.Children(),'type','uigridlayout'),'Visible','off');
     % show the grid layout manager for the summary type that is active
-    PODSData.Handles.([PODSData.Settings.SummaryDisplayType,'SummaryTableGrid']).Visible = 'on';
+    OOPSData.Handles.([OOPSData.Settings.SummaryDisplayType,'SummaryTableGrid']).Visible = 'on';
 
-    switch PODSData.Settings.SummaryDisplayType
+    switch OOPSData.Settings.SummaryDisplayType
 
         case 'Project'
 
-            projectTable = PODSData.ProjectSummaryDisplayTable;
-            PODSData.Handles.ProjectSummaryTable.Data = projectTable;
-            PODSData.Handles.ProjectSummaryTable.ColumnName = {};
-            PODSData.Handles.ProjectSummaryTable.RowName = {};
+            projectTable = OOPSData.ProjectSummaryDisplayTable;
+            OOPSData.Handles.ProjectSummaryTable.Data = projectTable;
+            OOPSData.Handles.ProjectSummaryTable.ColumnName = {};
+            OOPSData.Handles.ProjectSummaryTable.RowName = {};
 
             % testing adding styles to cells
 
             % first remove all styles
-            removeStyle(PODSData.Handles.ProjectSummaryTable);
+            removeStyle(OOPSData.Handles.ProjectSummaryTable);
 
             % color cell based on selected GUI background color
             % get row and col coordinates to the cell corresponding to 'GUI background color'
             [r,c] = find(ismember(projectTable.Variables,'GUI background color'));
             % create an icon color style for the cell
-            s = uistyle('Icon',makeRGBColorSquare(PODSData.Settings.GUIBackgroundColor,1));
+            s = uistyle('Icon',makeRGBColorSquare(OOPSData.Settings.GUIBackgroundColor,1));
             % add the style to the table
-            addStyle(PODSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
+            addStyle(OOPSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
 
             % color cell based on selected GUI foreground color
             % get row and col coordinates to the cell corresponding to 'GUI background color'
             [r,c] = find(ismember(projectTable.Variables,'GUI foreground color'));
             % create an icon color style for the cell
-            s = uistyle('Icon',makeRGBColorSquare(PODSData.Settings.GUIForegroundColor,1));
+            s = uistyle('Icon',makeRGBColorSquare(OOPSData.Settings.GUIForegroundColor,1));
             % add the style to the table
-            addStyle(PODSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
+            addStyle(OOPSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
 
             % color cell based on selected GUI foreground color
             % get row and col coordinates to the cell corresponding to 'GUI background color'
             [r,c] = find(ismember(projectTable.Variables,'GUI highlight color'));
             % create an icon color style for the cell
-            s = uistyle('Icon',makeRGBColorSquare(PODSData.Settings.GUIHighlightColor,1));
+            s = uistyle('Icon',makeRGBColorSquare(OOPSData.Settings.GUIHighlightColor,1));
             % add the style to the table
-            addStyle(PODSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
+            addStyle(OOPSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
 
             % end testing
 
 
         case 'Group'
 
-            cGroup = PODSData.CurrentGroup;
+            cGroup = OOPSData.CurrentGroup;
 
             if ~isempty(cGroup)
                 % groupTable = cGroup.GroupSummaryDisplayTable;
-                % PODSData.Handles.GroupSummaryTable.Data = groupTable;
-                % PODSData.Handles.GroupSummaryTable.ColumnName = {};
-                % PODSData.Handles.GroupSummaryTable.RowName = {};
+                % OOPSData.Handles.GroupSummaryTable.Data = groupTable;
+                % OOPSData.Handles.GroupSummaryTable.ColumnName = {};
+                % OOPSData.Handles.GroupSummaryTable.RowName = {};
                 % 
                 % % first remove all styles
-                % removeStyle(PODSData.Handles.GroupSummaryTable);
+                % removeStyle(OOPSData.Handles.GroupSummaryTable);
                 % 
                 % % create styles for cells with missing (NaN) values
                 % sMissing = uistyle("BackgroundColor",[1 0 0],"FontColor",[1 1 1]);
                 % % find indices to the missing values
                 % [rMissing,cMissing] = find(ismember(groupTable.Variables,'NaN'));
                 % % add the style to missing cells
-                % addStyle(PODSData.Handles.GroupSummaryTable,sMissing,'cell',[rMissing,cMissing]);
+                % addStyle(OOPSData.Handles.GroupSummaryTable,sMissing,'cell',[rMissing,cMissing]);
                 % 
                 % % create separate styles for cells that are 'True' or 'False'
                 % sPass = uistyle("Icon","success","IconAlignment","rightmargin");
@@ -91,8 +91,8 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 % [rFalse,cFalse] = find(ismember(groupTable.Variables,'False'));
                 % [rTrue,cTrue] = find(ismember(groupTable.Variables,'True'));
                 % % add the styles to corresponding cells
-                % addStyle(PODSData.Handles.GroupSummaryTable,sFail,'cell',[rFalse,cFalse]);
-                % addStyle(PODSData.Handles.GroupSummaryTable,sPass,'cell',[rTrue,cTrue]);
+                % addStyle(OOPSData.Handles.GroupSummaryTable,sFail,'cell',[rFalse,cFalse]);
+                % addStyle(OOPSData.Handles.GroupSummaryTable,sPass,'cell',[rTrue,cTrue]);
 
 
                 % get the data for the group table
@@ -122,37 +122,37 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 [groupTable.Group(rFalse)] = {'False'};
 
                 % add the table data to the uitable
-                PODSData.Handles.GroupSummaryTable.Data = groupTable;
+                OOPSData.Handles.GroupSummaryTable.Data = groupTable;
                 % remove column and row names
-                PODSData.Handles.GroupSummaryTable.ColumnName = {};
-                PODSData.Handles.GroupSummaryTable.RowName = {};
+                OOPSData.Handles.GroupSummaryTable.ColumnName = {};
+                OOPSData.Handles.GroupSummaryTable.RowName = {};
 
                 % first remove all styles
-                removeStyle(PODSData.Handles.GroupSummaryTable);
+                removeStyle(OOPSData.Handles.GroupSummaryTable);
                 % make sure all text is aligned left
-                addStyle(PODSData.Handles.GroupSummaryTable,sAlignment,'column',2);
+                addStyle(OOPSData.Handles.GroupSummaryTable,sAlignment,'column',2);
                 % add the styles to true or false cells
-                addStyle(PODSData.Handles.GroupSummaryTable,sFail,'cell',[rFalse,cFalse]);
-                addStyle(PODSData.Handles.GroupSummaryTable,sPass,'cell',[rTrue,cTrue]);
+                addStyle(OOPSData.Handles.GroupSummaryTable,sFail,'cell',[rFalse,cFalse]);
+                addStyle(OOPSData.Handles.GroupSummaryTable,sPass,'cell',[rTrue,cTrue]);
                 % add the style to missing cells
-                addStyle(PODSData.Handles.GroupSummaryTable,sMissing,'cell',[rMissing,cMissing]);
+                addStyle(OOPSData.Handles.GroupSummaryTable,sMissing,'cell',[rMissing,cMissing]);
 
             else
-                PODSData.Handles.AppInfoPanel.Title = 'No group found';
-                PODSData.Handles.GroupSummaryTable.Data = [];
-                PODSData.Handles.GroupSummaryTableGrid.Visible = 'off';
+                OOPSData.Handles.AppInfoPanel.Title = 'No group found';
+                OOPSData.Handles.GroupSummaryTable.Data = [];
+                OOPSData.Handles.GroupSummaryTableGrid.Visible = 'off';
                 return
             end
 
         case 'Image'
 
-            cImage = PODSData.CurrentImage;
+            cImage = OOPSData.CurrentImage;
 
             if ~isempty(cImage)
                 % imageTable = cImage(1).ImageSummaryDisplayTable;
-                % PODSData.Handles.ImageSummaryTable.Data = imageTable;
-                % PODSData.Handles.ImageSummaryTable.ColumnName = {};
-                % PODSData.Handles.ImageSummaryTable.RowName = {};
+                % OOPSData.Handles.ImageSummaryTable.Data = imageTable;
+                % OOPSData.Handles.ImageSummaryTable.ColumnName = {};
+                % OOPSData.Handles.ImageSummaryTable.RowName = {};
 
 
                 % testing below - when table data is not a cell array of cell arrays
@@ -160,10 +160,10 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 imageTable = cImage(1).ImageSummaryDisplayTable;
 
                 % add the table data to the uitable
-                PODSData.Handles.ImageSummaryTable.Data = imageTable;
+                OOPSData.Handles.ImageSummaryTable.Data = imageTable;
                 % remove column and row names
-                PODSData.Handles.ImageSummaryTable.ColumnName = {};
-                PODSData.Handles.ImageSummaryTable.RowName = {};
+                OOPSData.Handles.ImageSummaryTable.ColumnName = {};
+                OOPSData.Handles.ImageSummaryTable.RowName = {};
 
                 if dataOnly
                     return
@@ -172,10 +172,10 @@ function [] = UpdateSummaryDisplay(source,varargin)
 
                 % if dataOnly
                 %     % add the table data to the uitable
-                %     PODSData.Handles.ImageSummaryTable.Data = imageTable;
+                %     OOPSData.Handles.ImageSummaryTable.Data = imageTable;
                 %     % remove column and row names
-                %     PODSData.Handles.ImageSummaryTable.ColumnName = {};
-                %     PODSData.Handles.ImageSummaryTable.RowName = {};
+                %     OOPSData.Handles.ImageSummaryTable.ColumnName = {};
+                %     OOPSData.Handles.ImageSummaryTable.RowName = {};
                 %     return
                 % end
 
@@ -199,37 +199,37 @@ function [] = UpdateSummaryDisplay(source,varargin)
 
 
                 % % add the table data to the uitable
-                % PODSData.Handles.ImageSummaryTable.Data = imageTable;
+                % OOPSData.Handles.ImageSummaryTable.Data = imageTable;
                 % % remove column and row names
-                % PODSData.Handles.ImageSummaryTable.ColumnName = {};
-                % PODSData.Handles.ImageSummaryTable.RowName = {};
+                % OOPSData.Handles.ImageSummaryTable.ColumnName = {};
+                % OOPSData.Handles.ImageSummaryTable.RowName = {};
 
                 % first remove all styles
-                removeStyle(PODSData.Handles.ImageSummaryTable);
+                removeStyle(OOPSData.Handles.ImageSummaryTable);
                 % make sure all text is aligned left
-                addStyle(PODSData.Handles.ImageSummaryTable,sAlignment,'column',2);
+                addStyle(OOPSData.Handles.ImageSummaryTable,sAlignment,'column',2);
                 % add the styles to true or false cells
-                addStyle(PODSData.Handles.ImageSummaryTable,sFail,'cell',[rFalse,cFalse]);
-                addStyle(PODSData.Handles.ImageSummaryTable,sPass,'cell',[rTrue,cTrue]);
+                addStyle(OOPSData.Handles.ImageSummaryTable,sFail,'cell',[rFalse,cFalse]);
+                addStyle(OOPSData.Handles.ImageSummaryTable,sPass,'cell',[rTrue,cTrue]);
                 % add the style to missing cells
-                addStyle(PODSData.Handles.ImageSummaryTable,sMissing,'cell',[rMissing,cMissing]);
+                addStyle(OOPSData.Handles.ImageSummaryTable,sMissing,'cell',[rMissing,cMissing]);
 
             else
-                PODSData.Handles.AppInfoPanel.Title = 'No image found';
-                PODSData.Handles.ImageSummaryTable.Data = [];
-                PODSData.Handles.ImageSummaryTableGrid.Visible = 'off';
+                OOPSData.Handles.AppInfoPanel.Title = 'No image found';
+                OOPSData.Handles.ImageSummaryTable.Data = [];
+                OOPSData.Handles.ImageSummaryTableGrid.Visible = 'off';
                 return
             end  
 
         case 'Object'
 
-            cObject = PODSData.CurrentObject;
+            cObject = OOPSData.CurrentObject;
 
             if ~isempty(cObject)
                 % objectTable = cObject.ObjectSummaryDisplayTable;
-                % PODSData.Handles.ObjectSummaryTable.Data = objectTable;
-                % PODSData.Handles.ObjectSummaryTable.ColumnName = {};
-                % PODSData.Handles.ObjectSummaryTable.RowName = {};
+                % OOPSData.Handles.ObjectSummaryTable.Data = objectTable;
+                % OOPSData.Handles.ObjectSummaryTable.ColumnName = {};
+                % OOPSData.Handles.ObjectSummaryTable.RowName = {};
 
                 objectTable = cObject.ObjectSummaryDisplayTable;
 
@@ -249,26 +249,26 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 sLabel = uistyle('Icon',cObject.LabelColorSquare);
 
                 % add the table data to the uitable
-                PODSData.Handles.ObjectSummaryTable.Data = objectTable;
+                OOPSData.Handles.ObjectSummaryTable.Data = objectTable;
                 % remove column and row names
-                PODSData.Handles.ObjectSummaryTable.ColumnName = {};
-                PODSData.Handles.ObjectSummaryTable.RowName = {};
+                OOPSData.Handles.ObjectSummaryTable.ColumnName = {};
+                OOPSData.Handles.ObjectSummaryTable.RowName = {};
 
                 % first remove all styles
-                removeStyle(PODSData.Handles.ObjectSummaryTable);
+                removeStyle(OOPSData.Handles.ObjectSummaryTable);
                 % make sure all text is aligned left
-                addStyle(PODSData.Handles.ObjectSummaryTable,sAlignment,'column',2);
+                addStyle(OOPSData.Handles.ObjectSummaryTable,sAlignment,'column',2);
                 % add the style to missing cells
-                addStyle(PODSData.Handles.ObjectSummaryTable,sMissing,'cell',[rMissing,cMissing]);
+                addStyle(OOPSData.Handles.ObjectSummaryTable,sMissing,'cell',[rMissing,cMissing]);
                 % add label color square icon to object label cell
-                addStyle(PODSData.Handles.ObjectSummaryTable,sLabel,'cell',[rLabel,cLabel+1]);
+                addStyle(OOPSData.Handles.ObjectSummaryTable,sLabel,'cell',[rLabel,cLabel+1]);
                 % end testing
 
 
             else
-                PODSData.Handles.AppInfoPanel.Title = 'No object found';
-                PODSData.Handles.ObjectSummaryTable.Data = [];
-                PODSData.Handles.ObjectSummaryTableGrid.Visible = 'off';
+                OOPSData.Handles.AppInfoPanel.Title = 'No object found';
+                OOPSData.Handles.ObjectSummaryTable.Data = [];
+                OOPSData.Handles.ObjectSummaryTableGrid.Visible = 'off';
                 return
             end
 

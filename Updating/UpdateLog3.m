@@ -5,9 +5,9 @@
 %%
 function [] = UpdateLog3(source,msg,operation)
 
-% updates the log window in PODS_GUI
+% updates the log window in OOPS_GUI
 % Takes 3 inputs, data, msg, and operation
-% data is the PODS data structure holding all experimental information and
+% data is the OOPS data structure holding all experimental information and
 % figure objects, msg is the message to print to the log window, operation
 % is the type of operation to perform, can be 'append' to add text onto
 % existing text, or can remove and replace the most recent line of text if
@@ -18,22 +18,22 @@ function [] = UpdateLog3(source,msg,operation)
 
     % restrict log window to only hold the last ~200 messages
     
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
     if strcmp(operation,'append')
-        if length(PODSData.Handles.LogWindow.Value) > 199
-            PODSData.Handles.LogWindow.Value = {PODSData.Handles.LogWindow.Value{end-199:end},msg};
+        if length(OOPSData.Handles.LogWindow.Value) > 199
+            OOPSData.Handles.LogWindow.Value = {OOPSData.Handles.LogWindow.Value{end-199:end},msg};
         else
-            if strcmp(PODSData.Handles.LogWindow.Value{1},'')
-                PODSData.Handles.LogWindow.Value{end} = msg;
+            if strcmp(OOPSData.Handles.LogWindow.Value{1},'')
+                OOPSData.Handles.LogWindow.Value{end} = msg;
             else
-                PODSData.Handles.LogWindow.Value{end+1} = msg;
+                OOPSData.Handles.LogWindow.Value{end+1} = msg;
             end
         end
     else
-        PODSData.Handles.LogWindow.Value{end} = msg;
+        OOPSData.Handles.LogWindow.Value{end} = msg;
     end    
     
-    scroll(PODSData.Handles.LogWindow,'bottom');
+    scroll(OOPSData.Handles.LogWindow,'bottom');
     
     drawnow
     

@@ -1,7 +1,7 @@
 function generalZoomToCursor(source,~)
 %% ZoomToCursor
 %   allows for dynamic zooming/panning in axes containing an image
-%   all PODSGUI axes using ZoomToCursor will have a custom toolbar state
+%   all OOPSGUI axes using ZoomToCursor will have a custom toolbar state
 %   button, clicking will activate ZoomToCursor behavior
 %           clicking button again will deactivate
 %           clicking within axes will increase zoom through a set number of

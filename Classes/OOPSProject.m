@@ -1,23 +1,23 @@
-classdef PODSProject < handle
+classdef OOPSProject < handle
     % experimental groups class
     properties
         % name of the project
         ProjectName = 'Untitled';
-        % array of PODSGroup objects
-        Group PODSGroup
-        % indicates which PODSGroup is selected in the GUI
+        % array of OOPSGroup objects
+        Group OOPSGroup
+        % indicates which OOPSGroup is selected in the GUI
         CurrentGroupIndex double
         % handles to all gui objects
         Handles struct
-        % handle to the main PODSSettings object (shared across multiple objects)
-        Settings PODSSettings
+        % handle to the main OOPSSettings object (shared across multiple objects)
+        Settings OOPSSettings
     end
 
     properties (Dependent = true)
         nGroups double % depends on the size of dim 1 of Group
-        CurrentGroup PODSGroup
-        CurrentImage PODSImage
-        CurrentObject PODSObject
+        CurrentGroup OOPSGroup
+        CurrentImage OOPSImage
+        CurrentObject OOPSObject
 
         GroupNames
 
@@ -31,11 +31,11 @@ classdef PODSProject < handle
     methods
 
         % constructor method
-        function obj = PODSProject(settings)
+        function obj = OOPSProject(settings)
             if nargin > 0
                 obj.Settings = settings;
             else
-                obj.Settings = PODSSettings;
+                obj.Settings = OOPSSettings;
             end
         end
 
@@ -50,7 +50,7 @@ classdef PODSProject < handle
             % clear the placeholders
             clear Groups
             % reinitialize the obj.Group vector
-            obj.Group = PODSGroup.empty();
+            obj.Group = OOPSGroup.empty();
         end
 
         % save method, for saving the project to continue later
@@ -81,7 +81,7 @@ classdef PODSProject < handle
         % add a new group with only group name as input
         function AddNewGroup(obj,GroupName)
             NewColor = obj.getUniqueGroupColor();
-            obj.Group(end+1,1) = PODSGroup(GroupName,obj);
+            obj.Group(end+1,1) = OOPSGroup(GroupName,obj);
             obj.Group(end).Color = NewColor;
         end
 
@@ -102,7 +102,7 @@ classdef PODSProject < handle
 
         % return all objects with Label:Label
         function Objects = getObjectsByLabel(obj,Label)
-            Objects = PODSObject.empty();
+            Objects = OOPSObject.empty();
             if obj.nGroups >= 1
                 for i = 1:obj.nGroups
                     TotalObjsCounted = numel(Objects);
@@ -122,7 +122,7 @@ classdef PODSProject < handle
             end
         end
 
-        % select all objects with PODSLabel:Label
+        % select all objects with OOPSLabel:Label
         function SelectObjectsByLabel(obj,Label)
             ObjectsToSelect = obj.getObjectsByLabel(Label);
             [ObjectsToSelect.Selected] = deal(true);
@@ -136,14 +136,14 @@ classdef PODSProject < handle
             [ObjectsWithOldLabel(:).Label] = deal(NewLabel);
         end
 
-        % apply PODSLabel:Label to all selected objects in project
+        % apply OOPSLabel:Label to all selected objects in project
         function LabelSelectedObjects(obj,Label)
             for i = 1:obj.nGroups
                 obj.Group(i).LabelSelectedObjects(Label);
             end
         end
 
-        % delete the PODSGroup indicated by input:Group
+        % delete the OOPSGroup indicated by input:Group
         function DeleteGroup(obj,Group)
             Group2Delete = Group;
             GroupIdx = Group2Delete.SelfIdx;
@@ -151,7 +151,7 @@ classdef PODSProject < handle
                 if obj.nGroups > 1
                     obj.Group = obj.Group(2:end);
                 else
-                    obj.Group = PODSGroup.empty();
+                    obj.Group = OOPSGroup.empty();
                 end
             elseif GroupIdx == obj.nGroups
                 obj.Group = obj.Group(1:end-1);
@@ -177,16 +177,16 @@ classdef PODSProject < handle
             nGroups = numel(obj.Group);
         end
 
-        % return currently selected PODSGroup in GUI
+        % return currently selected OOPSGroup in GUI
         function CurrentGroup = get.CurrentGroup(obj)
             try
                 CurrentGroup = obj.Group(obj.CurrentGroupIndex);
             catch
-                CurrentGroup = PODSGroup.empty();
+                CurrentGroup = OOPSGroup.empty();
             end
         end
 
-        % return the currently selected PODSImage in GUI
+        % return the currently selected OOPSImage in GUI
         function CurrentImage = get.CurrentImage(obj)
             % get the currently selected group
             cGroup = obj.CurrentGroup;
@@ -196,11 +196,11 @@ classdef PODSProject < handle
                 CurrentImage = cGroup.CurrentImage; 
             else
                 % otherwise, return empty
-                CurrentImage = PODSImage.empty(); 
+                CurrentImage = OOPSImage.empty(); 
             end
         end
 
-        % return the currently selected PODSObject in GUI
+        % return the currently selected OOPSObject in GUI
         function CurrentObject = get.CurrentObject(obj)
             % get the current image
             cImage = obj.CurrentImage;
@@ -208,7 +208,7 @@ classdef PODSProject < handle
             if ~isempty(cImage)
                 CurrentObject = obj.CurrentImage(1).CurrentObject;
             else
-                CurrentObject = PODSObject.empty();
+                CurrentObject = OOPSObject.empty();
             end
         end
 
@@ -278,7 +278,7 @@ classdef PODSProject < handle
     methods (Static)
         function obj = loadobj(proj)
 
-            obj = PODSProject(PODSSettings.loadobj(proj.Settings));
+            obj = OOPSProject(OOPSSettings.loadobj(proj.Settings));
 
             % NewScreenSize = obj.Settings.ScreenSize;
             % NewFontSize = obj.Settings.FontSize;
@@ -298,7 +298,7 @@ classdef PODSProject < handle
             % for each group in the saved data structure
             for i = 1:length(proj.Group)
                 % load the group
-                obj.Group(i,1) = PODSGroup.loadobj(proj.Group(i,1));
+                obj.Group(i,1) = OOPSGroup.loadobj(proj.Group(i,1));
                 % and set its parent project (this project)
                 obj.Group(i,1).Parent = obj;
             end

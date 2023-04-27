@@ -3,12 +3,12 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
 % calculate the new mask of the currently selected image, update the display,
 % then detect the new objects defined by the mask
 
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
 
-    Handles = PODSData.Handles;   
+    Handles = OOPSData.Handles;   
     
     % get main channel (currently selected) of current replicate
-    MainReplicate = PODSData.CurrentImage(1);
+    MainReplicate = OOPSData.CurrentImage(1);
 
     rows = MainReplicate.Height;
     cols = MainReplicate.Width;

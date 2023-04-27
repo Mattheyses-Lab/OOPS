@@ -1,7 +1,7 @@
 function [] = ZoomToCursor(source,~)
 %% ZoomToCursor
 %   allows for dynamic zooming/panning in GUI axes
-%   all PODSGUI axes using ZoomToCursor will have a custom toolbar state
+%   all OOPSGUI axes using ZoomToCursor will have a custom toolbar state
 %   button, clicking will activate ZoomToCursor behavior
 %           clicking button again will deactivate
 %           clicking within axes will increase zoom through a set number of
@@ -21,11 +21,11 @@ function [] = ZoomToCursor(source,~)
 % shoelson@hotmail.com))
 
     % get the GUI data
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
     % get the handles structure
-    Handles = PODSData.Handles;
+    Handles = OOPSData.Handles;
     % get the zoom settings structure
-    Zoom = PODSData.Settings.Zoom;
+    Zoom = OOPSData.Settings.Zoom;
 
     % default freeze status
     freezeState = false;
@@ -168,8 +168,8 @@ function [] = ZoomToCursor(source,~)
             Zoom.OldImageButtonDownFcn = Zoom.DynamicImage.ButtonDownFcn;
 
             Handles.fH.Pointer = 'crosshair';
-            Handles.fH.WindowButtonMotionFcn = @(o,e) CursorMoving(o,PODSData);
-            Zoom.DynamicImage.ButtonDownFcn = @(o,e) ChangeZoomLevel(o,PODSData);
+            Handles.fH.WindowButtonMotionFcn = @(o,e) CursorMoving(o,OOPSData);
+            Zoom.DynamicImage.ButtonDownFcn = @(o,e) ChangeZoomLevel(o,OOPSData);
             Zoom.DynamicImage.HitTest = 'On';
             
         case 0 % off
@@ -211,16 +211,16 @@ function [] = ZoomToCursor(source,~)
 
     end  
     
-    PODSData.Settings.Zoom = Zoom;
-    PODSData.Handles = Handles;
+    OOPSData.Settings.Zoom = Zoom;
+    OOPSData.Handles = Handles;
     
 
 end
 
-function [] = CursorMoving(~,PODSData)
+function [] = CursorMoving(~,OOPSData)
 
-    Zoom = PODSData.Settings.Zoom;
-    DynamicAxes = PODSData.Settings.Zoom.DynamicAxes;
+    Zoom = OOPSData.Settings.Zoom;
+    DynamicAxes = OOPSData.Settings.Zoom.DynamicAxes;
     
     posn = Zoom.StaticAxes.CurrentPoint(1,:);
 
@@ -258,7 +258,7 @@ function [] = CursorMoving(~,PODSData)
                         [' (X,Y) = (',num2str(realx),...
                         ',',num2str(realy),') | Zoom: ',...
                         num2str(ZoomPct),'%',...
-                        ' | OF: ',num2str(PODSData.CurrentImage(1).OF_image(realy,realx))];
+                        ' | OF: ',num2str(OOPSData.CurrentImage(1).OF_image(realy,realx))];
                 catch
                     disp('Warning: Error updating cursor position label')
                 end
@@ -270,7 +270,7 @@ function [] = CursorMoving(~,PODSData)
                         [' (X,Y) = (',num2str(realx),...
                         ',',num2str(realy),') | Zoom: ',...
                         num2str(ZoomPct),'%',...
-                        ' | Norm. average intensity: ',num2str(PODSData.CurrentImage(1).I(realy,realx))];
+                        ' | Norm. average intensity: ',num2str(OOPSData.CurrentImage(1).I(realy,realx))];
                 catch
                     disp('Warning: Error updating cursor position label')
                 end
@@ -282,8 +282,8 @@ function [] = CursorMoving(~,PODSData)
                         [' (X,Y) = (',num2str(realx),...
                         ',',num2str(realy),') | Zoom: ',...
                         num2str(ZoomPct),'%',...
-                        ' | Azimuth: ',num2str(PODSData.CurrentImage(1).AzimuthImage(realy,realx)),' radians, '...
-                        num2str(rad2deg(PODSData.CurrentImage(1).AzimuthImage(realy,realx))),' °'];
+                        ' | Azimuth: ',num2str(OOPSData.CurrentImage(1).AzimuthImage(realy,realx)),' radians, '...
+                        num2str(rad2deg(OOPSData.CurrentImage(1).AzimuthImage(realy,realx))),' °'];
                 catch
                     disp('Warning: Error updating cursor position label')
                 end
@@ -291,9 +291,9 @@ function [] = CursorMoving(~,PODSData)
             case 'Mask'
 
                 % if cursor is on an object
-                if PODSData.CurrentImage(1).bw(realy,realx)
+                if OOPSData.CurrentImage(1).bw(realy,realx)
                     % get the idx of the object
-                    ObjIdx = PODSData.CurrentImage(1).L(realy,realx);
+                    ObjIdx = OOPSData.CurrentImage(1).L(realy,realx);
                     % display in the label
                     DynamicAxes.CursorPositionLabel.Text = ...
                         [' (X,Y) = (',num2str(realx),',',num2str(realy),...
@@ -305,7 +305,7 @@ function [] = CursorMoving(~,PODSData)
                         % delete any ActiveObjectBoundary (important in case our objects are "touching" in the mask)
                         delete(findobj(DynamicAxes,'Tag','ActiveObjectBoundary'));
                         % retrieve the new object
-                        Object = PODSData.CurrentImage(1).Object(ObjIdx);
+                        Object = OOPSData.CurrentImage(1).Object(ObjIdx);
                         % and its boundary
                         Boundary = Object.Boundary;
                         % plot the boundary as a primitive line colored by object label
@@ -345,11 +345,11 @@ function [] = CursorMoving(~,PODSData)
 
         end
         
-        PODSData.Handles.fH.Pointer = 'crosshair';
+        OOPSData.Handles.fH.Pointer = 'crosshair';
 
     else
 
-        PODSData.Handles.fH.Pointer = 'arrow';
+        OOPSData.Handles.fH.Pointer = 'arrow';
 
         DynamicAxes.CursorPositionLabel.Text = sprintf('x = %3.0f;  y = %3.0f',0,0);
         
@@ -360,17 +360,17 @@ function [] = CursorMoving(~,PODSData)
         
     end
 
-    PODSData.Settings.Zoom = Zoom;
+    OOPSData.Settings.Zoom = Zoom;
 
     %drawnow
 end
 
-function [] = ChangeZoomLevel(source,PODSData)
-    %PODSData = guidata(source);
+function [] = ChangeZoomLevel(source,OOPSData)
+    %OOPSData = guidata(source);
     
-    Zoom = PODSData.Settings.Zoom;
+    Zoom = OOPSData.Settings.Zoom;
 
-    switch PODSData.Handles.fH.SelectionType
+    switch OOPSData.Handles.fH.SelectionType
         case 'normal'
             % click
             % increases zoom level until maximum is reached
@@ -421,10 +421,10 @@ function [] = ChangeZoomLevel(source,PODSData)
     Zoom.XDist = Zoom.pct*Zoom.XRange;
     Zoom.YDist = Zoom.pct*Zoom.YRange;
 
-    PODSData.Settings.Zoom = Zoom;   
+    OOPSData.Settings.Zoom = Zoom;   
     
-    if ~strcmp(PODSData.Handles.fH.SelectionType,'extend')
-        CursorMoving(source,PODSData);
+    if ~strcmp(OOPSData.Handles.fH.SelectionType,'extend')
+        CursorMoving(source,OOPSData);
     end
 end
 

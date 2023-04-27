@@ -1,9 +1,9 @@
 function SelectObjectsInRectangularROI(source,ROI)
 
     % get data structure
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
     % get active image
-    CurrentImage = PODSData.CurrentImage(1);
+    CurrentImage = OOPSData.CurrentImage(1);
     % get boundaries of ROI
     right = ROI.Position(1)+ROI.Position(3);
     left = ROI.Position(1);

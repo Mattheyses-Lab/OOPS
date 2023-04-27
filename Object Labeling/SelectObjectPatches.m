@@ -7,9 +7,9 @@ function SelectObjectPatches(source,~)
     % store this handle so we can use it to update after deleting an object box
     hAx = source.Parent;
     % get the main data structure
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
     % get the handle to the active image in the GUI
-    CurrentImage = PODSData.CurrentImage(1);
+    CurrentImage = OOPSData.CurrentImage(1);
     % round the (x,y) coordinates of the clicked point
     x = round(CurrentPoint(1));
     y = round(CurrentPoint(2));
@@ -22,7 +22,7 @@ function SelectObjectPatches(source,~)
 %% depending on the type of click, either select/deselect the object, or make it active in the GUI
 % we could add more functionality here by including alternate click types (double-click, etc.)
     % if shift-click
-    if strcmp(PODSData.Handles.fH.SelectionType,'extend')
+    if strcmp(OOPSData.Handles.fH.SelectionType,'extend')
         % change the active object
         CurrentImage.CurrentObjectIdx = ObjIdx;
         % update the summary display if the summary type is 'Object'
@@ -33,8 +33,8 @@ function SelectObjectPatches(source,~)
         % invert the selection status of the object corresponding to the clicked patch
         CurrentImage.Object(ObjIdx).InvertSelection();
         % swap faces between selected and unselected patch objects
-        tempFace = PODSData.Handles.ObjectBoxes.Faces(ObjIdx,:);
-        PODSData.Handles.ObjectBoxes.Faces(ObjIdx,:) = PODSData.Handles.SelectedObjectBoxes.Faces(ObjIdx,:);
-        PODSData.Handles.SelectedObjectBoxes.Faces(ObjIdx,:) = tempFace;
+        tempFace = OOPSData.Handles.ObjectBoxes.Faces(ObjIdx,:);
+        OOPSData.Handles.ObjectBoxes.Faces(ObjIdx,:) = OOPSData.Handles.SelectedObjectBoxes.Faces(ObjIdx,:);
+        OOPSData.Handles.SelectedObjectBoxes.Faces(ObjIdx,:) = tempFace;
     end
 end

@@ -1,15 +1,15 @@
 function [] = CreateMask4(source,~)
 
-PODSData = guidata(source);
+OOPSData = guidata(source);
 
 chartab = '    ';
 
-nImages = length(PODSData.CurrentImage);
+nImages = length(OOPSData.CurrentImage);
 
 UpdateLog3(source,['Building mask(s) for ',num2str(nImages),' images...'],'append');
 
-MaskType = PODSData.Settings.MaskType;
-MaskName = PODSData.Settings.MaskName;
+MaskType = OOPSData.Settings.MaskType;
+MaskName = OOPSData.Settings.MaskName;
 
 i = 1;
 
@@ -19,13 +19,13 @@ switch MaskType
             % DO NOT EDIT - this is the original masking strategy used in BJ Paper (Dean & Mattheyses, 2022)
             case 'Legacy'
                 % main masking loop, iterates through each selected image
-                for cImage = PODSData.CurrentImage
+                for cImage = OOPSData.CurrentImage
                     disp('Main masking loop (time elapsed per loop):')
                     tic
                     % update log with status of masking
                     UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
                     % use disk-shaped structuring element to calculate BG
-                    BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
+                    BGImg = imopen(cImage.I,strel('disk',OOPSData.Settings.SESize,OOPSData.Settings.SELines));
                     % subtract BG
                     BGSubtractedImg = cImage.I - BGImg;
                     % median filter BG-subtracted image
@@ -84,7 +84,7 @@ switch MaskType
             case 'FilamentEdge'
                 SE = strel('disk',2,0);
                 % main masking loop, iterates through each selected image
-                for cImage = PODSData.CurrentImage
+                for cImage = OOPSData.CurrentImage
                     disp('Main masking loop (time elapsed per loop):')
                     tic
                     % UPDATE LOG
@@ -192,7 +192,7 @@ switch MaskType
             case 'AdaptiveFilament'
                 SE = strel('disk',2,0);
                 % main masking loop, iterates through each selected image
-                for cImage = PODSData.CurrentImage
+                for cImage = OOPSData.CurrentImage
                     disp('Main masking loop (time elapsed per loop):')
                     tic
                     % UPDATE LOG
@@ -256,13 +256,13 @@ switch MaskType
                 end % end iteration through images
             case 'Intensity'
                 % main masking loop, iterates through each selected image
-                for cImage = PODSData.CurrentImage
+                for cImage = OOPSData.CurrentImage
                     disp('Main masking loop (time elapsed per loop):')
                     tic
                     % update log with status of masking
                     UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
                     % use disk-shaped structuring element to calculate BG
-                    BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
+                    BGImg = imopen(cImage.I,strel('disk',OOPSData.Settings.SESize,OOPSData.Settings.SELines));
                     % subtract BG
                     BGSubtractedImg = cImage.I - BGImg;
                     % median filter BG-subtracted image
@@ -317,14 +317,14 @@ switch MaskType
                 end % end iteration through images
             case 'Adaptive'
                 % main masking loop, iterates through each selected image
-                for cImage = PODSData.CurrentImage
+                for cImage = OOPSData.CurrentImage
                     disp('Main masking loop (time elapsed per loop):')
                     tic
                     % UPDATE LOG
                     UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
 
                     % use disk-shaped structuring element to calculate BG
-                    BGImg = imopen(cImage.I,strel('disk',PODSData.Settings.SESize,PODSData.Settings.SELines));
+                    BGImg = imopen(cImage.I,strel('disk',OOPSData.Settings.SESize,OOPSData.Settings.SELines));
                     % subtract BG
                     BGSubtractedImg = cImage.I - BGImg;
                     % median filter BG-subtracted image
@@ -375,9 +375,9 @@ switch MaskType
 
     case 'CustomScheme'
         % get idx to user-defined mask scheme by searching through list of scheme names for a match
-        %SchemeIdx = find(ismember(PODSData.Settings.SchemeNames,MaskName));
+        %SchemeIdx = find(ismember(OOPSData.Settings.SchemeNames,MaskName));
         % load the scheme into struct() S -> should have single fieldname matching 'MaskName'
-        S = load(PODSData.Settings.SchemePaths{ismember(PODSData.Settings.SchemeNames,MaskName)});
+        S = load(OOPSData.Settings.SchemePaths{ismember(OOPSData.Settings.SchemeNames,MaskName)});
         % extract the scheme into a new var
         CustomScheme = S.(MaskName);
         % clear the struct
@@ -385,7 +385,7 @@ switch MaskType
         % make sure no residual image data stored in scheme (CustomMask object)
         CustomScheme.ClearImageData();
         % apply the scheme in a loop for each selected image
-        for cImage = PODSData.CurrentImage
+        for cImage = OOPSData.CurrentImage
             disp('Main masking loop (time elapsed per loop):')
             tic
             % UPDATE LOG
@@ -440,8 +440,8 @@ end
 
 
 % invoke callback to change tab
-if ~strcmp(PODSData.Settings.CurrentTab,'Mask')
-    feval(PODSData.Handles.hTabMask.Callback,PODSData.Handles.hTabMask,[]);
+if ~strcmp(OOPSData.Settings.CurrentTab,'Mask')
+    feval(OOPSData.Handles.hTabMask.Callback,OOPSData.Handles.hTabMask,[]);
 end
 
 UpdateLog3(source,'Done.','append');

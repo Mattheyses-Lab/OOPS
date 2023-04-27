@@ -1,6 +1,6 @@
 function TableOut = GetImageObjectSummary(cImage)
 
-    PODSDataOut = struct(...
+    OOPSDataOut = struct(...
         'Area',0,...
         'AvgReferenceChannelIntensity',0,...
         'AzimuthAverage',0,...
@@ -30,34 +30,34 @@ function TableOut = GetImageObjectSummary(cImage)
         );
     
     for i = 1:cImage.nObjects
-        PODSDataOut(i).Area =  cImage.Object(i).Area;
-        PODSDataOut(i).AvgReferenceChannelIntensity = cImage.Object(i).AvgReferenceChannelIntensity;
-        PODSDataOut(i).AzimuthAverage = cImage.Object(i).AzimuthAverage;
-        PODSDataOut(i).AzimuthStd = cImage.Object(i).AzimuthStd;
-        PODSDataOut(i).BGAverage =  cImage.Object(i).BGAverage;
-        PODSDataOut(i).BoundingBox = cImage.Object(i).BoundingBox;
-        PODSDataOut(i).Centroid = cImage.Object(i).Centroid;
-        PODSDataOut(i).Circularity =  cImage.Object(i).Circularity;
-        PODSDataOut(i).ConvexArea =  cImage.Object(i).ConvexArea;
-        PODSDataOut(i).Eccentricity =  cImage.Object(i).Eccentricity;
-        PODSDataOut(i).EquivDiameter = cImage.Object(i).EquivDiameter;
-        PODSDataOut(i).Extent = cImage.Object(i).Extent;
-        PODSDataOut(i).LabelName =  cImage.Object(i).LabelName;
-        PODSDataOut(i).MajorAxisLength = cImage.Object(i).MajorAxisLength;
-        PODSDataOut(i).MaxFeretDiameter =  cImage.Object(i).MaxFeretDiameter;
-        PODSDataOut(i).MinFeretDiameter =  cImage.Object(i).MinFeretDiameter;
-        PODSDataOut(i).MinorAxisLength = cImage.Object(i).MinorAxisLength;
-        PODSDataOut(i).ObjectIdx = cImage.Object(i).SelfIdx;
-        PODSDataOut(i).OFAvg =  cImage.Object(i).OFAvg;
-        PODSDataOut(i).Orientation = cImage.Object(i).Orientation;
-        PODSDataOut(i).Perimeter =  cImage.Object(i).Perimeter;
-        PODSDataOut(i).PixelIdxList = cImage.Object(i).PixelIdxList;
-        PODSDataOut(i).SBRatio = cImage.Object(i).SBRatio;
-        PODSDataOut(i).SignalAverage =  cImage.Object(i).SignalAverage;
-        PODSDataOut(i).Solidity = cImage.Object(i).Solidity;
-        PODSDataOut(i).SubarrayIdx = cImage.Object(i).SubarrayIdx;
+        OOPSDataOut(i).Area =  cImage.Object(i).Area;
+        OOPSDataOut(i).AvgReferenceChannelIntensity = cImage.Object(i).AvgReferenceChannelIntensity;
+        OOPSDataOut(i).AzimuthAverage = cImage.Object(i).AzimuthAverage;
+        OOPSDataOut(i).AzimuthStd = cImage.Object(i).AzimuthStd;
+        OOPSDataOut(i).BGAverage =  cImage.Object(i).BGAverage;
+        OOPSDataOut(i).BoundingBox = cImage.Object(i).BoundingBox;
+        OOPSDataOut(i).Centroid = cImage.Object(i).Centroid;
+        OOPSDataOut(i).Circularity =  cImage.Object(i).Circularity;
+        OOPSDataOut(i).ConvexArea =  cImage.Object(i).ConvexArea;
+        OOPSDataOut(i).Eccentricity =  cImage.Object(i).Eccentricity;
+        OOPSDataOut(i).EquivDiameter = cImage.Object(i).EquivDiameter;
+        OOPSDataOut(i).Extent = cImage.Object(i).Extent;
+        OOPSDataOut(i).LabelName =  cImage.Object(i).LabelName;
+        OOPSDataOut(i).MajorAxisLength = cImage.Object(i).MajorAxisLength;
+        OOPSDataOut(i).MaxFeretDiameter =  cImage.Object(i).MaxFeretDiameter;
+        OOPSDataOut(i).MinFeretDiameter =  cImage.Object(i).MinFeretDiameter;
+        OOPSDataOut(i).MinorAxisLength = cImage.Object(i).MinorAxisLength;
+        OOPSDataOut(i).ObjectIdx = cImage.Object(i).SelfIdx;
+        OOPSDataOut(i).OFAvg =  cImage.Object(i).OFAvg;
+        OOPSDataOut(i).Orientation = cImage.Object(i).Orientation;
+        OOPSDataOut(i).Perimeter =  cImage.Object(i).Perimeter;
+        OOPSDataOut(i).PixelIdxList = cImage.Object(i).PixelIdxList;
+        OOPSDataOut(i).SBRatio = cImage.Object(i).SBRatio;
+        OOPSDataOut(i).SignalAverage =  cImage.Object(i).SignalAverage;
+        OOPSDataOut(i).Solidity = cImage.Object(i).Solidity;
+        OOPSDataOut(i).SubarrayIdx = cImage.Object(i).SubarrayIdx;
     end % end groups
     
-    TableOut = struct2table(PODSDataOut);
-    clear PODSDataOut
+    TableOut = struct2table(OOPSDataOut);
+    clear OOPSDataOut
 end

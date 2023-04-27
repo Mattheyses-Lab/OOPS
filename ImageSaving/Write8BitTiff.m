@@ -10,7 +10,7 @@ function Write8BitTiff(I,filename,map)
     tagstruct.SamplesPerPixel = size(I,3);
     tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
     tagstruct.ColorMap = map;
-    tagstruct.Software = 'Polarized Order Detection Software (PODS)';
+    tagstruct.Software = 'Object-Oriented Polarization Software (OOPS)';
     t.setTag(tagstruct);
     t.write(I);
     t.close();

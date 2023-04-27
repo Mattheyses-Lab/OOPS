@@ -2,9 +2,9 @@ function SelectObjectsInROI(source,ROI)
 % currently working for freehand and rectangular ROIs
 % should work with any MATLAB ROI object, but untested
     % get data structure
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
     % get active image
-    CurrentImage = PODSData.CurrentImage(1);
+    CurrentImage = OOPSData.CurrentImage(1);
     % initialize array of object centroid coordinates
     Centroids = zeros(2,CurrentImage.nObjects);
     % get x-, and y-coordinates for each centroid

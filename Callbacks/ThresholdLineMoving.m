@@ -1,8 +1,8 @@
 function [] = ThresholdLineMoving(source,ThresholdLevel)
 
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
 
-    MainReplicate = PODSData.CurrentImage(1);
+    MainReplicate = OOPSData.CurrentImage(1);
 
     rows = MainReplicate.Height;
     cols = MainReplicate.Width;
@@ -30,7 +30,7 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
             MainReplicate.level = ThresholdLevel;
             MainReplicate.ObjectDetectionDone = false;
         
-            PODSData.Handles.MaskImgH.CData = bw;
+            OOPSData.Handles.MaskImgH.CData = bw;
 
         case 'Intensity'
             IM = MainReplicate.EnhancedImg;
@@ -53,7 +53,7 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
             MainReplicate.level = ThresholdLevel;
             MainReplicate.ObjectDetectionDone = false;
             % update mask display
-            PODSData.Handles.MaskImgH.CData = bw;
+            OOPSData.Handles.MaskImgH.CData = bw;
         case 'Adaptive'
             IM = MainReplicate.I;
 
@@ -73,7 +73,7 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
 
             MainReplicate.ObjectDetectionDone = false;
             % update mask display
-            PODSData.Handles.MaskImgH.CData = bw;
+            OOPSData.Handles.MaskImgH.CData = bw;
         case 'AdaptiveFilament'
             bw = MainReplicate.EnhancedImg > ThresholdLevel;
             % clear 10 px around image borders
@@ -89,7 +89,7 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
 
             MainReplicate.ObjectDetectionDone = false;
             % update mask display
-            PODSData.Handles.MaskImgH.CData = bw;
+            OOPSData.Handles.MaskImgH.CData = bw;
         otherwise
             return
     end

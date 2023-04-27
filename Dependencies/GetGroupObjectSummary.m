@@ -1,8 +1,8 @@
 function TableOut = GetGroupObjectSummary(source)
 
-    PODSData = guidata(source);
+    OOPSData = guidata(source);
     
-    PODSDataOut = struct('GroupIdx',0,...
+    OOPSDataOut = struct('GroupIdx',0,...
                          'GroupName',[],...
                          'ImageIdx',0,...
                          'ImageName',[],...
@@ -25,7 +25,7 @@ function TableOut = GetGroupObjectSummary(source)
                          'NormalRelativeAzimuth',0,...
                          'AzimuthAngularDeviation',0);
     
-    CurrentGroup = PODSData.CurrentGroup;
+    CurrentGroup = OOPSData.CurrentGroup;
 
     MasterIdx = 1;
 
@@ -33,28 +33,28 @@ function TableOut = GetGroupObjectSummary(source)
 
         for k = 1:CurrentGroup.Replicate(j).nObjects
             
-            PODSDataOut(MasterIdx).GroupIdx = PODSData.CurrentGroupIndex;
-            PODSDataOut(MasterIdx).GroupName = CurrentGroup.GroupName;
-            PODSDataOut(MasterIdx).ImageIdx = j;
-            PODSDataOut(MasterIdx).ImageName = CurrentGroup.Replicate(j).pol_shortname;
-            PODSDataOut(MasterIdx).ObjectIdx = k;
-            PODSDataOut(MasterIdx).ObjectAvgOF =  CurrentGroup.Replicate(j).Object(k).OFAvg;
-            PODSDataOut(MasterIdx).SBRatio = CurrentGroup.Replicate(j).Object(k).SBRatio;
-            PODSDataOut(MasterIdx).Area =  CurrentGroup.Replicate(j).Object(k).Area;
-            PODSDataOut(MasterIdx).Perimeter =  CurrentGroup.Replicate(j).Object(k).Perimeter;
-            PODSDataOut(MasterIdx).SignalAvg =  CurrentGroup.Replicate(j).Object(k).SignalAverage;
-            PODSDataOut(MasterIdx).BGAvg =  CurrentGroup.Replicate(j).Object(k).BGAverage;
-            PODSDataOut(MasterIdx).Circularity =  CurrentGroup.Replicate(j).Object(k).Circularity;
-            PODSDataOut(MasterIdx).Eccentricity =  CurrentGroup.Replicate(j).Object(k).Eccentricity;
-            PODSDataOut(MasterIdx).ConvexArea =  CurrentGroup.Replicate(j).Object(k).ConvexArea;
-            PODSDataOut(MasterIdx).MaxFeretDiameter =  CurrentGroup.Replicate(j).Object(k).MaxFeretDiameter;
-            PODSDataOut(MasterIdx).MinFeretDiameter =  CurrentGroup.Replicate(j).Object(k).MinFeretDiameter;
-            PODSDataOut(MasterIdx).LabelName =  CurrentGroup.Replicate(j).Object(k).LabelName;
-            PODSDataOut(MasterIdx).AzimuthAverage =  CurrentGroup.Replicate(j).Object(k).AzimuthAverage;
-            PODSDataOut(MasterIdx).AzimuthStd =  CurrentGroup.Replicate(j).Object(k).AzimuthStd;
-            PODSDataOut(MasterIdx).MidlineRelativeAzimuth = CurrentGroup.Replicate(j).Object(k).MidlineRelativeAzimuth;
-            PODSDataOut(MasterIdx).NormalRelativeAzimuth = CurrentGroup.Replicate(j).Object(k).NormalRelativeAzimuth;
-            PODSDataOut(MasterIdx).AzimuthAngularDeviation = CurrentGroup.Replicate(j).Object(k).AzimuthAngularDeviation;
+            OOPSDataOut(MasterIdx).GroupIdx = OOPSData.CurrentGroupIndex;
+            OOPSDataOut(MasterIdx).GroupName = CurrentGroup.GroupName;
+            OOPSDataOut(MasterIdx).ImageIdx = j;
+            OOPSDataOut(MasterIdx).ImageName = CurrentGroup.Replicate(j).pol_shortname;
+            OOPSDataOut(MasterIdx).ObjectIdx = k;
+            OOPSDataOut(MasterIdx).ObjectAvgOF =  CurrentGroup.Replicate(j).Object(k).OFAvg;
+            OOPSDataOut(MasterIdx).SBRatio = CurrentGroup.Replicate(j).Object(k).SBRatio;
+            OOPSDataOut(MasterIdx).Area =  CurrentGroup.Replicate(j).Object(k).Area;
+            OOPSDataOut(MasterIdx).Perimeter =  CurrentGroup.Replicate(j).Object(k).Perimeter;
+            OOPSDataOut(MasterIdx).SignalAvg =  CurrentGroup.Replicate(j).Object(k).SignalAverage;
+            OOPSDataOut(MasterIdx).BGAvg =  CurrentGroup.Replicate(j).Object(k).BGAverage;
+            OOPSDataOut(MasterIdx).Circularity =  CurrentGroup.Replicate(j).Object(k).Circularity;
+            OOPSDataOut(MasterIdx).Eccentricity =  CurrentGroup.Replicate(j).Object(k).Eccentricity;
+            OOPSDataOut(MasterIdx).ConvexArea =  CurrentGroup.Replicate(j).Object(k).ConvexArea;
+            OOPSDataOut(MasterIdx).MaxFeretDiameter =  CurrentGroup.Replicate(j).Object(k).MaxFeretDiameter;
+            OOPSDataOut(MasterIdx).MinFeretDiameter =  CurrentGroup.Replicate(j).Object(k).MinFeretDiameter;
+            OOPSDataOut(MasterIdx).LabelName =  CurrentGroup.Replicate(j).Object(k).LabelName;
+            OOPSDataOut(MasterIdx).AzimuthAverage =  CurrentGroup.Replicate(j).Object(k).AzimuthAverage;
+            OOPSDataOut(MasterIdx).AzimuthStd =  CurrentGroup.Replicate(j).Object(k).AzimuthStd;
+            OOPSDataOut(MasterIdx).MidlineRelativeAzimuth = CurrentGroup.Replicate(j).Object(k).MidlineRelativeAzimuth;
+            OOPSDataOut(MasterIdx).NormalRelativeAzimuth = CurrentGroup.Replicate(j).Object(k).NormalRelativeAzimuth;
+            OOPSDataOut(MasterIdx).AzimuthAngularDeviation = CurrentGroup.Replicate(j).Object(k).AzimuthAngularDeviation;
             
             MasterIdx = MasterIdx+1;
 
@@ -62,7 +62,7 @@ function TableOut = GetGroupObjectSummary(source)
         
     end % end images
     
-    TableOut = struct2table(PODSDataOut);
-    clear PODSDataOut    
+    TableOut = struct2table(OOPSDataOut);
+    clear OOPSDataOut    
 
 end
