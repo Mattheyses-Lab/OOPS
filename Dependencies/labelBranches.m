@@ -2,7 +2,7 @@ function [branchesLabeled,dilatedL] = labelBranches(I)
     % skeletonizes, then labels individual branches in skeletonized 
     % binary image and returns unskeletonized label matrix
 
-    % skeletonize the binary image (works better if we thin first)
+    % skeletonize the binary image (works "better" if we thin first)
     binarySkeleton = bwmorph(I,"thin",inf);
     binarySkeleton = bwskel(binarySkeleton);
     % get the branchpoints from the skeletonized binary image
@@ -14,7 +14,7 @@ function [branchesLabeled,dilatedL] = labelBranches(I)
     % create an image where every unlabeled pixel = NaN
     nanL = branchesLabeled;
     nanL(nanL==0) = NaN;
-    % initialize the output image which will hold our full labeled image
+    % preallocate the output image which will hold our full label image
     dilatedL = zeros(size(nanL));
     % preallocate mask image of just the branches
     branchMask = false(size(branchesLabeled));
@@ -64,5 +64,4 @@ function [branchesLabeled,dilatedL] = labelBranches(I)
     pixelLabelsVec = cat(1,pixelLabels{:});
     % add the labels to their corresponding pixels
     dilatedL(pixelLinearIdxsVec) = pixelLabelsVec;
-
 end

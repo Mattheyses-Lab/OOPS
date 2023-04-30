@@ -26,36 +26,4 @@ HSVtemp = cat(3,H_new,S,V);
 % convert the above HSV image to RGB for display
 HSV = hsv2rgb(HSVtemp);
 
-%% method 2
-
-% % mask the RGB H image with the V image (essentially a fully saturated HSV image in RGB)
-% MaskedRGBImage = bsxfun(@times, H_RGB, cast(V, 'like', H_RGB));
-% 
-% % %below not working identically
-% % % make a fully white RGB image, same size as others
-% % WhiteRGBImage = ones(size(H_RGB), 'like', H_RGB);
-% % % mask it using the input S image (S image in RGB)
-% % WhiteRGBImageMasked = bsxfun(@times, WhiteRGBImage, cast(S, 'like', WhiteRGBImage));
-% % % now add it to the H-V image
-% % HSV = MaskedRGBImage+WhiteRGBImageMasked;
-% 
-% MaskedRGBImage_HSV = rgb2hsv(MaskedRGBImage);
-% 
-% H_new = MaskedRGBImage_HSV(:,:,1);
-% V_new = MaskedRGBImage_HSV(:,:,3);
-% 
-% HSV = hsv2rgb(cat(3,H_new,S,V_new));
-
-
-
-
-
-
-
-
-
-
-
-
-
 end

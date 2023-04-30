@@ -3068,6 +3068,7 @@ pause(0.5)
         % attempt to load the selected file
         try
             load([path,filename],'SavedOOPSData');
+
             if isa(SavedOOPSData,'struct')
                 SavedOOPSData = OOPSProject.loadobj(SavedOOPSData);
             end
