@@ -169,10 +169,10 @@ classdef OOPSSettings < handle
                 % get the path to this .m file (two levels below the directory we want)
                 CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
                 % get the "MainPath" (path to main gui driver)
-                obj.MainPath = strjoin(CurrentPathSplit(1:end-2),'/');
+                obj.MainPath = strjoin(CurrentPathSplit(1:end-3),'/');
             elseif ispc
                 CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-                obj.MainPath = strjoin(CurrentPathSplit(1:end-2),'\');
+                obj.MainPath = strjoin(CurrentPathSplit(1:end-3),'\');
             end
 
             settingsFiles = {...
@@ -245,9 +245,9 @@ classdef OOPSSettings < handle
 
         function LoadCustomMaskSchemes(obj)
             if ismac || isunix
-                SchemeFilesList = dir(fullfile([obj.MainPath,'/CustomMasks/Schemes'],'*.mat'));
+                SchemeFilesList = dir(fullfile([obj.MainPath,'/assets/segmentation_schemes'],'*.mat'));
             elseif ispc
-                SchemeFilesList = dir(fullfile([obj.MainPath,'\CustomMasks\Schemes'],'*.mat'));
+                SchemeFilesList = dir(fullfile([obj.MainPath,'\assets\segmentation_schemes'],'*.mat'));
             end
 
             for i = 1:numel(SchemeFilesList)

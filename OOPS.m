@@ -2832,9 +2832,9 @@ pause(0.5)
             end
             % the path to the directory in which we will save the scheme
             if ismac || isunix
-                SchemeFilesPath = [OOPSData.Settings.MainPath,'/CustomMasks/Schemes/'];
+                SchemeFilesPath = [OOPSData.Settings.MainPath,'/assets/segmentation_schemes/'];
             elseif ispc
-                SchemeFilesPath = [OOPSData.Settings.MainPath,'\CustomMasks\Schemes\'];
+                SchemeFilesPath = [OOPSData.Settings.MainPath,'\assets\segmentation_schemes\'];
             end
             % save the new scheme
             temp_scheme_struct.(NewSchemeName) = NewScheme;
@@ -2847,7 +2847,7 @@ pause(0.5)
                     return
                 otherwise
                     report = getReport(ME);
-                    uialert(OOPSData.Handles.fH,['Unable to load project: ',report],'Error');
+                    uialert(OOPSData.Handles.fH,['Unable to build masking scheme: ',report],'Error');
                     return
             end
         end
