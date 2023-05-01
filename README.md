@@ -17,18 +17,9 @@ For a more detailed description of our imaging setup and calculations, please se
 
 OOPS allows for object-based analyses of FPM data across multiple experimental conditions. The GUI is designed to 
 provide interactive user control over each step of the FPM analysis pipeline. To calculate pixel-by-pixel OF and azimuth, only a few steps are required. 
-Thus, depending on your desired analysis, certain steps in the pipeline can be skipped. In general, the pipeline includes the following steps:
+Thus, depending on your desired analysis, certain steps in the pipeline can be skipped. Schematics showing the processing pipeline and data structure are shown below.
 
 ![OOPS flowchart and data structure](/assets/images/examples/FlowchartAndDataStructure.png)
-
-
-- Data upload (required)
-- Flat-field correction (optional)
-- Segmentation/object detection (optional)
-- Retrieval of pixel-by-pixel order and orientation statistics (required)
-- Object labeling/filtering (optional)
-- Plotting object data (optional)
-- Data export (required)
 
 ## Customization options
 
