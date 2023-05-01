@@ -1,12 +1,19 @@
 function hSwarmPlot = PlotSwarmChartByLabels(source,axH)
+
 % get the main project data structure
 OOPSData = guidata(source);
+
+% get the current group
+CurrentGroup = OOPSData.CurrentGroup;
+% if group is empty, return empty graphics placeholder
+if isempty(CurrentGroup)
+    hSwarmPlot = gobjects().empty();
+    return
+end
 
 % hide the axes until we are done plotting
 axH.Visible = 'off';
 
-% get the current group
-CurrentGroup = OOPSData.CurrentGroup;
 % the number of different object labels in the project
 nLabels = length(OOPSData.Settings.ObjectLabels);
 % make an x axis tick for each label

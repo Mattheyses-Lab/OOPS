@@ -3,6 +3,14 @@ function hSwarmPlot = PlotGroupSwarmChart(source,axH)
 % get the GUI data structure
 OOPSData = guidata(source);
 
+% determine how many data groups we have
+nGroups = OOPSData.nGroups;
+% if no groups exist, return empty graphics placeholder
+if nGroups == 0
+    hSwarmPlot = gobjects().empty();
+    return
+end
+
 % hide the axes until we are done plotting
 axH.Visible = 'off';
 

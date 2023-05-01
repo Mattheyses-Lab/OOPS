@@ -102,7 +102,7 @@ function [] = UpdateImages(source)
 
             % if ShowSelection toolbar state button is pressed,
             % show object selection boxes
-            if OOPSData.Handles.ShowSelectionAverageIntensity.Value == 1
+            if OOPSData.Handles.ShowSelectionAverageIntensity.Value == 1 && ~isempty(cImage)
                 switch OOPSData.Settings.ObjectBoxType
                     % simple lines showing the boundaries
                     case 'Boundary'
