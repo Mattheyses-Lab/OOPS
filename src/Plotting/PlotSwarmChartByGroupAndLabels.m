@@ -1,15 +1,21 @@
 function hSwarmPlot = PlotSwarmChartByGroupAndLabels(source,axH)
 
-% get handle to OOPSProject object, which is storing all the data
+% get the main project data structure
 OOPSData = guidata(source);
+
+% determine how many data groups we have
+nGroups = OOPSData.nGroups;
+% if no groups exist, return empty graphics placeholder
+if nGroups == 0
+    hSwarmPlot = gobjects().empty();
+    return
+end
 
 % hide the axes until we are done plotting
 axH.Visible = 'off';
 
 % determine how many unique labels we have
 nLabels = length(OOPSData.Settings.ObjectLabels);
-% determine how many data groups we have
-nGroups = OOPSData.nGroups;
 % calculate how many plots we need (number of labels * number of groups)
 nPlots = nLabels*nGroups;
 % then set XTick accordingly
