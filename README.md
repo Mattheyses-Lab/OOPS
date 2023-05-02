@@ -25,7 +25,7 @@ OOPS makes use of several libraries sourced from the [MATLAB File Exchange](http
 
 OOPS also relies on several MATLAB toolboxes which you will need to manually add to MATLAB. Links to each toolbox can also be found in the [Sources](#sources) section.
 
-To install this software, dowload the lasest [release](https://github.com/Mattheyses-Lab/OOPS/releases), unzip it, and make sure all associated files/folders are on the MATLAB `PATH`. For help, [see](https://www.mathworks.com/help/matlab/matlab_env/add-remove-or-reorder-folders-on-the-search-path.html).
+To install this software, dowload the lasest [release](https://github.com/Mattheyses-Lab/OOPS/releases), unzip it, and make sure all associated files/folders are on the MATLAB `PATH`. For help, see [here](https://www.mathworks.com/help/matlab/matlab_env/add-remove-or-reorder-folders-on-the-search-path.html).
 
 Once you have downloaded the software and required toolboxes, you can start up the GUI by simply typing `OOPS` in the command window.
 
@@ -76,4 +76,21 @@ Examples of the customization offered are given below:
 
 ## Sources
 
+#### External Sources
 
+- [Bio-Formats](https://www.openmicroscopy.org/bio-formats/) (bfmatlab, [various open source licenses](https://www.openmicroscopy.org/licensing/))
+- [Convert between RGB and Color Names](https://www.mathworks.com/matlabcentral/fileexchange/48155-convert-between-rgb-and-color-names) (colornames, [BSD-3-Clause](https://opensource.org/license/bsd-3-clause/))
+- [Colorspace Transformations](https://www.mathworks.com/matlabcentral/fileexchange/28790-colorspace-transformations) (colorspace, [BSD-2-Clause](https://opensource.org/license/bsd-2-clause/))
+- [crameri perceptually uniform colormaps](https://www.mathworks.com/matlabcentral/fileexchange/68546-crameri-perceptually-uniform-scientific-colormaps) (crameri_v1.08, [BSD-2-Clause](https://opensource.org/license/bsd-2-clause/))
+- [Generate maximally perceptually-distinct colors](https://www.mathworks.com/matlabcentral/fileexchange/29702-generate-maximally-perceptually-distinct-colors) (distinguishable_colors, [BSD-3-Clause](https://opensource.org/license/bsd-3-clause/))
+- [export_fig](https://www.mathworks.com/matlabcentral/fileexchange/23629-export_fig) (export_fig, [BSD-3-Clause](https://opensource.org/license/bsd-3-clause/))
+- [interparc](https://www.mathworks.com/matlabcentral/fileexchange/34874-interparc) (interparc, [BSD-2-Clause](https://opensource.org/license/bsd-2-clause/))
+- [Cyclic color map](https://www.mathworks.com/matlabcentral/fileexchange/57020-cyclic-color-map) (PhaseBar, [BSD-3-Clause](https://opensource.org/license/bsd-2-clause/))
+
+#### MATLAB Toolboxes
+
+- [Image Processing Toolbox](https://www.mathworks.com/products/image.html)
+- [Parallel Computing Toolbox](https://www.mathworks.com/products/parallel-computing.html)
+- [Signal Processing Toolbox](https://www.mathworks.com/products/signal.html)
+- [Statistics and Machine Learning Toolbox](https://www.mathworks.com/products/statistics.html)
+- [Curve Fitting Toolbox](https://www.mathworks.com/products/curvefitting.html)
