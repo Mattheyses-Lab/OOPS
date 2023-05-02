@@ -17,6 +17,21 @@ To calculate pixel-by-pixel OF and azimuth, you will need:
 For a more detailed description of our imaging setup and calculations, please see: 
 [Defining domain-specific orientational order in the desmosomal cadherins](https://www.sciencedirect.com/science/article/pii/S0006349522008293).
 
+## Installation and usage
+
+This software has only been fully tested in MATLAB version `R2023a`. It is not guaranteed to work with any previous versions.
+
+OOPS makes use of several libraries sourced from the [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/) or elsewhere, each of which are subject to their own licenses. These libraries are included with the source in the `lib` directory, so you do not have to download them yourself. However, if you intend to use this software, read the documentation for each library to ensure that your desired use is permitted. The versions included with OOPS may or may not be the latest versions. If you update these libraries yourself, the software is not guaranteed to work. Links to each library can be found in the [Sources](#sources) section.
+
+OOPS also relies on several MATLAB toolboxes which you will need to manually add to MATLAB. Links to each toolbox can also be found in the [Sources](#sources) section.
+
+To install this software, dowload the lasest [release](https://github.com/Mattheyses-Lab/OOPS/releases), unzip it, and make sure all associated files/folders are on the MATLAB `PATH`. For help, [see](https://www.mathworks.com/help/matlab/matlab_env/add-remove-or-reorder-folders-on-the-search-path.html).
+
+Once you have downloaded the software and required toolboxes, you can start up the GUI by simply typing `OOPS` in the command window.
+
+
+
+
 ## Analysis pipeline and data structure
 
 OOPS allows for object-based analyses of FPM data across multiple experimental conditions. The GUI is designed to 
@@ -59,7 +74,6 @@ Examples of the customization offered are given below:
   - Color plots by group or magnitude
   - Adjust plot background, foreground, and error bar colors
 
-To open OOPS, simply type the following into the MATLAB command window.
+## Sources
 
-`OOPS`
 
