@@ -1,7 +1,9 @@
 # Object-Oriented Polarization Software (OOPS)
 
 [![version: v1.0.0](https://img.shields.io/badge/version-v1.0.0-green)](https://github.com/Mattheyses-Lab/OOPS/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](https://opensource.org/license/gpl-3-0/)
+
+https://img.shields.io/badge/license-GPL--3.0-blue
 
 A GUI-based MATLAB software package for object-oriented analysis of excitation-resolved, widefield fluorescence polarization microscopy (FPM) data.
 
