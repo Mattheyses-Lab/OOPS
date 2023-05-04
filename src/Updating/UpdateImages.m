@@ -435,7 +435,7 @@ function [] = UpdateImages(source)
                     OF = cImage.OF_image;
                     OF = OF./max(max(OF));
 
-                    AzimuthRGB = makeHSVSpecial(Az,OF,OverlayIntensity,[]);
+                    AzimuthRGB = makeHSVSpecial(Az,OF,OverlayIntensity);
 
                     OOPSData.Handles.AzimuthImgH.CData = AzimuthRGB;
                 catch

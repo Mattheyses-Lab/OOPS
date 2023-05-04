@@ -1,15 +1,8 @@
-function HSV = makeHSVSpecial(H,S,V,cmap)
+function HSV = makeHSVSpecial(H,S,V)
 % make an "HSV" image (in RGB colorspace) from the H, S,and V inputs and the cmap
-% assumes H is in the range [-pi/2 pi/2]
+% assumes H is in the range [0 1] (representing azimuth values in the range [0 2*pi])
 
-if isempty(cmap)
-    cmap = hsv;
-end
-
-%H(H<0) = H(H<0)+pi;
-
-% scale so values are between 0 and 1
-%H = H./pi;
+cmap = hsv;
 
 % convert H to an RGB image with the selected colormap
 H_RGB = ind2rgb(im2uint8(H),cmap);
