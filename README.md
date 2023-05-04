@@ -3,8 +3,6 @@
 [![version: v1.0.0](https://img.shields.io/badge/version-v1.0.0-green)](https://github.com/Mattheyses-Lab/OOPS/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](https://opensource.org/license/gpl-3-0/)
 
-https://img.shields.io/badge/license-GPL--3.0-blue
-
 A GUI-based MATLAB software package for object-oriented analysis of excitation-resolved, widefield fluorescence polarization microscopy (FPM) data.
 
 The ultimate goal of the software is to retrieve pixel-by-pixel order and orientation statistics. We refer to these throughout as:
