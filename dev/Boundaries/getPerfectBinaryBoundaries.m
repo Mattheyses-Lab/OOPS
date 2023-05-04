@@ -28,10 +28,12 @@ switch Options.conn
                 "conn",4);
             % add the bounding box offset from the original 8-connected object to each of the object boundaries
             boundaries_4conn = cellfun(@(b) bsxfun(@plus,b,props_8conn(i).BoundingBox([2 1]) - 0.5),boundaries_4conn,'UniformOutput',0);
-            % if number of boundaries is 1, we can simply continue
+            % if number of 4-connected boundaries is 1
             if numel(boundaries_4conn)==1
+                % we can simply store the boundaries and continue
                 boundaries(i) = boundaries_4conn;
             else
+                % otherwise, we need to link them together
                 boundaries(i) = link4ConnectedBoundaries(boundaries_4conn);
             end
         end

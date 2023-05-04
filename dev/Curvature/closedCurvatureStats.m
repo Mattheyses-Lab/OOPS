@@ -59,7 +59,7 @@ curvatureList(On | ~isfinite(curvatureList)) = 0;
 
 %% find tortuosity
 
-% find the tortuosity (should correct units)
+% find the tortuosity
 tortuosity = sum(gradient(curvatureList(1:nPoints-1,1)).^2)/curveLength;
 
 %% estimate the direction of the tangent at each point using the slope between 2 flanking points
