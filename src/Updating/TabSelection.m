@@ -153,7 +153,12 @@ function TabSelection(source,~)
             OOPSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'Off';
             OOPSData.Handles.SwarmPlotAxH.HitTest = 'Off';
     
-        case 'View Objects'
+        case 'Polar Plots'
+
+            OOPSData.Handles.ImagePolarHistogram.Visible = 'Off';
+            OOPSData.Handles.GroupPolarHistogram.Visible = 'Off';
+
+        case 'Objects'
     
             % delete the object boundary plot
             delete(OOPSData.Handles.ObjectBoundaryPlot);
@@ -360,8 +365,21 @@ function TabSelection(source,~)
                 OOPSData.Handles.SmallPanels(1,i).Visible = 'Off';
                 OOPSData.Handles.SmallPanels(2,i).Visible = 'Off';
             end
+
+        case 'Polar Plots'
+
+            OOPSData.Handles.ImagePolarHistogram.Visible = 'On';
+            OOPSData.Handles.ImgPanel1.Visible = 'On';
+
+            OOPSData.Handles.GroupPolarHistogram.Visible = 'On';
+            OOPSData.Handles.ImgPanel2.Visible = 'On';
+
+            for i = 1:4
+                OOPSData.Handles.SmallPanels(1,i).Visible = 'Off';
+                OOPSData.Handles.SmallPanels(2,i).Visible = 'Off';
+            end
     
-        case 'View Objects'
+        case 'Objects'
     
             % object intensity image
             OOPSData.Handles.ObjectPolFFCAxH.Title.Visible = 'On';

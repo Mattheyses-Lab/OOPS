@@ -54,12 +54,13 @@ classdef OOPSObject < handle
         Label OOPSLabel
         Selected = false
 
-        % object azimuth stats
-        % (currently somewhat slow to calculate, so store them in memory)
-        AzimuthStd = NaN
-        MidlineRelativeAzimuth = NaN
-        NormalRelativeAzimuth = NaN
-
+        % stats in development
+        paddedSubarrayIdx = NaN
+        paddedSubarrayIdxAdjustment = []
+        paddedSubImage = []
+        imageToPaddedObjectShift = []
+        paddedPixelIdxList = []
+        pixelMidlineTangentList = []
 
     end % end properties
     
@@ -80,14 +81,11 @@ classdef OOPSObject < handle
         InterpreterFriendlyImageName
 
         % various object images
-        OFSubImage 
         PaddedOFSubImage
         MaskedOFSubImage
         PaddedFFCIntensitySubImage
         PaddedMaskSubImage
-        RestrictedPaddedMaskSubImage        
-        PaddedAnalysisChannelSubImage
-        PaddedColocNorm2MaxSubImage
+        RestrictedPaddedMaskSubImage
         PaddedAzimuthSubImage
         
         % we store the centroid as a 2-element vector, no need to store these too
@@ -121,27 +119,24 @@ classdef OOPSObject < handle
 
         % simplified boundary (may store in memory if becomes useful)
         SimplifiedBoundary
-
-        % boundary coordinates w.r.t. the object's padded subarray idx
-        PaddedSubIdxBoundary
-        % boundary coordinates w.r.t. the object's subarray idx
-        SubIdxBoundary
-
-        % 2-element adjustment vector to translate object coordinates w.r.t. the object's padded subarray idx
-        PaddedSubarrayIdxCoordinateAdjustment
-
-        % midline coordinates w.r.t. the object's padded subarray idx
-        PaddedSubIdxMidline
-        % boundary coordinates w.r.t. the object's subarray idx
-        SubIdxMidline
         
         % other stats !IN DEVELOPMENT!
+
+        paddedSubImageBoundary
+
+        % list of values for each object pixel representing the normal direction to the closest midline point
+        pixelMidlineNormalList
+
+        AzimuthAverage
+        AzimuthStd
+        AzimuthAngularDeviation
+        MidlineRelativeAzimuth
+        NormalRelativeAzimuth
+
         Tortuosity
         MidlineLength
-        AzimuthAverage
+        
         TangentAverage
-
-        AzimuthAngularDeviation
 
         ObjectSummaryDisplayTable
 
@@ -193,7 +188,15 @@ classdef OOPSObject < handle
 
             % detected midline coordinates
             obj.Midline = ObjectProps.Midline;
-            
+
+            % stats in development
+            obj.paddedSubarrayIdx = ObjectProps.paddedSubarrayIdx;
+            obj.paddedSubarrayIdxAdjustment = ObjectProps.paddedSubarrayIdxAdjustment;
+            obj.paddedSubImage = ObjectProps.paddedSubImage;
+            obj.imageToPaddedObjectShift = ObjectProps.imageToPaddedObjectShift;
+            obj.paddedPixelIdxList = ObjectProps.paddedPixelIdxList;
+            obj.pixelMidlineTangentList = ObjectProps.pixelMidlineTangentList;
+
             % set default object label
             obj.Label = Label;
 
@@ -251,11 +254,13 @@ classdef OOPSObject < handle
             object.Label = obj.Label;
             object.Selected = obj.Selected;
 
-            % object azimuth stats
-            %object.AzimuthAverage = obj.AzimuthAverage;
-            object.AzimuthStd = obj.AzimuthStd;
-            object.MidlineRelativeAzimuth = obj.MidlineRelativeAzimuth;
-            object.NormalRelativeAzimuth = obj.NormalRelativeAzimuth;
+
+            object.paddedSubarrayIdx = obj.paddedSubarrayIdx;
+            object.paddedSubarrayIdxAdjustment = obj.paddedSubarrayIdxAdjustment;
+            object.paddedSubImage = obj.paddedSubImage;
+            object.imageToPaddedObjectShift = obj.imageToPaddedObjectShift;
+            object.paddedPixelIdxList = obj.paddedPixelIdxList;
+            object.pixelMidlineTangentList = obj.pixelMidlineTangentList;
 
             object.Midline = obj.Midline;
 
@@ -298,34 +303,8 @@ classdef OOPSObject < handle
             SimplifiedBoundary = [newY newX];
         end
 
-        function SubIdxBoundary = get.SubIdxBoundary(obj)
-            % shift the boundary coordinates to match the subarray idx of the object
-            SubIdxBoundary = obj.Boundary - [obj.SubarrayIdx{1,1}(1), obj.SubarrayIdx{1,2}(1)] + 1;
-        end
-
-        function PaddedSubIdxBoundary = get.PaddedSubIdxBoundary(obj)
-            % shift the boundary coordinates to match the padded subarray idx of the object
-            PaddedSubIdxBoundary = obj.SubIdxBoundary + obj.PaddedSubarrayIdxCoordinateAdjustment;
-        end
-
-        function SubIdxMidline = get.SubIdxMidline(obj)
-            % shift the midline coordinates to match the subarray idx of the object
-            SubIdxMidline = obj.Midline - [obj.SubarrayIdx{1,2}(1), obj.SubarrayIdx{1,1}(1)] + 1;
-        end
-
-        function PaddedSubIdxMidline = get.PaddedSubIdxMidline(obj)
-            % shift the midline coordinates to match the padded subarray idx of the object
-            PaddedSubIdxMidline = obj.SubIdxMidline + fliplr(obj.PaddedSubarrayIdxCoordinateAdjustment);
-        end
-
-        function PaddedSubarrayIdxCoordinateAdjustment = get.PaddedSubarrayIdxCoordinateAdjustment(obj)
-            % get the padded subarray idx
-            paddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            % determine how many pxs of padding were added to top and left of subarray idx
-            topAdjust = obj.SubarrayIdx{1,1}(1) - paddedSubarrayIdx{1,1}(1);
-            leftAdjust = obj.SubarrayIdx{1,2}(1) - paddedSubarrayIdx{1,2}(1);
-            % return the 2-element output vector
-            PaddedSubarrayIdxCoordinateAdjustment = [topAdjust, leftAdjust];
+        function paddedSubImageBoundary = get.paddedSubImageBoundary(obj)
+            paddedSubImageBoundary = obj.Boundary + obj.imageToPaddedObjectShift;
         end
 
         function OFAvg = get.OFAvg(obj)
@@ -437,98 +416,32 @@ classdef OOPSObject < handle
                 AzimuthPixelValues = NaN;
             end
         end
-      
-        function OFSubImage = get.OFSubImage(obj)
-            OFImage = obj.Parent.OF_image;
-            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
-            OFSubImage = zeros(dim);
-            OFSubImage(:) = OFImage(PaddedSubarrayIdx{:});
-        end
         
         function PaddedOFSubImage = get.PaddedOFSubImage(obj)
-            OFImage = obj.Parent.OF_image;
-            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
-            PaddedOFSubImage = zeros(dim);
-            PaddedOFSubImage(:) = OFImage(PaddedSubarrayIdx{:});
+            PaddedOFSubImage = obj.Parent.OF_image(obj.paddedSubarrayIdx{:});
         end        
 
         function MaskedOFSubImage = get.MaskedOFSubImage(obj)
-            OFImage = obj.Parent.OF_image;
+            % OFImage = obj.Parent.OF_image;
             MaskedOFSubImage = zeros(size(obj.Image));
             % masked
-            MaskedOFSubImage(obj.Image) = OFImage(obj.PixelIdxList);
+            MaskedOFSubImage(obj.Image) = obj.Parent.OF_image(obj.PixelIdxList);
         end
 
         function PaddedAzimuthSubImage = get.PaddedAzimuthSubImage(obj)
-            % get Azimuth image
-            AzimuthImage = obj.Parent.AzimuthImage;
-            % pad subarray and make square
-            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            % get size of subarray idx
-            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
-            % initialize new subimage
-            PaddedAzimuthSubImage = zeros(dim);
-            % extract elements from main image into subimage
-            PaddedAzimuthSubImage(:) = AzimuthImage(PaddedSubarrayIdx{:});
+            PaddedAzimuthSubImage = obj.Parent.AzimuthImage(obj.paddedSubarrayIdx{:});
         end
         
         function PaddedFFCIntensitySubImage = get.PaddedFFCIntensitySubImage(obj)
-            % get FFCIntensity image
-            FFCIntensityImage = obj.Parent.I;
-            % pad subarray and make square
-            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            % get size of subarray idx
-            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
-            % initialize new subimage
-            PaddedFFCIntensitySubImage = zeros(dim);
-            % extract elements from main image into subimage
-            PaddedFFCIntensitySubImage(:) = FFCIntensityImage(PaddedSubarrayIdx{:});
+            PaddedFFCIntensitySubImage = obj.Parent.I(obj.paddedSubarrayIdx{:});
         end
         
         function PaddedMaskSubImage = get.PaddedMaskSubImage(obj)
-            % get FFCIntensity image
-            MaskImg = obj.Parent.bw;
-            % pad subarray and make square
-            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            % get size of subarray idx
-            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
-            % initialize new subimage
-            PaddedMaskSubImage = false(dim);
-            % extract elements from main image into subimage
-            PaddedMaskSubImage(:) = MaskImg(PaddedSubarrayIdx{:});
+            PaddedMaskSubImage = obj.Parent.bw(obj.paddedSubarrayIdx);
         end
         
         function RestrictedPaddedMaskSubImage = get.RestrictedPaddedMaskSubImage(obj)
-            % get full mask image
-            FullSizedMaskImg = false(size(obj.Parent.bw));
-            % set this object's pixels to on
-            FullSizedMaskImg(obj.PixelIdxList) = true;
-            % pad subarray and make square (if possible)
-            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            % get size of subarray idx
-            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
-            % initialize new subimage
-            RestrictedPaddedMaskSubImage = false(dim);
-            % extract elements from main image into subimage
-            RestrictedPaddedMaskSubImage(:) = FullSizedMaskImg(PaddedSubarrayIdx{:});
-        end        
-
-        function PaddedAnalysisChannelSubImage = get.PaddedAnalysisChannelSubImage(obj)
-            AnalysisChannelImage = obj.Parent.ColocImage;
-            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
-            PaddedAnalysisChannelSubImage = zeros(dim);
-            PaddedAnalysisChannelSubImage(:) = AnalysisChannelImage(PaddedSubarrayIdx{:});
-        end
-            
-        function PaddedColocNorm2MaxSubImage = get.PaddedColocNorm2MaxSubImage(obj)
-            ColocNorm2MaxImage = obj.Parent.ColocNormToMax;
-            PaddedSubarrayIdx = padSubarrayIdx(obj.SubarrayIdx,5);
-            dim = [length(PaddedSubarrayIdx{1,1}) length(PaddedSubarrayIdx{1,2})];
-            PaddedColocNorm2MaxSubImage = zeros(dim);
-            PaddedColocNorm2MaxSubImage(:) = ColocNorm2MaxImage(PaddedSubarrayIdx{:});
+            RestrictedPaddedMaskSubImage = obj.paddedSubImage;
         end
         
         function SelectionBoxLineWidth = get.SelectionBoxLineWidth(obj)
@@ -573,6 +486,45 @@ classdef OOPSObject < handle
                 TangentAverage = rad2deg(getAzimuthAverage(getMidlineTangent(obj.Midline)));
             catch
                 TangentAverage = NaN;
+            end
+        end
+
+        function pixelMidlineNormalList = get.pixelMidlineNormalList(obj)
+            if isempty(obj.pixelMidlineTangentList)
+                pixelMidlineNormalList = [];
+                return
+            end
+            pixelMidlineNormalList = obj.pixelMidlineTangentList+pi/2;
+            pixelMidlineNormalList(pixelMidlineNormalList>(pi/2)) = pixelMidlineNormalList(pixelMidlineNormalList>(pi/2))-pi;
+        end
+
+        function AzimuthStd = get.AzimuthStd(obj)
+            try
+                AzimuthStd = getAzimuthStd(obj.AzimuthPixelValues);
+            catch
+                AzimuthStd = NaN;
+            end
+        end
+
+        function MidlineRelativeAzimuth = get.MidlineRelativeAzimuth(obj)
+            try
+                % get the angular differences between azimuth and tangent angles
+                tangentDiff = angle(exp(2i*obj.AzimuthPixelValues)./exp(2i*obj.pixelMidlineTangentList))*0.5;
+                % average the differences
+                MidlineRelativeAzimuth = rad2deg(getAzimuthAverage(tangentDiff));
+            catch
+                MidlineRelativeAzimuth = NaN;
+            end
+        end
+
+        function NormalRelativeAzimuth = get.NormalRelativeAzimuth(obj)
+            try
+                % get the angular differences between azimuth and midline normal
+                normalDiff = angle(exp(2i*obj.AzimuthPixelValues)./exp(2i*obj.pixelMidlineNormalList))*0.5;
+                % average the differences
+                NormalRelativeAzimuth = rad2deg(getAzimuthAverage(normalDiff));
+            catch
+                NormalRelativeAzimuth = NaN;
             end
         end
 
@@ -676,10 +628,8 @@ classdef OOPSObject < handle
             ObjectProps.ConvexImage = object.ConvexImage;
             ObjectProps.Eccentricity = object.Eccentricity;
             ObjectProps.Extrema = object.Extrema;
-
             ObjectProps.EquivDiameter = object.EquivDiameter;
             ObjectProps.Extent = object.Extent;
-
             ObjectProps.FilledArea = object.FilledArea;
             ObjectProps.Image = full(object.Image);
             ObjectProps.MajorAxisLength = object.MajorAxisLength;
@@ -693,9 +643,18 @@ classdef OOPSObject < handle
 
             ObjectProps.BWBoundary = object.Boundary;
 
+            % idxs returned by regionprops
             ObjectProps.PixelIdxList = object.PixelIdxList;
             ObjectProps.PixelList = object.PixelList;
             ObjectProps.SubarrayIdx = object.SubarrayIdx;
+
+            % other idxs and pixel idx lists calculated upon masking
+            ObjectProps.paddedSubarrayIdx = object.paddedSubarrayIdx;
+            ObjectProps.paddedSubarrayIdxAdjustment = object.paddedSubarrayIdxAdjustment;
+            ObjectProps.paddedSubImage = object.paddedSubImage;
+            ObjectProps.imageToPaddedObjectShift = object.imageToPaddedObjectShift;
+            ObjectProps.paddedPixelIdxList = object.paddedPixelIdxList;
+            ObjectProps.pixelMidlineTangentList = object.pixelMidlineTangentList;
 
             % the object midline
             try 
@@ -703,10 +662,7 @@ classdef OOPSObject < handle
             catch
                 Midline = [NaN NaN];
             end
-
             ObjectProps.Midline = Midline;
-
-
 
             % get the object label (OOPSLabel)
             ObjectLabel = object.Label;
@@ -722,14 +678,6 @@ classdef OOPSObject < handle
 
             % selection status
             obj.Selected = object.Selected;
-
-            % azimuth stats
-            %obj.AzimuthAverage = object.AzimuthAverage;
-            obj.AzimuthStd = object.AzimuthStd;
-            obj.MidlineRelativeAzimuth = object.MidlineRelativeAzimuth;
-            obj.NormalRelativeAzimuth = object.NormalRelativeAzimuth;
-
-
 
         end
     end

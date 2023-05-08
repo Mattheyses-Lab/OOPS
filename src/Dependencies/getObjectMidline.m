@@ -1,4 +1,4 @@
-function [G,edges,Midline] = getObjectMidline(I,Options)
+function Midline = getObjectMidline(I,Options)
 %% input validation
 arguments
     I {mustBeA(I,'logical')}
@@ -25,6 +25,12 @@ boundariesy = boundaries{1}(:,1);
 
 orig_boundariesx = boundariesx;
 orig_boundariesy = boundariesy;
+
+% if too few boundary points, return [NaN NaN]
+if length(boundariesx)<4
+    Midline = [NaN NaN];
+    return
+end
 
 %% Convert to polygon and measure perimeter, nPoints, and nEdges
 
@@ -157,13 +163,19 @@ end
 
 %% construct an undirected graph, find the endpoints, then trace the shortest path between them
 
-% create an undirected graph using the edges and edge weights we jsut found
-G = graph(edges(:,1),edges(:,2),weights);
-% create a cell array of character vectors from the node idxs to use as the node names for the graph
-G.Nodes.Name = arrayfun(@num2str, (1:G.numnodes).', 'UniformOutput', 0);
-% add x and y coordinate information for each node in the graph
-G.Nodes.Xcoord = v_inobj(:,1);
-G.Nodes.Ycoord = v_inobj(:,2);
+numNodes = numel(weights)+1;
+
+node_names = arrayfun(@num2str, (1:numNodes).', 'UniformOutput', 0);
+
+% create a NodeTable to pass into graph() upon construction
+NodeTable = table( ...
+    node_names, ...
+    v_inobj(:,1), ...
+    v_inobj(:,2), ...
+    'VariableNames',{'Name' 'Xcoord' 'Ycoord'});
+
+% create an undirected graph using the edges, edge weights, and node properties we just found
+G = graph(edges(:,1),edges(:,2),weights,NodeTable);
 
 % number of nodes with degree > 2
 nDegreeGT2 = numel(find(degree(G)>2));
@@ -186,8 +198,6 @@ end
 G = rmnode(G,find(degree(G)==0));
 
 if numel(G.Nodes)==0
-    G = [];
-    edges = [];
     Midline = [NaN NaN];
     return
 end
@@ -230,7 +240,7 @@ catch
 end
 
 
-% get the midline coordinates
+% get the midline coordinates - this is slow
 Midline = [G.Nodes.Xcoord G.Nodes.Ycoord];
 
 % get the endpoint coordinates

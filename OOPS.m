@@ -174,8 +174,9 @@ OOPSData.Handles.hTabMask = uimenu(OOPSData.Handles.hTabMenu,'Text','Mask','Menu
 OOPSData.Handles.hTabOrderFactor = uimenu(OOPSData.Handles.hTabMenu,'Text','Order Factor','MenuSelectedFcn',@TabSelection,'tag','hTabOrderFactor');
 %OOPSData.Handles.hTabSBFiltering = uimenu(OOPSData.Handles.hTabMenu,'Text','Filtered Order Factor','MenuSelectedFcn',@TabSelection,'tag','hTabSBFiltering');
 OOPSData.Handles.hTabAzimuth = uimenu(OOPSData.Handles.hTabMenu,'Text','Azimuth','MenuSelectedFcn',@TabSelection,'tag','hTabAzimuth');
-OOPSData.Handles.hTabViewPlots = uimenu(OOPSData.Handles.hTabMenu,'Text','Plots','MenuSelectedFcn',@TabSelection,'tag','hTabViewPlots');
-OOPSData.Handles.hViewObjects = uimenu(OOPSData.Handles.hTabMenu,'Text','View Objects','MenuSelectedFcn',@TabSelection,'tag','hViewObjects');
+OOPSData.Handles.hTabPlots = uimenu(OOPSData.Handles.hTabMenu,'Text','Plots','MenuSelectedFcn',@TabSelection,'tag','hTabPlots');
+OOPSData.Handles.hTabPolarPlots = uimenu(OOPSData.Handles.hTabMenu,'Text','Polar Plots','MenuSelectedFcn',@TabSelection,'tag','hTabPolarPlots');
+OOPSData.Handles.hTabObjects = uimenu(OOPSData.Handles.hTabMenu,'Text','Objects','MenuSelectedFcn',@TabSelection,'tag','hTabObjects');
 
 %% Process Menu Button - allows user to perform FFC, generate mask, and generate output images
 
@@ -185,7 +186,7 @@ OOPSData.Handles.hProcessFFC = uimenu(OOPSData.Handles.hProcessMenu,'Text','Flat
 OOPSData.Handles.hProcessMask = uimenu(OOPSData.Handles.hProcessMenu,'Text','Build Mask','MenuSelectedFcn',@CreateMask4);
 OOPSData.Handles.hProcessOF = uimenu(OOPSData.Handles.hProcessMenu,'Text','Order Factor','MenuSelectedFcn',@pb_FindOrderFactor);
 OOPSData.Handles.hProcessLocalSB = uimenu(OOPSData.Handles.hProcessMenu,'Text','Local Signal:Background','MenuSelectedFcn',@pb_FindLocalSB);
-OOPSData.Handles.hProcessObjectAzimuthStats = uimenu(OOPSData.Handles.hProcessMenu,'Text','Object Azimuth Stats','MenuSelectedFcn',@pb_ComputeObjectAzimuthStats);
+%OOPSData.Handles.hProcessObjectAzimuthStats = uimenu(OOPSData.Handles.hProcessMenu,'Text','Object Azimuth Stats','MenuSelectedFcn',@pb_ComputeObjectAzimuthStats);
 
 %% Summary Menu Button
 
@@ -305,8 +306,8 @@ OOPSData.Handles.ColormapsSettingsGrid = uigridlayout(OOPSData.Handles.SettingsP
     "ColumnWidth",{'1x'});
     
 OOPSData.Handles.SettingsDropDown = uidropdown(OOPSData.Handles.ColormapsSettingsGrid,...
-    'Items',{'Colormaps','Azimuth Display','Scatter Plot','Swarm Plot','Label'},...
-    'ItemsData',{'ColormapsSettings','AzimuthDisplaySettings','ScatterPlotSettings','SwarmPlotSettings','LabelSettings'},...
+    'Items',{'Colormaps','Azimuth Display','Scatter Plot','Swarm Plot','Label','Polar Histogram'},...
+    'ItemsData',{'ColormapsSettings','AzimuthDisplaySettings','ScatterPlotSettings','SwarmPlotSettings','LabelSettings','PolarHistogramSettings'},...
     'Value','ColormapsSettings',...
     'ValueChangedFcn',@ChangeSettingsType,...
     'FontName',OOPSData.Settings.DefaultFont);
@@ -390,7 +391,7 @@ OOPSData.Handles.AzimuthDisplaySettingsGrid = uigridlayout(OOPSData.Handles.Sett
 
 OOPSData.Handles.AzimuthLineAlphaLabel = uilabel(...
     'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
-    'Text','Azimuth Line Alpha (default: 0.5)',...
+    'Text','Azimuth line alpha',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
 OOPSData.Handles.AzimuthLineAlphaLabel.Layout.Row = 2;
@@ -407,7 +408,7 @@ OOPSData.Handles.AzimuthLineAlphaDropdown.Layout.Column = 2;
 
 OOPSData.Handles.AzimuthLineWidthLabel = uilabel(...
     'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
-    'Text','Azimuth Line Width (default: 1 pt)',...
+    'Text','Azimuth line width',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
 OOPSData.Handles.AzimuthLineWidthLabel.Layout.Row = 3;
@@ -424,7 +425,7 @@ OOPSData.Handles.AzimuthLineWidthDropdown.Layout.Column = 2;
 
 OOPSData.Handles.AzimuthLineScaleLabel = uilabel(...
     'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
-    'Text','Azimuth Line Scale Factor (default: 100)',...
+    'Text','Azimuth Line Scale Factor',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
 OOPSData.Handles.AzimuthLineScaleLabel.Layout.Row = 4;
@@ -439,7 +440,7 @@ OOPSData.Handles.AzimuthLineScaleEditfield.Layout.Column = 2;
 
 OOPSData.Handles.AzimuthLineScaleDownLabel = uilabel(...
     'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
-    'Text','Number of Lines to Show (default: All)',...
+    'Text','Number of Lines to Show',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
 OOPSData.Handles.AzimuthLineScaleDownLabel.Layout.Row = 5;
@@ -457,7 +458,7 @@ OOPSData.Handles.AzimuthLineScaleDownDropdown.ItemsData = [1 2 4];
 
 OOPSData.Handles.AzimuthColorModeDropdownLabel = uilabel(...
     'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
-    'Text','Line color mode (default: Direction)',...
+    'Text','Line color mode',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
 OOPSData.Handles.AzimuthColorModeDropdownLabel.Layout.Row = 6;
@@ -478,6 +479,273 @@ OOPSData.Handles.ApplyAzimuthDisplaySettingsButton = uibutton(OOPSData.Handles.A
     'FontName',OOPSData.Settings.DefaultFont);
 OOPSData.Handles.ApplyAzimuthDisplaySettingsButton.Layout.Row = 7;
 OOPSData.Handles.ApplyAzimuthDisplaySettingsButton.Layout.Column = [1 2];
+
+%% PolarHistogram settings
+
+OOPSData.Handles.PolarHistogramSettingsGrid = uigridlayout(OOPSData.Handles.SettingsPanel,...
+    [14,2],...
+    'Visible','Off',...
+    'BackgroundColor','Black',...
+    'Padding',[5 5 5 5],...
+    'RowSpacing',10,...
+    'ColumnSpacing',5,...
+    'RowHeight',{20,20,20,20,20,20,20,20,20,20,20,20,20,20},...
+    'ColumnWidth',{'fit','1x'},...
+    'Scrollable','on');
+
+% variable to plot
+OOPSData.Handles.PolarHistogramVariableLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Variable',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramVariableLabel.Layout.Row = 2;
+OOPSData.Handles.PolarHistogramVariableLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramVariableDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',OOPSData.Settings.ObjectPolarPlotVariablesLong,...
+    'ItemsData',OOPSData.Settings.ObjectPolarPlotVariables,...
+    'Value',OOPSData.Settings.PolarHistogramVariable,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramVariableChanged);
+OOPSData.Handles.PolarHistogramVariableDropdown.Layout.Row = 2;
+OOPSData.Handles.PolarHistogramVariableDropdown.Layout.Column = 2;
+
+
+
+
+
+% nBins
+OOPSData.Handles.PolarHistogramnBinsLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Number of bins',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramnBinsLabel.Layout.Row = 3;
+OOPSData.Handles.PolarHistogramnBinsLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramnBinsDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'12','24','48','96'},...
+    'ItemsData',{12,24,48,96},...
+    'Value',OOPSData.Settings.PolarHistogramnBins,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramnBinsChanged);
+OOPSData.Handles.PolarHistogramnBinsDropdown.Layout.Row = 3;
+OOPSData.Handles.PolarHistogramnBinsDropdown.Layout.Column = 2;
+
+% wedgeFaceAlpha
+OOPSData.Handles.PolarHistogramWedgeFaceAlphaLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Face alpha',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramWedgeFaceAlphaLabel.Layout.Row = 4;
+OOPSData.Handles.PolarHistogramWedgeFaceAlphaLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramWedgeFaceAlphaDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'},...
+    'ItemsData',{0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1},...
+    'Value',OOPSData.Settings.PolarHistogramWedgeFaceAlpha,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramWedgeFaceAlphaChanged);
+OOPSData.Handles.PolarHistogramWedgeFaceAlphaDropdown.Layout.Row = 4;
+OOPSData.Handles.PolarHistogramWedgeFaceAlphaDropdown.Layout.Column = 2;
+
+% wedgeFaceColor
+OOPSData.Handles.PolarHistogramWedgeFaceColorLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Face color mode',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramWedgeFaceColorLabel.Layout.Row = 5;
+OOPSData.Handles.PolarHistogramWedgeFaceColorLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramWedgeFaceColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'flat','interp'},...
+    'Value',OOPSData.Settings.PolarHistogramWedgeFaceColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramWedgeFaceColorChanged);
+OOPSData.Handles.PolarHistogramWedgeFaceColorDropdown.Layout.Row = 5;
+OOPSData.Handles.PolarHistogramWedgeFaceColorDropdown.Layout.Column = 2;
+
+% wedgeLineWidth
+OOPSData.Handles.PolarHistogramWedgeLineWidthLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Wedge line width',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramWedgeLineWidthLabel.Layout.Row = 6;
+OOPSData.Handles.PolarHistogramWedgeLineWidthLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramWedgeLineWidthEditfield = uieditfield(...
+    OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'numeric',...
+    'Value',OOPSData.Settings.PolarHistogramWedgeLineWidth,...
+    'Limits',[0 10],...
+    'ValueDisplayFormat','%.1f points',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramWedgeLineWidthChanged);
+OOPSData.Handles.PolarHistogramWedgeLineWidthEditfield.Layout.Row = 6;
+OOPSData.Handles.PolarHistogramWedgeLineWidthEditfield.Layout.Column = 2;
+
+% wedgeEdgeColor
+OOPSData.Handles.PolarHistogramWedgeEdgeColorLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Edge color mode',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramWedgeEdgeColorLabel.Layout.Row = 7;
+OOPSData.Handles.PolarHistogramWedgeEdgeColorLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramWedgeEdgeColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'flat','interp'},...
+    'Value',OOPSData.Settings.PolarHistogramWedgeEdgeColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramWedgeEdgeColorChanged);
+OOPSData.Handles.PolarHistogramWedgeEdgeColorDropdown.Layout.Row = 7;
+OOPSData.Handles.PolarHistogramWedgeEdgeColorDropdown.Layout.Column = 2;
+
+% wedgeEdgeColor
+OOPSData.Handles.PolarHistogramWedgeLineColorLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Edge color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramWedgeLineColorLabel.Layout.Row = 8;
+OOPSData.Handles.PolarHistogramWedgeLineColorLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramWedgeLineColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'Black','White','Choose'},...
+    'ItemsData',{[0 0 0],[1 1 1],[]},...
+    'Value',[],...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramWedgeLineColorChanged);
+OOPSData.Handles.PolarHistogramWedgeLineColorDropdown.Layout.Row = 8;
+OOPSData.Handles.PolarHistogramWedgeLineColorDropdown.Layout.Column = 2;
+
+% gridline colors
+OOPSData.Handles.PolarHistogramGridlinesColorLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Gridlines color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramGridlinesColorLabel.Layout.Row = 9;
+OOPSData.Handles.PolarHistogramGridlinesColorLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramGridlinesColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'Black','White','Gray','Choose'},...
+    'ItemsData',{[0 0 0],[1 1 1],[.9 .9 .9],[]},...
+    'Value',[],...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramGridlinesColorChanged);
+OOPSData.Handles.PolarHistogramGridlinesColorDropdown.Layout.Row = 9;
+OOPSData.Handles.PolarHistogramGridlinesColorDropdown.Layout.Column = 2;
+
+% label colors
+OOPSData.Handles.PolarHistogramLabelsColorLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Labels color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramLabelsColorLabel.Layout.Row = 10;
+OOPSData.Handles.PolarHistogramLabelsColorLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramLabelsColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'Black','White','Choose'},...
+    'ItemsData',{[0 0 0],[1 1 1],[]},...
+    'Value',[],...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramLabelsColorChanged);
+OOPSData.Handles.PolarHistogramLabelsColorDropdown.Layout.Row = 10;
+OOPSData.Handles.PolarHistogramLabelsColorDropdown.Layout.Column = 2;
+
+% gridline line widths
+OOPSData.Handles.PolarHistogramGridlinesLineWidthLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Gridlines line width',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramGridlinesLineWidthLabel.Layout.Row = 11;
+OOPSData.Handles.PolarHistogramGridlinesLineWidthLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramGridlinesLineWidthEditfield = uieditfield(...
+    OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'numeric',...
+    'Value',OOPSData.Settings.PolarHistogramGridlinesLineWidth,...
+    'Limits',[0 10],...
+    'ValueDisplayFormat','%.1f points',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramGridlinesLineWidthChanged);
+OOPSData.Handles.PolarHistogramGridlinesLineWidthEditfield.Layout.Row = 11;
+OOPSData.Handles.PolarHistogramGridlinesLineWidthEditfield.Layout.Column = 2;
+
+% circleBackgroundColor
+OOPSData.Handles.PolarHistogramCircleBackgroundColorLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Circle background color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramCircleBackgroundColorLabel.Layout.Row = 12;
+OOPSData.Handles.PolarHistogramCircleBackgroundColorLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramCircleBackgroundColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'Black','White','Choose'},...
+    'ItemsData',{[0 0 0],[1 1 1],[]},...
+    'Value',[],...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramCircleBackgroundColorChanged);
+OOPSData.Handles.PolarHistogramCircleBackgroundColorDropdown.Layout.Row = 12;
+OOPSData.Handles.PolarHistogramCircleBackgroundColorDropdown.Layout.Column = 2;
+
+% circleColor
+OOPSData.Handles.PolarHistogramCircleColorLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Circle line color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramCircleColorLabel.Layout.Row = 13;
+OOPSData.Handles.PolarHistogramCircleColorLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramCircleColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'Black','White','Choose'},...
+    'ItemsData',{[0 0 0],[1 1 1],[]},...
+    'Value',[],...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramCircleColorChanged);
+OOPSData.Handles.PolarHistogramCircleColorDropdown.Layout.Row = 13;
+OOPSData.Handles.PolarHistogramCircleColorDropdown.Layout.Column = 2;
+
+% BackgroundColor
+OOPSData.Handles.PolarHistogramBackgroundColorLabel = uilabel(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Text','Background color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.PolarHistogramBackgroundColorLabel.Layout.Row = 14;
+OOPSData.Handles.PolarHistogramBackgroundColorLabel.Layout.Column = 1;
+
+OOPSData.Handles.PolarHistogramBackgroundColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.PolarHistogramSettingsGrid,...
+    'Items',{'Black','White','Choose'},...
+    'ItemsData',{[0 0 0],[1 1 1],[]},...
+    'Value',[],...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@PolarHistogramBackgroundColorChanged);
+OOPSData.Handles.PolarHistogramBackgroundColorDropdown.Layout.Row = 14;
+OOPSData.Handles.PolarHistogramBackgroundColorDropdown.Layout.Column = 2;
+
+
+
 %% ScatterPlot settings
 
 OOPSData.Handles.ScatterPlotSettingsGrid = uigridlayout(OOPSData.Handles.SettingsPanel,...
@@ -601,7 +869,7 @@ OOPSData.Handles.SwarmPlotBackgroundColorDropdownLabel.Layout.Column = 1;
 OOPSData.Handles.SwarmPlotBackgroundColorDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
     'Items',{'Black','White','Choose'},...
     'ItemsData',{[0 0 0],[1 1 1],[]},...
-    'Value',OOPSData.Settings.SwarmPlotBackgroundColor,...
+    'Value',[],...
     'FontName',OOPSData.Settings.DefaultFont,...
     'ValueChangedFcn',@SwarmPlotBackgroundColorChanged);
 OOPSData.Handles.SwarmPlotBackgroundColorDropdown.Layout.Row = 5;
@@ -618,7 +886,7 @@ OOPSData.Handles.SwarmPlotForegroundColorDropdownLabel.Layout.Column = 1;
 OOPSData.Handles.SwarmPlotForegroundColorDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
     'Items',{'Black','White','Choose'},...
     'ItemsData',{[0 0 0],[1 1 1],[]},...
-    'Value',OOPSData.Settings.SwarmPlotForegroundColor,...
+    'Value',[],...
     'FontName',OOPSData.Settings.DefaultFont,...
     'ValueChangedFcn',@SwarmPlotForegroundColorChanged);
 OOPSData.Handles.SwarmPlotForegroundColorDropdown.Layout.Row = 6;
@@ -635,7 +903,7 @@ OOPSData.Handles.SwarmPlotErrorBarColorDropdownLabel.Layout.Column = 1;
 OOPSData.Handles.SwarmPlotErrorBarColorDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
     'Items',{'Black','White','Choose'},...
     'ItemsData',{[0 0 0],[1 1 1],[]},...
-    'Value',OOPSData.Settings.SwarmPlotErrorBarColor,...
+    'Value',[],...
     'FontName',OOPSData.Settings.DefaultFont,...
     'ValueChangedFcn',@SwarmPlotErrorBarColorChanged);
 OOPSData.Handles.SwarmPlotErrorBarColorDropdown.Layout.Row = 7;
@@ -1040,8 +1308,8 @@ emptyimage = zeros(1024,1024);
 
 disp('Setting up small image axes...')
 
-%% Small Images
-    %% FLAT-FIELD IMAGES
+%% Small images
+    %% Flat-field correction stack
 
 for k = 1:4
     OOPSData.Handles.FFCAxH(k) = uiaxes('Parent',OOPSData.Handles.SmallPanels(2,k),...
@@ -1069,7 +1337,7 @@ for k = 1:4
     disableDefaultInteractivity(OOPSData.Handles.FFCAxH(k));
 end
 
-    %% RAW INTENSITY IMAGES
+    %% Raw intensity stack
 for k = 1:4
     OOPSData.Handles.RawIntensityAxH(k) = uiaxes('Parent',OOPSData.Handles.SmallPanels(1,k),...
         'Units','Normalized',...
@@ -1096,7 +1364,7 @@ for k = 1:4
     disableDefaultInteractivity(OOPSData.Handles.RawIntensityAxH(k));
 end
  
-    %% FLAT-FIELD CORRECTED INTENSITY
+    %% Flat-field corrected intensity stack
 for k = 1:4
     OOPSData.Handles.PolFFCAxH(k) = uiaxes('Parent',OOPSData.Handles.SmallPanels(2,k),...
         'Units','Normalized',...
@@ -1133,7 +1401,8 @@ end
 
 disp('Setting up large image axes...')
 
-    %% AVERAGE INTENSITY
+%% Large images
+    %% Average intensity
     OOPSData.Handles.AverageIntensityAxH = uiaxes(OOPSData.Handles.ImgPanel1,...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
@@ -1229,7 +1498,6 @@ disp('Setting up large image axes...')
         'HitTest','Off',...
         'FontName',OOPSData.Settings.DefaultPlotFont);
     
-    %disableDefaultInteractivity(OOPSData.Handles.SwarmPlotAxH);
     OOPSData.Handles.SwarmPlotAxH.Interactions = dataTipInteraction;
     axtoolbar(OOPSData.Handles.SwarmPlotAxH,{});
 
@@ -1250,15 +1518,6 @@ disp('Setting up large image axes...')
     OOPSData.Handles.SwarmPlotContextMenu_CopyVector = uimenu(OOPSData.Handles.SwarmPlotContextMenu,...
         'Text','Copy as vector graphic',...
         'MenuSelectedFcn',@CopySwarmPlotVector);
-    % OOPSData.Handles.SwarmPlotContextMenu_BackgroundColor = uimenu(OOPSData.Handles.SwarmPlotContextMenu,...
-    %     'Text','Background color',...
-    %     'MenuSelectedFcn',@SetSwarmPlotBackgroundColor);
-    % OOPSData.Handles.SwarmPlotContextMenu_ForegroundColor = uimenu(OOPSData.Handles.SwarmPlotContextMenu,...
-    %     'Text','Foreground color',...
-    %     'MenuSelectedFcn',@SetSwarmPlotForegroundColor);
-    % OOPSData.Handles.SwarmPlotContextMenu_ErrorBarColor = uimenu(OOPSData.Handles.SwarmPlotContextMenu,...
-    %     'Text','Error bars color',...
-    %     'MenuSelectedFcn',@SetSwarmPlotErrorBarColor);
 
     % add the context menu to the axes
     OOPSData.Handles.SwarmPlotAxH.ContextMenu = OOPSData.Handles.SwarmPlotContextMenu;
@@ -1314,7 +1573,55 @@ disp('Setting up large image axes...')
         'MenuSelectedFcn',@SetScatterPlotForegroundColor);
 
     % add the context menu to the axes
-    OOPSData.Handles.ScatterPlotAxH.ContextMenu = OOPSData.Handles.ScatterPlotContextMenu;    
+    OOPSData.Handles.ScatterPlotAxH.ContextMenu = OOPSData.Handles.ScatterPlotContextMenu;
+
+    %% Polar histogram - image
+
+    % create custom polar histogram with random data
+    OOPSData.Handles.ImagePolarHistogram = PolarHistogramColorChart(...
+        'Parent',OOPSData.Handles.ImgPanel1,...
+        'polarData',rand(1000,1)*pi,...
+        'wedgeColors',OOPSData.Settings.AzimuthColormap,...
+        'nBins',OOPSData.Settings.PolarHistogramnBins,...
+        'circleColor',OOPSData.Settings.PolarHistogramCircleColor,...
+        'circleBackgroundColor',OOPSData.Settings.PolarHistogramCircleBackgroundColor,...
+        'wedgeFaceColor',OOPSData.Settings.PolarHistogramWedgeFaceColor,...
+        'wedgeEdgeColor',OOPSData.Settings.PolarHistogramWedgeEdgeColor,...
+        'wedgeLineWidth',OOPSData.Settings.PolarHistogramWedgeLineWidth,...
+        'wedgeLineColor',OOPSData.Settings.PolarHistogramWedgeLineColor,...
+        'rGridlinesLineWidth',OOPSData.Settings.PolarHistogramGridlinesLineWidth,...
+        'thetaGridlinesLineWidth',OOPSData.Settings.PolarHistogramGridlinesLineWidth,...
+        'rGridlinesColor',OOPSData.Settings.PolarHistogramGridlinesColor,...
+        'thetaGridlinesColor',OOPSData.Settings.PolarHistogramGridlinesColor,...
+        'thetaLabelsColor',OOPSData.Settings.PolarHistogramLabelsColor,...
+        'BackgroundColor',OOPSData.Settings.PolarHistogramBackgroundColor,...
+        'wedgeColorsRepeats',2,...
+        'Title','Image - Pixel azimuths',...
+        'Visible','off');
+
+    %% Polar histogram - group
+
+    % create custom polar histogram with random data
+    OOPSData.Handles.GroupPolarHistogram = PolarHistogramColorChart(...
+        'Parent',OOPSData.Handles.ImgPanel2,...
+        'polarData',rand(1000,1)*pi,...
+        'wedgeColors',OOPSData.Settings.AzimuthColormap,...
+        'nBins',OOPSData.Settings.PolarHistogramnBins,...
+        'circleColor',OOPSData.Settings.PolarHistogramCircleColor,...
+        'circleBackgroundColor',OOPSData.Settings.PolarHistogramCircleBackgroundColor,...
+        'wedgeFaceColor',OOPSData.Settings.PolarHistogramWedgeFaceColor,...
+        'wedgeEdgeColor',OOPSData.Settings.PolarHistogramWedgeEdgeColor,...
+        'wedgeLineWidth',OOPSData.Settings.PolarHistogramWedgeLineWidth,...
+        'wedgeLineColor',OOPSData.Settings.PolarHistogramWedgeLineColor,...
+        'rGridlinesLineWidth',OOPSData.Settings.PolarHistogramGridlinesLineWidth,...
+        'thetaGridlinesLineWidth',OOPSData.Settings.PolarHistogramGridlinesLineWidth,...
+        'rGridlinesColor',OOPSData.Settings.PolarHistogramGridlinesColor,...
+        'thetaGridlinesColor',OOPSData.Settings.PolarHistogramGridlinesColor,...
+        'thetaLabelsColor',OOPSData.Settings.PolarHistogramLabelsColor,...
+        'BackgroundColor',OOPSData.Settings.PolarHistogramBackgroundColor,...
+        'wedgeColorsRepeats',2,...
+        'Title','Group - Pixel azimuths',...
+        'Visible','off');
 
     %% MASK
     OOPSData.Handles.MaskAxH = uiaxes(OOPSData.Handles.ImgPanel2,...
@@ -1646,33 +1953,13 @@ pause(0.5)
 
 %% NESTED FUNCTIONS - VARIOUS GUI CALLBACKS AND ACCESSORY FUNCTIONS
 
-%% Context menu and uidropdown callbacks for swarm plot
+%% Swarm plot callbacks/settings
 
     function CopySwarmPlotVector(source,~)
         UpdateLog3(source,'Copying...','append');
         copygraphics(OOPSData.Handles.SwarmPlotAxH,'ContentType','vector','BackgroundColor',OOPSData.Settings.SwarmPlotBackgroundColor);
         UpdateLog3(source,'Swarm plot vector graphic copied to clipboard','append');
     end
-
-    % function SetSwarmPlotBackgroundColor(~,~)
-    %     OOPSData.Settings.SwarmPlotSettings.BackgroundColor = uisetcolor();
-    %     figure(OOPSData.Handles.fH);
-    %     OOPSData.Handles.SwarmPlotAxH.Color = OOPSData.Settings.SwarmPlotBackgroundColor;
-    %     OOPSData.Handles.SwarmPlotGrid.BackgroundColor = OOPSData.Settings.SwarmPlotBackgroundColor;
-    % end
-    % 
-    % function SetSwarmPlotForegroundColor(~,~)
-    %     OOPSData.Settings.SwarmPlotSettings.ForegroundColor = uisetcolor();
-    %     figure(OOPSData.Handles.fH);
-    %     OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-    %     OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-    % end
-    % 
-    % function SetSwarmPlotErrorBarColor(source,~)
-    %     OOPSData.Settings.SwarmPlotSettings.ErrorBarColor = uisetcolor();
-    %     figure(OOPSData.Handles.fH);
-    %     UpdateImages(source);
-    % end
 
     function SwarmPlotBackgroundColorChanged(source,~)
         if isempty(source.Value)
@@ -1709,7 +1996,38 @@ pause(0.5)
         UpdateImages(source);
     end
 
-%% callback functions for scatter plot
+    function SwarmPlotYVariableChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.YVariable = source.Value;
+        UpdateImages(source);
+    end
+
+    function SwarmPlotGroupingTypeChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.GroupingType = source.Value;
+        UpdateImages(source);
+    end
+
+    function SwarmPlotColorModeChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.ColorMode = source.Value;
+        UpdateImages(source);
+    end
+
+    function SaveSwarmPlotSettings(source,~)
+        % saves the currently selected SwarmPlot settings to a .mat file
+        % which will be loaded in future sessions by OOPSSettings
+        UpdateLog3(source,'Saving swarmplot settings...','append');
+        SwarmPlotSettings = OOPSData.Settings.SwarmPlotSettings;
+        if ismac || isunix
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
+            save([SavePath,'/Settings/SwarmPlotSettings.mat'],'SwarmPlotSettings');        
+        elseif ispc
+            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
+            save([SavePath,'\Settings\SwarmPlotSettings.mat'],'SwarmPlotSettings');        
+        end
+        UpdateLog3(source,'Done.','append');
+    end
+%% Scatter plot callbacks/settings
 
     function CopyScatterPlotVector(source,~)
         UpdateLog3(source,'Copying...','append');
@@ -1729,6 +2047,142 @@ pause(0.5)
         figure(OOPSData.Handles.fH);
         OOPSData.Handles.ScatterPlotAxH.XAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
         OOPSData.Handles.ScatterPlotAxH.YAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
+    end
+
+%% Polar histogram callbacks/settings
+
+    function PolarHistogramnBinsChanged(source,~)
+        OOPSData.Settings.PolarHistogramSettings.nBins = source.Value;
+        OOPSData.Handles.ImagePolarHistogram.nBins = source.Value;
+        OOPSData.Handles.GroupPolarHistogram.nBins = source.Value;
+    end
+
+    function PolarHistogramWedgeFaceAlphaChanged(source,~)
+        OOPSData.Settings.PolarHistogramSettings.WedgeFaceAlpha = source.Value;
+        OOPSData.Handles.ImagePolarHistogram.wedgeFaceAlpha = source.Value;
+        OOPSData.Handles.GroupPolarHistogram.wedgeFaceAlpha = source.Value;
+    end
+
+    function PolarHistogramWedgeFaceColorChanged(source,~)
+        OOPSData.Settings.PolarHistogramSettings.WedgeFaceColor = source.Value;
+        OOPSData.Handles.ImagePolarHistogram.wedgeFaceColor = source.Value;
+        OOPSData.Handles.GroupPolarHistogram.wedgeFaceColor = source.Value;
+    end
+
+    function PolarHistogramWedgeLineWidthChanged(source,~)
+        OOPSData.Settings.PolarHistogramSettings.WedgeLineWidth = source.Value;
+        OOPSData.Handles.ImagePolarHistogram.wedgeLineWidth = source.Value;
+        OOPSData.Handles.GroupPolarHistogram.wedgeLineWidth = source.Value;
+    end
+
+    function PolarHistogramWedgeEdgeColorChanged(source,~)
+        OOPSData.Settings.PolarHistogramSettings.WedgeEdgeColor = source.Value;
+        switch source.Value
+            case 'flat'
+                OOPSData.Handles.PolarHistogramLineColorDropdown.Enable = 'off';
+            case 'interp'
+                OOPSData.Handles.PolarHistogramLineColorDropdown.Enable = 'on';
+        end
+        OOPSData.Handles.ImagePolarHistogram.wedgeEdgeColor = source.Value;
+        OOPSData.Handles.GroupPolarHistogram.wedgeEdgeColor = source.Value;
+    end
+
+    function PolarHistogramWedgeLineColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.PolarHistogramSettings.WedgeLineColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.PolarHistogramSettings.WedgeLineColor = source.Value();
+        end
+        OOPSData.Handles.ImagePolarHistogram.wedgeLineColor = OOPSData.Settings.PolarHistogramSettings.WedgeLineColor;
+        OOPSData.Handles.GroupPolarHistogram.wedgeLineColor = OOPSData.Settings.PolarHistogramSettings.WedgeLineColor;
+    end
+
+    function PolarHistogramGridlinesColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.PolarHistogramSettings.GridlinesColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.PolarHistogramSettings.GridlinesColor = source.Value();
+        end
+        OOPSData.Handles.ImagePolarHistogram.rGridlinesColor = OOPSData.Settings.PolarHistogramSettings.GridlinesColor;
+        OOPSData.Handles.ImagePolarHistogram.thetaGridlinesColor = OOPSData.Settings.PolarHistogramSettings.GridlinesColor;
+        OOPSData.Handles.GroupPolarHistogram.rGridlinesColor = OOPSData.Settings.PolarHistogramSettings.GridlinesColor;
+        OOPSData.Handles.GroupPolarHistogram.thetaGridlinesColor = OOPSData.Settings.PolarHistogramSettings.GridlinesColor;
+
+    end
+
+    function PolarHistogramLabelsColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.PolarHistogramSettings.LabelsColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.PolarHistogramSettings.LabelsColor = source.Value();
+        end
+        OOPSData.Handles.ImagePolarHistogram.thetaLabelsColor = OOPSData.Settings.PolarHistogramSettings.LabelsColor;
+        OOPSData.Handles.GroupPolarHistogram.thetaLabelsColor = OOPSData.Settings.PolarHistogramSettings.LabelsColor;
+    end
+
+    function PolarHistogramGridlinesLineWidthChanged(source,~)
+        OOPSData.Settings.PolarHistogramSettings.GridlinesLineWidth = source.Value;
+        OOPSData.Handles.ImagePolarHistogram.rGridlinesLineWidth = source.Value;
+        OOPSData.Handles.ImagePolarHistogram.thetaGridlinesLineWidth = source.Value;
+        OOPSData.Handles.GroupPolarHistogram.rGridlinesLineWidth = source.Value;
+        OOPSData.Handles.GroupPolarHistogram.thetaGridlinesLineWidth = source.Value; 
+    end
+
+    function PolarHistogramCircleColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.PolarHistogramSettings.CircleColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.PolarHistogramSettings.CircleColor = source.Value();
+        end
+        OOPSData.Handles.ImagePolarHistogram.circleColor = OOPSData.Settings.PolarHistogramSettings.CircleColor;
+        OOPSData.Handles.GroupPolarHistogram.circleColor = OOPSData.Settings.PolarHistogramSettings.CircleColor;
+    end
+
+    function PolarHistogramCircleBackgroundColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.PolarHistogramSettings.CircleBackgroundColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.PolarHistogramSettings.CircleBackgroundColor = source.Value();
+        end
+        OOPSData.Handles.ImagePolarHistogram.circleBackgroundColor = OOPSData.Settings.PolarHistogramSettings.CircleBackgroundColor;
+        OOPSData.Handles.GroupPolarHistogram.circleBackgroundColor = OOPSData.Settings.PolarHistogramSettings.CircleBackgroundColor;
+    end
+
+    function PolarHistogramBackgroundColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.PolarHistogramSettings.BackgroundColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.PolarHistogramSettings.BackgroundColor = source.Value();
+        end
+        OOPSData.Handles.ImagePolarHistogram.BackgroundColor = OOPSData.Settings.PolarHistogramSettings.BackgroundColor;
+        OOPSData.Handles.GroupPolarHistogram.BackgroundColor = OOPSData.Settings.PolarHistogramSettings.BackgroundColor;
+    end
+
+    function PolarHistogramVariableChanged(source,~)
+        OOPSData.Settings.PolarHistogramSettings.Variable = source.Value;
+        imagePolarData = deg2rad([OOPSData.CurrentImage(1).Object(:).(source.Value)]);
+        imagePolarData(isnan(imagePolarData)) = [];
+        imagePolarData(imagePolarData<0) = imagePolarData(imagePolarData<0)+pi;
+        OOPSData.Handles.ImagePolarHistogram.polarData = [imagePolarData,imagePolarData+pi];
+        OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',ExpandVariableName(source.Value)];
+
+        groupPolarData = deg2rad([OOPSData.CurrentGroup.GetAllObjectData(source.Value)]);
+        groupPolarData(isnan(groupPolarData)) = [];
+        groupPolarData(groupPolarData<0) = groupPolarData(groupPolarData<0)+pi;
+        OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
+        OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',ExpandVariableName(source.Value)];
     end
 
 %% Group uitree callbacks
@@ -1804,7 +2258,7 @@ pause(0.5)
         end
     end
 
-%% Azimuth display settings
+%% Azimuth stick plot callbacks/settings
 
     function ApplyAzimuthSettings(source,~)
         OOPSData.Settings.AzimuthDisplaySettings.LineAlpha = OOPSData.Handles.AzimuthLineAlphaDropdown.Value;
@@ -1828,40 +2282,6 @@ pause(0.5)
             CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
             SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
             save([SavePath,'\Settings\AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');        
-        end
-        UpdateLog3(source,'Done.','append');
-    end
-
-%% SwarmPlot settings
-
-    function SwarmPlotYVariableChanged(source,~)
-        OOPSData.Settings.SwarmPlotSettings.YVariable = source.Value;
-        UpdateImages(source);
-    end
-
-    function SwarmPlotGroupingTypeChanged(source,~)
-        OOPSData.Settings.SwarmPlotSettings.GroupingType = source.Value;
-        UpdateImages(source);
-    end
-
-    function SwarmPlotColorModeChanged(source,~)
-        OOPSData.Settings.SwarmPlotSettings.ColorMode = source.Value;
-        UpdateImages(source);
-    end
-
-    function SaveSwarmPlotSettings(source,~)
-        % saves the currently selected SwarmPlot settings to a .mat file
-        % which will be loaded in future sessions by OOPSSettings
-        UpdateLog3(source,'Saving swarmplot settings...','append');
-        SwarmPlotSettings = OOPSData.Settings.SwarmPlotSettings;
-        if ismac || isunix
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-            save([SavePath,'/Settings/SwarmPlotSettings.mat'],'SwarmPlotSettings');        
-        elseif ispc
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
-            save([SavePath,'\Settings\SwarmPlotSettings.mat'],'SwarmPlotSettings');        
         end
         UpdateLog3(source,'Done.','append');
     end
@@ -2886,7 +3306,7 @@ pause(0.5)
         cImage = OOPSData.CurrentImage;
         cImage.CurrentObjectIdx = source.Value;
         UpdateSummaryDisplay(source,{'Object'});
-        if strcmp(OOPSData.Settings.CurrentTab,'View Objects')
+        if strcmp(OOPSData.Settings.CurrentTab,'Objects')
             UpdateImages(source);
         end
         %disp('object selection changed');
@@ -2945,7 +3365,7 @@ pause(0.5)
         UpdateSummaryDisplay(source);
     end
 
-%% Local SB
+%% 'Process' menubar callbacks
 
     function pb_FindLocalSB(source,~)
         % number of selected images
@@ -2969,34 +3389,6 @@ pause(0.5)
         % update summary table
         UpdateSummaryDisplay(source,{'Group','Image','Object'});
     end
-
-%% Object Azimuth Stats
-
-    function pb_ComputeObjectAzimuthStats(source,~)
-        % number of selected images
-        nImages = length(OOPSData.CurrentImage);
-        % update log to indicate # of images we are processing
-        UpdateLog3(source,['Computing object azimuth statistics for ',num2str(nImages),' images'],'append');
-        % counter to track progress
-        Counter = 1;
-        % detect object azimuth stats for each currently selected image
-        for cImage = OOPSData.CurrentImage
-            % update log to indicate which image we are on
-            UpdateLog3(source,['    ',cImage.pol_shortname,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
-            % compute the azimuth stats
-            cImage.ComputeObjectAzimuthStats();
-            % log update to indicate we are done with this image
-            UpdateLog3(source,['        Computed object azimuth statistics for ',num2str(cImage.nObjects),' objects...'],'append');
-            % increment the counter
-            Counter = Counter+1;
-        end
-        % update summary table
-        UpdateSummaryDisplay(source,{'Group','Image','Object'});
-        % update log to indicate we are done
-        UpdateLog3(source,'Done.','append');
-    end
-
-%% Order statistics (OF, azimuth, potentially more in the future)
 
     function pb_FindOrderFactor(source,~)
         % number of selected images
@@ -3479,7 +3871,7 @@ pause(0.5)
         
     end
 
-%% Toolbar callbacks
+%% Axes toolbar callbacks
 
     function tbExportAxes(source,~)
         % get the toolbar parent of the calling button

@@ -53,7 +53,6 @@ classdef OOPSImage < handle
         OFDone = false
         ObjectDetectionDone = false
         LocalSBDone = false
-        ObjectAzimuthDone = false
         ReferenceImageLoaded = false
         
 %% Masking      
@@ -247,7 +246,6 @@ classdef OOPSImage < handle
             replicate.OFDone = obj.OFDone;
             replicate.ObjectDetectionDone = obj.ObjectDetectionDone;
             replicate.LocalSBDone = obj.LocalSBDone;
-            replicate.ObjectAzimuthDone = obj.ObjectAzimuthDone;
             replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
 
             % image mask
@@ -335,7 +333,6 @@ classdef OOPSImage < handle
             obj.ObjectDetectionDone = true;
             obj.CurrentObjectIdx = 1;
             obj.LocalSBDone = false;
-            obj.ObjectAzimuthDone = false;
             
         end % end of DetectObjects
         
@@ -526,9 +523,9 @@ classdef OOPSImage < handle
                 objectBBoxes = {obj.Object(:).BoundingBox}';
 
                 % get nObjects x 1 cell of object padded subarray idx coordinate adjustments
-                objectSubIdxAdjusts = {obj.Object(:).PaddedSubarrayIdxCoordinateAdjustment}';
+                objectSubIdxAdjusts = {obj.Object(:).paddedSubarrayIdxAdjustment}';
 
-                % get 1 x 2 cell array of object buffer and BG coordinates
+                % get cell array of object buffer and BG coordinates
                 [bufferIdxs,BGIdxs] = cellfun(@(I,BBox,adjustment,fullSize) getBufferAndBGLists(I,BBox,adjustment,fullSize),...
                     paddedObjectImages,objectBBoxes,objectSubIdxAdjusts,repmat({[obj.Height obj.Width]},numel(paddedObjectImages),1),'UniformOutput',0);
 
@@ -620,59 +617,6 @@ classdef OOPSImage < handle
 
         end
         
-        function ComputeObjectAzimuthStats(obj)
-            % only run if OF calculated and objects detected
-            if obj.ObjectDetectionDone && obj.OFDone
-
-                tic
-
-                for i = 1:obj.nObjects
-                    cObject = obj.Object(i);
-
-                    % get object azimuth std values
-                    try
-                        cObject.AzimuthStd = getAzimuthStd(cObject.AzimuthPixelValues);
-                    catch
-                        cObject.AzimuthStd = NaN;
-                    end
-
-                    % object midline and relative azimuth detection
-                    try
-                        % construct the object midline (this function still needs optimization)
-                        %[~,~,cObject.Midline] = getObjectMidline(cObject.RestrictedPaddedMaskSubImage,"DisplayResults",false);
-
-                        Midline = cObject.PaddedSubIdxMidline;
-
-                        if any(isnan(Midline(:)))
-                            error('Failed to detect object midline');
-                        end
-
-                        [cObject.MidlineRelativeAzimuth,cObject.NormalRelativeAzimuth] = getRelativeAzimuth(...
-                            cObject.RestrictedPaddedMaskSubImage,...
-                            cObject.PaddedAzimuthSubImage,...
-                            Midline...
-                            );
-
-                    catch me
-                        switch me.message
-                            case 'Failed to detect object midline'
-                                cObject.MidlineRelativeAzimuth = NaN;
-                                cObject.NormalRelativeAzimuth = NaN;
-                            otherwise
-                                disp(['Warning: Failed to calculate relative azimuth for object: ',num2str(cObject.SelfIdx)])
-                                cObject.MidlineRelativeAzimuth = NaN;
-                                cObject.NormalRelativeAzimuth = NaN;
-                        end
-                    end
-
-                end
-                obj.ObjectAzimuthDone = true;
-
-                toc
-
-            end
-        end
-
         % dependent get methods for image size, resolution
         function Dimensions = get.Dimensions(obj)
             Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
@@ -761,8 +705,7 @@ classdef OOPSImage < handle
                 "Mask generated",...
                 "OF/azimuth calculated",...
                 "Objects detected",...
-                "Local S/B calculated",...
-                "Azimuth stats calculated"];
+                "Local S/B calculated"];
 
             ImageSummaryDisplayTable = table(...
                 {obj.pol_shortname},...
@@ -779,7 +722,6 @@ classdef OOPSImage < handle
                 {Logical2String(obj.OFDone)},...
                 {Logical2String(obj.ObjectDetectionDone)},...
                 {Logical2String(obj.LocalSBDone)},...
-                {Logical2String(obj.ObjectAzimuthDone)},...
                 'VariableNames',varNames,...
                 'RowNames',"Image");
 
@@ -865,45 +807,10 @@ classdef OOPSImage < handle
                 'SubarrayIdx',...
                 'MaxFeretProperties',...
                 'MinFeretProperties'});
-            
-            % % get idxs to 'Image' and 'BoundingBox' fields
-            % fnames = fieldnames(ObjectProperties);
-            % % convert ObjectProperties struct to cell array
-            % C = struct2cell(ObjectProperties).';
-            % % get object images (using struct fieldnames to find idx to 'Image' column in cell array)
-            % ObjectImages = C(:,ismember(fnames,'Image'));
-            % % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
-            % ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
-            % % get boundaries from ObjectImages
-            % B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes'),ObjectImages,'UniformOutput',0);
-            % % add bounding box offsets to boundary coordinates from ObjectImages
-            % % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
-            % B = cellfun(@(b,box) bsxfun(@plus,b{1},box([2 1]) - 0.5),B,ObjectBBox,'UniformOutput',0);
-            % % add object boundaries cell to props struct
-            % ObjectProperties(end).BWBoundary = [];
-            % [ObjectProperties(:).BWBoundary] = deal(B{:});
 
-            %% testing below - new method to get "perfect" binary boundaries
+            %% get cell arrays of some properties (which we will use to calculate more properties)
 
-            % % get idxs to 'Image' and 'BoundingBox' fields
-            % fnames = fieldnames(ObjectProperties);
-            % % convert ObjectProperties struct to cell array
-            % C = struct2cell(ObjectProperties).';
-            % % get object images (using struct fieldnames to find idx to 'Image' column in cell array)
-            % ObjectImages = C(:,ismember(fnames,'Image'));
-            % % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
-            % ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
-            % % get boundaries from ObjectImages
-            % B = cellfun(@(obj_img)perfectBinaryBoundaries(padarray(obj_img,[1,1])),ObjectImages,'UniformOutput',0);
-            % % add bounding box offsets to boundary coordinates from ObjectImages
-            % % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
-            % B = cellfun(@(b,box) bsxfun(@plus,b,box([2 1]) - 1.5),B,ObjectBBox,'UniformOutput',0);
-            % % add object boundaries cell to props struct
-            % ObjectProperties(end).BWBoundary = [];
-            % [ObjectProperties(:).BWBoundary] = deal(B{:});
-
-            %% third method below
-            % get idxs to 'Image' and 'BoundingBox' fields
+            % get fieldnames of the ObjectProperties struct
             fnames = fieldnames(ObjectProperties);
             % convert ObjectProperties struct to cell array
             C = struct2cell(ObjectProperties).';
@@ -911,7 +818,71 @@ classdef OOPSImage < handle
             ObjectImages = C(:,ismember(fnames,'Image'));
             % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
             ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
+            % get object subarray idxs (using fieldnames to find idx to 'SubarrayIdx' column in cell array)
+            ObjectSubarrayIdx = C(:,ismember(fnames,'SubarrayIdx'));
+            % get object pixel idx list (using fieldnames to find idx to 'PixelIdxList' column in cell array)
+            ObjectPixelIdxList = C(:,ismember(fnames,'PixelIdxList'));
 
+
+            %% object padded subarray idxs
+
+            % get cell array of padded subarray idxs (padding=5)
+            paddedSubarrayIdx = cellfun(@(subidx) padSubarrayIdx(subidx,5),ObjectSubarrayIdx,'UniformOutput',0);
+            % deal into ObjectProperties struct
+            ObjectProperties(end).paddedSubarrayIdx = [];
+            [ObjectProperties(:).paddedSubarrayIdx] = deal(paddedSubarrayIdx{:});
+
+            %% object coordinate padding
+
+            % get cell array of object coordinate adjustments [yShift xShift]
+            paddedSubarrayIdxAdjustment = cellfun(@(subidx,paddedsubidx) ...
+                [subidx{1,1}(1)-paddedsubidx{1,1}(1) subidx{1,2}(1)-paddedsubidx{1,2}(1)],...
+                ObjectSubarrayIdx,paddedSubarrayIdx,'UniformOutput',0);
+            % deal into ObjectProperties struct
+            ObjectProperties(end).paddedSubarrayIdxAdjustment = [];
+            [ObjectProperties(:).paddedSubarrayIdxAdjustment] = deal(paddedSubarrayIdxAdjustment{:});
+
+            %% image to padded object coordinate shifts [yShift xShift]
+
+            imageToPaddedObjectShift = cellfun(@(box,padadjust) -1.*box([2 1]) + 0.5 + padadjust, ObjectBBox, paddedSubarrayIdxAdjustment, 'UniformOutput',0);
+            % deal into ObjectProperties struct
+            ObjectProperties(end).imageToPaddedObjectShift = [];
+            [ObjectProperties(:).imageToPaddedObjectShift] = deal(imageToPaddedObjectShift{:});
+
+            %% object padded pixel idx list
+
+            Isz = size(obj.bw);
+
+            paddedPixelIdxList = cellfun(@(pixelidxlist,coordshift,paddedsubidx) getPaddedPixelIdxList(pixelidxlist,coordshift,paddedsubidx),...
+                ObjectPixelIdxList,imageToPaddedObjectShift,paddedSubarrayIdx,...
+                'UniformOutput',0);
+
+            function paddedpixelidxlist = getPaddedPixelIdxList(pixelidxlist,coordshift,paddedsubidx)
+                [r,c] = ind2sub(Isz,pixelidxlist);
+                outSize = [length(paddedsubidx{1,1}) length(paddedsubidx{1,2})];
+                paddedpixelidxlist = sub2ind(outSize,r + coordshift(1),c + coordshift(2));
+            end
+
+            % deal into ObjectProperties struct
+            ObjectProperties(end).paddedPixelIdxList = [];
+            [ObjectProperties(:).paddedPixelIdxList] = deal(paddedPixelIdxList{:});
+
+
+            %% object padded mask images
+
+            paddedSubImage = cellfun(@(paddedsubidx,paddedpixelidxlist) ...
+                getPaddedSubImage(paddedsubidx,paddedpixelidxlist),...
+                paddedSubarrayIdx,paddedPixelIdxList,'UniformOutput',0);
+            % subfuntion to get the padded object subimages
+            function paddedsubimage = getPaddedSubImage(paddedsubidx,paddedpixelidxlist)
+                paddedsubimage = false([length(paddedsubidx{1,1}) length(paddedsubidx{1,2})]);
+                paddedsubimage(paddedpixelidxlist) = true;
+            end
+            % deal into ObjectProperties struct
+            ObjectProperties(end).paddedSubImage = [];
+            [ObjectProperties(:).paddedSubImage] = deal(paddedSubImage{:});
+
+            %% object boundaries
 
             % get boundaries from ObjectImages
             B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes','TraceStyle','pixeledge'),ObjectImages,'UniformOutput',0);
@@ -923,31 +894,26 @@ classdef OOPSImage < handle
             [ObjectProperties(:).BWBoundary] = deal(B{:});
 
 
-            %% now detect midline for each object
+            %% object midlines
 
-            % % get the object midline coordinates w.r.t. the object image (with 1 px padding)
-            % [~,~,M] = cellfun(@(obj_img)getObjectMidline(padarray(obj_img,[1,1]),"DisplayResults",false),ObjectImages,'UniformOutput',0);
-            % % adjust the coordinates to the frame of the full image
-            % M = cellfun(@(b,box) bsxfun(@plus,b,box([1 2]) - 1.5),M,ObjectBBox,'UniformOutput',0);
-            % % add object midline coordinates cell to props struct
-            % ObjectProperties(end).Midline = [];
-            % [ObjectProperties(:).Midline] = deal(M{:});
-
-            % get the object midline coordinates w.r.t. the object image (with 1 px padding)
-            M = cellfun(@(obj_img)getObjectMidlines(padarray(obj_img,[1,1])),ObjectImages,'UniformOutput',0);
-            % adjust the coordinates to the frame of the full image (-1.5 instead of -0.5 because of 1 px padding)
-            M = cellfun(@(b,box) bsxfun(@plus,b,box([1 2]) - 1.5),M,ObjectBBox,'UniformOutput',0);
+            % get the object midline coordinates w.r.t. the padded object subimage
+            M = parcellfun(@(obj_img) getObjectMidline(obj_img),paddedSubImage,'UniformOutput',0);
             % add object midline coordinates cell to props struct
             ObjectProperties(end).Midline = [];
             [ObjectProperties(:).Midline] = deal(M{:});
 
-            function Midline = getObjectMidlines(I)
-                try
-                    [~,~,Midline] = getObjectMidline(I,"DisplayResults",false);
-                catch
-                    Midline = [NaN NaN];
-                end
-            end
+            %% object midline and pixel tangents
+
+            % get a list of tangents for each object midline (one tangent per point in the midline)
+            MidlineTangent = cellfun(@(midline) getMidlineTangent(midline), M, 'UniformOutput',0);
+            % get a list of tangents for each pixel in the padded object mask image
+            pixelMidlineTangentList = parcellfun_multi(@(midline,midlinetangent,paddedsubimage) ...
+                getPixelValuesFromCurveValues(midline,midlinetangent,paddedsubimage), ...
+                {M,MidlineTangent,paddedSubImage}, ...
+                'UniformOutput',0);
+            % add object pixelTangentList cell to props struct
+            ObjectProperties(end).pixelMidlineTangentList = [];
+            [ObjectProperties(:).pixelMidlineTangentList] = deal(pixelMidlineTangentList{:});
 
         end
 
@@ -1206,7 +1172,6 @@ classdef OOPSImage < handle
             obj.OFDone = replicate.OFDone;
             obj.ObjectDetectionDone = replicate.ObjectDetectionDone;
             obj.LocalSBDone = replicate.LocalSBDone;
-            obj.ObjectAzimuthDone = replicate.ObjectAzimuthDone;
             obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;
 
             obj.bw = replicate.bw;

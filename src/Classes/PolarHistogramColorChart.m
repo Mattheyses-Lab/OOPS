@@ -19,6 +19,7 @@ properties
     thetaGridlinesColor (1,3) double = [.9 .9 .9]
     thetaLabelsColor (1,3) double = [0 0 0]
     thetaGridlinesLineWidth (1,1) double = 0.5
+    Title (1,:) char = 'Untitled polar histogram'
 end
 
 properties(Dependent = true)
@@ -61,6 +62,15 @@ methods(Access = protected)
             "Box","on");
         obj.HistogramAxes.Layout.Row = 1;
         obj.HistogramAxes.Layout.Column = 1;
+        % set up a title for the axes
+        obj.HistogramAxes.Title.String = obj.Title;
+        obj.HistogramAxes.Title.Units = 'Normalized';
+        obj.HistogramAxes.Title.HorizontalAlignment = 'Center';
+        obj.HistogramAxes.Title.VerticalAlignment = 'Top';
+        obj.HistogramAxes.Title.Color = [0 0 0];
+        obj.HistogramAxes.Title.Position = [0.5,1.0,0];
+        obj.HistogramAxes.Title.HitTest = 'Off';
+        obj.HistogramAxes.Title.PickableParts = 'none';
         % patch object to form the BG of the polar axes
         obj.PolarAxesBG = patch(obj.HistogramAxes,'XData',NaN,'YData',NaN);
         obj.PolarAxesBG.HitTest = 'off';
@@ -87,6 +97,10 @@ methods(Access = protected)
     end
 
     function update(obj)
+        % set the axis title
+        obj.HistogramAxes.Title.String = obj.Title;
+        obj.HistogramAxes.Title.Color = obj.thetaLabelsColor;
+        obj.HistogramAxes.Title.Visible = 'on';
         % get the angle data to plot in the histogram
         angles = obj.polarData;
         % construct the bin edges 
@@ -98,8 +112,11 @@ methods(Access = protected)
         obj.obj_maxCounts = max(hist_counts);
         % set the limits of the cartesian axes based on the rLim and plotBuffer
         rMax = obj.rLim;
-        plotBuffer = 0.15;
-        obj.HistogramAxes.XLim = [-rMax-rMax*plotBuffer rMax+rMax*plotBuffer];
+        % plotBuffer = 0.15;
+        % obj.HistogramAxes.XLim = [-rMax-rMax*plotBuffer rMax+rMax*plotBuffer];
+        plotBuffer = rMax*0.15;
+        obj.HistogramAxes.XLim = [-rMax-plotBuffer rMax+plotBuffer];
+
         obj.HistogramAxes.YLim = obj.HistogramAxes.XLim;
         % Define the center of the circle
         center = [0, 0];
@@ -165,12 +182,12 @@ methods(Access = protected)
         delete(obj.ThetaGridLinesLabels);
         obj.ThetaGridLinesLabels = repmat(matlab.graphics.primitive.Text,nThetaLabels,1);
         % get the distance of each label from the center of the plot
-        thetaLabelDist = rMax+rMax*plotBuffer*0.1;
+        thetaLabelDist = rMax+plotBuffer*0.1;
         % draw a label for each unique theta (i.e. do not draw a label at 360°)
         for thetaIdx = 1:nThetaLabels
             stringLabel = [num2str(rad2deg(thetaGridlineAngles(thetaIdx))),'°'];
-            xCoord = round(thetaLabelDist*cos(thetaGridlineAngles(thetaIdx)));
-            yCoord = round(thetaLabelDist*sin(thetaGridlineAngles(thetaIdx)));
+            xCoord = round(thetaLabelDist*cos(thetaGridlineAngles(thetaIdx)),4);
+            yCoord = round(thetaLabelDist*sin(thetaGridlineAngles(thetaIdx)),4);
 
             if xCoord > 0 && yCoord > 0 % if in q1
                 horizAlignment = 'left';
@@ -204,7 +221,8 @@ methods(Access = protected)
                 stringLabel,...
                 "HorizontalAlignment",horizAlignment,...
                 "VerticalAlignment",vertAlignment,...
-                "Color",obj.thetaLabelsColor);
+                "Color",obj.thetaLabelsColor,...
+                "FontWeight","normal");
         end
         %% now color the individual faces/edges
         % preallocate FaceVertexCData, XData, and YData for the bin wedge patch object
@@ -230,8 +248,6 @@ methods(Access = protected)
             switch obj.wedgeFaceColor
                 case 'flat' % each face is a single solid color
                     % get the color of this wedge
-                    % wedgeColorIdx = floor(((thetaEdge1/(2*pi))*nColors)+1);
-                    % wedgeColorIdx = min(max(wedgeColorIdx,1),nColors);
                     wedgeColorIdx = floor(((thetaMean/(2*pi))*nColors)+1);
                     wedgeColor = binColors(wedgeColorIdx,:);
                     wedgeVertexIdx = ([1;2;3])+3*(binIdx-1);

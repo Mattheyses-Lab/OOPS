@@ -585,7 +585,22 @@ function [] = UpdateImages(source)
             OOPSData.Handles.SwarmPlotAxH.Title.String = ExpandVariableName(OOPSData.Settings.SwarmPlotYVariable);
             OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = ExpandVariableName(OOPSData.Settings.SwarmPlotYVariable);            
             
-        case 'View Objects'
+        case 'Polar Plots'
+
+            polarData = deg2rad([cImage.Object(:).(OOPSData.Settings.PolarHistogramVariable)]);
+            polarData(isnan(polarData)) = [];
+            polarData(polarData<0) = polarData(polarData<0)+pi;
+            OOPSData.Handles.ImagePolarHistogram.polarData = [polarData,polarData+pi];
+            OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',ExpandVariableName(OOPSData.Settings.PolarHistogramVariable)];
+
+            groupPolarData = deg2rad(OOPSData.CurrentGroup.GetAllObjectData(OOPSData.Settings.PolarHistogramVariable));
+            groupPolarData(isnan(groupPolarData)) = [];
+            groupPolarData(groupPolarData<0) = groupPolarData(groupPolarData<0)+pi;
+            OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
+            OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',ExpandVariableName(OOPSData.Settings.PolarHistogramVariable)];
+
+
+        case 'Objects'
             %% Object Viewer
             try
                 % get handle to the current object
@@ -732,7 +747,7 @@ function [] = UpdateImages(source)
             end
 
             % retrieve the object midline coordinates
-            Midline = cObject.PaddedSubIdxMidline;
+            Midline = cObject.Midline;
             % if not empty...
             if ~isempty(Midline) && ~any(isnan(Midline(:)))
                 % then attempt to plot the midline coordinates
@@ -756,7 +771,7 @@ function [] = UpdateImages(source)
             % try and plot the object boundary
             try
                 % get the object boundary coordinates w.r.t. the padded intensity image
-                paddedBoundary = cObject.PaddedSubIdxBoundary;
+                paddedBoundary = cObject.paddedSubImageBoundary;
 
                 OOPSData.Handles.ObjectBoundaryPlot = line(OOPSData.Handles.ObjectPolFFCAxH,...
                     paddedBoundary(:,2),...

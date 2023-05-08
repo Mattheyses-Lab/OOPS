@@ -32,8 +32,6 @@ function [] = UpdateSummaryDisplay(source,varargin)
             OOPSData.Handles.ProjectSummaryTable.ColumnName = {};
             OOPSData.Handles.ProjectSummaryTable.RowName = {};
 
-            % testing adding styles to cells
-
             % first remove all styles
             removeStyle(OOPSData.Handles.ProjectSummaryTable);
 
@@ -61,39 +59,11 @@ function [] = UpdateSummaryDisplay(source,varargin)
             % add the style to the table
             addStyle(OOPSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
 
-            % end testing
-
-
         case 'Group'
 
             cGroup = OOPSData.CurrentGroup;
 
             if ~isempty(cGroup)
-                % groupTable = cGroup.GroupSummaryDisplayTable;
-                % OOPSData.Handles.GroupSummaryTable.Data = groupTable;
-                % OOPSData.Handles.GroupSummaryTable.ColumnName = {};
-                % OOPSData.Handles.GroupSummaryTable.RowName = {};
-                % 
-                % % first remove all styles
-                % removeStyle(OOPSData.Handles.GroupSummaryTable);
-                % 
-                % % create styles for cells with missing (NaN) values
-                % sMissing = uistyle("BackgroundColor",[1 0 0],"FontColor",[1 1 1]);
-                % % find indices to the missing values
-                % [rMissing,cMissing] = find(ismember(groupTable.Variables,'NaN'));
-                % % add the style to missing cells
-                % addStyle(OOPSData.Handles.GroupSummaryTable,sMissing,'cell',[rMissing,cMissing]);
-                % 
-                % % create separate styles for cells that are 'True' or 'False'
-                % sPass = uistyle("Icon","success","IconAlignment","rightmargin");
-                % sFail = uistyle("Icon","error","IconAlignment","rightmargin");
-                % % find the cells that are 'True' or 'False'
-                % [rFalse,cFalse] = find(ismember(groupTable.Variables,'False'));
-                % [rTrue,cTrue] = find(ismember(groupTable.Variables,'True'));
-                % % add the styles to corresponding cells
-                % addStyle(OOPSData.Handles.GroupSummaryTable,sFail,'cell',[rFalse,cFalse]);
-                % addStyle(OOPSData.Handles.GroupSummaryTable,sPass,'cell',[rTrue,cTrue]);
-
 
                 % get the data for the group table
                 groupTable = cGroup.GroupSummaryDisplayTable;
@@ -102,7 +72,7 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 sAlignment = uistyle("HorizontalAlignment","left");
 
                 % create styles for cells with missing (NaN) values
-                sMissing = uistyle("BackgroundColor",[1 0 0],"FontColor",[1 1 1]);
+                sMissing = uistyle("BackgroundColor",[1 0.6 0.6],"FontColor",[1 1 1]);
                 % find indices to the missing values
                 [rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), groupTable.Group));
                 % [rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), imageTable.Image));
@@ -149,13 +119,6 @@ function [] = UpdateSummaryDisplay(source,varargin)
             cImage = OOPSData.CurrentImage;
 
             if ~isempty(cImage)
-                % imageTable = cImage(1).ImageSummaryDisplayTable;
-                % OOPSData.Handles.ImageSummaryTable.Data = imageTable;
-                % OOPSData.Handles.ImageSummaryTable.ColumnName = {};
-                % OOPSData.Handles.ImageSummaryTable.RowName = {};
-
-
-                % testing below - when table data is not a cell array of cell arrays
 
                 imageTable = cImage(1).ImageSummaryDisplayTable;
 
@@ -169,20 +132,10 @@ function [] = UpdateSummaryDisplay(source,varargin)
                     return
                 end
 
-
-                % if dataOnly
-                %     % add the table data to the uitable
-                %     OOPSData.Handles.ImageSummaryTable.Data = imageTable;
-                %     % remove column and row names
-                %     OOPSData.Handles.ImageSummaryTable.ColumnName = {};
-                %     OOPSData.Handles.ImageSummaryTable.RowName = {};
-                %     return
-                % end
-
                 % create an alignment style to ensure all text is left-aligned
                 sAlignment = uistyle("HorizontalAlignment","left");
                 % create styles for cells with missing (NaN) values
-                sMissing = uistyle("BackgroundColor",[1 0 0],"FontColor",[1 1 1]);
+                sMissing = uistyle("BackgroundColor",[1 0.6 0.6],"FontColor",[1 1 1]);
                 % create separate styles for cells that are 'True' or 'False'
                 sPass = uistyle("Icon","success","IconAlignment","rightmargin");
                 sFail = uistyle("Icon","error","IconAlignment","rightmargin");
@@ -196,13 +149,6 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 cFalse = cFalse + 1;
                 [rTrue,cTrue] = find(cellfun(@(x) strcmp(x,'True'), imageTable.Image));
                 cTrue = cTrue + 1;
-
-
-                % % add the table data to the uitable
-                % OOPSData.Handles.ImageSummaryTable.Data = imageTable;
-                % % remove column and row names
-                % OOPSData.Handles.ImageSummaryTable.ColumnName = {};
-                % OOPSData.Handles.ImageSummaryTable.RowName = {};
 
                 % first remove all styles
                 removeStyle(OOPSData.Handles.ImageSummaryTable);
@@ -226,10 +172,6 @@ function [] = UpdateSummaryDisplay(source,varargin)
             cObject = OOPSData.CurrentObject;
 
             if ~isempty(cObject)
-                % objectTable = cObject.ObjectSummaryDisplayTable;
-                % OOPSData.Handles.ObjectSummaryTable.Data = objectTable;
-                % OOPSData.Handles.ObjectSummaryTable.ColumnName = {};
-                % OOPSData.Handles.ObjectSummaryTable.RowName = {};
 
                 objectTable = cObject.ObjectSummaryDisplayTable;
 
@@ -237,7 +179,7 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 sAlignment = uistyle("HorizontalAlignment","left");
 
                 % create styles for cells with missing (NaN) values
-                sMissing = uistyle("BackgroundColor",[1 0 0],"FontColor",[1 1 1]);
+                sMissing = uistyle("BackgroundColor",[1 0.6 0.6],"FontColor",[1 1 1]);
                 % find indices to the missing values
                 [rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), objectTable.Object));
                 cMissing = cMissing + 1;
@@ -263,7 +205,6 @@ function [] = UpdateSummaryDisplay(source,varargin)
                 % add label color square icon to object label cell
                 addStyle(OOPSData.Handles.ObjectSummaryTable,sLabel,'cell',[rLabel,cLabel+1]);
                 % end testing
-
 
             else
                 OOPSData.Handles.AppInfoPanel.Title = 'No object found';
