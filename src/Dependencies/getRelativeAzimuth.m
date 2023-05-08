@@ -3,7 +3,7 @@ function [MidlineRelativeAzimuth,NormalRelativeAzimuth] = getRelativeAzimuth(I,A
 
     Isz = size(I);
 
-    %% compute the midline tangent
+    %% compute the midline tangent in radians in the range [-pi/2 pi/2]
     midlineTangent = getMidlineTangent(Midline);
 
     % get the list of pixel azimuth values
@@ -26,7 +26,7 @@ function [MidlineRelativeAzimuth,NormalRelativeAzimuth] = getRelativeAzimuth(I,A
     % list of midline tangent angles
     TangentValues = IT(I);
 
-    % list of midline normal values (90° angle to midline)
+    % list of midline normal values (90° angle to midline) in the range [-pi/2 pi/2]
     NormalValues = TangentValues+pi/2;
     NormalValues(NormalValues>(pi/2)) = NormalValues(NormalValues>(pi/2))-pi;
 
