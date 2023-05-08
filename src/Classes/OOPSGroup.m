@@ -63,7 +63,7 @@ classdef OOPSGroup < handle
         FFCAllDone logical
         ObjectDetectionAllDone logical
         LocalSBAllDone logical
-        ObjectAzimuthAllDone logical
+        %ObjectAzimuthAllDone logical
         
         % pixel-average OF for all images in this OOPSGroup for which OF has been calculated
         OFAvg double
@@ -358,20 +358,20 @@ classdef OOPSGroup < handle
             LocalSBAllDone = true;
         end
 
-        function ObjectAzimuthAllDone = get.ObjectAzimuthAllDone(obj)
-            if obj.nReplicates == 0
-                ObjectAzimuthAllDone = false;
-                return
-            end
-            
-            for i = 1:obj.nReplicates
-                if ~obj.Replicate(i).ObjectAzimuthDone
-                    ObjectAzimuthAllDone = false;
-                    return
-                end
-            end
-            ObjectAzimuthAllDone = true;
-        end
+        % function ObjectAzimuthAllDone = get.ObjectAzimuthAllDone(obj)
+        %     if obj.nReplicates == 0
+        %         ObjectAzimuthAllDone = false;
+        %         return
+        %     end
+        % 
+        %     for i = 1:obj.nReplicates
+        %         if ~obj.Replicate(i).ObjectAzimuthDone
+        %             ObjectAzimuthAllDone = false;
+        %             return
+        %         end
+        %     end
+        %     ObjectAzimuthAllDone = true;
+        % end
 
         function OFAvg = get.OFAvg(obj)
             OFAvg = mean([obj.Replicate(find([obj.Replicate.OFDone])).OFAvg]);
@@ -455,8 +455,7 @@ classdef OOPSGroup < handle
                 "Mask generated",...
                 "OF/azimuth calculated",...
                 "Objects detected",...
-                "Local S/B calculated",...
-                "Azimuth stats calculated"];
+                "Local S/B calculated"];
 
             GroupSummaryDisplayTable = table(...
                 {obj.FFCLoaded},...
@@ -469,7 +468,6 @@ classdef OOPSGroup < handle
                 {obj.OFAllDone},...
                 {obj.ObjectDetectionAllDone},...
                 {obj.LocalSBAllDone},...
-                {obj.ObjectAzimuthAllDone},...
                 'VariableNames',varNames,...
                 'RowNames',"Group");
 
