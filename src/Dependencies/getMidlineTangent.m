@@ -1,4 +1,11 @@
 function midlineTangent = getMidlineTangent(Midline)
+% given an mx2 array of (x,y) coordinates representing an unclosed curve, 
+% return an mx1 array of estimated curve tangent angles in radians [-pi/2 pi/2]
+
+    if any(isnan(Midline))
+        midlineTangent = [];
+        return
+    end
 
     nMidline = size(Midline,1);
     midlineTangent = zeros(nMidline,1);
