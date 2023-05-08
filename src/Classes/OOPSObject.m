@@ -130,7 +130,6 @@ classdef OOPSObject < handle
         AzimuthAverage
         AzimuthStd
         AzimuthAngularDeviation
-
         MidlineRelativeAzimuth
         NormalRelativeAzimuth
 
@@ -255,10 +254,13 @@ classdef OOPSObject < handle
             object.Label = obj.Label;
             object.Selected = obj.Selected;
 
-            % object azimuth stats
-            object.AzimuthStd = obj.AzimuthStd;
-            object.MidlineRelativeAzimuth = obj.MidlineRelativeAzimuth;
-            object.NormalRelativeAzimuth = obj.NormalRelativeAzimuth;
+
+            object.paddedSubarrayIdx = obj.paddedSubarrayIdx;
+            object.paddedSubarrayIdxAdjustment = obj.paddedSubarrayIdxAdjustment;
+            object.paddedSubImage = obj.paddedSubImage;
+            object.imageToPaddedObjectShift = obj.imageToPaddedObjectShift;
+            object.paddedPixelIdxList = obj.paddedPixelIdxList;
+            object.pixelMidlineTangentList = obj.pixelMidlineTangentList;
 
             object.Midline = obj.Midline;
 
@@ -626,10 +628,8 @@ classdef OOPSObject < handle
             ObjectProps.ConvexImage = object.ConvexImage;
             ObjectProps.Eccentricity = object.Eccentricity;
             ObjectProps.Extrema = object.Extrema;
-
             ObjectProps.EquivDiameter = object.EquivDiameter;
             ObjectProps.Extent = object.Extent;
-
             ObjectProps.FilledArea = object.FilledArea;
             ObjectProps.Image = full(object.Image);
             ObjectProps.MajorAxisLength = object.MajorAxisLength;
@@ -643,9 +643,18 @@ classdef OOPSObject < handle
 
             ObjectProps.BWBoundary = object.Boundary;
 
+            % idxs returned by regionprops
             ObjectProps.PixelIdxList = object.PixelIdxList;
             ObjectProps.PixelList = object.PixelList;
             ObjectProps.SubarrayIdx = object.SubarrayIdx;
+
+            % other idxs and pixel idx lists calculated upon masking
+            ObjectProps.paddedSubarrayIdx = object.paddedSubarrayIdx;
+            ObjectProps.paddedSubarrayIdxAdjustment = object.paddedSubarrayIdxAdjustment;
+            ObjectProps.paddedSubImage = object.paddedSubImage;
+            ObjectProps.imageToPaddedObjectShift = object.imageToPaddedObjectShift;
+            ObjectProps.paddedPixelIdxList = object.paddedPixelIdxList;
+            ObjectProps.pixelMidlineTangentList = object.pixelMidlineTangentList;
 
             % the object midline
             try 
@@ -653,10 +662,7 @@ classdef OOPSObject < handle
             catch
                 Midline = [NaN NaN];
             end
-
             ObjectProps.Midline = Midline;
-
-
 
             % get the object label (OOPSLabel)
             ObjectLabel = object.Label;
@@ -673,11 +679,6 @@ classdef OOPSObject < handle
             % selection status
             obj.Selected = object.Selected;
 
-            % azimuth stats
-            %obj.AzimuthAverage = object.AzimuthAverage;
-            obj.AzimuthStd = object.AzimuthStd;
-            obj.MidlineRelativeAzimuth = object.MidlineRelativeAzimuth;
-            obj.NormalRelativeAzimuth = object.NormalRelativeAzimuth;
         end
     end
 

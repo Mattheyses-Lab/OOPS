@@ -63,7 +63,6 @@ classdef OOPSGroup < handle
         FFCAllDone logical
         ObjectDetectionAllDone logical
         LocalSBAllDone logical
-        %ObjectAzimuthAllDone logical
         
         % pixel-average OF for all images in this OOPSGroup for which OF has been calculated
         OFAvg double

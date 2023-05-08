@@ -53,7 +53,6 @@ classdef OOPSImage < handle
         OFDone = false
         ObjectDetectionDone = false
         LocalSBDone = false
-        %ObjectAzimuthDone = false
         ReferenceImageLoaded = false
         
 %% Masking      
@@ -247,7 +246,6 @@ classdef OOPSImage < handle
             replicate.OFDone = obj.OFDone;
             replicate.ObjectDetectionDone = obj.ObjectDetectionDone;
             replicate.LocalSBDone = obj.LocalSBDone;
-            replicate.ObjectAzimuthDone = obj.ObjectAzimuthDone;
             replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
 
             % image mask
@@ -1174,7 +1172,6 @@ classdef OOPSImage < handle
             obj.OFDone = replicate.OFDone;
             obj.ObjectDetectionDone = replicate.ObjectDetectionDone;
             obj.LocalSBDone = replicate.LocalSBDone;
-            obj.ObjectAzimuthDone = replicate.ObjectAzimuthDone;
             obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;
 
             obj.bw = replicate.bw;
