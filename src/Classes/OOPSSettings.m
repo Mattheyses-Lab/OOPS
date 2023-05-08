@@ -69,20 +69,23 @@ classdef OOPSSettings < handle
         % Azimuth display settings
         AzimuthDisplaySettings struct
         
-        % ScatterPlot Settings
+        % ScatterPlot settings
         ScatterPlotSettings struct
         ScatterPlotBackgroundColor = [0 0 0];
         ScatterPlotForegroundColor = [1 1 1];
         ScatterPlotLegendVisible = true;
 
-        % SwarmPlot Settings
+        % SwarmPlot settings
         SwarmPlotSettings struct
-        % SwarmPlotBackgroundColor = [0 0 0];
-        % SwarmPlotForegroundColor = [1 1 1];
-        % SwarmPlotErrorBarColor = [1 1 1];
+
+        % PolarHistogram settings
+        PolarHistogramSettings struct
 
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
+
+        % variables for object polar plots
+        ObjectPolarPlotVariables cell
         
         % object labeling
         ObjectLabels OOPSLabel
@@ -130,8 +133,25 @@ classdef OOPSSettings < handle
         SwarmPlotForegroundColor
         SwarmPlotErrorBarColor
 
+        % PolarHistogram settings
+        PolarHistogramnBins
+        PolarHistogramWedgeFaceAlpha
+        PolarHistogramCircleBackgroundColor
+        PolarHistogramWedgeFaceColor
+        PolarHistogramWedgeEdgeColor
+        PolarHistogramWedgeLineWidth
+        PolarHistogramWedgeLineColor
+        PolarHistogramGridlinesColor
+        PolarHistogramLabelsColor
+        PolarHistogramCircleColor
+        PolarHistogramGridlinesLineWidth
+        PolarHistogramBackgroundColor
+        PolarHistogramVariable
+
         % Object variables "long" names
         ObjectPlotVariablesLong
+
+        ObjectPolarPlotVariablesLong
 
         % for adding/deleting/adjusting labels
         nLabels
@@ -181,7 +201,9 @@ classdef OOPSSettings < handle
                 'ColormapsSettings.mat',...
                 'ScatterPlotSettings.mat',...
                 'SwarmPlotSettings.mat',...
-                'AzimuthDisplaySettings.mat'};
+                'AzimuthDisplaySettings.mat',...
+                'PolarHistogramSettings.mat',...
+                'ObjectPolarPlotVariables.mat'};
 
             obj.updateSettingsFromFiles(settingsFiles);
 
@@ -315,23 +337,26 @@ classdef OOPSSettings < handle
             end
         end
 
+        function ObjectPolarPlotVariablesLong = get.ObjectPolarPlotVariablesLong(obj)
+            ObjectPolarPlotVariablesLong = cell(size(obj.ObjectPolarPlotVariables));
+            for varIdx = 1:numel(obj.ObjectPolarPlotVariables)
+                ObjectPolarPlotVariablesLong{varIdx} = ExpandVariableName(obj.ObjectPolarPlotVariables{varIdx});
+            end
+        end
+
         function IntensityColormap = get.IntensityColormap(obj)
-            %IntensityColormap = obj.ColormapsSettings.Intensity{3};
             IntensityColormap = obj.ColormapsSettings.Intensity.Map;
         end
 
         function OrderFactorColormap = get.OrderFactorColormap(obj)
-            %OrderFactorColormap = obj.ColormapsSettings.OrderFactor{3};
             OrderFactorColormap = obj.ColormapsSettings.OrderFactor.Map;
         end
 
         function ReferenceColormap = get.ReferenceColormap(obj)
-            %ReferenceColormap = obj.ColormapsSettings.Reference{3};
             ReferenceColormap = obj.ColormapsSettings.Reference.Map;
         end
 
         function AzimuthColormap = get.AzimuthColormap(obj)
-            %AzimuthColormap = obj.ColormapsSettings.Azimuth{3};
             AzimuthColormap = obj.ColormapsSettings.Azimuth.Map;
         end
 
@@ -385,6 +410,58 @@ classdef OOPSSettings < handle
 
         function SwarmPlotErrorBarColor = get.SwarmPlotErrorBarColor(obj)
             SwarmPlotErrorBarColor = obj.SwarmPlotSettings.ErrorBarColor;
+        end
+
+        function PolarHistogramnBins = get.PolarHistogramnBins(obj)
+            PolarHistogramnBins = obj.PolarHistogramSettings.nBins;
+        end
+
+        function PolarHistogramWedgeFaceAlpha = get.PolarHistogramWedgeFaceAlpha(obj)
+            PolarHistogramWedgeFaceAlpha = obj.PolarHistogramSettings.WedgeFaceAlpha;
+        end
+
+        function PolarHistogramCircleBackgroundColor = get.PolarHistogramCircleBackgroundColor(obj)
+            PolarHistogramCircleBackgroundColor = obj.PolarHistogramSettings.CircleBackgroundColor;
+        end
+
+        function PolarHistogramWedgeFaceColor = get.PolarHistogramWedgeFaceColor(obj)
+            PolarHistogramWedgeFaceColor = obj.PolarHistogramSettings.WedgeFaceColor;
+        end
+
+        function PolarHistogramWedgeEdgeColor = get.PolarHistogramWedgeEdgeColor(obj)
+            PolarHistogramWedgeEdgeColor = obj.PolarHistogramSettings.WedgeEdgeColor;
+        end
+
+        function PolarHistogramWedgeLineWidth = get.PolarHistogramWedgeLineWidth(obj)
+            PolarHistogramWedgeLineWidth = obj.PolarHistogramSettings.WedgeLineWidth;
+        end
+
+        function PolarHistogramWedgeLineColor = get.PolarHistogramWedgeLineColor(obj)
+            PolarHistogramWedgeLineColor = obj.PolarHistogramSettings.WedgeLineColor;
+        end
+
+        function PolarHistogramGridlinesColor = get.PolarHistogramGridlinesColor(obj)
+            PolarHistogramGridlinesColor = obj.PolarHistogramSettings.GridlinesColor;
+        end
+
+        function PolarHistogramLabelsColor = get.PolarHistogramLabelsColor(obj)
+            PolarHistogramLabelsColor = obj.PolarHistogramSettings.LabelsColor;
+        end
+
+        function PolarHistogramCircleColor = get.PolarHistogramCircleColor(obj)
+            PolarHistogramCircleColor = obj.PolarHistogramSettings.CircleColor;
+        end
+
+        function PolarHistogramGridlinesLineWidth = get.PolarHistogramGridlinesLineWidth(obj)
+            PolarHistogramGridlinesLineWidth = obj.PolarHistogramSettings.GridlinesLineWidth;
+        end
+
+        function PolarHistogramBackgroundColor = get.PolarHistogramBackgroundColor(obj)
+            PolarHistogramBackgroundColor = obj.PolarHistogramSettings.BackgroundColor;
+        end
+
+        function PolarHistogramVariable = get.PolarHistogramVariable(obj)
+            PolarHistogramVariable = obj.PolarHistogramSettings.Variable;
         end
 
         function nLabels = get.nLabels(obj)
