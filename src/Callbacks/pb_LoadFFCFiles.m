@@ -5,8 +5,6 @@ function [] = pb_LoadFFCFiles(source,~)
     GroupIndex = OOPSData.CurrentGroupIndex;
     InputFileType = Settings.InputFileType;
 
-    FFCData = struct();
-    
     % current group based on user selected group and channel idxs
     cGroup = OOPSData.Group(GroupIndex);
 
@@ -40,7 +38,7 @@ function [] = pb_LoadFFCFiles(source,~)
             
             if ~iscell(cal_files)
                 if cal_files == 0
-                    error('No background normalization files selected. Exiting...');
+                    error('No background normalization files selected.');
                 end
             end
 
@@ -49,7 +47,7 @@ function [] = pb_LoadFFCFiles(source,~)
             % determine how many FFC stacks were loaded
             % cal_files will be a cell array if number of stacks > 1
             if iscell(cal_files)
-                [~,n_cal] = size(cal_files);
+                n_cal = numel(cal_files);
             elseif ischar(cal_files)
                 n_cal = 1;
             end
@@ -72,13 +70,17 @@ function [] = pb_LoadFFCFiles(source,~)
                 end
                 temp2 = temp{1,1};
                 clear temp
+
                 if i==1
                     h = size(temp2{1,1},1);
                     w = size(temp2{1,1},2);
                     UpdateLog3(source,['Calibration file dimensions are ' num2str(w) ' by ' num2str(h)],'append');
+                    % preallocate our FFC matrix (n rows,n cols,n slices per stack,n stacks)
+                    FFC_all_cal = zeros(h,w,4,n_cal);
                 end
+
                 for j=1:4
-                    cGroup.FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
+                    FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
                     % indexing example: FFCData.all_cal(row,col,pol,stack)
                 end
             end
@@ -108,28 +110,30 @@ function [] = pb_LoadFFCFiles(source,~)
 
             OOPSData.Settings.LastDirectory = calPath;
 
-            if(iscell(cal_files)==0)
-                if(cal_files==0)
-                    error('No background normalization files selected. Exiting...');
+            if ~iscell(cal_files)
+                if cal_files == 0
+                    error('No background normalization files selected.');
                 end
             end
 
             if iscell(cal_files)
-                [~,n_cal] = size(cal_files);
+                n_cal = numel(cal_files);
             elseif ischar(cal_files)
                 n_cal = 1;
             end
 
-            for i=1:n_cal
+            for i = 1:n_cal
                 if iscell(cal_files)
                     filename = cal_files{1,i};
                 else
                     filename = cal_files;
                 end
+
                 temp = strsplit(filename,'.');
                 cGroup.FFC_cal_shortname{i,1} = temp{1};
                 clear temp
                 cGroup.FFC_cal_fullname{i,1} = [calPath filename];
+
                 if i == 1
                     if iscell(cal_files)
                         info = imfinfo(char(cGroup.FFC_cal_fullname{i,1}));
@@ -139,10 +143,14 @@ function [] = pb_LoadFFCFiles(source,~)
                     h = info.Height;
                     w = info.Width;
                     fprintf(['Calibration file dimensions are ' num2str(w) ' by ' num2str(h) '\n'])
+
+                    % preallocate our FFC matrix (n rows,n cols,n slices per stack,n stacks)
+                    FFC_all_cal = zeros(h,w,4,n_cal);
                 end
+
                 for j=1:4
                     try
-                        cGroup.FFC_all_cal(:,:,j,i) = im2double(imread(char(cGroup.FFC_cal_fullname{i,1}),j))*65535; %convert to 32 bit
+                        FFC_all_cal(:,:,j,i) = im2double(imread(char(cGroup.FFC_cal_fullname{i,1}),j))*65535; %convert to 32 bit
                     catch
                         error('Correction files may not all be the same size')
                     end
@@ -157,20 +165,13 @@ function [] = pb_LoadFFCFiles(source,~)
     %excitation polarization
     %normalize resulting average stack by dividing by max value within
     %stack (across all images)    
-    cGroup.FFC_n_cal = size(cGroup.FFC_all_cal,4);
-    cGroup.FFC_cal_average = sum(cGroup.FFC_all_cal,4)./cGroup.FFC_n_cal;
-    cGroup.FFC_cal_norm = cGroup.FFC_cal_average/max(max(max(cGroup.FFC_cal_average)));
+    FFC_n_cal = size(FFC_all_cal,4);
+    FFC_cal_average = sum(FFC_all_cal,4)./FFC_n_cal;
+    cGroup.FFC_cal_norm = FFC_cal_average/max(max(max(FFC_cal_average)));
     cGroup.FFC_Height = h;
     cGroup.FFC_Width = w;
-    cGroup.FFC_cal_size = size(cGroup.FFC_cal_norm);
-    
-%     % update main data structure with new data
-%     cGroup.FFCData = FFCData;
 
-    % test below
     cGroup.FFCLoaded = true;
-    
-    clear FFCData
 
     % if files tab is not current, invoke the callback we need to get there
     if ~strcmp(OOPSData.Settings.CurrentTab,'Files')

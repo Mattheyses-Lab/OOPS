@@ -20,11 +20,7 @@ classdef OOPSGroup < handle
 
         FFC_cal_shortname
         FFC_cal_fullname
-        FFC_all_cal
-        FFC_n_cal
-        FFC_cal_average
         FFC_cal_norm
-        FFC_cal_size
         FFC_Height
         FFC_Width
 
@@ -115,13 +111,11 @@ classdef OOPSGroup < handle
             if group.FFCLoaded
                 group.FFC_cal_shortname = obj.FFC_cal_shortname;
                 group.FFC_cal_fullname = obj.FFC_cal_fullname;
-                group.FFC_cal_size = obj.FFC_cal_size;
                 group.FFC_Height = obj.FFC_Height;
                 group.FFC_Width = obj.FFC_Width;
             else
                 group.FFC_cal_shortname = [];
                 group.FFC_cal_fullname = [];
-                group.FFC_cal_size = obj.FFC_cal_size;
                 group.FFC_Height = obj.FFC_Height;
                 group.FFC_Width = obj.FFC_Width;
             end
@@ -179,31 +173,23 @@ classdef OOPSGroup < handle
 
         % delete images from this OOPSGroup based on selection status in GUI
         function DeleteSelectedImages(obj)
-            
             % get handles to all images in this group
             AllReplicates = obj.Replicate;
-
             % initialize logical selection array to gather selected/unselected images
             Selected = false(obj.nReplicates,1);
-
             % set any elements to true if the corresponding images are selected
             Selected(obj.CurrentImageIndex) = true;
-
             % get list of 'good' objects (not selected)
             Good = AllReplicates(~Selected);
-            
             % get list of objects to delete (selected)
             Bad = AllReplicates(Selected);
-            
             % replace image array of group with only the ones we wish to keep (not selected)
             obj.Replicate = Good;
-
             % in case current image idx is greater than the total # of images
             if obj.CurrentImageIndex(1) > obj.nReplicates
                 % then select the last image in the list
                 obj.CurrentImageIndex = obj.nReplicates;
             end
-            
             % delete the bad OOPSImage objects
             % set their pixel idxs to 0 in the mask
             for i = 1:length(Bad)
@@ -357,21 +343,6 @@ classdef OOPSGroup < handle
             LocalSBAllDone = true;
         end
 
-        % function ObjectAzimuthAllDone = get.ObjectAzimuthAllDone(obj)
-        %     if obj.nReplicates == 0
-        %         ObjectAzimuthAllDone = false;
-        %         return
-        %     end
-        % 
-        %     for i = 1:obj.nReplicates
-        %         if ~obj.Replicate(i).ObjectAzimuthDone
-        %             ObjectAzimuthAllDone = false;
-        %             return
-        %         end
-        %     end
-        %     ObjectAzimuthAllDone = true;
-        % end
-
         function OFAvg = get.OFAvg(obj)
             OFAvg = mean([obj.Replicate(find([obj.Replicate.OFDone])).OFAvg]);
         end
@@ -499,7 +470,7 @@ classdef OOPSGroup < handle
 
 %% IN DEVELOPMENT
 
-            % get FFCData if the files were loaded into the project, otherwise simulate
+            % get FFCData if the files were loaded into the project, otherwise 'simulate'
             if obj.FFCLoaded
                 obj.FFC_cal_shortname = group.FFC_cal_shortname;
                 obj.FFC_cal_fullname = group.FFC_cal_fullname;
@@ -509,30 +480,40 @@ classdef OOPSGroup < handle
                 fileType = fnameSplit{end};
 
                 % get other relevant parameters
-                obj.FFC_n_cal = numel(group.FFC_cal_shortname);
+                FFC_n_cal = numel(group.FFC_cal_shortname);
 
                 switch fileType
 
                     case 'nd2'
 
-                        for i=1:obj.FFC_n_cal
-                            temp = bfopen(char(obj.FFC_cal_fullname{i,1}));
+                        for i=1:FFC_n_cal
+
+                            fullFilename = char(obj.FFC_cal_fullname{i,1});
+
+                            % throw an error if file does not exist
+                            if ~isfile(fullFilename)
+                                error('OOPSGroup:fileNotFound',...
+                                    ['Unable to load file: ',fullFilename,'\nMake sure the file is in the location shown above.'])
+                            end
+
+                            temp = bfopen(fullFilename);
                             temp2 = temp{1,1};
                             clear temp
 
                             if i==1
                                 obj.FFC_Height = size(temp2{1,1},1);
                                 obj.FFC_Width = size(temp2{1,1},2);
+                                FFC_all_cal = zeros(obj.FFC_Height,obj.FFC_Width,4,FFC_n_cal);
                             end
+
                             for j=1:4
-                                obj.FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
+                                FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
                                 % indexing example: FFCData.all_cal(row,col,pol,stack)
                             end
                         end
 
-                        obj.FFC_cal_average = sum(obj.FFC_all_cal,4)./obj.FFC_n_cal;
-                        obj.FFC_cal_norm = obj.FFC_cal_average/max(max(max(obj.FFC_cal_average)));
-                        obj.FFC_cal_size = size(obj.FFC_cal_norm);
+                        FFC_cal_average = sum(FFC_all_cal,4)./FFC_n_cal;
+                        obj.FFC_cal_norm = FFC_cal_average/max(max(max(FFC_cal_average)));
 
                     case 'tif'
 
@@ -542,13 +523,9 @@ classdef OOPSGroup < handle
             else
                 obj.FFC_cal_shortname = [];
                 obj.FFC_cal_fullname = [];
-                obj.FFC_n_cal = 1;
                 obj.FFC_Height = group.FFC_Height;
                 obj.FFC_Width = group.FFC_Width;
-                obj.FFC_cal_size = group.FFC_cal_size;
-                obj.FFC_all_cal = ones(obj.FFC_cal_size);
-                obj.FFC_cal_average = sum(obj.FFC_all_cal,4)./obj.FFC_n_cal;
-                obj.FFC_cal_norm = obj.FFC_cal_average/max(max(max(obj.FFC_cal_average)));
+                obj.FFC_cal_norm = ones(obj.FFC_Height,obj.FFC_Width,4);
             end
 
 %% END IN DEVELOPMENT

@@ -24,6 +24,8 @@ classdef OOPSImage < handle
 
         % height of the image (number of the rows in this image)
         Height double
+
+        pixelSize double
         
 %% Raw data stack and various normalized/averaged versions
         % raw image stack - pol_rawdata(y/row,x/col,PolIdx)

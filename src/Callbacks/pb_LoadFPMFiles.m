@@ -40,15 +40,15 @@ function [] = pb_LoadFPMFiles(source,~)
             % make OOPSGUI active figure
             figure(OOPSData.Handles.fH);
             
-            if(iscell(Pol_files) == 0)
-                if(Pol_files==0)
+            if ~iscell(Pol_files)
+                if Pol_files == 0
                     error('No files selected. Exiting...');
                 end
             end
 
             % check how many image stacks were selected
             if iscell(Pol_files)
-                [~,n_Pol] = size(Pol_files);
+                n_Pol = numel(Pol_files);
             elseif ischar(Pol_files)
                 n_Pol = 1;
             end
@@ -198,16 +198,10 @@ function [] = pb_LoadFPMFiles(source,~)
     OOPSData.Group(GroupIndex).CurrentImageIndex = 1;
     % if no FFC files loaded, simulate them with a matrix of ones
     if ~cGroup.FFCLoaded
-        UpdateLog3(source,'Warning: No FFC files found. Simulating them with matrix of ones...','append');
-        %FFCData = struct();
-        cGroup.FFC_all_cal = ones(size(OOPSData.CurrentImage.pol_rawdata));
-        cGroup.FFC_n_cal = 1;
-        cGroup.FFC_cal_average = sum(cGroup.FFC_all_cal,4)./cGroup.FFC_n_cal;
-        cGroup.FFC_cal_norm = cGroup.FFC_cal_average/max(max(max(cGroup.FFC_cal_average)));
+        UpdateLog3(source,'Warning: No FFC files found. Load them now if you wish to perform flat-field correction.','append');
+        cGroup.FFC_cal_norm = ones(size(OOPSData.CurrentImage.pol_rawdata));
         cGroup.FFC_Height = OOPSData.CurrentImage.Height;
         cGroup.FFC_Width = OOPSData.CurrentImage.Width;
-        cGroup.FFC_cal_size = size(cGroup.FFC_cal_norm);
-        %cGroup.FFCData = FFCData;
         % update log to indicate completion
         UpdateLog3(source,'Done.','append');
     end
