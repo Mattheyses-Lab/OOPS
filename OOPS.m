@@ -271,7 +271,8 @@ OOPSData.Handles.AppInfoSelector = uilistbox('parent',OOPSData.Handles.AppInfoSe
 % panel to show project summary
 OOPSData.Handles.AppInfoPanel = uipanel(OOPSData.Handles.MainGrid,...
     'Visible','Off',...
-    'Title','Project Summary');
+    'Title','Project Summary',...
+    'Scrollable','off');
 OOPSData.Handles.AppInfoPanel.Layout.Row = 2;
 OOPSData.Handles.AppInfoPanel.Layout.Column = 1;
 

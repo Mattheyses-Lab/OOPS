@@ -28,24 +28,24 @@ classdef OOPSObject < handle
         MinFeretDiameter = NaN
         
         % linear pixel indices to object pixels in full-sized image
-        PixelIdxList
+        PixelIdxList = []
         
         % pixel indices
-        PixelList
+        PixelList = []
         
         % index to the subimage such that L(idx{:}) extracts the elements
         % (2x1 cell | each cell is a 1xm or 1xn double for y and x subarray idxs, respectively)
-        SubarrayIdx
+        SubarrayIdx = []
 
         % coordinates of the object boundary (mx2 double | m = number of boundary points)
-        Boundary
+        Boundary = []
 
         % coordinates of the object midline
-        Midline
+        Midline = [NaN NaN]
         
         % S/B properties
-        BGIdxList
-        BufferIdxList
+        BGIdxList = []
+        BufferIdxList = []
         SignalAverage = NaN
         BGAverage = NaN
         SBRatio = NaN
@@ -67,7 +67,7 @@ classdef OOPSObject < handle
     properties(Dependent = true)
         % various output values, object properties, and object images that are too costly 
         % to constantly store in memory, but quick to calculate if needed
-
+        
         % list of azimuth pixel values
         AzimuthPixelValues
 

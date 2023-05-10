@@ -25,7 +25,6 @@ classdef OOPSProject < handle
 
         % nGroups x nLabels array of the number of objects with each label in this project
         labelCounts
-
     end
 
     methods
@@ -57,7 +56,8 @@ classdef OOPSProject < handle
         function proj = saveobj(obj)
 
             proj.ProjectName = obj.ProjectName;
-            %proj.Settings = obj.Settings;
+            
+            % save the settings
             proj.Settings = obj.Settings.saveobj();
 
             proj.CurrentGroupIndex = obj.CurrentGroupIndex;
@@ -68,11 +68,8 @@ classdef OOPSProject < handle
             else
                 for i = 1:obj.nGroups
                     disp('calling saveobj(Group)')
-                    %proj.Group(i) = saveobj(obj.Group(i));
-
-                    % best working method below
+                    % save each OOPSGroup
                     proj.Group(i,1) = obj.Group(i,1).saveobj();
-
                 end
             end
 
@@ -280,20 +277,10 @@ classdef OOPSProject < handle
 
             obj = OOPSProject(OOPSSettings.loadobj(proj.Settings));
 
-            % NewScreenSize = obj.Settings.ScreenSize;
-            % NewFontSize = obj.Settings.FontSize;
-            % NewSchemeNames = obj.Settings.SchemeNames;
-            % NewSchemePaths = obj.Settings.SchemePaths;
-            % 
             obj.ProjectName = proj.ProjectName;
             %obj.Settings = proj.Settings;
             obj.CurrentGroupIndex = proj.CurrentGroupIndex;
             obj.Handles = proj.Handles;
-            % 
-            % obj.Settings.ScreenSize = NewScreenSize;
-            % obj.Settings.FontSize = NewFontSize;
-            % obj.Settings.SchemeNames = NewSchemeNames;
-            % obj.Settings.SchemePaths = NewSchemePaths;
 
             % for each group in the saved data structure
             for i = 1:length(proj.Group)
