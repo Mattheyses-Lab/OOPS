@@ -171,7 +171,11 @@ classdef OOPSProject < handle
 
         % get the number of groups in this project
         function nGroups = get.nGroups(obj)
-            nGroups = numel(obj.Group);
+            if isvalid(obj.Group)
+                nGroups = numel(obj.Group);
+            else
+                nGroups = 0;
+            end
         end
 
         % return currently selected OOPSGroup in GUI

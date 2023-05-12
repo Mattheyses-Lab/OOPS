@@ -3207,21 +3207,24 @@ pause(0.5)
         
         SchemeNameCell = SimpleFormFig('Enter a name for the masking scheme',{'Scheme name'},'White','Black');
 
-        if iscell(SchemeNameCell)
-            NewSchemeName = SchemeNameCell{1};
-        else % invalid input
-            return
-        end
-
-        % open the CustomMaskMaker app so user can build a masking scheme
-        NewScheme = CustomMaskMaker(OOPSData.CurrentImage(1).I,[],OOPSData.Settings.IntensityColormap);
-        % get the handle to the mask maker app window
-        MaskMakerFig = findobj(groot,'Name','Mask Maker');
-        % and wait until it is closed
-        waitfor(MaskMakerFig);
-
-        % attempt to save the new mask scheme
         try
+            if iscell(SchemeNameCell)
+                NewSchemeName = SchemeNameCell{1};
+            else % invalid input
+                error('Canceled by user');
+            end
+
+            if isempty(OOPSData.CurrentImage)
+                error('No data found')
+            end
+
+            % open the CustomMaskMaker app so user can build a masking scheme
+            NewScheme = CustomMaskMaker(OOPSData.CurrentImage(1).I,[],OOPSData.Settings.IntensityColormap);
+            % get the handle to the mask maker app window
+            MaskMakerFig = findobj(groot,'Name','Mask Maker');
+            % and wait until it is closed
+            waitfor(MaskMakerFig);
+
             % if not a valid masking scheme, throw error
             if ~NewScheme.isValidMaskingScheme
                 error('Invalid scheme');
@@ -3240,6 +3243,13 @@ pause(0.5)
             switch ME.message
                 case 'Invalid scheme'
                     uialert(OOPSData.Handles.fH,'Not a valid masking scheme','Error');
+                    return
+                case 'Canceled by user'
+                    % no need to throw error here, just return
+                    %uialert(OOPSData.Handles.fH,'Canceled by user','Error');
+                    return
+                case 'No data found'
+                    uialert(OOPSData.Handles.fH,'You need to load at least one FPM stack first','Error');
                     return
                 otherwise
                     report = getReport(ME);

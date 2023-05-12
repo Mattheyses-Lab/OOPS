@@ -169,9 +169,6 @@ switch MaskType
                     % label individual branches (this has to be the last step if we want individually labeled branches)
                     [~,cImage.L] = labelBranches(full(cImage.bw));
 
-                    % update log with masking output
-                    UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
-
                     %% BUILD NEW OBJECTS
                     % detect objects from the mask
                     cImage.DetectObjects();
@@ -234,9 +231,6 @@ switch MaskType
                     % label individual branches in the mask
                     [~,cImage.L] = labelBranches(full(cImage.bw));
 
-                    % update log with masking output
-                    UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
-
                     %% BUILD NEW OBJECTS
                     % detect objects from the mask
                     cImage.DetectObjects();
@@ -290,10 +284,6 @@ switch MaskType
                     clear CC S L
                     % generate new label matrix
                     cImage.L = sparse(bwlabel(full(cImage.bw),4));
-
-                    % update log with masking output
-                    UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
-                    UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
 
                     % ...so we can detect the new ones (requires bw and L to be computed previously)
                     cImage.DetectObjects();
@@ -350,10 +340,6 @@ switch MaskType
 
                     % BUILD 4-CONNECTED LABEL MATRIX
                     cImage.L = sparse(bwlabel(full(cImage.bw),4));
-
-                    % update log with masking output
-                    UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
-                    UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
 
                     %% BUILD NEW OBJECTS
                     % ...so we can detect the new ones (requires bw and L to be computed previously)

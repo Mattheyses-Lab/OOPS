@@ -20,9 +20,13 @@ function NewProject2(source,~)
             error('Invalid input')
         end
 
+        % if groups already exist, delete them
+        if OOPSData.nGroups > 0
+            OOPSData.deleteGroups();
+        end
+
         % set the project name
         OOPSData.ProjectName = projectTitle;
-
 
         % make group name labels for the dialog box
         groupNamesLabels = cell(nGroups,1);
