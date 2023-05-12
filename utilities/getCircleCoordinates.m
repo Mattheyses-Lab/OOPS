@@ -9,11 +9,13 @@ function [x,y] = getCircleCoordinates(centerx,centery,r,extent)
 % h = plot(xunit, yunit);
 % hold off
 
+thetaResolution = 5;
+
 if isempty(extent)
-    extent = 2*pi;
+    extent = 360;
 end
 
-th = 0:1:extent;
+th = 0:thetaResolution:extent;
 x = r * cosd(th) + centerx;
 y = r * sind(th) + centery;
 
