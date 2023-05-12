@@ -629,7 +629,7 @@ classdef OOPSImage < handle
         end
         
         function RealWorldLimits = get.RealWorldLimits(obj)
-            RealWorldLimits = [0 obj.Settings.PixelSize*obj.Width];
+            RealWorldLimits = [0 obj.rawFPMPixelSize*obj.Width];
         end
 
 %% dependent get methods for various display options specific to this image
