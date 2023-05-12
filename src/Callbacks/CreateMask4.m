@@ -42,7 +42,7 @@ switch MaskType
                         % on loop iterations 2:n, double the threshold until nObjects < 500
                         if notfirst
                             cImage.level = cImage.level*2;
-                            UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
+                            %UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
                         end
                         notfirst = true;
                         % binarize median-filtered image at level determined above
@@ -63,8 +63,8 @@ switch MaskType
                     end
 
                     % update log with masking output
-                    UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
-                    UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
+                    %UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
+                    %UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
                     % detect objects from the mask
                     cImage.DetectObjects();
                     % indicates mask was generated automatically
