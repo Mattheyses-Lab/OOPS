@@ -35,6 +35,6 @@ function [] = UpdateLog3(source,msg,operation)
     
     scroll(OOPSData.Handles.LogWindow,'bottom');
     
-    drawnow
+    drawnow limitrate
     
 end

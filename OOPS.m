@@ -119,12 +119,6 @@ OOPSData.Handles.hGUIFontSize = uimenu(OOPSData.Handles.hGUI,'Text','Font Size')
 OOPSData.Handles.hGUIFontSize_Larger = uimenu(OOPSData.Handles.hGUIFontSize,'Text','Larger','Callback',@ChangeGUIFontSize);
 OOPSData.Handles.hGUIFontSize_Smaller = uimenu(OOPSData.Handles.hGUIFontSize,'Text','Smaller','Callback',@ChangeGUIFontSize);
 
-% Input File Type Option
-OOPSData.Handles.hFileInputType = uimenu(OOPSData.Handles.hOptionsMenu,'Text','File Input Type');
-% Options for input file type
-OOPSData.Handles.hFileInputType_nd2 = uimenu(OOPSData.Handles.hFileInputType,'Text','.nd2','Checked','On','Callback',@ChangeInputFileType);
-OOPSData.Handles.hFileInputType_tif = uimenu(OOPSData.Handles.hFileInputType,'Text','.tif','Checked','Off','Callback',@ChangeInputFileType);
-
 % Options for mask type ('Default' or 'Custom', 'Upload mask' in development
 OOPSData.Handles.hMaskType = uimenu(OOPSData.Handles.hOptionsMenu,'Text','Mask Type');
 % Option to select 'Default' mask type
@@ -3059,26 +3053,6 @@ pause(0.5)
 
     end
 
-
-%% Changing file input settings
-
-    function ChangeInputFileType(source,~)
-        OOPSData.Settings.InputFileType = source.Text;
-        UpdateLog3(source,['Input File Type Changed to ',source.Text],'append');
-        
-        switch OOPSData.Settings.InputFileType
-            case '.nd2'
-                OOPSData.Handles.hFileInputType_nd2.Checked = 'On';
-                OOPSData.Handles.hFileInputType_tif.Checked = 'Off';
-            case '.tif'
-                OOPSData.Handles.hFileInputType_nd2.Checked = 'Off';
-                OOPSData.Handles.hFileInputType_tif.Checked = 'On';
-        end
-
-        % only update summary overview if 'Project' is selected
-        UpdateSummaryDisplay(source,{'Project'});
-    end
-
 %% Changing object boxes type
 
     function ChangeObjectBoxType(source,~)
@@ -3728,13 +3702,13 @@ pause(0.5)
                 ImageSummary.bw = cImage.bw;
                 ImageSummary.OFAvg = cImage.OFAvg;
                 % raw data, raw data normalized to stack-max, raw stack-average
-                ImageSummary.RawData = cImage.pol_rawdata;
-                ImageSummary.RawDataAvg = cImage.RawPolAvg;
+                ImageSummary.rawFPMStack = cImage.rawFPMStack;
+                ImageSummary.rawFPMAverage = cImage.rawFPMAverage;
                 % same as above, but with flat-field corrected data
-                ImageSummary.FlatFieldCorrectedData = cImage.pol_ffc;
-                ImageSummary.FlatFieldCorrectedDataAvg = cImage.Pol_ImAvg;
+                ImageSummary.ffcFPMStack = cImage.ffcFPMStack;
+                ImageSummary.ffcFPMAverage = cImage.ffcFPMAverage;
                 % FF-corrected data normalized within each 4-px stack
-                ImageSummary.FlatFieldCorrectedDataPixelNorm = cImage.norm;
+                ImageSummary.ffcFPMPixelNorm = cImage.ffcFPMPixelNorm;
                 % output images
                 ImageSummary.OFImage = cImage.OF_image;
                 ImageSummary.MaskedOFImage = cImage.MaskedOFImage;

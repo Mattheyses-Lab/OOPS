@@ -281,7 +281,6 @@ classdef OOPSProject < handle
             %obj.Settings = proj.Settings;
             obj.CurrentGroupIndex = proj.CurrentGroupIndex;
             obj.Handles = proj.Handles;
-
             % for each group in the saved data structure
             for i = 1:length(proj.Group)
                 % load the group

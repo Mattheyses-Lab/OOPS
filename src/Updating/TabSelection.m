@@ -22,8 +22,8 @@ function TabSelection(source,~)
         OOPSData.Settings.Zoom.Restore = true;
     end
     
-    % indicate tab selection in log
-    UpdateLog3(source,[OOPSData.Settings.CurrentTab,' Tab Selected'],'append');
+    % indicate tab selection in log (commented for now, until log window updating is faster)
+    %UpdateLog3(source,[OOPSData.Settings.CurrentTab,' Tab Selected'],'append');
     
     switch OOPSData.Settings.PreviousTab % the tab we are switching from
     

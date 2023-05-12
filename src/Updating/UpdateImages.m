@@ -35,7 +35,7 @@ function [] = UpdateImages(source)
             end
 
             try
-                images = cImage.pol_rawdata_normalizedbystack;
+                images = cImage.rawFPMStack_normalizedbystack;
                 for i = 1:4
                     OOPSData.Handles.RawIntensityImgH(i).CData = images(:,:,i);
                 end
@@ -49,7 +49,7 @@ function [] = UpdateImages(source)
             %% FFC
             % flat-field corrected images
             try
-                images = cImage.pol_ffc_normalizedbystack;
+                images = cImage.ffcFPMStack_normalizedbystack;
                 for i = 1:4
                     OOPSData.Handles.PolFFCImgH(i).CData = images(:,:,i);
                 end
@@ -62,7 +62,7 @@ function [] = UpdateImages(source)
 
             % raw data images, normalized to stack max
             try
-                images = cImage.pol_rawdata_normalizedbystack;
+                images = cImage.rawFPMStack_normalizedbystack;
                 for i = 1:4
                     OOPSData.Handles.RawIntensityImgH(i).CData = images(:,:,i);
                 end
@@ -622,7 +622,7 @@ function [] = UpdateImages(source)
                 % initialize pixel-normalized intensity stack for curve fitting
                 PaddedObjPixelNormIntensity = zeros([size(RestrictedPaddedObjMask),4]);
                 % get pixel-normalized intensity stack for curve fitting
-                PaddedObjPixelNormIntensity(:) = cObject.Parent.norm(PaddedSubarrayIdx{:},:);
+                PaddedObjPixelNormIntensity(:) = cObject.Parent.ffcFPMPixelNorm(PaddedSubarrayIdx{:},:);
                 % calculate and plot object intensity curve fits
                 OOPSData.Handles.ObjectIntensityPlotAxH = PlotObjectIntensityProfile([0,pi/4,pi/2,3*(pi/4)],...
                     PaddedObjPixelNormIntensity,...
@@ -752,8 +752,16 @@ function [] = UpdateImages(source)
             if ~isempty(Midline) && ~any(isnan(Midline(:)))
                 % then attempt to plot the midline coordinates
                 try
+                    % % plot as a primitive line
+                    % OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectMaskAxH,...
+                    %     'XData',Midline(:,1),...
+                    %     'YData',Midline(:,2),...
+                    %     'Marker','none',...
+                    %     'LineStyle','-',...
+                    %     'LineWidth',2,...
+                    %     'Color',[0 0 0]);
                     % plot as a primitive line
-                    OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectMaskAxH,...
+                    OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectAzimuthOverlayAxH,...
                         'XData',Midline(:,1),...
                         'YData',Midline(:,2),...
                         'Marker','none',...
@@ -762,9 +770,12 @@ function [] = UpdateImages(source)
                         'Color',[0 0 0]);
                 catch ME
                     UpdateLog3(source,['Warning: Error displaying object midline: ', ME.message],'append');
-                    % reset the axes limits to match the object image size
+                    % % reset the axes limits to match the object image size
+                    % OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
+                    % OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
                     OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
                     OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
+
                 end
             end
 
@@ -788,7 +799,7 @@ function [] = UpdateImages(source)
                 % initialize stack-normalized intensity stack for display
                 PaddedObjNormIntensity = zeros([size(RestrictedPaddedObjMask),4]);
                 % get stack-normalized intensity stack for display
-                PaddedObjNormIntensity(:) = cObject.Parent.pol_ffc(PaddedSubarrayIdx{:},:);
+                PaddedObjNormIntensity(:) = cObject.Parent.ffcFPMStack(PaddedSubarrayIdx{:},:);
                 % normalize to stack maximum
                 % PaddedObjNormIntensity = PaddedObjNormIntensity./max(max(max(PaddedObjNormIntensity)));
                 % rescale the object intensity stack to the range [0 1]
