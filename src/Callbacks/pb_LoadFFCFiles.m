@@ -1,177 +1,144 @@
 function [] = pb_LoadFFCFiles(source,~)
 
+    % main data structure
     OOPSData = guidata(source);
-    Settings = OOPSData.Settings;
+    % group that we will be loading data for
     GroupIndex = OOPSData.CurrentGroupIndex;
-    InputFileType = Settings.InputFileType;
-
-    % current group based on user selected group and channel idxs
+    % get the current group into which we will load the image files
     cGroup = OOPSData.Group(GroupIndex);
 
-    %% This switch block should be its own function
-    switch InputFileType
-        %--------------------------.nd2 Files----------------------------------
-        case '.nd2'
+    % add code to clear any previously loaded FFC data
 
-            uialert(OOPSData.Handles.fH,'Select .nd2 flat-field stack(s)','Load flat-field image stack(s)',...
-                'Icon','',...
-                'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
-            
-            uiwait(OOPSData.Handles.fH);
 
-            OOPSData.Handles.fH.Visible = 'Off';
-            
-            try
-                [cal_files, calPath, ~] = uigetfile('*.nd2',...
-                    'Select .nd2 flat-field stack(s)',...
-                    'MultiSelect','on',OOPSData.Settings.LastDirectory);
-            catch
-                [cal_files, calPath, ~] = uigetfile('*.nd2',...
-                    'Select .nd2 flat-field stack(s)',...
-                    'MultiSelect','on');
-            end
 
-            OOPSData.Handles.fH.Visible = 'On';
-            figure(OOPSData.Handles.fH);
-
-            OOPSData.Settings.LastDirectory = calPath;
-            
-            if ~iscell(cal_files)
-                if cal_files == 0
-                    error('No background normalization files selected.');
-                end
-            end
-
-            UpdateLog3(source,'Opening FFC images...','append');
-
-            % determine how many FFC stacks were loaded
-            % cal_files will be a cell array if number of stacks > 1
-            if iscell(cal_files)
-                n_cal = numel(cal_files);
-            elseif ischar(cal_files)
-                n_cal = 1;
-            end
-
-            for i=1:n_cal
-                if iscell(cal_files)
-                    filename = cal_files{1,i};
-                else
-                    filename = cal_files;
-                end
-
-                temp = strsplit(filename,'.');
-                cGroup.FFC_cal_shortname{i,1} = temp{1};
-                cGroup.FFC_cal_fullname{i,1} = [calPath filename];
-
-                if iscell(cal_files)
-                    temp = bfopen(char(cGroup.FFC_cal_fullname{i,1}));
-                else
-                    temp = bfopen(char(cGroup.FFC_cal_fullname));
-                end
-                temp2 = temp{1,1};
-                clear temp
-
-                if i==1
-                    h = size(temp2{1,1},1);
-                    w = size(temp2{1,1},2);
-                    UpdateLog3(source,['Calibration file dimensions are ' num2str(w) ' by ' num2str(h)],'append');
-                    % preallocate our FFC matrix (n rows,n cols,n slices per stack,n stacks)
-                    FFC_all_cal = zeros(h,w,4,n_cal);
-                end
-
-                for j=1:4
-                    FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
-                    % indexing example: FFCData.all_cal(row,col,pol,stack)
-                end
-            end
-            %------------------------------.tif Files----------------------------------
-            
-        case '.tif'
-            
-            uialert(OOPSData.Handles.fH,'Select .tif flat-field stack(s)','Load flat-field image stack(s)',...
-                'Icon','',...
-                'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
-            
-            uiwait(OOPSData.Handles.fH);
-
-            OOPSData.Handles.fH.Visible = 'Off';
-
-            try
-                [cal_files, calPath, ~] = uigetfile('*.tif',...
-                    'Select .tif flat-field stack(s)',...
-                    'MultiSelect','on',OOPSData.Settings.LastDirectory);
-            catch
-                [cal_files, calPath, ~] = uigetfile('*.tif',...
-                    'Select .tif flat-field stack(s)',...
-                    'MultiSelect','on');
-            end
-
-            OOPSData.Handles.fH.Visible = 'On';
-
-            OOPSData.Settings.LastDirectory = calPath;
-
-            if ~iscell(cal_files)
-                if cal_files == 0
-                    error('No background normalization files selected.');
-                end
-            end
-
-            if iscell(cal_files)
-                n_cal = numel(cal_files);
-            elseif ischar(cal_files)
-                n_cal = 1;
-            end
-
-            for i = 1:n_cal
-                if iscell(cal_files)
-                    filename = cal_files{1,i};
-                else
-                    filename = cal_files;
-                end
-
-                temp = strsplit(filename,'.');
-                cGroup.FFC_cal_shortname{i,1} = temp{1};
-                clear temp
-                cGroup.FFC_cal_fullname{i,1} = [calPath filename];
-
-                if i == 1
-                    if iscell(cal_files)
-                        info = imfinfo(char(cGroup.FFC_cal_fullname{i,1}));
-                    else
-                        info = imfinfo(char(cGroup.FFC_cal_fullname));
-                    end
-                    h = info.Height;
-                    w = info.Width;
-                    fprintf(['Calibration file dimensions are ' num2str(w) ' by ' num2str(h) '\n'])
-
-                    % preallocate our FFC matrix (n rows,n cols,n slices per stack,n stacks)
-                    FFC_all_cal = zeros(h,w,4,n_cal);
-                end
-
-                for j=1:4
-                    try
-                        FFC_all_cal(:,:,j,i) = im2double(imread(char(cGroup.FFC_cal_fullname{i,1}),j))*65535; %convert to 32 bit
-                    catch
-                        error('Correction files may not all be the same size')
-                    end
-                end
-            end
-            
-    end % end file-type switch block
+    % end code to clear any previously loaded FFC data
     
+    % alert box to indicate required action, closing will resume interaction on main window
+    uialert(OOPSData.Handles.fH,...
+        'Select .nd2 or .tif polarization stack(s)',...
+        'Load flat-field image stack(s)',...
+        'Icon','',...
+        'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
+    % prevent interaction with the main window until we finish
+    uiwait(OOPSData.Handles.fH);
+    % hide main window
+    OOPSData.Handles.fH.Visible = 'Off';
     
-    %average all FFC stacks, result is average stack where each image in
-    %the stack is an average of all images collected at a specific
-    %excitation polarization
-    %normalize resulting average stack by dividing by max value within
-    %stack (across all images)    
-    FFC_n_cal = size(FFC_all_cal,4);
-    FFC_cal_average = sum(FFC_all_cal,4)./FFC_n_cal;
-    cGroup.FFC_cal_norm = FFC_cal_average/max(max(max(FFC_cal_average)));
-    cGroup.FFC_Height = h;
-    cGroup.FFC_Width = w;
+    % try to get files from the most recent directory, otherwise just use default
+    try
+        [FFCFiles, FFCPath, ~] = uigetfile('*.nd2',...
+            'Select .nd2 or .tif flat-field stack(s)',...
+            'MultiSelect','on',OOPSData.Settings.LastDirectory);
+    catch
+        [FFCFiles, FFCPath, ~] = uigetfile('*.nd2',...
+            'Select .nd2 or .tif flat-field stack(s)',...
+            'MultiSelect','on');
+    end
+    
+    % save accessed directory
+    OOPSData.Settings.LastDirectory = FFCPath;
+    % show main window
+    OOPSData.Handles.fH.Visible = 'On';
+    % make OOPSGUI active figure
+    figure(OOPSData.Handles.fH);
+    
+    if ~iscell(FFCFiles)
+        % if no files selected
+        if FFCFiles == 0
+            % throw error
+            error('No files selected');
+        else
+            % otherwise convert to cell array
+            FFCFiles = {FFCFiles};
+        end
+    end
+    
+    % check how many image stacks were selected
+    nFFCFiles = numel(FFCFiles);
 
+    % update log
+    UpdateLog3(source,['Opening ',num2str(nFFCFiles),' FFC images...'],'append');
+    
+    % preallocate some variables
+    FFC_cal_shortname = cell(nFFCFiles,1);
+    FFC_cal_fullname = cell(nFFCFiles,1);
+    
+    for i=1:nFFCFiles
+
+        % get the name of this file
+        filename = FFCFiles{1,i};
+        % split on the '.'
+        filenameSplit = strsplit(filename,'.');
+        % get the 'short' filename (without path and extension)
+        FFC_cal_shortname{i,1} = filenameSplit{1};
+        % get the 'full' filename (with path and extension)
+        FFC_cal_fullname{i,1} = [FFCPath filename];
+
+        % open the image with bioformats
+        bfData = bfopen(char(FFC_cal_fullname{i,1}));
+        % get the image info (pixel values and filename) from the first element of the bf cell array
+        imageInfo = bfData{1,1};
+
+        % make sure this is a 4-image stack
+        nSlices = length(imageInfo(:,1));
+
+        if nSlices ~= 4
+            error('LoadFFCData:incorrectSize', ...
+                ['Error while loading ', ...
+                FFC_cal_fullname{i,1}, ...
+                '\nFile must be a stack of four images'])
+        end
+
+        % from the bfdata cell array of image data, concatenate slices along 3rd dim and convert to matrix
+        rawFFCStack = cell2mat(reshape(imageInfo(1:4,1),1,1,4));
+        % get the metadata structure from the fourth element of the bf cell array
+        %omeMeta = bfData{1,4}; % currently not used so leave commented
+
+        % get the range of values in the input stack using its class
+        rawFFCRange = getrangefromclass(rawFFCStack);
+
+        % if this is this first file
+        if i == 1
+            % get the height and width of the input stack
+            [Height,Width] = size(rawFFCStack,[1 2]);
+            % preallocate the 4D matrix which will hold the FFC stacks
+            rawFFCStacks = zeros(Height,Width,4,nFFCFiles);
+        else
+            % throw error if dimensions of this image stack do not match those of the first one
+            assert(size(rawFFCStack,1)==Height,'Dimensions of FFC files do not match');
+            assert(size(rawFFCStack,2)==Width,'Dimensions of FFC files do not match');
+        end
+
+        % add this stack to our 4D array of stacks, convert to double with the same values
+        rawFFCStacks(:,:,:,i) = im2double(rawFFCStack).*rawFFCRange(2);
+    
+        % update log to display image dimensions
+        UpdateLog3(source,['Dimensions of ', ...
+            FFC_cal_fullname{i,1}, ...
+            ' are ', num2str(Width), ...
+            ' by ', num2str(Height)], ...
+            'append');
+    end
+
+    % add short and full filenames to this OOPSGroup
+    cGroup.FFC_cal_shortname = FFC_cal_shortname;
+    cGroup.FFC_cal_fullname = FFC_cal_fullname;
+    % store height and width of the FFC files
+    cGroup.FFC_Height = Height;
+    cGroup.FFC_Width = Width;
+
+    UpdateLog3(source,'Averaging and normalizing the input...','append');
+
+    % average the raw input stacks along the fourth dimension
+    FFC_cal_average = sum(rawFFCStacks,4)./nFFCFiles;
+    % normalize to the maximum value across all pixels/images in the average stack
+    cGroup.FFC_cal_norm = FFC_cal_average/max(FFC_cal_average,[],"all");
+
+    % indicate that at least one FFC file has been loaded
     cGroup.FFCLoaded = true;
+
+    % update log to indicate completion
+    UpdateLog3(source,'Done.','append');
 
     % if files tab is not current, invoke the callback we need to get there
     if ~strcmp(OOPSData.Settings.CurrentTab,'Files')
@@ -180,6 +147,5 @@ function [] = pb_LoadFFCFiles(source,~)
     
     UpdateImages(source);
     UpdateSummaryDisplay(source);
-    UpdateListBoxes(source);
     
 end
