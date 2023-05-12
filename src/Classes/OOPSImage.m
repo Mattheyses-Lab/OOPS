@@ -13,40 +13,42 @@ classdef OOPSImage < handle
 %% Input Image Properties
         
         % file name of the original input image
-        filename char
+        filename (1,:) char
 
         % shortened file name (no path)
-        pol_shortname char
-        pol_fullname char
+        pol_shortname (1,:) char
+        pol_fullname (1,:) char
 
         % width of the image (number of columns in the image matrix)
-        Width double
+        Width (1,1) double
 
         % height of the image (number of the rows in this image)
-        Height double
+        Height (1,1) double
 
-        pixelSize double
-        
-%% Raw data stack and various normalized/averaged versions
-        % raw image stack - pol_rawdata(y/row,x/col,PolIdx)
-        %   PolIdx: 1 = 0 deg | 2 = 45 deg | 3 = 90 deg | 4 = 135 deg
-        pol_rawdata
+        % real-world size of the pixels of the raw input data
+        rawFPMPixelSize double
 
-        % average intensity of the raw data
-        RawPolAvg
+        % class/type of the raw input data ('uint8','uint16',etc)
+        rawFPMClass (1,:) char
 
-        % flat-field corrected image stack - same indexing as raw
-        pol_ffc
+        % intensity range of the raw input data [low high] (based on class)
+        rawFPMRange (1,2) double
 
-        % average image stack - Pol_ImAvg(y/row,x/col)
-        Pol_ImAvg
+        % file type (extension) of the raw input data
+        rawFPMFileType (1,:) char
 
-        % pixel-normalized image stack - same indexing as raw
-        norm
+        % raw input stack, size = [Height,Width,4] variable types depedning on user input
+        rawFPMStack
 
-        % logical array of the pixels with intensity > 0 (should be true for all)
-        r1
-        
+        % average of the raw input stack, size = [Height,Width] double
+        rawFPMAverage
+
+        % flat-field corrected stack, size = [Height,Width,4]
+        ffcFPMStack
+
+        % average of the flat-field corrected stack, size = [Height,Width]
+        ffcFPMAverage
+
 %% Status Tracking    
 
         FilesLoaded = false
@@ -98,8 +100,6 @@ classdef OOPSImage < handle
 
         AzimuthImage double
         OF_image double
-        a double
-        b double
         
 %% Output Values        
         
@@ -116,6 +116,9 @@ classdef OOPSImage < handle
     % dependent properties (not stored in memory, calculated each time they are retrieved)
     properties (Dependent = true)
         
+        % flat-field corrected intensity stack, normalized to the max in the 3rd dimension
+        ffcFPMPixelNorm
+
         % OF image in RGB format
         OFImageRGB
 
@@ -144,10 +147,10 @@ classdef OOPSImage < handle
         ObjectNames cell
         
         % flat-field corrected image stack, normalized to the maximum value among all pixels in the stack
-        pol_ffc_normalizedbystack
+        ffcFPMStack_normalizedbystack
 
         % raw image stack, normalized to the maximum value among all pixels in the stack
-        pol_rawdata_normalizedbystack
+        rawFPMStack_normalizedbystack
         
         % number of objects detected in this OOPSImage
         nObjects uint16
@@ -297,14 +300,17 @@ classdef OOPSImage < handle
 
         % performs flat field correction for 1 OOPSImage
         function FlatFieldCorrection(obj)
+
+            rawFPMStackDouble = im2double(obj.rawFPMStack) .* obj.rawFPMRange(2);
+
             % divide each raw data image by the corresponding flatfield image
             for i = 1:4
-                obj.pol_ffc(:,:,i) = obj.pol_rawdata(:,:,i)./obj.Parent.FFC_cal_norm(:,:,i);
+                obj.ffcFPMStack(:,:,i) = rawFPMStackDouble(:,:,i)./obj.Parent.FFC_cal_norm(:,:,i);
             end
             % average FFC intensity
-            obj.Pol_ImAvg = mean(obj.pol_ffc,3);
+            obj.ffcFPMAverage = mean(obj.ffcFPMStack,3);
             % normalized average FFC intensity (normalized to max)
-            obj.I = obj.Pol_ImAvg./max(max(obj.Pol_ImAvg));
+            obj.I = obj.ffcFPMAverage./max(max(obj.ffcFPMAverage));
             % done with FFC
             obj.FFCDone = true;
         end
@@ -469,20 +475,18 @@ classdef OOPSImage < handle
 
         % calculate pixel-by-pixel OF and azimuth for this image
         function FindOrderFactor(obj)
-            % normalize each pixel in polarization stack to the maximum in dim 3
-            maximum = max(obj.pol_ffc,[],3);
-            obj.r1 = obj.pol_ffc(:,:,1) > 0;
-            obj.norm = obj.pol_ffc./maximum;
+            % get the pixel-normalized, flat-field corrected intensity stack
+            pixelNorm = obj.ffcFPMPixelNorm;
             % orthogonal polarization difference components
-            obj.a = obj.norm(:,:,1) - obj.norm(:,:,3);
-            obj.b = obj.norm(:,:,2) - obj.norm(:,:,4);
+            a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
+            b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
             % find Order Factor
-            obj.OF_image = zeros(size(obj.norm(:,:,1)));
-            obj.OF_image(obj.r1) = sqrt(obj.a(obj.r1).^2+obj.b(obj.r1).^2);
+            obj.OF_image = zeros(size(pixelNorm(:,:,1)));
+            obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
             % find azimuth image
-            obj.AzimuthImage = zeros(size(obj.norm(:,:,1)));
+            obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
             % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
-            obj.AzimuthImage(obj.r1) = (1/2).*atan2(obj.b(obj.r1),obj.a(obj.r1));
+            obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
             % update completion status
             obj.OFDone = true;
         end
@@ -597,14 +601,14 @@ classdef OOPSImage < handle
 
                     try
                         obj.Object(i).BGIdxList = newObjectBGPixels2;
-                        obj.Object(i).BGAverage = mean(obj.RawPolAvg(obj.Object(i).BGIdxList));
+                        obj.Object(i).BGAverage = mean(obj.rawFPMAverage(obj.Object(i).BGIdxList));
                     catch
                         obj.Object(i).BGIdxList = [];
                         obj.Object(i).BGAverage = NaN;
                     end
 
                     % calculate signal and BG levels
-                    obj.Object(i).SignalAverage = mean(obj.RawPolAvg(obj.Object(i).PixelIdxList));
+                    obj.Object(i).SignalAverage = mean(obj.rawFPMAverage(obj.Object(i).PixelIdxList));
                     obj.Object(i).SBRatio = obj.Object(i).SignalAverage / obj.Object(i).BGAverage;
 
                 end
@@ -696,6 +700,8 @@ classdef OOPSImage < handle
             varNames = [...
                 "Name",...
                 "Dimensions",...
+                "Input image class",...
+                "Pixel size",...
                 "Mask threshold",...
                 "Threshold adjusted",...
                 "Number of objects",...
@@ -712,6 +718,8 @@ classdef OOPSImage < handle
             ImageSummaryDisplayTable = table(...
                 {obj.pol_shortname},...
                 {obj.Dimensions},...
+                {obj.rawFPMClass},...
+                {obj.rawFPMPixelSize},...
                 {obj.level},...
                 {Logical2String(obj.ThresholdAdjusted)},...
                 {obj.nObjects},...
@@ -1039,13 +1047,14 @@ classdef OOPSImage < handle
 %% Normalize Image Stacks
 
         % get normalized FFC stack
-        function pol_ffc_normalizedbystack = get.pol_ffc_normalizedbystack(obj)
-            pol_ffc_normalizedbystack = obj.pol_ffc./(max(max(max(obj.pol_ffc))));
+        function ffcFPMStack_normalizedbystack = get.ffcFPMStack_normalizedbystack(obj)
+            ffcFPMStack_normalizedbystack = obj.ffcFPMStack./(max(max(max(obj.ffcFPMStack))));
         end
          
         % get normalized raw emission images stack
-        function pol_rawdata_normalizedbystack = get.pol_rawdata_normalizedbystack(obj)
-            pol_rawdata_normalizedbystack = obj.pol_rawdata./(max(max(max(obj.pol_rawdata))));
+        function rawFPMStack_normalizedbystack = get.rawFPMStack_normalizedbystack(obj)
+            rawDataDouble = im2double(obj.rawFPMStack);
+            rawFPMStack_normalizedbystack = rawDataDouble./(max(max(max(rawDataDouble))));
         end
 
 %% dependent 'get' methods for object output values
@@ -1114,6 +1123,14 @@ classdef OOPSImage < handle
                 FilteredOFAvg = NaN;
             end
         end
+
+%% dependent 'get' methods for intermediates that do not need to constantly be in memory
+
+        function ffcFPMPixelNorm = get.ffcFPMPixelNorm(obj)
+            ffcFPMPixelNorm = obj.ffcFPMStack./max(obj.ffcFPMStack,[],3);
+        end
+
+
     end
 
     methods (Static)
@@ -1137,17 +1154,30 @@ classdef OOPSImage < handle
                 case 'nd2'
                     disp(['Loading ',obj.pol_fullname,'...']);
                     % get file data structure
-                    temp = bfopen(char(replicate.pol_fullname));
-                    temp2 = temp{1,1};
-                    % get image dimensions
-                    obj.Height = size(temp2{1,1},1);
-                    obj.Width = size(temp2{1,1},2);
-                    % pre-allocate raw data array
-                    obj.pol_rawdata = zeros(obj.Height,obj.Width,4);
-                    % add each pol slice to 3D image matrix
-                    for j=1:4
-                        obj.pol_rawdata(:,:,j) = im2double(temp2{j,1})*65535;
+                    bfData = bfopen(char(replicate.pol_fullname));
+                    % get the image info (pixel values and filename) from the first element of the bf cell array
+                    imageInfo = bfData{1,1};
+                    % get the metadata structure from the fourth element of the bf cell array
+                    omeMeta = bfData{1,4};
+                    % try and get the pixel dimensions from the metadata
+                    try
+                        obj.rawFPMPixelSize = omeMeta.getPixelsPhysicalSizeX(0).value();
+                    catch
+                        warning('Unable to detect pixel size.')
                     end
+                    % get the actual image matrix
+                    imageData = cell2mat(reshape(imageInfo(1:4,1),1,1,4));
+                    % determine the class/type of the input data
+                    obj.rawFPMClass = class(imageData);
+                    % get the range of values in the input stack using its class
+                    obj.rawFPMRange = getrangefromclass(imageData);
+                    % get image dimensions
+                    obj.Height = size(imageData,1);
+                    obj.Width = size(imageData,2);
+                    % pre-allocate raw data array
+                    obj.rawFPMStack = zeros(obj.Height,obj.Width,4);
+                    % add the raw image data to this OOPSImage
+                    obj.rawFPMStack = imageData;
                 case 'tif'
                     disp(['Loading ',obj.pol_fullname,'...']);
                     % get file data structure
@@ -1156,17 +1186,17 @@ classdef OOPSImage < handle
                     obj.Height = info.Height;
                     obj.Width = info.Width;
                     % pre-allocate raw data array
-                    obj.pol_rawdata = zeros(obj.Height,obj.Width,4);
+                    obj.rawFPMStack = zeros(obj.Height,obj.Width,4);
                     % add the image data to pol_rawdata
                     for j=1:4
-                        obj.pol_rawdata(:,:,j) = im2double(imread(char(obj.pol_fullname),j))*65535;
+                        obj.rawFPMStack(:,:,j) = im2double(imread(char(obj.pol_fullname),j))*65535;
                     end
             end
 
             %% end raw data loading
 
             % average the raw data (polarization stack)
-            obj.RawPolAvg = mean(obj.pol_rawdata,3);
+            obj.rawFPMAverage = mean(im2double(obj.rawFPMStack),3);
 
             obj.FilesLoaded = replicate.FilesLoaded;
             obj.FFCDone = replicate.FFCDone;
