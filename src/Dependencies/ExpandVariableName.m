@@ -22,10 +22,6 @@ function NameOut = ExpandVariableName(NameIn)
             NameOut = 'Minor Axis Length';
         case 'Eccentricity'
             NameOut = 'Eccentricity';
-        case 'AvgReferenceChannelIntensity'
-            NameOut = 'Reference Channel Average Intensity';
-        case 'IntegratedReferenceChannelIntensity'
-            NameOut = 'Reference Channel Integrated Intensity';
         case 'BGAverage'
             NameOut = 'BG Intensity Average';
         case 'AzimuthAverage'

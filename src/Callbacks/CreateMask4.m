@@ -23,7 +23,7 @@ switch MaskType
                     disp('Main masking loop (time elapsed per loop):')
                     tic
                     % update log with status of masking
-                    UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
+                    UpdateLog3(source,[chartab,cImage.rawFPMShortName,' (',num2str(i),'/',num2str(nImages),')'],'append');
                     % use disk-shaped structuring element to calculate BG
                     BGImg = imopen(cImage.I,strel('disk',OOPSData.Settings.SESize,OOPSData.Settings.SELines));
                     % subtract BG
@@ -61,10 +61,6 @@ switch MaskType
                         % get nObjects from label matrix
                         nObjects = max(max(full(cImage.L)));
                     end
-
-                    % update log with masking output
-                    %UpdateLog3(source,[chartab,chartab,'Threshold set to ' num2str(cImage.level)], 'append');
-                    %UpdateLog3(source,[chartab,chartab,'Building new objects...'],'append');
                     % detect objects from the mask
                     cImage.DetectObjects();
                     % indicates mask was generated automatically
@@ -81,14 +77,13 @@ switch MaskType
                     % increment loop counter
                     i = i+1;
                 end % end iteration through images
-            case 'FilamentEdge'
-                SE = strel('disk',2,0);
+            case 'Filament'
                 % main masking loop, iterates through each selected image
                 for cImage = OOPSData.CurrentImage
                     disp('Main masking loop (time elapsed per loop):')
                     tic
                     % UPDATE LOG
-                    UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
+                    UpdateLog3(source,[chartab,cImage.rawFPMShortName,' (',num2str(i),'/',num2str(nImages),')'],'append');
 
                     % the normalized, average intensity image
                     I = cImage.I;
@@ -112,7 +107,6 @@ switch MaskType
                     end
                     % get the overall max
                     I_superopen = max(I_superopen,[],3);
-                    % end test
 
                     I = I_superopen;
                     cImage.EnhancedImg = I;
@@ -186,132 +180,13 @@ switch MaskType
                     % increment loop counter
                     i = i+1;
                 end % end iteration through images
-            case 'AdaptiveFilament'
-                SE = strel('disk',2,0);
-                % main masking loop, iterates through each selected image
-                for cImage = OOPSData.CurrentImage
-                    disp('Main masking loop (time elapsed per loop):')
-                    tic
-                    % UPDATE LOG
-                    UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
-
-                    I = cImage.I;
-
-                    %% Enhance intensity
-
-                    % enhance fibers
-                    I = fibermetric(I,6,"ObjectPolarity","bright","StructureSensitivity",0.5*maxhessiannorm(I,6));
-                    I = Scale0To1(imflatfield(I,30,'FilterSize',129));
-                    cImage.EnhancedImg = I;
-
-                    % GUESS THRESHOLD WITH OTSU'S METHOD
-                    [cImage.level,~] = graythresh(cImage.EnhancedImg);
-
-
-                    %% Build mask and label matrix
-
-                    % BINARIZE
-                    cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
-
-                    % CLEAR 10 PX BORDER
-                    cImage.bw = ClearImageBorder(cImage.bw,10);
-
-                    % testing below
-                    % remove any pixels that have a diagonal 8-connection
-                    % this is very useful and not built into matlab, consider writing separate function
-                    % fill in gaps to remove diagonally connected pixels, keep only the pixels we added
-                    diagFill = bwmorph(full(cImage.bw),'diag',1)-full(cImage.bw);
-                    % now get an image with just the pixels that were originally connected
-                    diagFill = bwmorph(diagFill,'diag',1)-diagFill;
-                    % set those pixels to 0
-                    cImage.bw(diagFill==1) = 0;
-                    % end testing
-
-
-                    % label individual branches in the mask
-                    [~,cImage.L] = labelBranches(full(cImage.bw));
-
-                    %% BUILD NEW OBJECTS
-                    % detect objects from the mask
-                    cImage.DetectObjects();
-                    % indicates mask was generated automatically
-                    cImage.ThresholdAdjusted = false;
-                    % a mask exists for this replicate
-                    cImage.MaskDone = true;
-                    % store the name of the mask used
-                    cImage.MaskName = MaskName;
-                    cImage.MaskType = MaskType;
-                    % update log
-                    UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
-                    % end main loop timer
-                    toc
-                    % increment loop counter
-                    i = i+1;
-                end % end iteration through images
-            case 'Intensity'
-                % main masking loop, iterates through each selected image
-                for cImage = OOPSData.CurrentImage
-                    disp('Main masking loop (time elapsed per loop):')
-                    tic
-                    % update log with status of masking
-                    UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
-                    % use disk-shaped structuring element to calculate BG
-                    BGImg = imopen(cImage.I,strel('disk',OOPSData.Settings.SESize,OOPSData.Settings.SELines));
-                    % subtract BG
-                    BGSubtractedImg = cImage.I - BGImg;
-                    % median filter BG-subtracted image
-                    cImage.EnhancedImg = medfilt2(BGSubtractedImg);
-                    % normalize to max
-                    cImage.EnhancedImg = cImage.EnhancedImg./max(max(cImage.EnhancedImg));
-                    % initial threshold guess using graythresh()
-                    [cImage.level,~] = graythresh(cImage.EnhancedImg);
-
-                    % binarize median-filtered image at level determined above
-                    cImage.bw = sparse(imbinarize(cImage.EnhancedImg,cImage.level));
-
-                    % set 10 border px on all sides to 0, this is to speed up local BG
-                    % detection later on
-                    cImage.bw(1:10,1:end) = 0;
-                    cImage.bw(1:end,1:10) = 0;
-                    cImage.bw(cImage.Height-9:end,1:end) = 0;
-                    cImage.bw(1:end,cImage.Width-9:end) = 0;
-
-                    % remove small objects
-                    CC = bwconncomp(full(cImage.bw),4);
-                    S = regionprops(CC, 'Area');
-                    L = labelmatrix(CC);
-                    cImage.bw = sparse(ismember(L, find([S.Area] >= 10)));
-                    clear CC S L
-                    % generate new label matrix
-                    cImage.L = sparse(bwlabel(full(cImage.bw),4));
-
-                    % ...so we can detect the new ones (requires bw and L to be computed previously)
-                    cImage.DetectObjects();
-                    % current object will be the first object by default
-                    cImage.CurrentObjectIdx = 1;
-                    % indicates mask was generated automatically
-                    cImage.ThresholdAdjusted = 0;
-                    % a mask exists for this replicate
-                    cImage.MaskDone = 1;
-                    % store the name of the mask used
-                    cImage.MaskName = MaskName;
-                    cImage.MaskType = MaskType;
-
-                    UpdateLog3(source,[chartab,chartab,num2str(cImage.nObjects) ' objects detected.'],'append');
-
-                    % end main loop timer
-                    toc
-
-                    % increment loop counter
-                    i = i+1;
-                end % end iteration through images
             case 'Adaptive'
                 % main masking loop, iterates through each selected image
                 for cImage = OOPSData.CurrentImage
                     disp('Main masking loop (time elapsed per loop):')
                     tic
                     % UPDATE LOG
-                    UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
+                    UpdateLog3(source,[chartab,cImage.rawFPMShortName,' (',num2str(i),'/',num2str(nImages),')'],'append');
 
                     % use disk-shaped structuring element to calculate BG
                     BGImg = imopen(cImage.I,strel('disk',OOPSData.Settings.SESize,OOPSData.Settings.SELines));
@@ -375,7 +250,7 @@ switch MaskType
             disp('Main masking loop (time elapsed per loop):')
             tic
             % UPDATE LOG
-            UpdateLog3(source,[chartab,cImage.pol_shortname,' (',num2str(i),'/',num2str(nImages),')'],'append');
+            UpdateLog3(source,[chartab,cImage.rawFPMShortName,' (',num2str(i),'/',num2str(nImages),')'],'append');
             % set cImage.I to starting/input image of the scheme
             CustomScheme.StartingImage = cImage.I;
             % execute the scheme

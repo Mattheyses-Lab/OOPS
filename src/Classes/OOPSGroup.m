@@ -1,4 +1,4 @@
-classdef OOPSGroup < handle
+ classdef OOPSGroup < handle
     % experimental groups class
     properties
 
@@ -125,7 +125,7 @@ classdef OOPSGroup < handle
             group.nReplicates = obj.nReplicates;
 
             for i = 1:obj.nReplicates
-                disp(['Saving OOPSImage: ',obj.Replicate(i).pol_shortname])
+                disp(['Saving OOPSImage: ',obj.Replicate(i).rawFPMShortName])
 %                 group.Replicate(i) = saveobj(obj.Replicate(i));
                 group.Replicate(i) = obj.Replicate(i).saveobj();
             end
@@ -235,7 +235,7 @@ classdef OOPSGroup < handle
         function ImageNames = get.ImageNames(obj)
             % new cell array of image names
             ImageNames = {};
-            [ImageNames{1:obj.nReplicates,1}] = obj.Replicate.pol_shortname;
+            [ImageNames{1:obj.nReplicates,1}] = obj.Replicate.rawFPMShortName;
         end  
         
         function CurrentImage = get.CurrentImage(obj)
@@ -508,7 +508,7 @@ classdef OOPSGroup < handle
 
                             for j=1:4
                                 FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
-                                % indexing example: FFCData.all_cal(row,col,pol,stack)
+                                % indexing example: FFCData.all_cal(row,col,slice,stack)
                             end
                         end
 

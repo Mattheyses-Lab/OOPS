@@ -10,7 +10,7 @@ function pb_FFC(source,~)
     % perform flat-field correction for each image
     for cImage = OOPSData.CurrentImage
         % update log to indicate which image we are on
-        UpdateLog3(source,['    ',cImage.pol_shortname,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
+        UpdateLog3(source,['    ',cImage.rawFPMShortName,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
         % perform the flat-field correction for this image
         cImage.FlatFieldCorrection;
         % increment the counter

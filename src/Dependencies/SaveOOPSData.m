@@ -26,7 +26,6 @@ function TableOut = SaveOOPSData(source)
                          'Solidity',0,...
                          'EquivDiameter',0,...
                          'Extent',0,...
-                         'AvgReferenceChannelIntensity',0,...
                          'LabelName','',...
                          'MidlineRelativeAzimuth',0,...
                          'NormalRelativeAzimuth',0,...
@@ -42,7 +41,7 @@ function TableOut = SaveOOPSData(source)
                 OOPSDataOut(MasterIdx).GroupIdx = i;
                 OOPSDataOut(MasterIdx).GroupName = OOPSData.Group(i).GroupName;
                 OOPSDataOut(MasterIdx).ImageIdx = j;
-                OOPSDataOut(MasterIdx).ImageName = OOPSData.Group(i).Replicate(j).pol_shortname;
+                OOPSDataOut(MasterIdx).ImageName = OOPSData.Group(i).Replicate(j).rawFPMShortName;
                 OOPSDataOut(MasterIdx).ObjectIdx = k;
                 OOPSDataOut(MasterIdx).OFAvg =  OOPSData.Group(i).Replicate(j).Object(k).OFAvg;
                 OOPSDataOut(MasterIdx).AzimuthAverage = OOPSData.Group(i).Replicate(j).Object(k).AzimuthAverage;
@@ -63,7 +62,6 @@ function TableOut = SaveOOPSData(source)
                 OOPSDataOut(MasterIdx).Solidity = OOPSData.Group(i).Replicate(j).Object(k).Solidity;
                 OOPSDataOut(MasterIdx).EquivDiameter = OOPSData.Group(i).Replicate(j).Object(k).EquivDiameter;
                 OOPSDataOut(MasterIdx).Extent = OOPSData.Group(i).Replicate(j).Object(k).Extent;
-                OOPSDataOut(MasterIdx).AvgReferenceChannelIntensity = OOPSData.Group(i).Replicate(j).Object(k).AvgReferenceChannelIntensity;
                 OOPSDataOut(MasterIdx).LabelName =  OOPSData.Group(i).Replicate(j).Object(k).LabelName;
                 OOPSDataOut(MasterIdx).MidlineRelativeAzimuth = OOPSData.Group(i).Replicate(j).Object(k).MidlineRelativeAzimuth;
                 OOPSDataOut(MasterIdx).NormalRelativeAzimuth = OOPSData.Group(i).Replicate(j).Object(k).NormalRelativeAzimuth;

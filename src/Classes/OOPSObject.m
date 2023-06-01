@@ -52,7 +52,7 @@ classdef OOPSObject < handle
         
         % Selection and labeling
         Label OOPSLabel
-        Selected = false
+        Selected (1,1) logical = false
 
         % stats in development
         paddedSubarrayIdx = NaN
@@ -71,8 +71,11 @@ classdef OOPSObject < handle
         % list of azimuth pixel values
         AzimuthPixelValues
 
-        % name of the group that to which this object's image belongs
+        % name of the group that to which this object belongs
         GroupName
+
+        % idx of the group to which this object belongs
+        GroupIdx
 
         % name of this object's parent image
         ImageName
@@ -106,10 +109,6 @@ classdef OOPSObject < handle
         LabelName
         LabelColor
         LabelColorSquare
-        
-        % Reference channel properties
-        AvgReferenceChannelIntensity
-        IntegratedReferenceChannelIntensity
 
         % index of this object in its parent 'Object' property
         SelfIdx
@@ -121,6 +120,13 @@ classdef OOPSObject < handle
         SimplifiedBoundary
         
         % other stats !IN DEVELOPMENT!
+
+        % the expanded bounding box of this object (left,bottom,width,height)
+        expandedBoundingBox
+
+        % the coordinates to the four vertices in the expanded bounding box
+        expandedBoundingBoxCoordinates
+
 
         paddedSubImageBoundary
 
@@ -334,36 +340,6 @@ classdef OOPSObject < handle
             end
         end
         
-        function AvgReferenceChannelIntensity = get.AvgReferenceChannelIntensity(obj)
-            
-            % if no reference image loaded, return NaN
-            if isempty(obj.Parent.ReferenceImage)
-                AvgReferenceChannelIntensity = NaN;
-                return
-            end
-
-            try
-                AvgReferenceChannelIntensity = mean(obj.Parent.ReferenceImage(obj.PixelIdxList));
-            catch
-                AvgReferenceChannelIntensity = NaN;
-            end
-        end
-        
-        function IntegratedReferenceChannelIntensity = get.IntegratedReferenceChannelIntensity(obj)
-
-            % if no reference image loaded, return NaN
-            if isempty(obj.Parent.ReferenceImage)
-                IntegratedReferenceChannelIntensity = NaN;
-                return
-            end
-
-            try
-                IntegratedReferenceChannelIntensity = sum(obj.Parent.ReferenceImage(obj.PixelIdxList));
-            catch
-                IntegratedReferenceChannelIntensity = NaN;
-            end
-        end        
-        
         function LabelIdx = get.LabelIdx(obj)
             LabelIdx = obj.Label.SelfIdx;
         end
@@ -386,16 +362,21 @@ classdef OOPSObject < handle
             GroupName = convertCharsToStrings(obj.Parent.Parent.GroupName);
         end
 
+        function GroupIdx = get.GroupIdx(obj)
+            % get the idx of the parent group
+            GroupIdx = obj.Parent.Parent.SelfIdx;
+        end
+
         function ImageName = get.ImageName(obj)
-            ImageName = categorical({obj.Parent.pol_shortname});
+            ImageName = categorical({obj.Parent.rawFPMShortName});
         end
 
         function InterpreterFriendlyImageName = get.InterpreterFriendlyImageName(obj)
-            % nameSplit = strsplit(obj.Parent.pol_shortname,'_');
+            % nameSplit = strsplit(obj.Parent.rawFPMShortName,'_');
             % InterpreterFriendlyImageName = categorical({strjoin(nameSplit,"\_")});
 
             % testing below
-            nameSplit = strsplit(obj.Parent.pol_shortname,'_');
+            nameSplit = strsplit(obj.Parent.rawFPMShortName,'_');
             InterpreterFriendlyImageName = convertCharsToStrings(strjoin(nameSplit,"\_"));
         end
 
@@ -463,6 +444,27 @@ classdef OOPSObject < handle
         end        
 
 % GET METHODS STILL IN DEVELOPMENT
+
+        function expandedBoundingBox = get.expandedBoundingBox(obj)
+            expandedBoundingBox = ExpandBoundingBox(obj.BoundingBox,4);
+        end
+
+        function expandedBoundingBoxCoordinates = get.expandedBoundingBoxCoordinates(obj)
+            BB = obj.expandedBoundingBox;
+
+            x = BB(1);
+            y = BB(2);
+            width = BB(3);
+            height = BB(4);
+
+            expandedBoundingBoxCoordinates = [ ...
+                x y; ...
+                x+width y; ...
+                x+width y+height; ...
+                x y+height ...
+                ];
+        end
+
 
         function AzimuthAngularDeviation = get.AzimuthAngularDeviation(obj)
             try

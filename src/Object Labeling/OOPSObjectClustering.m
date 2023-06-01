@@ -1,31 +1,36 @@
 function [ClusterIdxs,nClusters] = OOPSObjectClustering(ObjectData,...
     nClusters,...
     nReplicates,...
-    VariablesList,...
-    VariablesToPlot,...
     nClustersMode,...
-    Criterion)
+    Criterion,...
+    DistanceMetric,...
+    NormalizationMethod)
 
-%     Var1Name = VariablesList{VariablesToPlot(1)};
-%     Var2Name = VariablesList{VariablesToPlot(2)};
-%     Var3Name = VariablesList{VariablesToPlot(3)};
+% set rng to known state for consistent performance
+rng(6,'twister');
 
-    % set rng to known state for consistent performance
-    rng(6,'twister');
+% if a normalization method was selected
+if ~strcmp(NormalizationMethod,'none')
+    % normalize the data using the specified method
+    ObjectData = normalize(ObjectData,1,NormalizationMethod);
+end
 
-%% Euclidean distance k-means clustering (DETERMINE OPTIMUM NUMBER OF CLUSTERS, with more replicates) BEST SO FAR
+
+%% perform k-means clustering with the specified parameters
+
+maxK = 15;
 
 switch nClustersMode
     case 'Manual'
         disp(['Performing k-means clustering with ',num2str(nClusters),' clusters...']);
     case 'Auto'
-        disp(['Determining the optimal value of k (max=10) with the ',Criterion,' criterion...']);
-        clust = zeros(size(ObjectData,1),10);
-        Sums = zeros(1,10);
-        for i=1:10
+        disp(['Determining the optimal value of k (max=',num2str(maxK),') with the ',Criterion,' criterion...']);
+        clust = zeros(size(ObjectData,1),maxK);
+        Sums = zeros(1,maxK);
+        for i=1:maxK
             % run kmeans clustering with i clusters
-            [clust(:,i),~,S,~] = kmeans(ObjectData,i,'replicate',nReplicates);
-            % save the within cluster sum of sums
+            [clust(:,i),~,S,~] = kmeans(ObjectData,i,'replicate',nReplicates,'Distance',DistanceMetric);
+            % save the within-cluster sums of point-to-centroid distances
             Sums(1,i) = sum(S);
         end
 
@@ -36,15 +41,39 @@ switch nClustersMode
         % ylabel('Sum of within-cluster point-to-centroid distances');
 
         % evaluate the clusters using the user-selected criterion
-        ClusterEvalObj = evalclusters(ObjectData,clust,Criterion);
-        nClusters = ClusterEvalObj.OptimalK;
+
+
+        switch Criterion
+            case 'CalinskiHarabasz'
+                ClusterEvalObj = evalclusters(ObjectData,clust,Criterion);
+                nClusters = ClusterEvalObj.OptimalK;
+            case 'DaviesBouldin'
+                ClusterEvalObj = evalclusters(ObjectData,clust,Criterion);
+                nClusters = ClusterEvalObj.OptimalK;
+            case 'silhouette'
+                ClusterEvalObj = evalclusters(ObjectData,clust,Criterion,'Distance',DistanceMetric);
+                nClusters = ClusterEvalObj.OptimalK;
+        end
+
+        %figure();plot(ClusterEvalObj);
+
+
         disp(['Optimal number of clusters: ',num2str(nClusters)]);
 end
 
-    % use 'replicates' name-value pair to repeat the clustering algorithm
-    %   for different randomly selected centroids for each replicate 
-    [cidx3,cmeans3,sumd3] = kmeans(ObjectData,nClusters,'replicates',nReplicates,'display','final');
-    ClusterIdxs = cidx3;
+% use 'replicates' name-value pair to repeat the clustering algorithm
+%   for different randomly selected centroids for each replicate
+[cidx3,cmeans3,sumd3] = kmeans(ObjectData,nClusters,...
+    'replicates',nReplicates,...
+    'Distance',DistanceMetric,...
+    'display','final');
+ClusterIdxs = cidx3;
+
+
+
+
+
+
     % 3rd output, sumd3, contains sum of distance within each cluster for the best solution
 
     % % figure to show silhouette plots
