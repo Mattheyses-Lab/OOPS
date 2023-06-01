@@ -57,18 +57,18 @@ function [] = pb_LoadFPMFiles(source,~)
     for i=1:n_Pol
 
         % get the name of this file
-        filename = FPMFiles{1,i};
+        rawFPMFileName = FPMFiles{1,i};
         % split on the '.'
-        filenameSplit = strsplit(filename,'.');
+        filenameSplit = strsplit(rawFPMFileName,'.');
         % get the 'short' filename (without path and extension)
-        pol_shortname = filenameSplit{1};
+        rawFPMShortName = filenameSplit{1};
         % get the 'full' filename (with path and extension)
-        pol_fullname = [FPMPath filename];
+        rawFPMFullName = [FPMPath rawFPMFileName];
         % get the file extension
         rawFPMFileType = filenameSplit{2};
 
         % open the image with bioformats
-        bfData = bfopen(char(pol_fullname));
+        bfData = bfopen(char(rawFPMFullName));
         % get the image info (pixel values and filename) from the first element of the bf cell array
         imageInfo = bfData{1,1};
 
@@ -78,7 +78,7 @@ function [] = pb_LoadFPMFiles(source,~)
         if nSlices ~= 4
             error('LoadFPMData:incorrectSize', ...
                 ['Error while loading ', ...
-                pol_fullname, ...
+                rawFPMFullName, ...
                 '\nFile must be a stack of four images'])
         end
 
@@ -105,11 +105,11 @@ function [] = pb_LoadFPMFiles(source,~)
         cImage = cGroup.Replicate(end);
 
         % get the name of this file
-        cImage.filename = filename;
+        cImage.rawFPMFileName = rawFPMFileName;
         % store the 'short' filename (without path and extension)
-        cImage.pol_shortname = pol_shortname;
+        cImage.rawFPMShortName = rawFPMShortName;
         % store the 'full' filename (with path and extension)
-        cImage.pol_fullname = pol_fullname;
+        cImage.rawFPMFullName = rawFPMFullName;
         % store the file extension
         cImage.rawFPMFileType = rawFPMFileType;
         % try and get the pixel dimensions from the metadata
@@ -144,7 +144,7 @@ function [] = pb_LoadFPMFiles(source,~)
 
         % update log to display image dimensions
         UpdateLog3(source,['Dimensions of ', ...
-            char(cImage.pol_shortname), ...
+            char(cImage.rawFPMShortName), ...
             ' are ', num2str(cImage.Width), ...
             ' by ', num2str(cImage.Height)], ...
             'append');
