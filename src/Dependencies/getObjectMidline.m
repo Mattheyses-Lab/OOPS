@@ -122,6 +122,7 @@ edge = nan(numel(istr),2);
 
 % get idxs to Voronoi nodes within the object boundary
 v_inobj_idx = find(inpolygon(V(:,1),V(:,2),boundariesx,boundariesy));
+
 % using those idxs, get the actual (x,y) coordinates of each Voronoi node
 v_inobj = V(v_inobj_idx,:);
 
@@ -167,12 +168,22 @@ numNodes = numel(weights)+1;
 
 node_names = arrayfun(@num2str, (1:numNodes).', 'UniformOutput', 0);
 
-% create a NodeTable to pass into graph() upon construction
-NodeTable = table( ...
-    node_names, ...
-    v_inobj(:,1), ...
-    v_inobj(:,2), ...
-    'VariableNames',{'Name' 'Xcoord' 'Ycoord'});
+% chance for an error here if the graph contains any cycles (i.e. numEdges ~= numNodes - 1)
+% apparently, this happens if a node outside the mask object is inadvertenly included because it is inside
+% the object boundary
+% for now, we just catch any error and return NaN
+
+try
+    % create a NodeTable to pass into graph() upon construction
+    NodeTable = table( ...
+        node_names, ...
+        v_inobj(:,1), ...
+        v_inobj(:,2), ...
+        'VariableNames',{'Name' 'Xcoord' 'Ycoord'});
+catch
+    Midline = [NaN NaN];
+    return
+end
 
 % create an undirected graph using the edges, edge weights, and node properties we just found
 G = graph(edges(:,1),edges(:,2),weights,NodeTable);
