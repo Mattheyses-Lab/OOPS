@@ -13,11 +13,11 @@ classdef OOPSImage < handle
 %% Input Image Properties
         
         % file name of the original input image
-        filename (1,:) char
+        rawFPMFileName (1,:) char
 
         % shortened file name (no path)
-        pol_shortname (1,:) char
-        pol_fullname (1,:) char
+        rawFPMShortName (1,:) char
+        rawFPMFullName (1,:) char
 
         % width of the image (number of columns in the image matrix)
         Width (1,1) double
@@ -26,7 +26,7 @@ classdef OOPSImage < handle
         Height (1,1) double
 
         % real-world size of the pixels of the raw input data
-        rawFPMPixelSize double
+        rawFPMPixelSize (1,1) double
 
         % class/type of the raw input data ('uint8','uint16',etc)
         rawFPMClass (1,:) char
@@ -38,50 +38,50 @@ classdef OOPSImage < handle
         rawFPMFileType (1,:) char
 
         % raw input stack, size = [Height,Width,4] variable types depedning on user input
-        rawFPMStack
+        rawFPMStack (:,:,4)
 
         % average of the raw input stack, size = [Height,Width] double
-        rawFPMAverage
+        rawFPMAverage (:,:) double
 
         % flat-field corrected stack, size = [Height,Width,4]
-        ffcFPMStack
+        ffcFPMStack (:,:,4) double
 
         % average of the flat-field corrected stack, size = [Height,Width]
-        ffcFPMAverage
+        ffcFPMAverage (:,:) double
 
 %% Status Tracking    
 
-        FilesLoaded = false
-        FFCDone = false
-        MaskDone = false
-        OFDone = false
-        ObjectDetectionDone = false
-        LocalSBDone = false
-        ReferenceImageLoaded = false
+        FilesLoaded (1,1) logical = false
+        FFCDone (1,1) logical = false
+        MaskDone (1,1) logical = false
+        OFDone (1,1) logical = false
+        ObjectDetectionDone (1,1) logical = false
+        LocalSBDone (1,1) logical = false
+        ReferenceImageLoaded (1,1) logical = false
         
 %% Masking      
 
         % image mask
-        bw logical
+        bw (:,:) logical
         
         % label matrix that defines the objects
-        L
+        L (:,:) double
 
         % whether the mask intensity threshold has been manually adjusted
-        ThresholdAdjusted logical = false
+        ThresholdAdjusted (1,1) logical = false
 
         % the intensity threshold used to generate the mask (only for certain mask types)
-        level double
+        level (1,1) double
         
         % masking steps
-        I double
-        EnhancedImg double
+        I (:,:) double
+        EnhancedImg (:,:) double
 
         % the type of mask applied to this image ('Default', 'Custom')
-        MaskType = 'Default'
+        MaskType (1,:) char = 'Default'
 
         % the name of the mask applied to this image (various)
-        MaskName = 'Legacy'
+        MaskName (1,:) char = 'Legacy'
         
         % mask threshold adjustment (for display purposes)
         IntensityBinCenters
@@ -89,7 +89,7 @@ classdef OOPSImage < handle
         
 %% Object Data        
         % objects
-        CurrentObjectIdx uint16 % i.e. no more than 65535 objects per group
+        CurrentObjectIdx (1,1) uint16 % i.e. no more than 65535 objects per group
         
 %% Reference Image
 
@@ -98,9 +98,9 @@ classdef OOPSImage < handle
         
 %% Output Images
 
-        AzimuthImage double
-        OF_image double
-        
+        AzimuthImage (:,:) double
+        OF_image (:,:) double
+
 %% Output Values        
         
         % output values
@@ -108,8 +108,8 @@ classdef OOPSImage < handle
         
 %% Intensity display limits
 
-        PrimaryIntensityDisplayLimits = [0 1];
-        ReferenceIntensityDisplayLimits = [0 1];
+        PrimaryIntensityDisplayLimits (1,2) double = [0 1];
+        ReferenceIntensityDisplayLimits (1,2) double = [0 1];
  
     end
     
@@ -153,53 +153,53 @@ classdef OOPSImage < handle
         rawFPMStack_normalizedbystack
         
         % number of objects detected in this OOPSImage
-        nObjects uint16
+        nObjects (1,1) uint16
         
         % currently selected object in this OOPSImage
-        CurrentObject OOPSObject
+        CurrentObject (1,1) OOPSObject
         
         % image dimensions as a char array for display purposes: 'dim1xdim2'
-        Dimensions char
+        Dimensions (1,:) char
         
         % 2-element vector describing the limits of the image in real-world coordinates
-        RealWorldLimits double        
+        RealWorldLimits (1,2) double        
         
         % average OF among all objects
-        OFAvg double
+        OFAvg (1,1) double
 
         % maximum OF among all objects
-        OFMax double
+        OFMax (1,1) double
 
         % minimum OF among all objects
-        OFMin double
+        OFMin (1,1) double
 
         % list of pixel OFs for all of the pixels in the image mask
-        OFList double
+        OFList (:,1) double
 
         % various filtered output
         bw_filt
         FilteredOFAvg
 
         % index of this image in [obj.Parent.Replicate()]
-        SelfIdx
+        SelfIdx (1,1)
 
         % title of the threshold adjustment panel in the GUI
-        ThreshPanelTitle char
+        ThreshPanelTitle (1,:) char
 
         % name of the threshold statistic being adjusted, depends on MaskType/MaskName
-        ThreshStatisticName char
+        ThreshStatisticName (1,:) char
 
         % whether or not manual image thresholding is enabled, depends on MaskType/MaskName
-        ManualThreshEnabled logical
+        ManualThreshEnabled (1,1) logical
 
         % handle to the OOPSSettings object, shared across the entire data structure
-        Settings OOPSSettings
+        Settings (1,1) OOPSSettings
 
         % table used to build the image summary uitable shown in the GUI
         ImageSummaryDisplayTable
 
         % 1 x nLabels array of the number of objects with each label in this image
-        labelCounts
+        labelCounts (1,:) double
 
     end
     
@@ -210,7 +210,7 @@ classdef OOPSImage < handle
             obj.Parent = Group;
             
             % image name (minus path and file extension)
-            obj.pol_shortname = '';
+            obj.rawFPMShortName = '';
             
             % default threshold level (used to set binary mask)
             obj.level = 0;
@@ -238,9 +238,9 @@ classdef OOPSImage < handle
         % saveobj() method
         function replicate = saveobj(obj)
 
-            replicate.filename = obj.filename;
-            replicate.pol_shortname = obj.pol_shortname;
-            replicate.pol_fullname = obj.pol_fullname;
+            replicate.rawFPMFileName = obj.rawFPMFileName;
+            replicate.rawFPMShortName = obj.rawFPMShortName;
+            replicate.rawFPMFullName = obj.rawFPMFullName;
             replicate.Width = obj.Width;
             replicate.Height = obj.Height;
 
@@ -303,6 +303,8 @@ classdef OOPSImage < handle
 
             rawFPMStackDouble = im2double(obj.rawFPMStack) .* obj.rawFPMRange(2);
 
+            % preallocate matrix
+            obj.ffcFPMStack = zeros(obj.Height,obj.Width,4);
             % divide each raw data image by the corresponding flatfield image
             for i = 1:4
                 obj.ffcFPMStack(:,:,i) = rawFPMStackDouble(:,:,i)./obj.Parent.FFC_cal_norm(:,:,i);
@@ -400,13 +402,9 @@ classdef OOPSImage < handle
             
             % get handles to all objects in this image
             AllObjects = obj.Object;
-            % idxs to the bad objects
-            %BadIdxs = find([AllObjects.Label]==Label);
-            % and the bad objects
+            % just the bad objects
             Bad = AllObjects([AllObjects.Label]==Label);
-            % idxs to the good objects
-            %GoodIdxs = find([AllObjects.Label]~=Label);
-            % and the good objects
+            % just the good objects
             Good = AllObjects([AllObjects.Label]~=Label);
             % replace the Object array of this image with only the ones we are keeping
             obj.Object = Good;
@@ -520,8 +518,6 @@ classdef OOPSImage < handle
             % can't detect local S/B until we detect the objects!
             if obj.ObjectDetectionDone
 
-                tic
-
                 % get nObjects x 1 cell array of padded object subimages
                 paddedObjectImages = {obj.Object(:).RestrictedPaddedMaskSubImage}';
 
@@ -541,27 +537,9 @@ classdef OOPSImage < handle
 
                 all_object_pixels = obj.bw;
                 all_buffer_pixels = cell2mat(bufferIdxs);
-                all_BG_pixels = cell2mat(BGIdxs);
+                %all_BG_pixels = cell2mat(BGIdxs);
 
-
-                elapsedTime = toc;
-                disp(['S and B identification: ',num2str(elapsedTime),' s'])
-
-                %% testing below - show a label matrix to test identification of S and B
-                % SBLabels = zeros(obj.Height,obj.Width);
-                %
-                % SBLabels(all_object_pixels) = 1;
-                % SBLabels(all_buffer_pixels) = 2;
-                % SBLabels(all_BG_pixels) = 3;
-                %
-                % SBLabels = label2rgb(SBLabels);
-                %
-                % imshow2(SBLabels)
-                %% end testing
                 %% now filter the pixels found above
-
-                tic
-
                 % for each object
                 for i = 1:obj.nObjects
                     %% first, we remove any buffer pixels that overlap with any object pixels
@@ -574,7 +552,6 @@ classdef OOPSImage < handle
 
                     % keep only the elements in bufferPixels that are not in allObjectPixels
                     newObjectBufferPixels = setdiff(objectBufferPixels,allObjectPixels);
-
 
                     %% next, we remove any BG pixels that overlap with any object or buffer pixels
 
@@ -591,7 +568,7 @@ classdef OOPSImage < handle
                     newObjectBGPixels2 = setdiff(newObjectBGPixels,allObjectPixels);
 
 
-                    %% BUG IDENTIFIED HERE: If there are too many objects within a small region, code may fail to identify
+                    %% "BUG" IDENTIFIED HERE: If there are too many objects within a small region, code may fail to identify
                     % any BG or buffer pixels. In that case new_buffer and/or new_BG will be empty. Still need to
                     % implement a fix for this... (maybe delete the object then re-index if no BG pxs found?)
                     % however, this is a very rare bug that only causes issues in cases of very low S/N, in which
@@ -612,11 +589,8 @@ classdef OOPSImage < handle
                     obj.Object(i).SBRatio = obj.Object(i).SignalAverage / obj.Object(i).BGAverage;
 
                 end
-
+                % indicate that Local S/B calculation has been one for this image
                 obj.LocalSBDone = true;
-
-                elapsedTime = toc;
-                disp(['S and B pixel filtering: ',num2str(elapsedTime),' s'])
             else
                 error('Cannot calculate local S:B until objects are detected');
             end
@@ -642,10 +616,6 @@ classdef OOPSImage < handle
                             ThreshPanelTitle = 'Adjust Otsu threshold';
                         case 'Adaptive'
                             ThreshPanelTitle = 'Adjust adaptive mask sensitivity';
-                        case 'Intensity'
-                            ThreshPanelTitle = 'Adjust intensity threshold';
-                        case 'AdaptiveFilament'
-                            ThreshPanelTitle = 'Adjust adaptive mask sensitivity';
                         otherwise
                             ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
                     end
@@ -661,10 +631,6 @@ classdef OOPSImage < handle
                         case 'Legacy'
                             ThreshStatisticName = 'Threshold';
                         case 'Adaptive'
-                            ThreshStatisticName = 'Adaptive mask sensitivity';
-                        case 'Intensity'
-                            ThreshStatisticName = 'Threshold';
-                        case 'AdaptiveFilament'
                             ThreshStatisticName = 'Adaptive mask sensitivity';
                         otherwise
                             ThreshStatisticName = false;
@@ -682,10 +648,6 @@ classdef OOPSImage < handle
                         case 'Legacy'
                             ManualThreshEnabled = true;
                         case 'Adaptive'
-                            ManualThreshEnabled = true;
-                        case 'Intensity'
-                            ManualThreshEnabled = true;
-                        case 'AdaptiveFilament'
                             ManualThreshEnabled = true;
                         otherwise
                             ManualThreshEnabled = false;
@@ -716,7 +678,7 @@ classdef OOPSImage < handle
                 "Local S/B calculated"];
 
             ImageSummaryDisplayTable = table(...
-                {obj.pol_shortname},...
+                {obj.rawFPMShortName},...
                 {obj.Dimensions},...
                 {obj.rawFPMClass},...
                 {obj.rawFPMPixelSize},...
@@ -1025,6 +987,83 @@ classdef OOPSImage < handle
             end
         end
 
+        function [...
+                AllVertices,...
+                AllCData,...
+                SelectedFaces,...
+                UnselectedFaces...
+                ] = getObjectRectanglePatchData(obj)
+
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+
+            % get list of unselected objects
+            Unselected = AllObjects(~[obj.Object.Selected]);
+            % get list of selected objects
+            Selected = AllObjects([obj.Object.Selected]);
+
+            totalnObjects = numel(Unselected)+numel(Selected);
+
+            % highest number of boundary vertices among all objects
+            AllVerticesMax = 0;
+
+            % total number of boundary vertices among all objects
+            AllVerticesSum = 0;
+
+            % for each object
+            for cObject = obj.Object
+                % % get the number of vertices in the simplified boundary
+                % nVertices = size(cObject.SimplifiedBoundary,1);
+                
+                % get the number of vertices in the boundary
+                nVertices = 4;       
+                % determine the total and max number of vertices
+                AllVerticesSum = AllVerticesSum + nVertices;
+                AllVerticesMax = max(AllVerticesMax,nVertices);
+            end
+
+            % initialize unselected faces matrix (each row is a vector of vertex idxs)
+            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
+            % initialize selected faces matrix (each row is a vector of vertex idxs)
+            SelectedFaces = nan(totalnObjects,AllVerticesMax);
+            % list of boundary coordinates for all objects
+            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
+            % object/face counter
+            Counter = 0;
+            % list of FaceVertexCData for the patch objects we are going to draw
+            AllCData = zeros(AllVerticesSum+totalnObjects,3);
+            % total number of vertices we have created faces for
+            TotalVertices = 0;
+
+            for cObject = obj.Object
+                % increment the object/face counter
+                Counter = Counter + 1;
+                % % get the simplified boundary
+                % thisObjectBoundary = cObject.SimplifiedBoundary;
+                % get the boundary
+                thisObjectBoundary = cObject.expandedBoundingBoxCoordinates;
+                % determine number of vertices
+                nvertices = size(thisObjectBoundary,1);
+                % obtain vertices idx
+                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
+                % add boundary coordinates to list of vertices
+                AllVertices(AllVerticesIdx,:) = thisObjectBoundary;
+                % add CData for each vertex
+                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                % set object faces depending on their selection status
+                switch cObject.Selected
+                    case true
+                        % add vertex idxs to selected faces list
+                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                    case false
+                        % add vertex idxs to unselected faces list
+                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                end
+                % increment the total number of vertices
+                TotalVertices = TotalVertices + nvertices;
+            end
+        end
+
         % return the number of objects in this OOPSImage
         function nObjects = get.nObjects(obj)
             if isvalid(obj.Object)
@@ -1138,23 +1177,23 @@ classdef OOPSImage < handle
 
             obj = OOPSImage(OOPSGroup.empty());
 
-            % info about the image path and filename
-            obj.filename = replicate.filename;
-            obj.pol_shortname = replicate.pol_shortname;
-            obj.pol_fullname = replicate.pol_fullname;
+            % info about the image path and rawFPMFileName
+            obj.rawFPMFileName = replicate.rawFPMFileName;
+            obj.rawFPMShortName = replicate.rawFPMShortName;
+            obj.rawFPMFullName = replicate.rawFPMFullName;
 
-            %% attempt to load the raw data using the saved filename
+            %% attempt to load the raw data using the saved rawFPMFileName
 
             % find file extension
-            fnameSplit = strsplit(obj.filename,'.');
+            fnameSplit = strsplit(obj.rawFPMFileName,'.');
             fileType = fnameSplit{end};
 
             % load the image data
             switch fileType
                 case 'nd2'
-                    disp(['Loading ',obj.pol_fullname,'...']);
+                    disp(['Loading ',obj.rawFPMFullName,'...']);
                     % get file data structure
-                    bfData = bfopen(char(replicate.pol_fullname));
+                    bfData = bfopen(char(replicate.rawFPMFullName));
                     % get the image info (pixel values and filename) from the first element of the bf cell array
                     imageInfo = bfData{1,1};
                     % get the metadata structure from the fourth element of the bf cell array
@@ -1179,17 +1218,17 @@ classdef OOPSImage < handle
                     % add the raw image data to this OOPSImage
                     obj.rawFPMStack = imageData;
                 case 'tif'
-                    disp(['Loading ',obj.pol_fullname,'...']);
+                    disp(['Loading ',obj.rawFPMFullName,'...']);
                     % get file data structure
-                    info = imfinfo(char(obj.pol_fullname));
+                    info = imfinfo(char(obj.rawFPMFullName));
                     % get image dimensions
                     obj.Height = info.Height;
                     obj.Width = info.Width;
                     % pre-allocate raw data array
                     obj.rawFPMStack = zeros(obj.Height,obj.Width,4);
-                    % add the image data to pol_rawdata
+                    % add the image data to rawFPMStack
                     for j=1:4
-                        obj.rawFPMStack(:,:,j) = im2double(imread(char(obj.pol_fullname),j))*65535;
+                        obj.rawFPMStack(:,:,j) = im2double(imread(char(obj.rawFPMFullName),j))*65535;
                     end
             end
 
