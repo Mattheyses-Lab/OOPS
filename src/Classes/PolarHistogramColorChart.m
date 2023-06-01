@@ -103,6 +103,13 @@ methods(Access = protected)
         obj.HistogramAxes.Title.Visible = 'on';
         % get the angle data to plot in the histogram
         angles = obj.polarData;
+
+        if isempty(angles)
+            obj.BinWedges.XData = [];
+            obj.BinWedges.YData = [];
+            return
+        end
+
         % construct the bin edges 
         binEdges = linspace(0, 2*pi, obj.nBins+1);
         % Calculate the counts in each bin
