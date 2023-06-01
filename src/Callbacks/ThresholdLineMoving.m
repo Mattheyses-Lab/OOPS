@@ -31,29 +31,6 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
             MainReplicate.ObjectDetectionDone = false;
         
             OOPSData.Handles.MaskImgH.CData = bw;
-
-        case 'Intensity'
-            IM = MainReplicate.EnhancedImg;
-            IM = IM./max(max(IM));
-            bw = IM > ThresholdLevel;
-        
-            % clear 10 px around image borders
-            bw(1:10,1:end) = 0;
-            bw(1:end,1:10) = 0;
-            bw(rows-9:end,1:end) = 0;
-            bw(1:end,cols-9:end) = 0;
-
-            % remove objects < 10 px
-            CC = bwconncomp(bw,4);
-            S = regionprops(CC, 'Area');
-            L = labelmatrix(CC);
-            bw = ismember(L, find([S.Area] >= 10));
-        
-            MainReplicate.bw = bw;
-            MainReplicate.level = ThresholdLevel;
-            MainReplicate.ObjectDetectionDone = false;
-            % update mask display
-            OOPSData.Handles.MaskImgH.CData = bw;
         case 'Adaptive'
             IM = MainReplicate.I;
 
@@ -62,22 +39,6 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
             % clear 10 px around image borders
             bw = ClearImageBorder(bw,10);
 
-            % remove objects < 10 px
-            CC = bwconncomp(bw,4);
-            S = regionprops(CC, 'Area');
-            L = labelmatrix(CC);
-            bw = ismember(L, find([S.Area] >= 10));
-
-            MainReplicate.bw = bw;
-            MainReplicate.level = ThresholdLevel;
-
-            MainReplicate.ObjectDetectionDone = false;
-            % update mask display
-            OOPSData.Handles.MaskImgH.CData = bw;
-        case 'AdaptiveFilament'
-            bw = MainReplicate.EnhancedImg > ThresholdLevel;
-            % clear 10 px around image borders
-            bw = ClearImageBorder(bw,10);
             % remove objects < 10 px
             CC = bwconncomp(bw,4);
             S = regionprops(CC, 'Area');
