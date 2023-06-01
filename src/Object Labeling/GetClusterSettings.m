@@ -1,85 +1,153 @@
-function ClusterSettings = GetClusterSettings(VarList)
+function ClusterSettings = GetClusterSettings(variableList)
 
 ClusterSettings = struct();
-ClusterSettings.VarList = {};
+ClusterSettings.variableList = {};
 ClusterSettings.nClustersMode = 'Manual';
 ClusterSettings.nClusters = 3;
 ClusterSettings.Criterion = 'CalinskiHarabasz';
+ClusterSettings.DistanceMetric = 'sqeuclidean';
+ClusterSettings.NormalizationMethod = 'zscore';
 
-% cluster settings figure window
+%% main window and grid
+
 fH_ClusterSettings = uifigure("HandleVisibility","on",...
     "Visible","Off",...
-    "CloseRequestFcn",@CloseClusterSettingsFig);
-% cluster settings main grid layout object
+    "CloseRequestFcn",@CloseClusterSettingsFig,...
+    "Name",'k-means clustering options');
+
 MainGrid_ClusterSettings = uigridlayout(fH_ClusterSettings,...
     [3,1],...
     'BackgroundColor','Black',...
     'RowHeight',{'1x','fit',20},...
     'ColumnWidth',{'1x'});
+
+%% variable selection
+
 % uipanel to hold variable selection checkboxes
-VarPanel_ClusterSettings = uipanel(MainGrid_ClusterSettings,...
+variablePanel = uipanel(MainGrid_ClusterSettings,...
     'Title','Variables',...
     'BackgroundColor','Black',...
     'ForegroundColor','White');
-VarPanel_ClusterSettings.Layout.Row = 1;
-% uipanel to hold nCluster selection
-nClustersPanel_ClusterSettings = uipanel(MainGrid_ClusterSettings,...
-    'Title','Number of clusters (k)',...
+variablePanel.Layout.Row = 1;
+
+% add uitree checkbox with selection for each variable
+variableTreeGrid = uigridlayout(variablePanel,...
+    [1,1],...
+    'BackgroundColor','Black',...
+    'Padding',[0 0 0 0]);
+
+variableTree = uitree(variableTreeGrid,'checkbox');
+for i = 1:numel(variableList)
+    VarCheckNodes(i) = uitreenode(variableTree,...
+        'Text',ExpandVariableName(variableList{i}),...
+        'NodeData',variableList{i});
+end
+
+%% options panel and grid
+
+% options panel
+optionsPanel = uipanel(MainGrid_ClusterSettings,...
+    'Title','Options',...
     'BackgroundColor','Black',...
     'ForegroundColor','White');
-nClustersPanel_ClusterSettings.Layout.Row = 2;
+optionsPanel.Layout.Row = 2;
 
-% components to control nCluster selection
-nCLustersGrid = uigridlayout(nClustersPanel_ClusterSettings,...
-    [2,2],...
-    'BackgroundColor','Black');
+% options grid inside the panel
+optionsGrid = uigridlayout(optionsPanel,...
+    [5,2],...
+    "ColumnWidth",{'1x','fit'},...
+    "RowHeight",20,...
+    "RowSpacing",5,...
+    "BackgroundColor",[0 0 0]);
 
-nClustersManual = uicheckbox(nCLustersGrid,...
-    'Text','Manual',...
-    'FontColor','White',...
-    'ValueChangedFcn',@UpdatenClustersSelection,...
-    'Value',1);
-nClustersManual.Layout.Row = 1;
-nClustersManual.Layout.Column = 1;
+%% Mode for determining k
 
-nClustersManualEditfield = uieditfield(nCLustersGrid,...
-    'numeric',...
-    'ValueDisplayFormat','%.0f clusters',...
-    'Value',3);
-nClustersManualEditfield.Layout.Row = 1;
-nClustersManualEditfield.Layout.Column = 2;
+nClustersModeLabel = uilabel(...
+    "Parent",optionsGrid,...
+    "Text","k selection mode",...
+    "FontColor",[1 1 1]);
+nClustersModeLabel.Layout.Row = 1;
+nClustersModeLabel.Layout.Column = 1;
 
-nClustersAuto = uicheckbox(nCLustersGrid,...
-    'Text','Auto',...
-    'FontColor','White',...
-    'ValueChangedFcn',@UpdatenClustersSelection,...
-    'Value',0);
-nClustersAuto.Layout.Row = 2;
-nClustersAuto.Layout.Column = 1;
+nClustersModeDropdown = uidropdown(...
+    "Parent",optionsGrid,...
+    "Items",{'Auto','Manual'},...
+    "Value",'Manual',...
+    "ValueChangedFcn",@nClustersModeChanged);
+nClustersModeDropdown.Layout.Row = 1;
+nClustersModeDropdown.Layout.Column = 2;
 
-ClusterCriterionDropdown = uidropdown(nCLustersGrid,...
+%% k (manual)
+
+nClustersLabel = uilabel(...
+    "Parent",optionsGrid,...
+    "Text","k",...
+    "FontColor",[1 1 1]);
+nClustersLabel.Layout.Row = 2;
+nClustersLabel.Layout.Column = 1;
+
+nClustersEditfield = uieditfield(optionsGrid,...
+    "numeric",...
+    "Value",3,...
+    "Limits",[1 15]);
+nClustersEditfield.Layout.Row = 2;
+nClustersEditfield.Layout.Column = 2;
+
+%% Cluster criterion for auto k
+
+ClusterCriterionLabel = uilabel(...
+    "Parent",optionsGrid,...
+    "Text","Criterion",...
+    "FontColor",[1 1 1]);
+ClusterCriterionLabel.Layout.Row = 3;
+ClusterCriterionLabel.Layout.Column = 1;
+
+ClusterCriterionDropdown = uidropdown(...
+    "Parent",optionsGrid,...
     "Items",{'CalinskiHarabasz','DaviesBouldin','silhouette'},...
     "Enable","Off");
-ClusterCriterionDropdown.Layout.Row = 2;
+ClusterCriterionDropdown.Layout.Row = 3;
 ClusterCriterionDropdown.Layout.Column = 2;
+
+%% Distance metric
+
+DistanceMetricLabel = uilabel(...
+    "Parent",optionsGrid,...
+    "Text","Distance metric",...
+    "FontColor",[1 1 1]);
+DistanceMetricLabel.Layout.Row = 4;
+DistanceMetricLabel.Layout.Column = 1;
+
+DistanceMetricDropdown = uidropdown(...
+    "Parent",optionsGrid,...
+    "Items",{'sqeuclidean','cosine'},...
+    "Value",'sqeuclidean');
+DistanceMetricDropdown.Layout.Row = 4;
+DistanceMetricDropdown.Layout.Column = 2;
+
+%% Normalization method
+
+NormalizationMethodLabel = uilabel(...
+    "Parent",optionsGrid,...
+    "Text","Normalization method",...
+    "FontColor",[1 1 1]);
+NormalizationMethodLabel.Layout.Row = 5;
+NormalizationMethodLabel.Layout.Column = 1;
+
+NormalizationMethodDropdown = uidropdown(...
+    "Parent",optionsGrid,...
+    "Items",{'z-score','none'},...
+    "ItemsData",{'zscore','none'},...
+    "Value",'zscore');
+NormalizationMethodDropdown.Layout.Row = 5;
+NormalizationMethodDropdown.Layout.Column = 2;
+
+%% continue button
 
 % button to complete settings selection
 ContinueButton_ClusterSettings = uibutton(MainGrid_ClusterSettings,...
     'Text','Run k-means clustering',...
     'ButtonPushedFcn',@CloseClusterSettingsFig);
-
-% add uitree checkbox with selection for each variable
-VarTreeGrid = uigridlayout(VarPanel_ClusterSettings,...
-    [1,1],...
-    'BackgroundColor','Black',...
-    'Padding',[0 0 0 0]);
-
-VarTree = uitree(VarTreeGrid,'checkbox');
-for i = 1:numel(VarList)
-    VarCheckNodes(i) = uitreenode(VarTree,...
-        'Text',ExpandVariableName(VarList{i}),...
-        'NodeData',VarList{i});
-end
 
 % call drawnow and pause briefly
 drawnow
@@ -97,52 +165,35 @@ fH_ClusterSettings.Visible = "On";
 
 waitfor(fH_ClusterSettings)
 
-    function UpdatenClustersSelection(source,event)
-        switch source.Text
-            case 'Manual'
-                nClustersAuto.Value = ~(nClustersAuto.Value);
-                switch source.Value
-                    case 1
-                        ClusterSettings.nClustersMode = 'Manual';
-                        ClusterCriterionDropdown.Enable = 'Off';
-                        nClustersManualEditfield.Enable = 'On';
-                    case 0
-                        ClusterSettings.nClustersMode = 'Auto';
-                        ClusterCriterionDropdown.Enable = 'On';
-                        nClustersManualEditfield.Enable = 'Off';
-                end
+    function nClustersModeChanged(source,~)
+        switch source.Value
             case 'Auto'
-                nClustersManual.Value = ~(nClustersManual.Value);
-                switch source.Value
-                    case 1
-                        ClusterSettings.nClustersMode = 'Auto';
-                        nClustersManualEditfield.Enable = 'Off';
-                        ClusterCriterionDropdown.Enable = 'On';
-                    case 0
-                        ClusterSettings.nClustersMode = 'Manual';
-                        nClustersManualEditfield.Enable = 'On';
-                        ClusterCriterionDropdown.Enable = 'Off';
-                end
+                ClusterCriterionDropdown.Enable = 'on';
+                nClustersEditfield.Enable = 'off';
+            case 'Manual'
+                ClusterCriterionDropdown.Enable = 'off';
+                nClustersEditfield.Enable = 'on';
         end
     end
 
     function CloseClusterSettingsFig(~,~)
         % gather the output
-        if isempty(VarTree.CheckedNodes)
-            ClusterSettings.VarList = {};
+        if isempty(variableTree.CheckedNodes)
+            ClusterSettings.variableList = {};
         else
-            [ClusterSettings.VarList{1,1:numel(VarTree.CheckedNodes)}] = deal(VarTree.CheckedNodes.NodeData);
-            ClusterSettings.nClusters = nClustersManualEditfield.Value;
+            [ClusterSettings.variableList{1,1:numel(variableTree.CheckedNodes)}] = deal(variableTree.CheckedNodes.NodeData);
+            ClusterSettings.nClusters = nClustersEditfield.Value;
             ClusterSettings.Criterion = ClusterCriterionDropdown.Value;
+            ClusterSettings.DistanceMetric = DistanceMetricDropdown.Value;
+            ClusterSettings.nClustersMode = nClustersModeDropdown.Value;
+            ClusterSettings.NormalizationMethod = NormalizationMethodDropdown.Value;
         end
         % if no variables were selected
-        if isempty(ClusterSettings.VarList)
+        if isempty(ClusterSettings.variableList)
             ClusterSettings = [];
         end
         % delete the figure
         delete(fH_ClusterSettings);
     end
-
-
 
 end
