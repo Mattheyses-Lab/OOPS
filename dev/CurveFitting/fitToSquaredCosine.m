@@ -8,7 +8,7 @@ amplitude = zeros(Isz);
 azimuth = zeros(Isz);
 
 % linearly spaced vector (in radians) of phi angles (x values)
-phiFit = linspace(0,pi,180);
+phiFit = linspace(0,pi,181);
 
 for i = 1:numel(amplitude)
 
@@ -47,7 +47,12 @@ for i = 1:numel(amplitude)
     % M = modulation depth
     %M = (maxCurveFit-minCurveFit)/(maxCurveFit+minCurveFit);
 
-    amplitude(i) = (maxCurveFit-minCurveFit);
+    amplitude(i) = (maxCurveFit-minCurveFit)/(maxCurveFit+minCurveFit);
+
+    % below works for pre-normalized values (I think)
+    % amplitude(i) = (maxCurveFit-minCurveFit);
+
+
     azimuth(i) = phiFit(maxIdx);
 
 end
