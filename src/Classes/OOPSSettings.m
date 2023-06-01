@@ -27,8 +27,6 @@ classdef OOPSSettings < handle
             'DynamicAxes',[],...
             'DynamicAxesParent',[],...
             'ActiveObjectIdx',NaN);
-        
-        InputFileType = '.nd2';
 
         LastDirectory = pwd;
 
@@ -71,9 +69,6 @@ classdef OOPSSettings < handle
         
         % ScatterPlot settings
         ScatterPlotSettings struct
-        ScatterPlotBackgroundColor = [0 0 0];
-        ScatterPlotForegroundColor = [1 1 1];
-        ScatterPlotLegendVisible = true;
 
         % SwarmPlot settings
         SwarmPlotSettings struct
@@ -124,6 +119,11 @@ classdef OOPSSettings < handle
         % Scatterplot settings
         ScatterPlotXVariable
         ScatterPlotYVariable
+        ScatterPlotMarkerSize
+        ScatterPlotColorMode
+        ScatterPlotBackgroundColor
+        ScatterPlotForegroundColor
+        ScatterPlotLegendVisible
 
         % SwarmPlot settings
         SwarmPlotYVariable
@@ -132,6 +132,11 @@ classdef OOPSSettings < handle
         SwarmPlotBackgroundColor
         SwarmPlotForegroundColor
         SwarmPlotErrorBarColor
+
+        % new swarm plot settings
+        SwarmPlotMarkerFaceAlpha
+        SwarmPlotMarkerSize
+        SwarmPlotErrorBarsVisible
 
         % PolarHistogram settings
         PolarHistogramnBins
@@ -218,8 +223,6 @@ classdef OOPSSettings < handle
         % saveobj method
         function settings = saveobj(obj)
 
-            settings.InputFileType = obj.InputFileType;
-
             settings.SummaryDisplayType = obj.SummaryDisplayType;
 
             % monitor tab switching
@@ -239,16 +242,6 @@ classdef OOPSSettings < handle
             settings.SEShape = obj.SEShape;
             settings.SESize = obj.SESize;
             settings.SELines = obj.SELines;
-
-            % ScatterPlot Settings
-            settings.ScatterPlotBackgroundColor = obj.ScatterPlotBackgroundColor;
-            settings.ScatterPlotForegroundColor = obj.ScatterPlotForegroundColor;
-            settings.ScatterPlotLegendVisible = obj.ScatterPlotLegendVisible;
-
-            % SwarmPlot Settings
-            settings.SwarmPlotBackgroundColor = obj.SwarmPlotBackgroundColor;
-            settings.SwarmPlotForegroundColor = obj.SwarmPlotForegroundColor;
-            settings.SwarmPlotErrorBarColor = obj.SwarmPlotErrorBarColor;
 
             % object labeling
             settings.ObjectLabels = obj.ObjectLabels;
@@ -388,6 +381,26 @@ classdef OOPSSettings < handle
             ScatterPlotYVariable = obj.ScatterPlotSettings.YVariable;
         end
 
+        function ScatterPlotMarkerSize = get.ScatterPlotMarkerSize(obj)
+            ScatterPlotMarkerSize = obj.ScatterPlotSettings.MarkerSize;
+        end
+
+        function ScatterPlotColorMode = get.ScatterPlotColorMode(obj)
+            ScatterPlotColorMode = obj.ScatterPlotSettings.ColorMode;
+        end
+
+        function ScatterPlotBackgroundColor = get.ScatterPlotBackgroundColor(obj)
+            ScatterPlotBackgroundColor = obj.ScatterPlotSettings.BackgroundColor;
+        end
+
+        function ScatterPlotForegroundColor = get.ScatterPlotForegroundColor(obj)
+            ScatterPlotForegroundColor = obj.ScatterPlotSettings.ForegroundColor;
+        end
+
+        function ScatterPlotLegendVisible = get.ScatterPlotLegendVisible(obj)
+            ScatterPlotLegendVisible = obj.ScatterPlotSettings.LegendVisible;
+        end
+
         function SwarmPlotYVariable = get.SwarmPlotYVariable(obj)
             SwarmPlotYVariable = obj.SwarmPlotSettings.YVariable;
         end
@@ -410,6 +423,18 @@ classdef OOPSSettings < handle
 
         function SwarmPlotErrorBarColor = get.SwarmPlotErrorBarColor(obj)
             SwarmPlotErrorBarColor = obj.SwarmPlotSettings.ErrorBarColor;
+        end
+
+        function SwarmPlotMarkerFaceAlpha = get.SwarmPlotMarkerFaceAlpha(obj)
+            SwarmPlotMarkerFaceAlpha = obj.SwarmPlotSettings.MarkerFaceAlpha;
+        end
+
+        function SwarmPlotMarkerSize = get.SwarmPlotMarkerSize(obj)
+            SwarmPlotMarkerSize = obj.SwarmPlotSettings.MarkerSize;
+        end
+
+        function SwarmPlotErrorBarsVisible = get.SwarmPlotErrorBarsVisible(obj)
+            SwarmPlotErrorBarsVisible = obj.SwarmPlotSettings.ErrorBarsVisible;
         end
 
         function PolarHistogramnBins = get.PolarHistogramnBins(obj)
@@ -487,8 +512,6 @@ classdef OOPSSettings < handle
             % create the default settings object, to which we will add our saved settings
             obj = OOPSSettings();
 
-            obj.InputFileType = settings.InputFileType;
-
             obj.SummaryDisplayType = settings.SummaryDisplayType;
 
             % monitor tab switching
@@ -508,16 +531,6 @@ classdef OOPSSettings < handle
             obj.SEShape = settings.SEShape;
             obj.SESize = settings.SESize;
             obj.SELines = settings.SELines;
-
-            % ScatterPlot Settings
-            obj.ScatterPlotBackgroundColor = settings.ScatterPlotBackgroundColor;
-            obj.ScatterPlotForegroundColor = settings.ScatterPlotForegroundColor;
-            obj.ScatterPlotLegendVisible = settings.ScatterPlotLegendVisible;
-
-            % % SwarmPlot Settings
-            % obj.SwarmPlotBackgroundColor = settings.SwarmPlotBackgroundColor;
-            % obj.SwarmPlotForegroundColor = settings.SwarmPlotForegroundColor;
-            % obj.SwarmPlotErrorBarColor = settings.SwarmPlotErrorBarColor;
 
             % object labeling
             obj.ObjectLabels = settings.ObjectLabels;
