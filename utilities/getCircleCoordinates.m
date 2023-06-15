@@ -2,14 +2,7 @@ function [x,y] = getCircleCoordinates(centerx,centery,r,extent)
 % returns x and y coordinates to a circle or semi-circle with radius r centered at (centerx,centery)
 % (extent is the angle in degrees traversed by the radius line around the semi-circle edge)
 
-% hold on
-% th = 0:pi/50:2*pi;
-% xunit = r * cos(th) + x;
-% yunit = r * sin(th) + y;
-% h = plot(xunit, yunit);
-% hold off
-
-thetaResolution = 5;
+thetaResolution = 1;
 
 if isempty(extent)
     extent = 360;
