@@ -50,7 +50,6 @@ end
 
 methods(Access=protected)
     function setup(obj)
-        disp("Setup")
         % grid layout manager to hold the panel
         obj.containerGrid = uigridlayout(obj,...
             [1,1],...
