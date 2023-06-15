@@ -18,6 +18,8 @@ switch MaskType
         switch MaskName
             % DO NOT EDIT - this is the original masking strategy used in BJ Paper (Dean & Mattheyses, 2022)
             case 'Legacy'
+                % testing below - smaller minimum area (default 10)
+                minimumArea = 10;
                 % main masking loop, iterates through each selected image
                 for cImage = OOPSData.CurrentImage
                     disp('Main masking loop (time elapsed per loop):')
@@ -54,7 +56,7 @@ switch MaskType
                         CC = bwconncomp(full(cImage.bw),4);
                         S = regionprops(CC, 'Area');
                         L = labelmatrix(CC);
-                        cImage.bw = sparse(ismember(L, find([S.Area] >= 10)));
+                        cImage.bw = sparse(ismember(L, find([S.Area] >= minimumArea)));
                         clear CC S L
                         % generate new label matrix
                         cImage.L = sparse(bwlabel(full(cImage.bw),4));
@@ -309,6 +311,6 @@ UpdateLog3(source,'Done.','append');
 UpdateSummaryDisplay(source);
 UpdateObjectListBox(source);
 UpdateImages(source);
-UpdateImageOperationDisplay(source);
+UpdateThresholdSlider(source);
     
 end
