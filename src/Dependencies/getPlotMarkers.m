@@ -5,8 +5,8 @@ function plotMarkers = getPlotMarkers(nMarkers)
         'o',... % circle
         's',... % square
         '^',... % upward-pointing triangle
-        'p',... % pentagram
         'h',... % hexagram
+        'p',... % pentagram
         'd',... % diamond
         'v',... % downward-pointing triangle
         '>',... % right-pointing triangle
