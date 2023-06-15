@@ -36,13 +36,20 @@ function hScatter = PlotGroupScatterPlot(source,axH)
     Y = cell(nPlots,1);
     X = cell(nPlots,1);
 
+    % testing below
+    % make main figure active
+    figure(OOPSData.Handles.fH);
+    % end testing
 
     % set the proper current axes
     OOPSData.Handles.fH.CurrentAxes = axH;
     % initialize scatterplot array
     hScatter = gobjects(nPlots,1);
     % get a cell array of plot markers for each scatterplot
-    plotMarkers = getPlotMarkers(nPlots);
+    % uncomment for unique markers
+    %plotMarkers = getPlotMarkers(nPlots);
+
+    plotMarkers = repmat({'o'},1,nPlots);
     
     for i = 1:nPlots
 
@@ -101,7 +108,7 @@ function hScatter = PlotGroupScatterPlot(source,axH)
                         'SizeData',OOPSData.Settings.ScatterPlotMarkerSize,...
                         'DisplayName',OOPSData.Group(i).GroupName,...
                         'MarkerFaceAlpha',1,...
-                        'MarkerEdgeAlpha',0.5);
+                        'MarkerEdgeAlpha',1);
                 case 'Density'
                     % plot the data
                     hScatter(i) = scatter(axH,X{i},Y{i},...
@@ -111,7 +118,7 @@ function hScatter = PlotGroupScatterPlot(source,axH)
                         'SizeData',OOPSData.Settings.ScatterPlotMarkerSize,...
                         'DisplayName',OOPSData.Group(i).GroupName,...
                         'MarkerFaceAlpha',0.5,...
-                        'MarkerEdgeAlpha',0.5);
+                        'MarkerEdgeAlpha',1);
                 case 'Label'
                     % plot the data
                     hScatter(i) = scatter(axH,X{i},Y{i},...
@@ -122,7 +129,7 @@ function hScatter = PlotGroupScatterPlot(source,axH)
                         'SizeData',OOPSData.Settings.ScatterPlotMarkerSize,...
                         'DisplayName',OOPSData.Group(i).GroupName,...
                         'MarkerFaceAlpha',1,...
-                        'MarkerEdgeAlpha',0.5);
+                        'MarkerEdgeAlpha',1);
             end
         catch me
             switch me.message
@@ -134,6 +141,7 @@ function hScatter = PlotGroupScatterPlot(source,axH)
         end
         hold on
     end
+
     
 
     switch OOPSData.Settings.ScatterPlotColorMode
@@ -162,6 +170,34 @@ function hScatter = PlotGroupScatterPlot(source,axH)
             axH.Colormap = turbo;
 
             axH.CLim = [min(densityData) max(densityData)];
+
+            % delete the old scatterplot legend
+            delete(OOPSData.Handles.ScatterPlotLegend);
+
+            legendPlots = gobjects(OOPSData.nGroups,1);
+            legendPlotIdx = 1;
+
+            % for each group
+            for i = 1:OOPSData.nGroups
+                % create an empty plot for each group,label combination
+                legendPlots(legendPlotIdx) = plot(axH,...
+                    NaN,NaN,...
+                    'DisplayName',[OOPSData.Group(i).GroupName],...
+                    'Marker',plotMarkers{i},...
+                    'MarkerFaceColor',[1 1 1],...
+                    'MarkerEdgeColor',[0 0 0],...
+                    'MarkerSize',OOPSData.Settings.ScatterPlotMarkerSize,...
+                    'LineStyle','none');
+                % increment the idx
+                legendPlotIdx = legendPlotIdx+1;
+            end
+
+            % remake a new legend with the empty plot handles
+            OOPSData.Handles.ScatterPlotLegend = legend(legendPlots);
+
+            OOPSData.Handles.ScatterPlotLegend.TextColor = OOPSData.Settings.ScatterPlotForegroundColor;
+            OOPSData.Handles.ScatterPlotLegend.Color = OOPSData.Settings.ScatterPlotBackgroundColor;
+            OOPSData.Handles.ScatterPlotLegend.EdgeColor = OOPSData.Settings.ScatterPlotForegroundColor;
 
         case 'Label'
             % color the points according to the color of the label of each object
@@ -205,11 +241,6 @@ function hScatter = PlotGroupScatterPlot(source,axH)
             OOPSData.Handles.ScatterPlotLegend.EdgeColor = OOPSData.Settings.ScatterPlotForegroundColor;
 
     end
-
-
-
-
-
 
     axH.YTickMode = 'Auto';
     axH.YTickLabelMode = 'Auto';

@@ -45,8 +45,8 @@ function PlotGroupScatterPlotMatrix(source,~)
     end
 
     % usage: gplotmatrix(X,[],group,clr,sym,siz,doleg,dispopt,xnam)
-    [h,ax] = gplotmatrix(objectData,[],objectGroupIdxs,objectGroupColors,[],markerSize,[],DiagonalDisplay,variableListLong);
-
+    % [h,ax] = gplotmatrix(objectData,[],objectGroupIdxs,objectGroupColors,[],markerSize,[],DiagonalDisplay,variableListLong);
+    [h,ax] = gplotmatrix(objectData,[],objectGroupIdxs,objectGroupColors,[],[],[],DiagonalDisplay,variableListLong);
 
 
     for i = 1:nVariables
