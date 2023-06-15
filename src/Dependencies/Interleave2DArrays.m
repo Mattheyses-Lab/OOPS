@@ -1,31 +1,28 @@
-function OutputArray = Interleave2DArrays(array1,array2,mode)
+function OutputArray = Interleave2DArrays(A,B,mode)
    
-    array1_size = size(array1);
+    % validate input
+    assert(all(size(A)==size(B)),'Interleave2DArrays:incompatibleArraySizes','Array sizes must match');
+    assert(numel(size(A))<=2,'Interleave2DArrays:invalidArrayDimensions','Arrays must be 2-dimensional');
+    assert(all(size(A)~=0),'Interleave2DArrays:invalidDimensionLengths','Dimension lengths must be nonzero');
     
-    if size(array2) ~= array1_size
-        error("Arrays must have the same size");
+    % get the number of rows and columns
+    [nRows,nCols] = size(A);
+
+    
+    if iscell(A)
+        OutputArray = cell(nRows*2,nCols);
+    else
+        OutputArray = zeros(nRows*2,nCols);
     end
-    
-    nRows = array1_size(1);
-    nCols = array1_size(2);
-    
+
     switch mode
         case 'row'
-            if iscell(array1)
-                OutputArray = cell(nRows*2,nCols);
-            else
-                OutputArray = zeros(nRows*2,nCols);
-            end
-            OutputArray(1:2:end,:) = array1;
-            OutputArray(2:2:end,:) = array2;
+            OutputArray(1:2:end,:) = A;
+            OutputArray(2:2:end,:) = B;
         case 'column'
-            if iscell(array1)
-                OutputArray = cell(nRows,nCols*2);
-            else
-                OutputArray = zeros(nRows,nCols*2);
-            end
-            OutputArray(:,1:2:end) = array1;
-            OutputArray(:,2:2:end) = array2;
+            OutputArray = OutputArray.';
+            OutputArray(:,1:2:end) = A;
+            OutputArray(:,2:2:end) = B;
     end
 
 end
