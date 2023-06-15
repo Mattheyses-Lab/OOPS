@@ -17,6 +17,8 @@ classdef OOPSImage < handle
 
         % shortened file name (no path)
         rawFPMShortName (1,:) char
+
+        % full name (path and extension)
         rawFPMFullName (1,:) char
 
         % width of the image (number of columns in the image matrix)
@@ -37,7 +39,7 @@ classdef OOPSImage < handle
         % file type (extension) of the raw input data
         rawFPMFileType (1,:) char
 
-        % raw input stack, size = [Height,Width,4] variable types depedning on user input
+        % raw input stack, size = [Height,Width,4] variable types depending on user input
         rawFPMStack (:,:,4)
 
         % average of the raw input stack, size = [Height,Width] double
@@ -93,8 +95,18 @@ classdef OOPSImage < handle
         
 %% Reference Image
 
-        ReferenceImage double
+        rawReferenceImage (:,:)
+        ReferenceImage (:,:) double
+
         ReferenceImageEnhanced double
+
+        rawReferenceClass (1,:) char
+
+        rawReferenceFileName (1,:) char
+        rawReferenceFullName (1,:) char
+        rawReferenceShortName (1,:) char
+
+        rawReferenceFileType (1,:) char
         
 %% Output Images
 
@@ -128,11 +140,23 @@ classdef OOPSImage < handle
         % OF image in RGB format with mask applied | masked pixels = [0 0 0] (black)
         MaskedOFImageRGB
 
+        % OF-intensity overlay in RGB format, unscaled OF
+        OFIntensityOverlayRGB
+
+        % OF-intensity overlay in RGB format, with OF scaled to image maximum
+        ScaledOFIntensityOverlayRGB
+
         % azimuth image in RGB format
         AzimuthRGB
 
         % masked azimuth image in RGB format | masked pixels = [0 0 0] (black)
         MaskedAzimuthRGB
+
+        % Azimuth-intensity-OF HSV image in RGB format
+        AzimuthOFIntensityHSV
+
+        % RGB format mask for saving
+        MaskRGBImage
 
         % struct() of morphological properties returned by regionprops(), see get() method for full list
         ObjectProperties struct
@@ -734,6 +758,52 @@ classdef OOPSImage < handle
             MaskedAzimuthRGB = MaskRGB(obj.AzimuthRGB,obj.bw);
         end
 
+        function AzimuthOFIntensityHSV = get.AzimuthOFIntensityHSV(obj)
+            % get 'V' data (intensity image)
+            OverlayIntensity = obj.I;
+
+            % get 'H' data (azimuth image)
+            AzimuthData = obj.AzimuthImage;
+            % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
+            AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
+            % scale values to [0 1]
+            AzimuthData = AzimuthData./pi;
+
+            % get 'S' data (scaled order factor image)
+            OF = obj.OF_image;
+            OF = OF./max(max(OF));
+
+            % combine to make HSV image (in RGB format)
+            AzimuthOFIntensityHSV = makeHSVSpecial(AzimuthData,OF,OverlayIntensity);
+        end
+
+        function ScaledOFIntensityOverlayRGB = get.ScaledOFIntensityOverlayRGB(obj)
+            % get the average intensity image to use as an opacity mask
+            OverlayIntensity = obj.I;
+            % get the raw OF image
+            OF = obj.OF_image;
+            % get the maximum OF in the image
+            maxOF = max(max(OF));
+            % now get the scaled OF-intensity RGB overlay
+            ScaledOFIntensityOverlayRGB = ...
+                MaskRGB(ind2rgb(im2uint8(OF./maxOF),obj.Settings.OrderFactorColormap),OverlayIntensity);
+        end
+
+        function OFIntensityOverlayRGB = get.OFIntensityOverlayRGB(obj)
+            % get the average intensity image to use as an opacity mask
+            OverlayIntensity = obj.I;
+            % get the raw OF image
+            OF = obj.OF_image;
+            % now get the scaled OF-intensity RGB overlay
+            OFIntensityOverlayRGB = ...
+                MaskRGB(ind2rgb(im2uint8(OF),obj.Settings.OrderFactorColormap),OverlayIntensity);
+        end
+
+        function MaskRGBImage = get.MaskRGBImage(obj)
+            MaskRGBImage = ind2rgb(im2uint8(full(obj.bw)),gray);
+        end
+
+
 %% other dependent 'get' methods
 
         % get current Object (OOPSObject)
@@ -1182,55 +1252,39 @@ classdef OOPSImage < handle
             obj.rawFPMShortName = replicate.rawFPMShortName;
             obj.rawFPMFullName = replicate.rawFPMFullName;
 
+            % split on the '.'
+            filenameSplit = strsplit(obj.rawFPMFileName,'.');
+            % get the file extension
+            obj.rawFPMFileType = filenameSplit{2};
+
             %% attempt to load the raw data using the saved rawFPMFileName
 
-            % find file extension
-            fnameSplit = strsplit(obj.rawFPMFileName,'.');
-            fileType = fnameSplit{end};
-
-            % load the image data
-            switch fileType
-                case 'nd2'
-                    disp(['Loading ',obj.rawFPMFullName,'...']);
-                    % get file data structure
-                    bfData = bfopen(char(replicate.rawFPMFullName));
-                    % get the image info (pixel values and filename) from the first element of the bf cell array
-                    imageInfo = bfData{1,1};
-                    % get the metadata structure from the fourth element of the bf cell array
-                    omeMeta = bfData{1,4};
-                    % try and get the pixel dimensions from the metadata
-                    try
-                        obj.rawFPMPixelSize = omeMeta.getPixelsPhysicalSizeX(0).value();
-                    catch
-                        warning('Unable to detect pixel size.')
-                    end
-                    % get the actual image matrix
-                    imageData = cell2mat(reshape(imageInfo(1:4,1),1,1,4));
-                    % determine the class/type of the input data
-                    obj.rawFPMClass = class(imageData);
-                    % get the range of values in the input stack using its class
-                    obj.rawFPMRange = getrangefromclass(imageData);
-                    % get image dimensions
-                    obj.Height = size(imageData,1);
-                    obj.Width = size(imageData,2);
-                    % pre-allocate raw data array
-                    obj.rawFPMStack = zeros(obj.Height,obj.Width,4);
-                    % add the raw image data to this OOPSImage
-                    obj.rawFPMStack = imageData;
-                case 'tif'
-                    disp(['Loading ',obj.rawFPMFullName,'...']);
-                    % get file data structure
-                    info = imfinfo(char(obj.rawFPMFullName));
-                    % get image dimensions
-                    obj.Height = info.Height;
-                    obj.Width = info.Width;
-                    % pre-allocate raw data array
-                    obj.rawFPMStack = zeros(obj.Height,obj.Width,4);
-                    % add the image data to rawFPMStack
-                    for j=1:4
-                        obj.rawFPMStack(:,:,j) = im2double(imread(char(obj.rawFPMFullName),j))*65535;
-                    end
+            disp(['Loading ',obj.rawFPMFullName,'...']);
+            % get file data structure
+            bfData = bfopen(char(replicate.rawFPMFullName));
+            % get the image info (pixel values and filename) from the first element of the bf cell array
+            imageInfo = bfData{1,1};
+            % get the metadata structure from the fourth element of the bf cell array
+            omeMeta = bfData{1,4};
+            % try and get the pixel dimensions from the metadata
+            try
+                obj.rawFPMPixelSize = omeMeta.getPixelsPhysicalSizeX(0).value();
+            catch
+                warning('Unable to detect pixel size.')
             end
+            % get the actual image matrix
+            imageData = cell2mat(reshape(imageInfo(1:4,1),1,1,4));
+            % determine the class of the input data
+            obj.rawFPMClass = class(imageData);
+            % get the range of values in the input stack using its class
+            obj.rawFPMRange = getrangefromclass(imageData);
+            % get image dimensions
+            obj.Height = size(imageData,1);
+            obj.Width = size(imageData,2);
+            % pre-allocate raw data array
+            obj.rawFPMStack = zeros(obj.Height,obj.Width,4);
+            % add the raw image data to this OOPSImage
+            obj.rawFPMStack = imageData;
 
             %% end raw data loading
 

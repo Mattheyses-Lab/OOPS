@@ -124,7 +124,12 @@ classdef OOPSProject < handle
 
         % total number of objects across all groups
         function nObjects = get.nObjects(obj)
-            nObjects = sum(obj.Group(:).TotalObjects);
+            %nObjects = sum(obj.Group(:).TotalObjects,"all");
+
+            nObjects = 0;
+            for i = 1:obj.nGroups
+                nObjects = nObjects + obj.Group(i).TotalObjects;
+            end
         end
 
         % return all objects with Label:Label
@@ -193,16 +198,34 @@ classdef OOPSProject < handle
 
         % find unique group color based on existing group colors
         function NewColor = getUniqueGroupColor(obj)
-            % we want to avoid having these colors set as group colors
-            BGColors = [1 1 1];
-            if obj.nGroups>0
-                CurrentColors = zeros(obj.nGroups,3);    
-                for i = 1:obj.nGroups
-                    CurrentColors(i,:) = obj.Group(i).Color;
-                end
+
+            groupPalette = obj.Settings.GroupPalette;
+            nPaletteColors = size(groupPalette,1);
+
+            if obj.nGroups >= nPaletteColors
+                CurrentColors = obj.GroupColors;
+                BGColors = [1 1 1;0 0 0];
                 NewColor = distinguishable_colors(1,[CurrentColors;BGColors]);
             else
-                NewColor = distinguishable_colors(1,BGColors);
+                NewColor = groupPalette(obj.nGroups+1,:);
+            end
+        end
+
+        function UpdateGroupColors(obj)
+
+            groupPalette = obj.Settings.GroupPalette;
+            nPaletteColors = size(groupPalette,1);
+
+            if obj.nGroups > nPaletteColors
+                nExtraColors = obj.nGroups-nPaletteColors;
+                extraColors = distinguishable_colors(nExtraColors,[groupPalette;1 1 1]);
+                NewGroupColors = [groupPalette;extraColors];
+            else
+                NewGroupColors = groupPalette(1:obj.nGroups,:);
+            end
+
+            for groupIdx = 1:obj.nGroups
+                obj.Group(groupIdx).Color = NewGroupColors(groupIdx,:);
             end
         end
 

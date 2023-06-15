@@ -4,7 +4,6 @@ classdef customColormap
         Map (256,3) double {mustBeInRange(Map,0,1)} = gray;
         Name (1,1) string = "Untitled colormap";
         Source (1,1) string  = "Custom";
-        Attributes (:,1) cell {mustBeMember(Attributes,{'Linear','Circular','PerceptuallyUniform','none'})} = {'none'};
     end
 
     properties (Dependent = true)
@@ -17,21 +16,18 @@ classdef customColormap
             % constructor input validation
             arguments
                 NameValuePairs.Map (256,3) double {mustBeInRange(NameValuePairs.Map,0,1)} = gray;
-                NameValuePairs.Name (1,1) string = "Untitled colormap";
+                NameValuePairs.Name (1,1) string = "Untitled";
                 NameValuePairs.Source (1,1) string = "Custom";
-                NameValuePairs.Attributes (:,1) cell {mustBeMember(NameValuePairs.Attributes,{'Linear','Circular','PerceptuallyUniform','none'})} = {'none'};
             end
             % set properties
             obj.Map = NameValuePairs.Map;
             obj.Name = NameValuePairs.Name;
             obj.Source = NameValuePairs.Source;
-            obj.Attributes = NameValuePairs.Attributes;
         end
 
         function TF = eq(A,B)
             if strcmp(A.Name,B.Name) && ...
                     all(A.Map(:)==B.Map(:)) && ...
-                    all(ismember(A.Attributes,B.Attributes)) && ...
                     strcmp(A.Source,B.Source)
                 TF = true;
             else
@@ -54,14 +50,6 @@ classdef customColormap
                     mapImage = ind2rgb(im2uint8(repmat(linspace(0,1,sz(1)).',1,sz(2))),obj.Map);
             end
             
-        end
-
-        function addAttribute(obj,attribute)
-            if ~ismember(attribute,obj.Attributes)
-                obj.Attributes{end+1} = attribute;
-            else
-                error('The customColormap already has this attribute.')
-            end
         end
 
         function invertedMap = get.invertedMap(obj)

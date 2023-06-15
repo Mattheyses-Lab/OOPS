@@ -28,19 +28,17 @@ classdef OOPSSettings < handle
             'DynamicAxesParent',[],...
             'ActiveObjectIdx',NaN);
 
+        % most recently accessed directory
         LastDirectory = pwd;
 
-        % path to main code directory (path with OOPSv2.m)
+        % path to main code directory (path with OOPS.m)
         MainPath char
 
         SummaryDisplayType = 'Project';
         
-        % monitor tab switching
+        % current and previous tabs selected in GUI
         CurrentTab = 'Files';
         PreviousTab = 'Files';
-        
-        % current image operation
-        CurrentImageOperation = 'Mask Threshold';
         
         % size of the display (to set main window Position)
         ScreenSize
@@ -63,6 +61,10 @@ classdef OOPSSettings < handle
         Colormaps struct
         xColormaps struct
         ColormapsSettings struct
+
+        % palettes settings
+        Palettes struct
+        PalettesSettings struct
         
         % Azimuth display settings
         AzimuthDisplaySettings struct
@@ -76,12 +78,15 @@ classdef OOPSSettings < handle
         % PolarHistogram settings
         PolarHistogramSettings struct
 
+        % ObjectIntensityProfile settings
+        ObjectIntensityProfileSettings struct       
+
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
 
         % variables for object polar plots
         ObjectPolarPlotVariables cell
-        
+
         % object labeling
         ObjectLabels OOPSLabel
         
@@ -109,14 +114,14 @@ classdef OOPSSettings < handle
 
     properties (Dependent = true)
 
-        % azimuth display settings
+        % AzimuthDisplaySettings
         AzimuthLineAlpha
         AzimuthLineWidth
         AzimuthLineScale
         AzimuthScaleDownFactor
         AzimuthColorMode
 
-        % Scatterplot settings
+        % ScatterPlotSettings
         ScatterPlotXVariable
         ScatterPlotYVariable
         ScatterPlotMarkerSize
@@ -125,20 +130,18 @@ classdef OOPSSettings < handle
         ScatterPlotForegroundColor
         ScatterPlotLegendVisible
 
-        % SwarmPlot settings
+        % SwarmPlotSettings
         SwarmPlotYVariable
         SwarmPlotGroupingType
         SwarmPlotColorMode
         SwarmPlotBackgroundColor
         SwarmPlotForegroundColor
         SwarmPlotErrorBarColor
-
-        % new swarm plot settings
         SwarmPlotMarkerFaceAlpha
         SwarmPlotMarkerSize
         SwarmPlotErrorBarsVisible
 
-        % PolarHistogram settings
+        % PolarHistogramSettings
         PolarHistogramnBins
         PolarHistogramWedgeFaceAlpha
         PolarHistogramCircleBackgroundColor
@@ -152,6 +155,14 @@ classdef OOPSSettings < handle
         PolarHistogramGridlinesLineWidth
         PolarHistogramBackgroundColor
         PolarHistogramVariable
+
+        % ObjectIntensityProfileSettings
+        ObjectIntensityProfileFitLineColor
+        ObjectIntensityProfilePixelLinesColor
+        ObjectIntensityProfileBackgroundColor
+        ObjectIntensityProfileForegroundColor
+        ObjectIntensityProfileAnnotationsColor
+        ObjectIntensityProfileAzimuthLinesColor
 
         % Object variables "long" names
         ObjectPlotVariablesLong
@@ -168,6 +179,10 @@ classdef OOPSSettings < handle
         OrderFactorColormap double
         ReferenceColormap double
         AzimuthColormap double
+
+        % Palettes
+        GroupPalette double
+        LabelPalette double
 
     end
     
@@ -204,11 +219,14 @@ classdef OOPSSettings < handle
                 'ObjectPlotVariables.mat',...
                 'Colormaps.mat',...
                 'ColormapsSettings.mat',...
+                'Palettes.mat',...
+                'PalettesSettings.mat',...
                 'ScatterPlotSettings.mat',...
                 'SwarmPlotSettings.mat',...
                 'AzimuthDisplaySettings.mat',...
                 'PolarHistogramSettings.mat',...
-                'ObjectPolarPlotVariables.mat'};
+                'ObjectPolarPlotVariables.mat',...
+                'ObjectIntensityProfileSettings.mat'};
 
             obj.updateSettingsFromFiles(settingsFiles);
 
@@ -225,12 +243,9 @@ classdef OOPSSettings < handle
 
             settings.SummaryDisplayType = obj.SummaryDisplayType;
 
-            % monitor tab switching
+            % current and previous tabs selected in GUI
             settings.CurrentTab = obj.CurrentTab;
             settings.PreviousTab = obj.PreviousTab;
-
-            % current image operation
-            settings.CurrentImageOperation = obj.CurrentImageOperation;
 
             % themes and colors for GUI display
             settings.GUITheme = obj.GUITheme;
@@ -238,7 +253,7 @@ classdef OOPSSettings < handle
             settings.GUIForegroundColor = obj.GUIForegroundColor;
             settings.GUIHighlightColor = obj.GUIHighlightColor;
 
-            % sturcturing element for masking
+            % structuring element for masking
             settings.SEShape = obj.SEShape;
             settings.SESize = obj.SESize;
             settings.SELines = obj.SELines;
@@ -295,15 +310,47 @@ classdef OOPSSettings < handle
     
         function AddNewObjectLabel(obj,LabelName,LabelColor)
             if isempty(LabelColor)
-                BGColors = [0 0 0];
-                LabelColor = distinguishable_colors(1,[obj.LabelColors;BGColors]);
+                LabelColor = obj.getUniqueLabelColor;
             end
 
             if isempty(LabelName)
                 LabelName = ['Untitled Label ',num2str(obj.nLabels+1)];
             end
-
             obj.ObjectLabels(end+1,1) = OOPSLabel(LabelName,LabelColor,obj);
+        end
+
+        % find unique group color based on existing group colors
+        function NewColor = getUniqueLabelColor(obj)
+
+            labelPalette = obj.LabelPalette;
+            nPaletteColors = size(labelPalette,1);
+
+            if obj.nLabels >= nPaletteColors
+                CurrentColors = obj.LabelColors;
+                BGColors = [1 1 1;0 0 0];
+                NewColor = distinguishable_colors(1,[CurrentColors;BGColors]);
+            else
+                NewColor = labelPalette(obj.nLabels+1,:);
+            end
+
+        end
+
+        function UpdateLabelColors(obj)
+
+            labelPalette = obj.LabelPalette;
+            nPaletteColors = size(labelPalette,1);
+
+            if obj.nLabels > nPaletteColors
+                nExtraColors = obj.nLabels-nPaletteColors;
+                extraColors = distinguishable_colors(nExtraColors,[labelPalette;1 1 1]);
+                NewLabelColors = [labelPalette;extraColors];
+            else
+                NewLabelColors = labelPalette(1:obj.nLabels,:);
+            end
+
+            for labelIdx = 1:obj.nLabels
+                obj.ObjectLabels(labelIdx).Color = NewLabelColors(labelIdx,:);
+            end
         end
 
         function DeleteObjectLabel(obj,Label)
@@ -351,6 +398,14 @@ classdef OOPSSettings < handle
 
         function AzimuthColormap = get.AzimuthColormap(obj)
             AzimuthColormap = obj.ColormapsSettings.Azimuth.Map;
+        end
+
+        function GroupPalette = get.GroupPalette(obj)
+            GroupPalette = obj.PalettesSettings.Group.Colors;
+        end
+
+        function LabelPalette = get.LabelPalette(obj)
+            LabelPalette = obj.PalettesSettings.Label.Colors;
         end
 
         function AzimuthLineAlpha = get.AzimuthLineAlpha(obj)
@@ -489,6 +544,35 @@ classdef OOPSSettings < handle
             PolarHistogramVariable = obj.PolarHistogramSettings.Variable;
         end
 
+
+        function ObjectIntensityProfileFitLineColor = get.ObjectIntensityProfileFitLineColor(obj)
+            ObjectIntensityProfileFitLineColor = obj.ObjectIntensityProfileSettings.FitLineColor;
+        end
+
+        function ObjectIntensityProfilePixelLinesColor = get.ObjectIntensityProfilePixelLinesColor(obj)
+            ObjectIntensityProfilePixelLinesColor = obj.ObjectIntensityProfileSettings.PixelLinesColor;
+        end
+
+        function ObjectIntensityProfileBackgroundColor = get.ObjectIntensityProfileBackgroundColor(obj)
+            ObjectIntensityProfileBackgroundColor = obj.ObjectIntensityProfileSettings.BackgroundColor;
+        end
+
+        function ObjectIntensityProfileForegroundColor = get.ObjectIntensityProfileForegroundColor(obj)
+            ObjectIntensityProfileForegroundColor = obj.ObjectIntensityProfileSettings.ForegroundColor;
+        end
+
+        function ObjectIntensityProfileAnnotationsColor = get.ObjectIntensityProfileAnnotationsColor(obj)
+            ObjectIntensityProfileAnnotationsColor = obj.ObjectIntensityProfileSettings.AnnotationsColor;
+        end
+
+        function ObjectIntensityProfileAzimuthLinesColor = get.ObjectIntensityProfileAzimuthLinesColor(obj)
+            ObjectIntensityProfileAzimuthLinesColor = obj.ObjectIntensityProfileSettings.AzimuthLinesColor;
+        end
+
+
+
+
+
         function nLabels = get.nLabels(obj)
             % find number of unique object labels
             nLabels = numel(obj.ObjectLabels);
@@ -517,9 +601,6 @@ classdef OOPSSettings < handle
             % monitor tab switching
             obj.CurrentTab = settings.CurrentTab;
             obj.PreviousTab = settings.PreviousTab;
-
-            % current image operation
-            obj.CurrentImageOperation = settings.CurrentImageOperation;
 
             % themes and colors for GUI display
             obj.GUITheme = settings.GUITheme;

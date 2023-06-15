@@ -189,8 +189,10 @@ function TabSelection(source,~)
             OOPSData.Handles.ObjectOFImgH.Visible = 'Off';
     
             % object intensity fit plot
+            %OOPSData.Handles.ObjectIntensityProfileGrid.Visible = 'Off';
             OOPSData.Handles.ObjectIntensityPlotAxH.Visible = 'Off';
-            OOPSData.Handles.ObjectIntensityPlotAxH.Title.Visible = 'Off';
+            %OOPSData.Handles.ObjectIntensityPlotAxH.Title.Visible = 'Off';
+            OOPSData.Handles.ObjectIntensityPlotAxH.HitTest = 'Off';
     
             % object stack-normalized intensity
             OOPSData.Handles.ObjectNormIntStackImgH.Visible = 'Off';
@@ -398,8 +400,10 @@ function TabSelection(source,~)
             OOPSData.Handles.ObjectNormIntStackImgH.Visible = 'On';
             OOPSData.Handles.ObjectNormIntStackAxH.Title.Visible = 'On';
     
+            %OOPSData.Handles.ObjectIntensityProfileGrid.Visible = 'On';
             OOPSData.Handles.ObjectIntensityPlotAxH.Visible = 'On';
-            OOPSData.Handles.ObjectIntensityPlotAxH.Title.Visible = 'On';
+            %OOPSData.Handles.ObjectIntensityPlotAxH.Title.Visible = 'On';
+            OOPSData.Handles.ObjectIntensityPlotAxH.HitTest = 'On';
     
             OOPSData.Handles.ImgPanel2.Visible = 'On';
     

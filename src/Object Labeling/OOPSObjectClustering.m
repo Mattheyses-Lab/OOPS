@@ -4,7 +4,8 @@ function [ClusterIdxs,nClusters] = OOPSObjectClustering(ObjectData,...
     nClustersMode,...
     Criterion,...
     DistanceMetric,...
-    NormalizationMethod)
+    NormalizationMethod,...
+    DisplayEvalutation)
 
 % set rng to known state for consistent performance
 rng(6,'twister');
@@ -19,6 +20,8 @@ end
 %% perform k-means clustering with the specified parameters
 
 maxK = 15;
+
+% add the following to use parallel: 'Options',statset('UseParallel',1)
 
 switch nClustersMode
     case 'Manual'
@@ -55,90 +58,69 @@ switch nClustersMode
                 nClusters = ClusterEvalObj.OptimalK;
         end
 
-        %figure();plot(ClusterEvalObj);
 
+        if DisplayEvalutation
+            fH_ClusterEvaluation = uifigure(...
+                'Name','Cluster evaluation',...
+                'HandleVisibility','on',...
+                'WindowStyle','alwaysontop',...
+                'Visible','off');
+            uiaxes(fH_ClusterEvaluation,...
+                "Units","normalized",...
+                "OuterPosition",[0 0 1 1]);
+            plot(ClusterEvalObj);
+            movegui(fH_ClusterEvaluation,"center");
+            fH_ClusterEvaluation.Visible = 'On';
+        end
 
         disp(['Optimal number of clusters: ',num2str(nClusters)]);
 end
 
 % use 'replicates' name-value pair to repeat the clustering algorithm
 %   for different randomly selected centroids for each replicate
-[cidx3,cmeans3,sumd3] = kmeans(ObjectData,nClusters,...
+[clust,C,sumd] = kmeans(ObjectData,nClusters,...
     'replicates',nReplicates,...
     'Distance',DistanceMetric,...
     'display','final');
-ClusterIdxs = cidx3;
+ClusterIdxs = clust;
+
+
+% C = cluster centroid locations
+
+% testing below
+% if just one variable was selected, attempt to resort the idxs based on centroid locations
+if size(C,2)==1
+    % sort the cluster centroids
+    [Csort,sortIdx] = sort(C);
+    % preallocate a new array to hold the sorted cluster idxs
+    clustSort = zeros(size(clust));
+    % for each element of the sorted centroid locations
+    for i = 1:numel(Csort)
+        % set the new sorted cluster idx
+        clustSort(clust==sortIdx(i)) = i;
+    end
+    % any idxs originally set to NaN -> set to NaN
+    clustSort(isnan(clust)) = NaN;
+    % replaced the cluster idxs with the sorted idxs
+    ClusterIdxs = clustSort;
+end
+% end testing
 
 
 
+if DisplayEvalutation
+    fH_Silhouette = uifigure(...
+        'Name','Silhouette',...
+        'HandleVisibility','on',...
+        'WindowStyle','alwaysontop',...
+        'Visible','off');
+    uiaxes(fH_Silhouette,...
+        "Units","normalized",...
+        "OuterPosition",[0 0 1 1]);
+    silhouette(ObjectData,ClusterIdxs);
+    movegui(fH_Silhouette,"center");
+    fH_Silhouette.Visible = 'On';
+end
 
-
-
-    % 3rd output, sumd3, contains sum of distance within each cluster for the best solution
-
-    % % figure to show silhouette plots
-    % figure('Name',['Silhouette (Euclidean Distance,',num2str(nReplicates),' replicates)'])
-    % % use silhouette plot to visualize cluster separation
-    % [silh3,h] = silhouette(ObjectData,cidx3,'sqeuclidean');
-
-    % display average silhouette width
-    %disp(['Mean Silhouette Width (Euclidean Distance, ',num2str(nReplicates),' replicates): ',num2str(mean(silh3))])
-
-%% Cosine distance k-means clustering
-
-%     % use cosine distance instead of euclidean distance
-%     [cidxCos,cmeansCos] = kmeans(ObjectData,nClusters,'dist','cos');
-%     
-%     figure('Name','Silhouette (Cosine Distance)')
-%     
-%     % visualize with silhouette
-%     [silhCos,h] = silhouette(ObjectData,cidxCos,'cos');
-%     [mean(silh2) mean(silh3) mean(silhCos)]
-%     
-%     figure('Name','3D Scatter (Cosine Distance)')
-%     
-%     % again plot the raw data
-%     for i = 1:3
-%         clust = find(cidxCos==i);
-%         plot3(ObjectData(clust,VariablesToPlot(1)),...
-%             ObjectData(clust,VariablesToPlot(2)),...
-%             ObjectData(clust,VariablesToPlot(3)),...
-%             ptsymb{i});        
-%         hold on
-%     end
-%     hold off
-%     
-%     % add axes labels
-%     xlabel(Var1Name);
-%     ylabel(Var2Name);
-%     zlabel(Var3Name);
-%     
-%     view(-137,10);
-%     grid on
-%     
-%     figure('Name','Parallel Coordinate Plots (Cosine Clustering)')
-% 
-%     % -> plots don't show centroids, as cosine distance centroids correspond to half-line from origin
-%     %      in space of raw data
-%     % can make a parallel coordinate plot of normalized data points to view distances between centroids
-%     lnsymb = {'b-','r-','m-','g-','y-'};
-%     %names = {'SL','SW','PL','PW'};
-%     ObjectData0 = ObjectData ./ repmat(sqrt(sum(ObjectData.^2,2)),1,length(VariablesList));
-%     
-%     ymin = min(min(ObjectData0));
-%     ymax = max(max(ObjectData0));
-%     for i = 1:nClusters
-%         subplot(1,nClusters,i);
-%         plot(ObjectData0(cidxCos==i,:)',lnsymb{i});
-%         hold on;
-%         plot(cmeansCos(i,:)','k-','LineWidth',2);
-%         hold off;
-%         title(sprintf('Cluster %d',i));
-%         xlim([.9, length(VariablesList)+0.1]);
-%         ylim([ymin, ymax]);
-%         h_gca = gca;
-%         h_gca.XTick = 1:length(VariablesList);
-%         h_gca.XTickLabel = VariablesList;
-%     end
 
 end

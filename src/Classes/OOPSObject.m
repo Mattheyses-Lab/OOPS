@@ -58,31 +58,26 @@ classdef OOPSObject < handle
         paddedSubarrayIdx = NaN
         paddedSubarrayIdxAdjustment = []
         paddedSubImage = []
+        % 2-element vector to add to image-frame coordinate to retrieve padded object-frame coordinates
         imageToPaddedObjectShift = []
+        % pixel idx list for the padded object
         paddedPixelIdxList = []
+        % lest of tangents for eah point in the object midline
         pixelMidlineTangentList = []
 
     end % end properties
     
     properties(Dependent = true)
-        % various output values, object properties, and object images that are too costly 
-        % to constantly store in memory, but quick to calculate if needed
-        
         % list of azimuth pixel values
         AzimuthPixelValues
-
         % name of the group that to which this object belongs
         GroupName
-
         % idx of the group to which this object belongs
         GroupIdx
-
         % name of this object's parent image
         ImageName
-
         % name of this object's parent image, but with some special characters preceeded by '\'
         InterpreterFriendlyImageName
-
         % various object images
         PaddedOFSubImage
         MaskedOFSubImage
@@ -110,7 +105,7 @@ classdef OOPSObject < handle
         LabelColor
         LabelColorSquare
 
-        % index of this object in its parent 'Object' property
+        % index of this object in its parent 'Object' array
         SelfIdx
 
         % object name, based on SelfIdx
@@ -145,6 +140,21 @@ classdef OOPSObject < handle
         TangentAverage
 
         ObjectSummaryDisplayTable
+
+
+        %% output images 
+
+        % horixontal montage object intensity stack, scaled across the stack to [0 1]
+        IntensityStackNormMontageRGB
+        % unmasked OF
+        OFImageRGB
+        % label image of signal and BG regions
+        SBRegionsRGB
+        
+
+
+
+
 
     end
 
@@ -465,7 +475,6 @@ classdef OOPSObject < handle
                 ];
         end
 
-
         function AzimuthAngularDeviation = get.AzimuthAngularDeviation(obj)
             try
                 r = abs(mean(exp(1i*obj.AzimuthPixelValues*2)));
@@ -612,6 +621,62 @@ classdef OOPSObject < handle
             ObjectSummaryDisplayTable.Properties.RowNames = varNames;
 
         end
+
+
+        %% Object output images
+
+        function IntensityStackNormMontageRGB = get.IntensityStackNormMontageRGB(obj)
+            % get the padded mask image
+            paddedMask = obj.paddedSubImage;
+            % initialize stack-normalized intensity stack for display
+            PaddedObjNormIntensity = zeros([size(paddedMask),4]);
+            % get stack-normalized intensity stack for display
+            PaddedObjNormIntensity(:) = obj.Parent.ffcFPMStack(obj.paddedSubarrayIdx{:},:);
+            % rescale the object intensity stack to the range [0 1]
+            PaddedObjNormIntensity = Scale0To1(PaddedObjNormIntensity);
+            % show stack-normalized object intensity stack
+            IntensityStackNormMontage = [...
+                PaddedObjNormIntensity(:,:,1),...
+                PaddedObjNormIntensity(:,:,2),...
+                PaddedObjNormIntensity(:,:,3),...
+                PaddedObjNormIntensity(:,:,4)];
+            % convert to RGB
+            IntensityStackNormMontageRGB = ind2rgb(im2uint8(IntensityStackNormMontage),obj.Parent.Settings.IntensityColormap);
+        end
+
+        function OFImageRGB = get.OFImageRGB(obj)
+            OFImageRGB = ind2rgb(im2uint8(obj.PaddedOFSubImage),obj.Parent.Settings.OrderFactorColormap);
+        end
+
+        function SBRegionsRGB = get.SBRegionsRGB(obj)
+
+            parentSize = size(obj.Parent.bw);
+            objSize = size(obj.paddedSubImage);
+            SBRegions = zeros(objSize);
+
+            [signalR,signalC] = ind2sub(parentSize,obj.PixelIdxList);
+            signalR = signalR + obj.imageToPaddedObjectShift(1);
+            signalC = signalC + obj.imageToPaddedObjectShift(2);
+
+            [bgR,bgC] = ind2sub(parentSize,obj.BGIdxList);
+            bgR = bgR + obj.imageToPaddedObjectShift(1);
+            bgC = bgC + obj.imageToPaddedObjectShift(2);
+
+            signalIdx = sub2ind(objSize,signalR,signalC);
+            bgIdx = sub2ind(objSize,bgR,bgC);
+
+            SBRegions(signalIdx) = 1;
+            SBRegions(bgIdx) = 2;
+
+            % for red and green signal and BG on black background
+            %SBRegionsRGB = label2rgb(SBRegions,[1 0 0;0 1 0],[0 0 0]);
+
+            SBRegionsRGB = label2rgb(SBRegions);
+
+
+        end
+
+
 
 
 

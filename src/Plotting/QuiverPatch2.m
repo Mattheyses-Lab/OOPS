@@ -9,6 +9,11 @@ function hPatch = QuiverPatch2(hAx,...
     LineAlpha,...
     LineScale)
 
+% need to generalize and add documentation
+
+
+
+
 %% NEW METHOD
 
     nLines = length(x);

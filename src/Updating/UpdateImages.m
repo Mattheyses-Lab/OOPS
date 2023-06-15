@@ -1,4 +1,4 @@
-function [] = UpdateImages(source)
+function [] = UpdateImages(source,varargin)
     
     % get main data structure
     OOPSData = guidata(source);
@@ -15,12 +15,18 @@ function [] = UpdateImages(source)
     % empty image to serve as a placeholder
     EmptyImage = sparse(zeros(cImage.Height,cImage.Width));
     
-    % get the current tab
-    CurrentTab = OOPSData.Settings.CurrentTab;
+    % check if we really need to update to prevent unnecessary overhead
+    % ex: if varargin{1} = {'Files','Mask'}, only update if the current tab is 'Files' or 'Mask'
+    if ~isempty(varargin)
+        % if no choices match currently selected display type, don't update
+        if ~any(ismember(varargin{1},OOPSData.Settings.CurrentTab))
+            return
+        end
+    end
 
-%% Update CData of gui image objects to reflect user-specified group/image change 
 
-    switch CurrentTab
+    
+    switch OOPSData.Settings.CurrentTab
         case 'Files'
             %% FILES
             cGroup = OOPSData.CurrentGroup;
@@ -189,7 +195,7 @@ function [] = UpdateImages(source)
                             'ButtonDownFcn',@SelectObjectPatches,...
                             'PickableParts','all',...
                             'Interruptible','off');
-                        OOPSData.Handles.ObjectBoxes.LineWidth = 1;
+                        OOPSData.Handles.ObjectBoxes.LineWidth = 2;
 
                         % plot a patch object containing the selected objects
                         OOPSData.Handles.SelectedObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
@@ -204,7 +210,7 @@ function [] = UpdateImages(source)
                             'ButtonDownFcn',@SelectObjectPatches,...
                             'PickableParts','all',...
                             'Interruptible','off');
-                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 2;
+                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 3;
 
                         % remove the hold
                         hold off
@@ -620,7 +626,11 @@ function [] = UpdateImages(source)
                 OOPSData.Handles.ObjectIntensityPlotAxH = PlotObjectIntensityProfile([0,pi/4,pi/2,3*(pi/4)],...
                     PaddedObjPixelNormIntensity,...
                     RestrictedPaddedObjMask,...
-                    OOPSData.Handles.ObjectIntensityPlotAxH);
+                    OOPSData.Handles.ObjectIntensityPlotAxH,...
+                    OOPSData.Settings.ObjectIntensityProfileFitLineColor,...
+                    OOPSData.Settings.ObjectIntensityProfilePixelLinesColor,...
+                    OOPSData.Settings.ObjectIntensityProfileAnnotationsColor,...
+                    OOPSData.Settings.ObjectIntensityProfileAzimuthLinesColor);
             catch
                 disp('Warning: Error displaying object sinusoidal intensity fit curves');
             end
@@ -796,6 +806,7 @@ function [] = UpdateImages(source)
                     PaddedObjNormIntensity(:,:,2),...
                     PaddedObjNormIntensity(:,:,3),...
                     PaddedObjNormIntensity(:,:,4)];
+
             catch
                 disp('Warning: Error displaying stack-normalized object intensity')
                 OOPSData.Handles.ObjectNormIntStackImgH.CData = repmat(EmptyImage,1,4);

@@ -48,13 +48,13 @@ function [] = pb_LoadFPMFiles(source,~)
     end
 
     % check how many image stacks were selected
-    n_Pol = numel(FPMFiles);
+    nFiles = numel(FPMFiles);
 
     % update log
-    UpdateLog3(source,['Opening ',num2str(n_Pol),' FPM images...'],'append');
+    UpdateLog3(source,['Opening ',num2str(nFiles),' FPM images...'],'append');
 
     % for each file (stack of 4 polarization images)
-    for i=1:n_Pol
+    for i=1:nFiles
 
         % get the name of this file
         rawFPMFileName = FPMFiles{1,i};
