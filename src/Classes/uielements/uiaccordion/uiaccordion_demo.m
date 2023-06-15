@@ -2,76 +2,75 @@ function uiaccordion_demo()
 
     fH = uifigure(...
         "WindowStyle","alwaysontop",...
-        "Name","Accordion demo",...
-        "Position",[0 0 400 500],...
-        "HandleVisibility","on",...
-        "Visible","off");
+        "Name","uiaccordion demo",...
+        "HandleVisibility","on");
 
-    mainGrid = uigridlayout(fH,[4,1],...
-        "RowHeight",{'fit','fit','fit','fit'},...
-        "RowSpacing",5,...
-        "Scrollable","on",...
-        "BackgroundColor",[0 0 0]);
+    accordionGrid = uigridlayout(fH,[1,1]);
 
 
-    accordion = uiaccordion2(mainGrid);
+    % works
+    accordion = uiaccordion(accordionGrid);
 
-    accordion2 = uiaccordion2(mainGrid);
-
-    accordion3 = uiaccordion2(mainGrid);
-
-    accordion4 = uiaccordion2(mainGrid);
+    % add 4 accordion items
+    accordion.addItem();
+    accordion.addItem();
+    accordion.addItem();
+    accordion.addItem();
 
 
     % pane 1 items
 
-    accordion.Pane.RowHeight = {25};
-    accordion.Pane.ColumnWidth = {'fit','1x'};
-    accordion.Pane.RowSpacing = 5;
-    accordion.Pane.ColumnSpacing = 5;
+    accordion.Items(1).Pane.RowHeight = {25};
+    accordion.Items(1).Pane.ColumnWidth = {'fit','1x'};
+    accordion.Items(1).Pane.RowSpacing = 5;
+    accordion.Items(1).Pane.ColumnSpacing = 5;
 
-    uilabel(accordion.Pane,"Text","Pane Background Color","FontColor",[0 0 0]);
-    uibutton(accordion.Pane,...
+    uilabel(accordion.Items(1).Pane,"Text","Pane Background Color","FontColor",[0 0 0]);
+    uibutton(accordion.Items(1).Pane,...
         "Text","Choose",...
         "ButtonPushedFcn",@setAccordionColors,...
         "Tag","PaneBackgroundColor",... % accordion property
-        "UserData",accordion); % the accordion
+        "UserData",accordion.Items(1)); % the accordion
 
-    uilabel(accordion.Pane,"Text","Title Background Color","FontColor",[0 0 0]);
-    uibutton(accordion.Pane,...
+    uilabel(accordion.Items(1).Pane,"Text","Title Background Color","FontColor",[0 0 0]);
+    uibutton(accordion.Items(1).Pane,...
         "Text","Choose",...
         "ButtonPushedFcn",@setAccordionColors,...
         "Tag","TitleBackgroundColor",... % accordion property
-        "UserData",accordion); % the accordion
+        "UserData",accordion.Items(1)); % the accordion
 
-    uilabel(accordion.Pane,"Text","Border Color","FontColor",[0 0 0]);
-    uibutton(accordion.Pane,...
+    uilabel(accordion.Items(1).Pane,"Text","Border Color","FontColor",[0 0 0]);
+    uibutton(accordion.Items(1).Pane,...
         "Text","Choose",...
         "ButtonPushedFcn",@setAccordionColors,...
         "Tag","BorderColor",... % accordion property
-        "UserData",accordion); % the accordion
+        "UserData",accordion.Items(1)); % the accordion
 
-    uilabel(accordion.Pane,"Text","Title Font Color","FontColor",[0 0 0]);
-    uibutton(accordion.Pane,...
+    uilabel(accordion.Items(1).Pane,"Text","Title Font Color","FontColor",[0 0 0]);
+    uibutton(accordion.Items(1).Pane,...
         "Text","Choose",...
         "ButtonPushedFcn",@setAccordionColors,...
         "Tag","FontColor",... % accordion property
-        "UserData",accordion); % the accordion
+        "UserData",accordion.Items(1)); % the accordion
 
     % pane 2 items
 
-    uibutton(accordion2.Pane,"Text","uibutton");
+    uibutton(accordion.Items(2).Pane,"Text","uibutton");
 
-    uilabel(accordion2.Pane,"Text","uilabel","FontColor",[0 0 0]);
-
-    % pane 3 items
-
-    accordion3.Pane.Padding = [0 0 0 0];
+    uilabel(accordion.Items(2).Pane,"Text","uilabel","FontColor",[0 0 0]);
 
     % pane 3 items
 
-    uilistbox(accordion3.Pane);
-    hAx = uiaxes(accordion4.Pane);
+    accordion.Items(3).Pane.Padding = [0 0 0 0];
+
+    % pane 3 items
+
+    uilistbox(accordion.Items(3).Pane);
+
+    % pane 4 items
+
+
+    hAx = uiaxes(accordion.Items(4).Pane);
 
     x = 0:1:180;
     y = cosd(x);
@@ -79,13 +78,13 @@ function uiaccordion_demo()
     plot(hAx,x,y);
 
 
-    accordion.FontSize = 12;
+    accordion.Items(1).FontSize = 12;
 
-    accordion2.FontSize = 12;
+    accordion.Items(2).FontSize = 12;
 
-    accordion2.expand();
+    accordion.Items(2).expand();
 
-    accordion.expand();
+    accordion.Items(1).expand();
 
     movegui(fH,'center')
 
