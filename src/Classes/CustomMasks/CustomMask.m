@@ -118,8 +118,14 @@ classdef CustomMask < handle
         CurrentOperation
         CurrentImage
 
+        % logical, indicates whether or not this scheme is a valid masking scheme
         isValidMaskingScheme
-
+        % the last grayscale image in the scheme before binarization
+        EnhancedImg
+        % the idx to the threshold steps
+        ThreshStepIdx
+        % threshold type (Otsu, adaptive, other, or '')
+        ThreshType
     end
     
     methods
@@ -235,9 +241,7 @@ classdef CustomMask < handle
         end
 
         function isValidMaskingScheme = get.isValidMaskingScheme(obj)
-    
             isValidMaskingScheme = strcmp(obj.Images(end).ImageClass,'logical');
-
         end
 
         function DeleteOperation(obj,operation)
@@ -271,5 +275,49 @@ classdef CustomMask < handle
                 end
             end
         end
+
+
+
+        function ThreshStepIdx = get.ThreshStepIdx(obj)
+            opTypes = cell(1,obj.nOperations);
+            [opTypes{1,1:obj.nOperations}] = deal(obj.Operations.OperationName);
+            ThreshStepIdx = find(ismember(opTypes,{'Otsu','Adaptive'}));
+        end
+
+        function ThreshType = get.ThreshType(obj)
+            threshIdx = obj.ThreshStepIdx;
+            nThresh = numel(threshIdx);
+            % if the last image is logical but neither 'Otsu' or 'Adaptive' were used
+            if nThresh < 1 && obj.isValidMaskingScheme
+                ThreshType = 'other';
+                return
+            elseif nThresh == 1
+                ThreshType = obj.Operations(threshIdx).OperationName;
+                return
+            else
+                ThreshType = '';
+            end
+        end
+
+        function EnhancedImg = get.EnhancedImg(obj)
+            % the enhanced image is the final grayscale image before the threshold step
+            switch obj.ThreshType
+                case {'Otsu','Adaptive'}
+                    EnhancedImg = obj.Images(obj.ThreshStepIdx-1).ImageData;
+                otherwise
+                    imageTypes = cell(1,obj.nImages);
+                    [imageTypes{1,1:obj.nImages}] = deal(obj.Images.ImageClass);
+                    firstLogicalImageIdx = find(ismember(imageTypes,{'logical'}));
+
+                    if ~isempty(firstLogicalImageIdx)
+                        EnhancedImg = obj.Images(firstLogicalImageIdx(1)-1);
+                    else
+                        EnhancedImg = [];
+                    end
+            end
+        end
+
+
+
     end
 end
