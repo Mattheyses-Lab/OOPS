@@ -1,5 +1,9 @@
 classdef uiaccordion < matlab.ui.componentcontainer.ComponentContainer
 
+properties
+    FontSize (1,1) double = 12
+end
+
 properties(SetAccess = private)
     Items (:,1) uiaccordionitem
 end
@@ -38,6 +42,8 @@ methods(Access = protected)
             % place items in the appropriate row of the grid
             for i = 1:obj.nItems
                 obj.Items(i).Layout.Row = i;
+                obj.Items(i).FontSize = obj.FontSize;
+                fontsize(obj.Items(i).Pane,obj.FontSize,"pixels");
             end
             % set the grid row heights
             obj.containerGrid.RowHeight = repmat({'fit'},1,obj.nItems);
@@ -92,6 +98,8 @@ methods
         % delete the individual accordion items
         delete(obj.Items);
     end
+
+
 
 end
 

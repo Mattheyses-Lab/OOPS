@@ -1,4 +1,4 @@
-function uiaccordion_demo()
+function accordion = uiaccordion_demo()
 
     fH = uifigure(...
         "WindowStyle","alwaysontop",...
@@ -20,7 +20,7 @@ function uiaccordion_demo()
 
     % pane 1 items
 
-    accordion.Items(1).Pane.RowHeight = {25};
+    accordion.Items(1).Pane.RowHeight = {25,25,25,25};
     accordion.Items(1).Pane.ColumnWidth = {'fit','1x'};
     accordion.Items(1).Pane.RowSpacing = 5;
     accordion.Items(1).Pane.ColumnSpacing = 5;
@@ -55,15 +55,17 @@ function uiaccordion_demo()
 
     % pane 2 items
 
-    uibutton(accordion.Items(2).Pane,"Text","uibutton");
+    accordion.Items(2).Pane.RowHeight = {25};
+    accordion.Items(2).Pane.ColumnWidth = {'fit','1x'};
 
     uilabel(accordion.Items(2).Pane,"Text","uilabel","FontColor",[0 0 0]);
 
+    uibutton(accordion.Items(2).Pane,"Text","uibutton");
+
+   
     % pane 3 items
 
     accordion.Items(3).Pane.Padding = [0 0 0 0];
-
-    % pane 3 items
 
     uilistbox(accordion.Items(3).Pane);
 
