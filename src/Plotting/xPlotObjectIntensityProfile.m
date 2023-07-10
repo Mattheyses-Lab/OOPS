@@ -197,7 +197,7 @@ hold off
 
 
 set(axH,'XLim',[0 pi]);
-set(axH,'YLim',[0 1]);
+set(axH,'YLim',[0.5 1]);
 
 
 movegui(figH,'center')
