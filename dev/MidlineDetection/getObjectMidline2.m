@@ -18,7 +18,7 @@ midline_interp_res = 0.1;
 %% determine the original object boundary using bwboundaries()
 
 
-boundaries = perfectBinaryBoundaries(I,"method","tightest");
+boundaries = perfectBinaryBoundaries(I,"method","tightest","interpResolution",0.5);
 boundariesx = boundaries(:,2);
 boundariesy = boundaries(:,1);
 
