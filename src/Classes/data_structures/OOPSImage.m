@@ -84,6 +84,11 @@ classdef OOPSImage < handle
 
         % the name of the mask applied to this image (various)
         MaskName (1,:) char = 'Legacy'
+
+        % % handle to the custom mask scheme (if one was used)
+        % CustomScheme (1,1) CustomMask = CustomMask.empty()
+        % handle to the custom mask scheme (if one was used)
+        CustomScheme CustomMask = CustomMask.empty()
         
         % mask threshold adjustment (for display purposes)
         IntensityBinCenters
@@ -158,6 +163,13 @@ classdef OOPSImage < handle
         % RGB format mask for saving
         MaskRGBImage
 
+        % RGB label image showing the mask colored by object label
+        ObjectLabelImageRGB
+
+
+
+
+
         % struct() of morphological properties returned by regionprops(), see get() method for full list
         ObjectProperties struct
 
@@ -224,6 +236,9 @@ classdef OOPSImage < handle
 
         % 1 x nLabels array of the number of objects with each label in this image
         labelCounts (1,:) double
+
+        % % handle to the custom mask scheme (if one was used)
+        % CustomScheme (1,1) CustomMask
 
     end
     
@@ -630,21 +645,29 @@ classdef OOPSImage < handle
             RealWorldLimits = [0 obj.rawFPMPixelSize*obj.Width];
         end
 
-%% dependent get methods for various display options specific to this image
+%% dependent get methods for various display/processing options specific to this image
 
         function ThreshPanelTitle = get.ThreshPanelTitle(obj)
             switch obj.MaskType
                 case 'Default'
                     switch obj.MaskName
                         case 'Legacy'
-                            ThreshPanelTitle = 'Adjust Otsu threshold';
+                            ThreshPanelTitle = 'Adjust threshold';
                         case 'Adaptive'
-                            ThreshPanelTitle = 'Adjust adaptive mask sensitivity';
+                            ThreshPanelTitle = 'Adjust adaptive threshold sensitivity';
                         otherwise
                             ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
                     end
                 case 'CustomScheme'
-                    ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
+                    customScheme = obj.CustomScheme;
+                    switch customScheme.ThreshType
+                        case 'Otsu'
+                            ThreshPanelTitle = 'Adjust threshold';
+                        case 'Adaptive'
+                            ThreshPanelTitle = 'Adjust adaptive threshold sensitivity';
+                        otherwise
+                            ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
+                    end
             end
         end
 
@@ -655,12 +678,20 @@ classdef OOPSImage < handle
                         case 'Legacy'
                             ThreshStatisticName = 'Threshold';
                         case 'Adaptive'
-                            ThreshStatisticName = 'Adaptive mask sensitivity';
+                            ThreshStatisticName = 'Adaptive threshold sensitivity';
                         otherwise
                             ThreshStatisticName = false;
                     end
                 case 'CustomScheme'
-                    ThreshStatisticName = false;
+                    customScheme = obj.CustomScheme;
+                    switch customScheme.ThreshType
+                        case 'Otsu'
+                            ThreshStatisticName = 'Threshold';
+                        case 'Adaptive'
+                            ThreshStatisticName = 'Adaptive threshold sensitivity';
+                        otherwise
+                            ThreshStatisticName = false;
+                    end
             end
             % when set to false, will throw an error that we will catch when updating display
         end
@@ -677,7 +708,15 @@ classdef OOPSImage < handle
                             ManualThreshEnabled = false;
                     end
                 case 'CustomScheme'
-                    ManualThreshEnabled = false;
+                    customScheme = obj.CustomScheme;
+                    switch customScheme.ThreshType
+                        case 'Otsu'
+                            ManualThreshEnabled = true;
+                        case 'Adaptive'
+                            ManualThreshEnabled = true;
+                        otherwise
+                            ManualThreshEnabled = false;
+                    end
             end
         end
 
@@ -727,7 +766,7 @@ classdef OOPSImage < handle
 
         end
 
-%% dependent 'get' methods for output images
+%% RGB output images
 
         function OFImageRGB = get.OFImageRGB(obj)
             OFImageRGB = ind2rgb(im2uint8(obj.OF_image),obj.Settings.OrderFactorColormap);
@@ -801,6 +840,20 @@ classdef OOPSImage < handle
 
         function MaskRGBImage = get.MaskRGBImage(obj)
             MaskRGBImage = ind2rgb(im2uint8(full(obj.bw)),gray);
+        end
+
+        function ObjectLabelImageRGB = get.ObjectLabelImageRGB(obj)
+            % preallocate 2D label idx image
+            ObjectLabelImage = zeros(size(obj.bw));
+
+            % for each object in the image, set its pixels = the idx of its label
+            for objIdx = 1:obj.nObjects
+                ObjectLabelImage(obj.Object(objIdx).PixelIdxList) = obj.Object(objIdx).LabelIdx;
+            end
+            % the BG color
+            zeroColor = [0 0 0];
+            % convert the label matrix to an RGB image using the existing label colors
+            ObjectLabelImageRGB = label2rgb(ObjectLabelImage,obj.Settings.LabelColors,zeroColor);
         end
 
 
