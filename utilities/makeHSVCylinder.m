@@ -75,16 +75,23 @@ Z = [cylinderHeight.*Z([2 2 1], :); zeros(1, cylinderRes+1)];
 wedgeRatio = missingWedgeSize/360;
 cutoutCylinderIdx = round(cylinderRes*(1-wedgeRatio))+1;
 
-% cylinder with cutout wedge
-figure;
-surf(X(:,1:cutoutCylinderIdx),...
+% create a figure
+fH = figure("Name","HSV Cylinder");
+% place an axes in the figure
+hAx = axes(fH);
+% plot cylinder with cutout wedge
+surf(hAx,...
+    X(:,1:cutoutCylinderIdx),...
     Y(:,1:cutoutCylinderIdx),...
     Z(:,1:cutoutCylinderIdx),...
     C(:,1:cutoutCylinderIdx-1,:),...
     'FaceColor','texturemap',...
-    'EdgeColor', 'none');
+    'EdgeColor', 'none',...
+    'HitTest','off');
 axis equal
 hold on
+
+%% draw two rectangular planes on the inside of the missing wedge
 
 if missingWedgeSize > 0
     % (x,y,z) coordinates of plane 1
@@ -140,5 +147,85 @@ end
 set(gcf,'Color',[0 0 0]);
 set(gca,'Visible','Off');
 
+% now set up some callback functions to draw 2 lines along the vertical face of 
+% the cylinder to give the appearance of a solid outline at any viewing angle
+
+% first get x and y coordinates for a circle, the same size as the cylinder bases
+[circleX,circleY] = getCircleCoordinates(0,0,cylinderRadius,360);
+
+% set the default viewing angle of the axis
+view(hAx,45,30);
+
+% draw the default outline lines
+[outlineX,outlineY,outlineZ] = getOutlineCoordinates();
+outlines = line(outlineX,outlineY,outlineZ,...
+    'LineWidth',outlineWidth,...
+    'Color',outlineColor);
+
+fH.WindowButtonDownFcn = @StartUpdatingOutlines;
+
+    function StartUpdatingOutlines(~,~)
+        fH.WindowButtonMotionFcn = @UpdateOutlines;
+        fH.WindowButtonUpFcn = @StopUpdatingOutlines;
+    end
+
+    function StopUpdatingOutlines(~,~)
+        fH.WindowButtonMotionFcn = [];
+        fH.WindowButtonUpFcn = [];
+        UpdateOutlines();
+    end
+
+    function UpdateOutlines(~,~)
+        [outlineX,outlineY,outlineZ] = getOutlineCoordinates();
+        % delete the old outline lines
+        delete(outlines)
+        % draw new ones
+        outlines = line(outlineX,outlineY,outlineZ,...
+            'LineWidth',outlineWidth,...
+            'Color',outlineColor);
+    end
+
+    function [XData,YData,ZData] = getOutlineCoordinates()
+        % get the azimuthal view angle
+        viewAngles = hAx.View;
+        viewAzimuth = round(viewAngles(1));
+        % unwrap the angle in case it is negative or its absolute value is greater than 360°
+        viewAzimuth = mod(viewAzimuth,360);
+        % get the angular position of each line
+        % line 1
+        line1Azimuth = viewAzimuth;
+        % line 2
+        if viewAzimuth > 180
+            line2Azimuth = viewAzimuth-180;
+        else
+            line2Azimuth = viewAzimuth+180;
+        end
+        % get the angle beyond which we won't draw lines (because of the cutout)
+        cutoffAngle = 360-missingWedgeSize;
+        % get coordinates for each line
+        % line 1: if line is within missing wedge
+        if line1Azimuth >= cutoffAngle
+            % then coordinates = NaN
+            outlineX1 = NaN; outlineY1 = NaN; outlineZ1 = NaN;
+        else % otherwise, determine coordinates
+            outlineX1 = [circleX(line1Azimuth+1); circleX(line1Azimuth+1)];
+            outlineY1 = [circleY(line1Azimuth+1); circleY(line1Azimuth+1)];
+            outlineZ1 = [0; cylinderHeight];
+        end
+        % line 2: if line is within missing wedge
+        if line2Azimuth >= cutoffAngle
+            % then coordinates = NaN
+            outlineX2 = NaN; outlineY2 = NaN; outlineZ2 = NaN;
+        else 
+            % otherwise, determine coordinates
+            outlineX2 = [circleX(line2Azimuth+1); circleX(line2Azimuth+1)];
+            outlineY2 = [circleY(line2Azimuth+1); circleY(line2Azimuth+1)];
+            outlineZ2 = [0; cylinderHeight];
+        end
+        % concatenate the line coordinates
+        XData = [outlineX1; NaN; outlineX2];
+        YData = [outlineY1; NaN; outlineY2];
+        ZData = [outlineZ1; NaN; outlineZ2];
+    end
 
 end
