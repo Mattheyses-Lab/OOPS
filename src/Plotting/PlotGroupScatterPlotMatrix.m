@@ -32,7 +32,8 @@ function PlotGroupScatterPlotMatrix(source,~)
             'HandleVisibility','on',...
             'WindowStyle','alwaysontop',...
             'Visible','off',...
-            'AutoResizeChildren','Off');
+            'AutoResizeChildren','Off',...
+            'Color',[1 1 1]);
 
     % get colors for each object based on ColorMode
     switch ColorMode
@@ -46,7 +47,7 @@ function PlotGroupScatterPlotMatrix(source,~)
 
     % usage: gplotmatrix(X,[],group,clr,sym,siz,doleg,dispopt,xnam)
     % [h,ax] = gplotmatrix(objectData,[],objectGroupIdxs,objectGroupColors,[],markerSize,[],DiagonalDisplay,variableListLong);
-    [h,ax] = gplotmatrix(objectData,[],objectGroupIdxs,objectGroupColors,[],[],[],DiagonalDisplay,variableListLong);
+    [h,ax,bigAx] = gplotmatrix(objectData,[],objectGroupIdxs,objectGroupColors,[],markerSize,false,DiagonalDisplay,variableListLong);
 
 
     for i = 1:nVariables
