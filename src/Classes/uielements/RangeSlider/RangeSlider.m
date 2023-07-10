@@ -178,6 +178,8 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
 
             obj.RangeLine.Color = obj.RangeColor;
             obj.RangeLine.YData = [obj.YDist obj.YDist];
+            % test below
+            obj.RangeLine.XData = obj.Value;
 
             obj.RangeAxes.XColor = obj.TickColor;
 
