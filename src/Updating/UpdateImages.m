@@ -112,9 +112,6 @@ function [] = UpdateImages(source,varargin)
                 switch OOPSData.Settings.ObjectBoxType
                     % simple rectangles
                     case 'Box'
-                        %% using patch objects
-                        % plotting obj patches with faces/vertices
-                        % (we could also pass in the object boundary coordinates as XData and YData)
                         [AllVertices,...
                             AllCData,...
                             SelectedFaces,...
@@ -123,13 +120,10 @@ function [] = UpdateImages(source,varargin)
 
                         OOPSData.Handles.ObjectBoxes = gobjects(1,1);
                         OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-
                         % change the current axes of the main window
                         OOPSData.Handles.fH.CurrentAxes = OOPSData.Handles.AverageIntensityAxH;
-
                         % hold on so we can preserve our images/other objects
                         hold on
-
                         % plot a patch object containing the unselected objects
                         OOPSData.Handles.ObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
                             'Faces',UnselectedFaces,...
@@ -143,7 +137,6 @@ function [] = UpdateImages(source,varargin)
                             'PickableParts','all',...
                             'Interruptible','off');
                         OOPSData.Handles.ObjectBoxes.LineWidth = 1;
-
                         % plot a patch object containing the selected objects
                         OOPSData.Handles.SelectedObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
                             'Faces',SelectedFaces,...
@@ -158,13 +151,9 @@ function [] = UpdateImages(source,varargin)
                             'PickableParts','all',...
                             'Interruptible','off');
                         OOPSData.Handles.SelectedObjectBoxes.LineWidth = 2;
-
                         % remove the hold
                         hold off
-
-                    % in development - object boundaries
                     case 'Boundary'
-
                         %% using patch objects
                         % plotting obj patches with faces/vertices
                         % (we could also pass in the object boundary coordinates as XData and YData)
@@ -176,13 +165,10 @@ function [] = UpdateImages(source,varargin)
 
                         OOPSData.Handles.ObjectBoxes = gobjects(1,1);
                         OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-
                         % change the current axes of the main window
                         OOPSData.Handles.fH.CurrentAxes = OOPSData.Handles.AverageIntensityAxH;
-
                         % hold on so we can preserve our images/other objects
                         hold on
-
                         % plot a patch object containing the unselected objects
                         OOPSData.Handles.ObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
                             'Faces',UnselectedFaces,...
@@ -195,8 +181,7 @@ function [] = UpdateImages(source,varargin)
                             'ButtonDownFcn',@SelectObjectPatches,...
                             'PickableParts','all',...
                             'Interruptible','off');
-                        OOPSData.Handles.ObjectBoxes.LineWidth = 2;
-
+                        OOPSData.Handles.ObjectBoxes.LineWidth = 1;
                         % plot a patch object containing the selected objects
                         OOPSData.Handles.SelectedObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
                             'Faces',SelectedFaces,...
@@ -210,18 +195,14 @@ function [] = UpdateImages(source,varargin)
                             'ButtonDownFcn',@SelectObjectPatches,...
                             'PickableParts','all',...
                             'Interruptible','off');
-                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 3;
-
+                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 2;
                         % remove the hold
                         hold off
-                        
                 end
             end
             
             UpdateAverageIntensity();            
-            %UpdateThreshholdSlider();
 
-            %drawnow
 
         case 'Order Factor'
             %% Order Factor Tab
@@ -427,8 +408,10 @@ function [] = UpdateImages(source,varargin)
                 end
             end
 
-            UpdateAverageIntensity();           
-            drawnow
+            UpdateAverageIntensity();
+
+            % this drawnow line might be causing issues
+            %drawnow
 
         case 'Azimuth'
             %% Azimuth
@@ -606,7 +589,7 @@ function [] = UpdateImages(source,varargin)
                 cObject = cImage.CurrentObject;
                 % get object mask image, restricted -> does not include nearby objects
                 % within padded object bounding box
-                RestrictedPaddedObjMask = cObject.RestrictedPaddedMaskSubImage;
+                RestrictedPaddedObjMask = cObject.paddedSubImage;
                 % pad the object subarrayidx with 5 pixels per side
                 PaddedSubarrayIdx = padSubarrayIdx(cObject.SubarrayIdx,5);
             catch
@@ -645,7 +628,11 @@ function [] = UpdateImages(source,varargin)
 
             % display object binary image
             try
-                OOPSData.Handles.ObjectMaskImgH.CData = cObject.RestrictedPaddedMaskSubImage;
+                %OOPSData.Handles.ObjectMaskImgH.CData = cObject.RestrictedPaddedMaskSubImage;
+
+                % testing below - use RGB instead of logical for easier exporting
+                OOPSData.Handles.ObjectMaskImgH.CData = cObject.MaskImageRGB;
+
             catch
                 disp('Warning: Error displaying object binary image');
                 OOPSData.Handles.ObjectMaskImgH.CData = EmptyImage;
@@ -691,14 +678,11 @@ function [] = UpdateImages(source,varargin)
             end
 
             try
-                % create 'circular' colormap by vertically concatenating 2 hsv maps
-                % tempmap = hsv;
-                % circmap = vertcat(tempmap,tempmap);
 
                 azimuthMap = repmat(OOPSData.Settings.AzimuthColormap,2,1);
 
-                LineMask = cObject.RestrictedPaddedMaskSubImage;
-                LineScaleDown = OOPSData.Settings.AzimuthScaleDownFactor;
+                LineMask = cObject.paddedSubImage;
+                LineScaleDown = OOPSData.Settings.ObjectAzimuthScaleDownFactor;
     
                 if LineScaleDown > 1
                     ScaleDownMask = makeSpacedCheckerboard(size(LineMask),LineScaleDown);
@@ -706,18 +690,29 @@ function [] = UpdateImages(source,varargin)
                 end
 
                 [y,x] = find(LineMask==1);
+                
+                % azimuth line directions
                 theta = cObject.PaddedAzimuthSubImage(LineMask);
+                % azimuth line lengths
                 rho = cObject.PaddedOFSubImage(LineMask);
-    
-                ColorMode = OOPSData.Settings.AzimuthColorMode;
-                LineWidth = OOPSData.Settings.AzimuthLineWidth;
-                LineAlpha = OOPSData.Settings.AzimuthLineAlpha;
-                LineScale = OOPSData.Settings.AzimuthLineScale;
+                % settings controlling line appearance
+                ColorMode = OOPSData.Settings.ObjectAzimuthColorMode;
+                LineWidth = OOPSData.Settings.ObjectAzimuthLineWidth;
+                LineAlpha = OOPSData.Settings.ObjectAzimuthLineAlpha;
+                LineScale = OOPSData.Settings.ObjectAzimuthLineScale;
+
+                %ColorMode = 'RelativeDirection';
+
+                if strcmp(ColorMode,'RelativeDirection')
+                    theta2 = cObject.MidlineRelativeAzimuthImage(LineMask);
+                else
+                    theta2 = [];
+                end
     
                 switch ColorMode
                     case 'Magnitude'
                         Colormap = OOPSData.Settings.OrderFactorColormap;
-                    case 'Direction'
+                    case {'Direction','RelativeDirection'}
                         Colormap = azimuthMap;
                     case 'Mono'
                         Colormap = [1 1 1];
@@ -733,21 +728,24 @@ function [] = UpdateImages(source,varargin)
                     Colormap,...
                     LineWidth,...
                     LineAlpha,...
-                    LineScale);
+                    LineScale,...
+                    theta2);
 
-                objectPaddedSize = size(cObject.RestrictedPaddedMaskSubImage);
+                objectPaddedSize = size(cObject.paddedSubImage);
 
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
                 
             catch ME
-                msg = getReport(ME);
-                warning(['Error displaying object azimuth sticks: ', msg]);
                 % because setting the axes limits will change lim mode to 'manual', we need to set the limits
-                % if the sticks don't display properly in the try statement above. Otherwise, the limits of 
+                % if the sticks don't display properly in the try block above. Otherwise, the limits of 
                 % the axes might not match the size of CData of the image object it holds
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
+                % send a warning to the command window
+                warning(['Error displaying object azimuth sticks: ', ME.message]);
+                % send error message to the OOPS log window
+                % UpdateLog3(source,['Error displaying object azimuth sticks: ',ME.message],'append');
             end
 
             % retrieve the object midline coordinates
@@ -756,21 +754,32 @@ function [] = UpdateImages(source,varargin)
             if ~isempty(Midline) && ~any(isnan(Midline(:)))
                 % then attempt to plot the midline coordinates
                 try
+                    % % plot as a primitive line
+                    % OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectAzimuthOverlayAxH,...
+                    %     'XData',Midline(:,1),...
+                    %     'YData',Midline(:,2),...
+                    %     'Marker','none',...
+                    %     'LineStyle','-',...
+                    %     'LineWidth',2,...
+                    %     'Color',[0 0 0]);
+
                     % plot as a primitive line
-                    OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectAzimuthOverlayAxH,...
+                    OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectMaskAxH,...
                         'XData',Midline(:,1),...
                         'YData',Midline(:,2),...
                         'Marker','none',...
                         'LineStyle','-',...
                         'LineWidth',2,...
                         'Color',[0 0 0]);
+                    
                 catch ME
                     UpdateLog3(source,['Warning: Error displaying object midline: ', ME.message],'append');
                     % % reset the axes limits to match the object image size
                     % OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
                     % OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
-                    OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
-                    OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
+
+                    OOPSData.Handles.ObjectMaskAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
+                    OOPSData.Handles.ObjectMaskAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
 
                 end
             end
@@ -812,7 +821,9 @@ function [] = UpdateImages(source,varargin)
                 OOPSData.Handles.ObjectNormIntStackImgH.CData = repmat(EmptyImage,1,4);
             end
 
-            drawnow
+            % having a drawnow here can cause an long, unstoppable upddate queue
+            % now testing if necessary
+            %drawnow limitrate nocallbacks
              
     end
 
