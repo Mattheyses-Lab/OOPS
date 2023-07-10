@@ -191,11 +191,11 @@ methods
     end
 
     function nodeSize = get.nodeSize(obj)
-        nodeSize = obj.FontSize + 6
+        nodeSize = obj.FontSize + 6;
     end
 
     function nodeSizeWithBorders = get.nodeSizeWithBorders(obj)
-        nodeSizeWithBorders = obj.nodeSize + obj.BorderWidth*2 + 2
+        nodeSizeWithBorders = obj.nodeSize + obj.BorderWidth*2 + 2;
     end
 
     function gridPadding = get.gridPadding(obj)
