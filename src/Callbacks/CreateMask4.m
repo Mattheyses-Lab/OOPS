@@ -260,6 +260,22 @@ switch MaskType
             % get the final output image (should be a logical mask image)
             cImage.bw = sparse(CustomScheme.Images(end).ImageData);
 
+
+
+
+            if ismember(CustomScheme.ThreshType,{'Otsu','Adaptive'})
+                % store the enhanced grayscale image (from which the mask is built)
+                cImage.EnhancedImg = CustomScheme.EnhancedImg;
+
+                switch CustomScheme.ThreshType
+                    case 'Otsu'
+                        cImage.level = graythresh(cImage.EnhancedImg);
+                    case 'Adaptive'
+                        cImage.level = CustomScheme.Operations(CustomScheme.ThreshStepIdx).ParamsMap('Sensitivity');
+                end
+
+            end
+
             % testing below, various adjustments to the custom mask
             % fill in gaps to remove diagonally connected pixels, keep only the pixels we added
             diagFill = bwmorph(full(cImage.bw),'diag',1)-full(cImage.bw);
@@ -297,10 +313,11 @@ switch MaskType
             i = i+1;
             % clear the data once more
             CustomScheme.ClearImageData();
+            % store a handle to the custom scheme
+            cImage.CustomScheme = CustomScheme;
         end
-        clear CustomScheme
+        %clear CustomScheme
 end
-
 
 % invoke callback to change tab
 if ~strcmp(OOPSData.Settings.CurrentTab,'Mask')

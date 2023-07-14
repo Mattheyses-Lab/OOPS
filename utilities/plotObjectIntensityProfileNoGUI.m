@@ -7,7 +7,7 @@ PaddedSubarrayIdx = padSubarrayIdx(Object.SubarrayIdx,5);
 % initialize pixel-normalized intensity stack for curve fitting
 PaddedObjPixelNormIntensity = zeros([size(Mask),4]);
 % get pixel-normalized intensity stack for curve fitting
-PaddedObjPixelNormIntensity(:) = Object.Parent.norm(PaddedSubarrayIdx{:},:);
+PaddedObjPixelNormIntensity(:) = Object.Parent.ffcFPMPixelNorm(PaddedSubarrayIdx{:},:);
 % x and y values to fit to the sinusoid
 x = [0,pi/4,pi/2,3*(pi/4)];
 % y values to fit to the sinusoid

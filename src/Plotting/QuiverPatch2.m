@@ -7,7 +7,8 @@ function hPatch = QuiverPatch2(hAx,...
     Colormap,...
     LineWidth,...
     LineAlpha,...
-    LineScale)
+    LineScale,...
+    theta2)
 
 % need to generalize and add documentation
 
@@ -33,10 +34,10 @@ function hPatch = QuiverPatch2(hAx,...
 
     % 'bin' the x and y coords if desired,
     %   sometimes useful if plotting many lines
-    X = X(:,1:1:end);
-    Y = Y(:,1:1:end);
-    rho = rho(1:1:end);
-    theta = theta(1:1:end);
+    % X = X(:,1:1:end);
+    % Y = Y(:,1:1:end);
+    % rho = rho(1:1:end);
+    % theta = theta(1:1:end);
     % preallocate line colors array
     PatchColors = zeros(nLines,3);
     
@@ -70,6 +71,23 @@ function hPatch = QuiverPatch2(hAx,...
             MonoColor = [1 1 1];
             % replicate the MonoColor nLines times since each line is the same color
             PatchColors = repmat(MonoColor,nLines,1);
+        case 'RelativeDirection'
+            % determine how many colors in the full map
+            nColors = length(Colormap);
+            % get the region of the circular map from
+            % -pi/2 to pi/2 (the range of our values)
+            % (pi/2)/(2pi) = 0.25
+            % (3pi/2)/(2pi) = 0.75
+            halfcircmap = Colormap(0.25*nColors:0.75*nColors,:);
+            % how many colors in the truncated map
+            nColors = length(halfcircmap);
+            % normalize our theta values and convert to idxs
+            % theta is in the range [-pi/2,pi/2]...
+            % (theta+pi/2)./(pi) will scale theta to 0-1...
+            % thus: 0 -> -pi/2, 1 -> pi/2
+            ColorIdxsNorm = round(((theta2+pi/2)./(pi))*(nColors-1))+1;
+            % fill the array with colors based on idxs in ColorIdxsNorm
+            PatchColors(:,:) = halfcircmap(ColorIdxsNorm,:);
     end
 
 C = Interleave2DArrays(PatchColors,nan(size(PatchColors)),'row');

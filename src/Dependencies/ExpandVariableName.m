@@ -1,7 +1,7 @@
 function NameOut = ExpandVariableName(NameIn)
     switch NameIn
         case 'OFAvg'
-            NameOut = 'Order Factor Average';
+            NameOut = 'Mean OF';
         case 'SBRatio'
             NameOut = 'Local S/B';
         case 'Area'
@@ -11,7 +11,7 @@ function NameOut = ExpandVariableName(NameIn)
         case 'Circularity'
             NameOut = 'Circularity';
         case 'SignalAverage'
-            NameOut = 'Raw Intensity Average';
+            NameOut = 'Mean Raw Intensity';
         case 'MaxFeretDiameter'
             NameOut = 'Maximum Feret Diameter';
         case 'MinFeretDiameter'
@@ -23,9 +23,9 @@ function NameOut = ExpandVariableName(NameIn)
         case 'Eccentricity'
             NameOut = 'Eccentricity';
         case 'BGAverage'
-            NameOut = 'BG Intensity Average';
+            NameOut = 'Mean BG Intensity';
         case 'AzimuthAverage'
-            NameOut = 'Azimuth Average';
+            NameOut = 'Mean Azimuth';
         case 'AzimuthStd'
             NameOut = 'Azimuth Circular Standard Deviation';
         case 'Orientation'
@@ -35,9 +35,9 @@ function NameOut = ExpandVariableName(NameIn)
         case 'ConvexArea'
             NameOut = 'Convex Area';
         case 'MidlineRelativeAzimuth'
-            NameOut = 'Azimuth Relative to Midline';
+            NameOut = 'Mean Azimuth (Midline)';
         case 'NormalRelativeAzimuth'
-            NameOut = 'Azimuth Relative to Midline Normal';
+            NameOut = 'Mean Azimuth (Midline Normal)';
         case 'MidlineLength'
             NameOut = 'Midline Length';
         case 'AzimuthAngularDeviation'

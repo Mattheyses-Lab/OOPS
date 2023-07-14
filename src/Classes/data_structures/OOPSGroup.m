@@ -33,7 +33,7 @@
     
     properties (Dependent = true)
         
-        % number of 'images' in this experimental group, depends on the size of obj.Replicate
+        % number of 'images' in this group, depends on the size of obj.Replicate
         nReplicates uint8
         
         % total number of objects in this group, changes depending on user-defined mask
@@ -472,54 +472,73 @@
 
             % get FFCData if the files were loaded into the project, otherwise 'simulate'
             if obj.FFCLoaded
-                obj.FFC_cal_shortname = group.FFC_cal_shortname;
-                obj.FFC_cal_fullname = group.FFC_cal_fullname;
-
-                % find file extension
-                fnameSplit = strsplit(obj.FFC_cal_fullname{1,1},'.');
-                fileType = fnameSplit{end};
+                % get the 'short' filename (without path and extension)
+                FFC_cal_shortname = group.FFC_cal_shortname;
+                % get the 'full' filename (with path and extension)
+                FFC_cal_fullname = group.FFC_cal_fullname;
 
                 % get other relevant parameters
-                FFC_n_cal = numel(group.FFC_cal_shortname);
+                nFFCFiles = numel(group.FFC_cal_shortname);
 
-                switch fileType
+                for i=1:nFFCFiles
 
-                    case 'nd2'
+                    fullFilename = char(FFC_cal_fullname{i,1});
 
-                        for i=1:FFC_n_cal
+                    % throw an error if file does not exist
+                    if ~isfile(fullFilename)
+                        error('OOPSGroup:fileNotFound',...
+                            ['Unable to load file: ',fullFilename,'\nMake sure the file is in the location shown above.'])
+                    end
 
-                            fullFilename = char(obj.FFC_cal_fullname{i,1});
+                    % open the image with bioformats
+                    bfData = bfopen(fullFilename);
+                    % get the image info (pixel values and filename) from the first element of the bf cell array
+                    imageInfo = bfData{1,1};
 
-                            % throw an error if file does not exist
-                            if ~isfile(fullFilename)
-                                error('OOPSGroup:fileNotFound',...
-                                    ['Unable to load file: ',fullFilename,'\nMake sure the file is in the location shown above.'])
-                            end
+                    % make sure this is a 4-image stack
+                    nSlices = length(imageInfo(:,1));
 
-                            temp = bfopen(fullFilename);
-                            temp2 = temp{1,1};
-                            clear temp
+                    if nSlices ~= 4
+                        error('LoadFFCData:incorrectSize', ...
+                            ['Error while loading ', ...
+                            FFC_cal_fullname{i,1}, ...
+                            '\nFile must be a stack of four images'])
+                    end
 
-                            if i==1
-                                obj.FFC_Height = size(temp2{1,1},1);
-                                obj.FFC_Width = size(temp2{1,1},2);
-                                FFC_all_cal = zeros(obj.FFC_Height,obj.FFC_Width,4,FFC_n_cal);
-                            end
+                    % from the bfdata cell array of image data, concatenate slices along 3rd dim and convert to matrix
+                    rawFFCStack = cell2mat(reshape(imageInfo(1:4,1),1,1,4));
 
-                            for j=1:4
-                                FFC_all_cal(:,:,j,i) = im2double(temp2{j,1})*65535;
-                                % indexing example: FFCData.all_cal(row,col,slice,stack)
-                            end
-                        end
+                    % get the range of values in the input stack using its class
+                    rawFFCRange = getrangefromclass(rawFFCStack);
 
-                        FFC_cal_average = sum(FFC_all_cal,4)./FFC_n_cal;
-                        obj.FFC_cal_norm = FFC_cal_average/max(max(max(FFC_cal_average)));
+                    % if this is this first file
+                    if i == 1
+                        % get the height and width of the input stack
+                        [Height,Width] = size(rawFFCStack,[1 2]);
+                        % preallocate the 4D matrix which will hold the FFC stacks
+                        rawFFCStacks = zeros(Height,Width,4,nFFCFiles);
+                    else
+                        % throw error if dimensions of this image stack do not match those of the first one
+                        assert(size(rawFFCStack,1)==Height,'Dimensions of FFC files do not match');
+                        assert(size(rawFFCStack,2)==Width,'Dimensions of FFC files do not match');
+                    end
 
-                    case 'tif'
+                    % add this stack to our 4D array of stacks, convert to double with the same values
+                    rawFFCStacks(:,:,:,i) = im2double(rawFFCStack).*rawFFCRange(2);
 
 
                 end
 
+                % add short and full filenames to this OOPSGroup
+                obj.FFC_cal_shortname = FFC_cal_shortname;
+                obj.FFC_cal_fullname = FFC_cal_fullname;
+                % store height and width of the FFC files
+                obj.FFC_Height = Height;
+                obj.FFC_Width = Width;
+                % average the raw input stacks along the fourth dimension
+                FFC_cal_average = sum(rawFFCStacks,4)./nFFCFiles;
+                % normalize to the maximum value across all pixels/images in the average stack
+                obj.FFC_cal_norm = FFC_cal_average/max(FFC_cal_average,[],'all');
             else
                 obj.FFC_cal_shortname = [];
                 obj.FFC_cal_fullname = [];

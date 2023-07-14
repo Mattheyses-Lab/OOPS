@@ -233,10 +233,16 @@ for i = 1:nGroups
     end
 end
 
+% set y-axis limits, y-axis tick locations, and y-axis tick labels automatically
 axH.YTickMode = 'Auto';
 axH.YTickLabelMode = 'Auto';
 axH.YLimMode = 'Auto';
 
+% unhide all the plot elements
+set(findobj(axH,'type','scatter'),'Visible','on');
+set(findobj(axH,'type','line'),'Visible','on');
+
+% set marker colors based on color mode
 switch OOPSData.Settings.SwarmPlotColorMode
     case 'Magnitude'
         % color the points according to magnitude using the currently selected Order factor colormap
@@ -254,11 +260,9 @@ switch OOPSData.Settings.SwarmPlotColorMode
         end
 end
 
-% unhide all the plot elements
-set(findobj(axH,'type','scatter'),'Visible','on');
-set(findobj(axH,'type','line'),'Visible','on');
-
 % hide the axes until we are done plotting
 axH.Visible = 'on';
+
+
 
 end

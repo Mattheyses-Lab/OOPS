@@ -37,9 +37,10 @@ function UpdateThresholdSlider(source)
     else
         OOPSData.Handles.ThreshAxH.HitTest = 'Off';
         % get histogram counts from random data
-        [~,HistPlot] = BuildHistogram(rand(1024,1024));
+        [~,HistPlot] = BuildHistogram([]);
         % set the data on our threshold slider axes
         OOPSData.Handles.ThreshBar.YData = HistPlot;
+
         % set thresh line to 0
         OOPSData.Handles.CurrentThresholdLine.Value = 0;
         % don't display a label

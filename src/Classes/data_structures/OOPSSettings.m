@@ -66,20 +66,23 @@ classdef OOPSSettings < handle
         Palettes struct
         PalettesSettings struct
         
-        % Azimuth display settings
+        % azimuth display settings
         AzimuthDisplaySettings struct
         
-        % ScatterPlot settings
+        % scatter plot settings
         ScatterPlotSettings struct
 
-        % SwarmPlot settings
+        % swarm plot settings
         SwarmPlotSettings struct
 
-        % PolarHistogram settings
+        % polar histogram settings
         PolarHistogramSettings struct
 
-        % ObjectIntensityProfile settings
-        ObjectIntensityProfileSettings struct       
+        % object intensity profile settings
+        ObjectIntensityProfileSettings struct
+
+        % object azimuth display settings
+        ObjectAzimuthDisplaySettings struct
 
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
@@ -164,6 +167,13 @@ classdef OOPSSettings < handle
         ObjectIntensityProfileAnnotationsColor
         ObjectIntensityProfileAzimuthLinesColor
 
+        % ObjectAzimuthDisplaySettings
+        ObjectAzimuthLineAlpha
+        ObjectAzimuthLineWidth
+        ObjectAzimuthLineScale
+        ObjectAzimuthScaleDownFactor
+        ObjectAzimuthColorMode
+
         % Object variables "long" names
         ObjectPlotVariablesLong
 
@@ -208,11 +218,11 @@ classdef OOPSSettings < handle
             if ismac || isunix
                 % get the path to this .m file (two levels below the directory we want)
                 CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-                % get the "MainPath" (path to main gui driver)
-                obj.MainPath = strjoin(CurrentPathSplit(1:end-3),'/');
+                % get the "MainPath" (path to OOPS.m)
+                obj.MainPath = strjoin(CurrentPathSplit(1:end-4),'/');
             elseif ispc
                 CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-                obj.MainPath = strjoin(CurrentPathSplit(1:end-3),'\');
+                obj.MainPath = strjoin(CurrentPathSplit(1:end-4),'\');
             end
 
             settingsFiles = {...
@@ -226,7 +236,8 @@ classdef OOPSSettings < handle
                 'AzimuthDisplaySettings.mat',...
                 'PolarHistogramSettings.mat',...
                 'ObjectPolarPlotVariables.mat',...
-                'ObjectIntensityProfileSettings.mat'};
+                'ObjectIntensityProfileSettings.mat',...
+                'ObjectAzimuthDisplaySettings.mat'};
 
             obj.updateSettingsFromFiles(settingsFiles);
 
@@ -384,6 +395,8 @@ classdef OOPSSettings < handle
             end
         end
 
+%% colormap settings
+
         function IntensityColormap = get.IntensityColormap(obj)
             IntensityColormap = obj.ColormapsSettings.Intensity.Map;
         end
@@ -400,6 +413,8 @@ classdef OOPSSettings < handle
             AzimuthColormap = obj.ColormapsSettings.Azimuth.Map;
         end
 
+%% palette settings
+
         function GroupPalette = get.GroupPalette(obj)
             GroupPalette = obj.PalettesSettings.Group.Colors;
         end
@@ -407,6 +422,8 @@ classdef OOPSSettings < handle
         function LabelPalette = get.LabelPalette(obj)
             LabelPalette = obj.PalettesSettings.Label.Colors;
         end
+
+%% azimuth display settings
 
         function AzimuthLineAlpha = get.AzimuthLineAlpha(obj)
             AzimuthLineAlpha = obj.AzimuthDisplaySettings.LineAlpha;
@@ -427,6 +444,8 @@ classdef OOPSSettings < handle
         function AzimuthColorMode = get.AzimuthColorMode(obj)
             AzimuthColorMode = obj.AzimuthDisplaySettings.ColorMode;
         end
+
+%% scatter plot settings        
 
         function ScatterPlotXVariable = get.ScatterPlotXVariable(obj)
             ScatterPlotXVariable = obj.ScatterPlotSettings.XVariable;
@@ -455,6 +474,8 @@ classdef OOPSSettings < handle
         function ScatterPlotLegendVisible = get.ScatterPlotLegendVisible(obj)
             ScatterPlotLegendVisible = obj.ScatterPlotSettings.LegendVisible;
         end
+
+%% swarm plot settings
 
         function SwarmPlotYVariable = get.SwarmPlotYVariable(obj)
             SwarmPlotYVariable = obj.SwarmPlotSettings.YVariable;
@@ -491,6 +512,8 @@ classdef OOPSSettings < handle
         function SwarmPlotErrorBarsVisible = get.SwarmPlotErrorBarsVisible(obj)
             SwarmPlotErrorBarsVisible = obj.SwarmPlotSettings.ErrorBarsVisible;
         end
+
+%% polar histogram settings        
 
         function PolarHistogramnBins = get.PolarHistogramnBins(obj)
             PolarHistogramnBins = obj.PolarHistogramSettings.nBins;
@@ -544,6 +567,7 @@ classdef OOPSSettings < handle
             PolarHistogramVariable = obj.PolarHistogramSettings.Variable;
         end
 
+%% object intensity profile settings
 
         function ObjectIntensityProfileFitLineColor = get.ObjectIntensityProfileFitLineColor(obj)
             ObjectIntensityProfileFitLineColor = obj.ObjectIntensityProfileSettings.FitLineColor;
@@ -569,7 +593,27 @@ classdef OOPSSettings < handle
             ObjectIntensityProfileAzimuthLinesColor = obj.ObjectIntensityProfileSettings.AzimuthLinesColor;
         end
 
+%% object azimuth display settings
 
+        function ObjectAzimuthLineAlpha = get.ObjectAzimuthLineAlpha(obj)
+            ObjectAzimuthLineAlpha = obj.ObjectAzimuthDisplaySettings.LineAlpha;
+        end
+
+        function ObjectAzimuthLineWidth = get.ObjectAzimuthLineWidth(obj)
+            ObjectAzimuthLineWidth = obj.ObjectAzimuthDisplaySettings.LineWidth;
+        end
+
+        function ObjectAzimuthLineScale = get.ObjectAzimuthLineScale(obj)
+            ObjectAzimuthLineScale = obj.ObjectAzimuthDisplaySettings.LineScale;
+        end
+
+        function ObjectAzimuthScaleDownFactor = get.ObjectAzimuthScaleDownFactor(obj)
+            ObjectAzimuthScaleDownFactor = obj.ObjectAzimuthDisplaySettings.ScaleDownFactor;
+        end
+
+        function ObjectAzimuthColorMode = get.ObjectAzimuthColorMode(obj)
+            ObjectAzimuthColorMode = obj.ObjectAzimuthDisplaySettings.ColorMode;
+        end
 
 
 

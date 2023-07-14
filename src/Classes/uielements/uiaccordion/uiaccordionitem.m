@@ -139,6 +139,12 @@ methods(Access=protected)
             obj.collapsedGrid.Visible = 'on';
             obj.expandedGrid.Visible = 'off';
         end
+
+        % update itemGrid row height and column 1 width to account for changing FontSize
+        obj.itemGrid.RowHeight = obj.nodeSize;
+        obj.itemGrid.ColumnWidth{1} = obj.nodeSize;
+
+        % make sure collapsed and expanded grids are sized to fit components
         obj.collapsedGrid.RowHeight{1} = 'fit';
         obj.expandedGrid.RowHeight{1} = 'fit';
         % set grid padding and row spacing to simulate borders
