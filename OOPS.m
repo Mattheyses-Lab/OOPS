@@ -194,7 +194,19 @@ OOPSData.Handles.hPlotMenu = uimenu(OOPSData.Handles.fH,'Text','Plot');
 % Plot options
 OOPSData.Handles.hPlotGroupScatterPlotMatrix = uimenu(OOPSData.Handles.hPlotMenu,'Text','Group scatter plot matrix','MenuSelectedFcn',@PlotGroupScatterPlotMatrix);
 OOPSData.Handles.hPlotObjectIntensityProfile = uimenu(OOPSData.Handles.hPlotMenu,'Text','Object intensity profile','MenuSelectedFcn',@xPlotObjectIntensityProfile);
-OOPSData.Handles.hPlotFullAzimuthQuiver = uimenu(OOPSData.Handles.hPlotMenu,'Text','Azimuth quiver plot','MenuSelectedFcn',@PlotFullAzimuthQuiver);
+OOPSData.Handles.hPlotFullAzimuthQuiver = uimenu(OOPSData.Handles.hPlotMenu,'Text','Azimuth stick plot','MenuSelectedFcn',@PlotFullAzimuthQuiver);
+% Show images
+OOPSData.Handles.hPlot_Images = uimenu(OOPSData.Handles.hPlotMenu,'Text','Images');
+% options for 'Images'
+OOPSData.Handles.hPlot_Images_OFImageRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','OF','Tag','OFImageRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_MaskedOFImageRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Masked OF','Tag','MaskedOFImageRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_OFIntensityOverlayRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','OF-intensity overlay','Tag','OFIntensityOverlayRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_ScaledOFIntensityOverlayRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Scaled OF-intensity overlay','Tag','ScaledOFIntensityOverlayRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_AzimuthRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Azimuth','Tag','AzimuthRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_MaskedAzimuthRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Masked azimuth','Tag','MaskedAzimuthRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_AzimuthOFIntensityOverlayHSV = uimenu(OOPSData.Handles.hPlot_Images,'Text','Azimuth-OF-intensity HSV','Tag','AzimuthOFIntensityHSV','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_MaskRGBImage = uimenu(OOPSData.Handles.hPlot_Images,'Text','Mask','Tag','MaskRGBImage','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_ObjectLabelImageRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Object labels','Tag','ObjectLabelImageRGB','MenuSelectedFcn',@ShowImage);
 
 
 %% draw the menu bar objects and pause for more predictable performance
@@ -3918,6 +3930,27 @@ pause(0.5)
 
     end
 
+    function ShowImage(source,~)
+        try
+            % get the current image
+            cImage = OOPSData.CurrentImage;
+            % if empty, throw error
+            if isempty(cImage)
+                error('No image found')
+            else
+                cImage = cImage(1);
+            end
+            % show the image type specified by the Tag property of the clicked menu button
+            imshow2(cImage.(source.Tag));
+        catch ME
+            msg = ME.message;
+            uialert(OOPSData.Handles.fH,msg,'Error');
+            return
+        end
+    end
+
+
+
 %% Changing object boxes type
 
     function ChangeObjectBoxType(source,~)
@@ -4510,7 +4543,7 @@ pause(0.5)
 
     end
 
-%% Data saving
+%% Data saving/exporting
 
     function [] = SaveImages(source,~)
         
@@ -4715,6 +4748,8 @@ pause(0.5)
             end
             
         end % end of main save loop
+
+        UpdateLog3(source,'Done.','append');
         
     end % end SaveImages
 
@@ -4782,7 +4817,7 @@ pause(0.5)
 
 
         
-        UpdateLog3(source,['Done saving data for Group:',CurrentGroup.GroupName],'append');
+        UpdateLog3(source,'Done.','append');
         
     end
 
