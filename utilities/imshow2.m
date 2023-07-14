@@ -14,7 +14,9 @@ function hImg = imshow2(I)
     hAx.InnerPosition = [0 0 1 1];
     hAx.Visible = 'off';
 
-    fH.Position = [50 200 800 800];
+    fH.Position = [200 200 800 800];
+
+    movegui(fH,'center');
 
     fH.Visible = 'on';
 
