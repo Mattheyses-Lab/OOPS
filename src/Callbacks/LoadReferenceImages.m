@@ -1,4 +1,4 @@
-function [] = LoadReferenceImages(source,~)
+function LoadReferenceImages(source,~)
 % main data structure
 OOPSData = guidata(source);
 % idx to the group that we will be loading data for
