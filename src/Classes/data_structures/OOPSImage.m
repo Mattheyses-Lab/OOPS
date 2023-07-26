@@ -85,8 +85,6 @@ classdef OOPSImage < handle
         % the name of the mask applied to this image (various)
         MaskName (1,:) char = 'Legacy'
 
-        % % handle to the custom mask scheme (if one was used)
-        % CustomScheme (1,1) CustomMask = CustomMask.empty()
         % handle to the custom mask scheme (if one was used)
         CustomScheme CustomMask = CustomMask.empty()
         
@@ -102,15 +100,11 @@ classdef OOPSImage < handle
 
         rawReferenceImage (:,:)
         ReferenceImage (:,:) double
-
         ReferenceImageEnhanced double
-
         rawReferenceClass (1,:) char
-
         rawReferenceFileName (1,:) char
         rawReferenceFullName (1,:) char
         rawReferenceShortName (1,:) char
-
         rawReferenceFileType (1,:) char
         
 %% Output Images
@@ -165,10 +159,6 @@ classdef OOPSImage < handle
 
         % RGB label image showing the mask colored by object label
         ObjectLabelImageRGB
-
-
-
-
 
         % struct() of morphological properties returned by regionprops(), see get() method for full list
         ObjectProperties struct
@@ -236,10 +226,6 @@ classdef OOPSImage < handle
 
         % 1 x nLabels array of the number of objects with each label in this image
         labelCounts (1,:) double
-
-        % % handle to the custom mask scheme (if one was used)
-        % CustomScheme (1,1) CustomMask
-
     end
     
     methods
@@ -305,6 +291,10 @@ classdef OOPSImage < handle
 
             replicate.MaskName = obj.MaskName;
 
+            % testing below
+            replicate.MaskType = obj.MaskType;
+            % end testing
+
             replicate.IntensityBinCenters = obj.IntensityBinCenters;
             replicate.IntensityHistPlot = obj.IntensityHistPlot;
 
@@ -328,6 +318,17 @@ classdef OOPSImage < handle
             SelfIdx = find(obj.Parent.Replicate==obj);
         end
 
+%% settings
+
+        function updateMaskSchemes(obj)
+            if strcmp(obj.MaskType,'CustomScheme')
+                % store a handle to the custom mask scheme, indicated by obj.MaskName
+                obj.CustomScheme = obj.Settings.CustomSchemes(ismember(obj.Settings.SchemeNames,obj.MaskName));
+                % make sure the scheme is not storing any image data
+                obj.CustomScheme.ClearImageData();
+            end
+        end
+
         % dependent 'get' method for project settings so we do not store multiple copies
         function Settings = get.Settings(obj)
             try
@@ -336,6 +337,8 @@ classdef OOPSImage < handle
                 Settings = OOPSSettings.empty();
             end
         end
+
+%% processing methods (corrections, FPM stats, local S/B)
 
         % performs flat field correction for 1 OOPSImage
         function FlatFieldCorrection(obj)
@@ -356,12 +359,405 @@ classdef OOPSImage < handle
             obj.FFCDone = true;
         end
 
+        function BuildMask(obj)
+
+            switch obj.Settings.MaskType
+
+                case 'Default'
+
+                    switch obj.Settings.MaskName
+
+                        case 'Legacy'
+                            minimumArea = 10;
+
+                            % use disk-shaped structuring element to calculate BG
+                            BGImg = imopen(obj.I,strel('disk',obj.Settings.SESize,obj.Settings.SELines));
+                            % subtract BG
+                            BGSubtractedImg = obj.I - BGImg;
+                            % median filter BG-subtracted image
+                            obj.EnhancedImg = medfilt2(BGSubtractedImg);
+                            % scale so that max intensity is 1
+                            obj.EnhancedImg = obj.EnhancedImg./max(max(obj.EnhancedImg));
+                            % initial threshold guess using graythresh() (Otsu's method)
+                            [obj.level,~] = graythresh(obj.EnhancedImg);
+                            %% Build mask
+                            tempObjects = 500;
+                            notfirst = false;
+                            % Set the max nObjects to 500 by increasing the threshold until nObjects <= 500
+                            while tempObjects >= 500
+                                % on loop iterations 2:n, double the threshold until nObjects < 500
+                                if notfirst
+                                    obj.level = obj.level*2;
+                                    %UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
+                                end
+                                notfirst = true;
+                                % binarize median-filtered image at level determined above
+                                obj.bw = sparse(imbinarize(obj.EnhancedImg,obj.level));
+                                % set 10 border px on all sides to 0, this is to speed up local BG
+                                % detection later on
+                                obj.bw = ClearImageBorder(obj.bw,10);
+                                % remove small objects
+                                CC = bwconncomp(full(obj.bw),4);
+                                S = regionprops(CC, 'Area');
+                                labelMatrix = labelmatrix(CC);
+                                obj.bw = sparse(ismember(labelMatrix, find([S.Area] >= minimumArea)));
+                                clear CC S L
+                                % generate new label matrix
+                                obj.L = sparse(bwlabel(full(obj.bw),4));
+                                % get nObjects from label matrix
+                                tempObjects = max(max(full(obj.L)));
+                            end
+                            % detect objects from the mask
+                            obj.DetectObjects();
+                            % indicates mask was generated automatically
+                            obj.ThresholdAdjusted = false;
+                            % a mask exists for this replicate
+                            obj.MaskDone = true;
+                            % store the type/name of the mask used
+                            obj.MaskName = obj.Settings.MaskName;
+                            obj.MaskType = obj.Settings.MaskType;
+
+                        case 'Filament'
+
+                            % enhance the contrast of fibrous structures
+                            C = maxhessiannorm(obj.I,4);
+                            Ifiber = fibermetric(obj.I,4,'StructureSensitivity',0.5*C);
+
+                            % preallocate superopen images
+                            I_superopen = zeros([size(Ifiber), 12],'like',Ifiber);
+                            % create array of phi values
+                            phiValues = reshape(1:180,15,12);
+                            % do 12 independent super openings in a parallel loop
+                            parfor phiIdx = 1:12
+                                % get the phi values
+                                phis = phiValues(:,phiIdx);
+                                % compute the super opening for each set of phi
+                                for idx = 1:15
+                                    I_superopen(:,:,phiIdx) = max(I_superopen(:,:,phiIdx),imopen(Ifiber,strel('line',40,phis(idx))))
+                                end
+                            end
+                            % get the overall max
+                            I_superopen = max(I_superopen,[],3);
+
+                            obj.EnhancedImg = I_superopen;
+
+                            % clear a 10 px wide region around the image border
+                            temp = ClearImageBorder(I_superopen,10);
+
+                            %% Detect edges
+                            IEdges = edge(temp,'zerocross',0);
+                            % mask is the edge pixels
+                            obj.bw = sparse(IEdges);
+
+                            % build 8-connected label matrix
+                            obj.L = sparse(bwlabel(full(obj.bw),8));
+
+                            % fill in outlines and recreate mask
+                            bwtemp = zeros(size(obj.bw));
+                            bwempty = zeros(size(obj.bw));
+                            props = regionprops(full(obj.L),full(obj.bw),...
+                                {'FilledImage',...
+                                'SubarrayIdx'});
+                            for obj_idx = 1:max(max(full(obj.L)))
+                                bwempty(props(obj_idx).SubarrayIdx{:}) = props(obj_idx).FilledImage;
+                                bwtemp = bwtemp | bwempty;
+                                bwempty(:) = 0;
+                            end
+
+                            obj.bw = sparse(bwtemp);
+                            %% end fill
+
+                            % remove any "nearly" h-connected pixels (and the h-connected ones)
+                            obj.bw = sparse(quasihbreak(full(obj.bw)));
+
+                            % NOTE: connectivity changed from 8 to 4, make sure it didn't mess anything up
+                            % remove small or rounded objects
+                            CC = bwconncomp(full(obj.bw),4);
+                            S = regionprops(CC, 'Area','Eccentricity','Circularity');
+                            labelMatrix = labelmatrix(CC);
+                            obj.bw = sparse(ismember(labelMatrix, find([S.Area] >= 5 & ...
+                                [S.Eccentricity] > 0.5 & ...
+                                [S.Circularity] < 0.5)));
+
+                            % testing below
+                            % remove any pixels that have a diagonal 8-connection
+                            % this is very useful and not built into matlab, consider writing separate function
+                            % fill in gaps to remove diagonally connected pixels, keep only the pixels we added
+                            diagFill = bwmorph(full(obj.bw),'diag',1)-full(obj.bw);
+                            % now get an image with just the pixels that were originally connected
+                            diagFill = bwmorph(diagFill,'diag',1)-diagFill;
+                            % set those pixels to 0
+                            obj.bw(diagFill==1) = 0;
+                            % end testing
+
+                            % label individual branches (this has to be the last step if we want individually labeled branches)
+                            [~,obj.L] = labelBranches(full(obj.bw));
+
+                            %% BUILD NEW OBJECTS
+                            % detect objects from the mask
+                            obj.DetectObjects();
+                            % indicates mask was generated automatically
+                            obj.ThresholdAdjusted = false;
+                            % a mask exists for this replicate
+                            obj.MaskDone = true;
+                            % store the name of the mask used
+                            obj.MaskName = obj.Settings.MaskName;
+                            obj.MaskType = obj.Settings.MaskType;
+                        case 'Adaptive'
+                            % use disk-shaped structuring element to calculate BG
+                            BGImg = imopen(obj.I,strel('disk',obj.Settings.SESize,obj.Settings.SELines));
+                            % subtract BG
+                            BGSubtractedImg = obj.I - BGImg;
+                            % median filter BG-subtracted image
+                            obj.EnhancedImg = medfilt2(BGSubtractedImg);
+                            % normalize to max
+                            obj.EnhancedImg = obj.EnhancedImg./max(max(obj.EnhancedImg));
+
+                            % GUESS THRESHOLD WITH OTSU'S METHOD
+                            [obj.level,~] = graythresh(obj.I);
+
+                            %% Build mask
+                            obj.bw = sparse(imbinarize(obj.I,adaptthresh(obj.I,obj.level,'Statistic','Gaussian','NeighborhoodSize',3)));
+
+                            % CLEAR 10 PX BORDER
+                            obj.bw = ClearImageBorder(obj.bw,10);
+
+                            % FILTER OBJECTS WITH AREA < 10 PX
+                            CC = bwconncomp(full(obj.bw),4);
+                            S = regionprops(CC, 'Area');
+                            labelMatrix = labelmatrix(CC);
+                            obj.bw = sparse(ismember(labelMatrix, find([S.Area] >=10)));
+                            clear CC S L
+
+                            % BUILD 4-CONNECTED LABEL MATRIX
+                            obj.L = sparse(bwlabel(full(obj.bw),4));
+
+                            %% BUILD NEW OBJECTS
+                            % ...so we can detect the new ones (requires bw and L to be computed previously)
+                            obj.DetectObjects();
+                            % indicates mask was generated automatically
+                            obj.ThresholdAdjusted = 0;
+                            % a mask exists for this replicate
+                            obj.MaskDone = 1;
+                            % store the name of the mask used
+                            obj.MaskName = obj.Settings.MaskName;
+                            obj.MaskType = obj.Settings.MaskType;
+                    end
+
+                case 'CustomScheme'
+
+                    % get the active custom scheme
+                    customScheme = obj.Settings.ActiveCustomScheme;
+                    % make sure no residual image data stored in scheme (CustomMask object)
+                    customScheme.ClearImageData();
+                    % set obj.I as the starting image of the scheme
+                    customScheme.StartingImage = obj.I;
+                    % execute the scheme
+                    customScheme.Execute();
+                    % get the final output image (should be a logical mask image)
+                    obj.bw = sparse(customScheme.Images(end).ImageData);
+
+
+
+                    if ismember(customScheme.ThreshType,{'Otsu','Adaptive'})
+                        % store the enhanced grayscale image (from which the mask is built)
+                        obj.EnhancedImg = customScheme.EnhancedImg;
+
+                        switch customScheme.ThreshType
+                            case 'Otsu'
+                                obj.level = graythresh(obj.EnhancedImg);
+                            case 'Adaptive'
+                                obj.level = customScheme.Operations(customScheme.ThreshStepIdx).ParamsMap('Sensitivity');
+                        end
+
+                    end
+
+                    % testing below, various adjustments to the custom mask
+                    % fill in gaps to remove diagonally connected pixels, keep only the pixels we added
+                    diagFill = bwmorph(full(obj.bw),'diag',1)-full(obj.bw);
+                    % now get an image with just the pixels that were originally connected
+                    diagFill = bwmorph(diagFill,'diag',1)-diagFill;
+                    % set those pixels to 0
+                    obj.bw(diagFill==1) = 0;
+
+
+                    obj.bw = sparse(ClearImageBorder(full(obj.bw),10));
+                    % end testing
+
+
+                    % % use the mask to build the label matrix
+                    % cImage.L = sparse(bwlabel(full(cImage.bw),4));
+
+
+                    % label individual branches
+                    [~,obj.L] = labelBranches(full(obj.bw));
+
+                    %% BUILD NEW OBJECTS
+                    % ...so we can detect the new ones (requires bw and L to be computed previously)
+                    obj.DetectObjects();
+                    % indicates mask was generated automatically
+                    obj.ThresholdAdjusted = 0;
+                    % a mask exists for this replicate
+                    obj.MaskDone = 1;
+                    % store the name of the mask used
+                    obj.MaskName = obj.Settings.MaskName;
+                    obj.MaskType = obj.Settings.MaskType;
+
+                    % clear the data once more
+                    customScheme.ClearImageData();
+                    % store a handle to the custom scheme
+                    obj.CustomScheme = customScheme;
+            end
+
+        end
+
+        % calculate pixel-by-pixel OF and azimuth for this image
+        function FindOrderFactor(obj)
+            % get the pixel-normalized, flat-field corrected intensity stack
+            pixelNorm = obj.ffcFPMPixelNorm;
+            % orthogonal polarization difference components
+            a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
+            b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
+            % find Order Factor
+            obj.OF_image = zeros(size(pixelNorm(:,:,1)));
+            obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
+            % find azimuth image
+            obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
+            % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
+            obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
+            % update completion status
+            obj.OFDone = true;
+        end
+
+        % detect local S/B ratio for each object in this OOPSImage
+        function obj = FindLocalSB(obj)
+
+            % subfunction that returns linear idxs (w.r.t. full image) to buffer and BG regions for an object
+            function [bufferIdxs, BGIdxs] = getBufferAndBGLists(I,BBox,adjustment,fullSize)
+                % dilate to form the buffer
+                objectBuffer = imdilate(I,ones(7));
+                % dilate further to form the BG
+                objectBG = imdilate(objectBuffer,ones(5));
+                % remove non-BG pixels
+                objectBG(objectBuffer) = 0;
+                % remove non-buffer pixels
+                objectBuffer(I) = 0;
+                % get row and column coordinates of the buffer pixels
+                [bufferR,bufferC] = find(objectBuffer);
+                bufferCoords = [bufferR,bufferC] + BBox([2 1]) - 0.5 - adjustment;
+                % get linear idxs of those pixels
+                bufferIdxs = sub2ind(fullSize,bufferCoords(:,1),bufferCoords(:,2));
+                % get row and column coordinates of the BG pixels
+                [BGR,BGC] = find(objectBG);
+                BGCoords = [BGR,BGC] + BBox([2 1]) - 0.5 - adjustment;
+                % get linear idxs of those pixels
+                BGIdxs = sub2ind(fullSize,BGCoords(:,1),BGCoords(:,2));
+            end
+
+            % can't detect local S/B until we detect the objects!
+            if obj.ObjectDetectionDone
+
+                % get nObjects x 1 cell array of padded object subimages
+                paddedObjectImages = {obj.Object(:).RestrictedPaddedMaskSubImage}';
+
+                % get nObjects x 1 cell of object bounding boxes
+                objectBBoxes = {obj.Object(:).BoundingBox}';
+
+                % get nObjects x 1 cell of object padded subarray idx coordinate adjustments
+                objectSubIdxAdjusts = {obj.Object(:).paddedSubarrayIdxAdjustment}';
+
+                % get cell array of object buffer and BG coordinates
+                [bufferIdxs,BGIdxs] = cellfun(@(I,BBox,adjustment,fullSize) getBufferAndBGLists(I,BBox,adjustment,fullSize),...
+                    paddedObjectImages,objectBBoxes,objectSubIdxAdjusts,repmat({[obj.Height obj.Width]},numel(paddedObjectImages),1),'UniformOutput',0);
+
+
+                [obj.Object(:).BufferIdxList] = deal(bufferIdxs{:});
+                [obj.Object(:).BGIdxList] = deal(BGIdxs{:});
+
+                all_object_pixels = obj.bw;
+                all_buffer_pixels = cell2mat(bufferIdxs);
+                %all_BG_pixels = cell2mat(BGIdxs);
+
+                %% now filter the pixels found above
+                % for each object
+                for i = 1:obj.nObjects
+                    %% first, we remove any buffer pixels that overlap with any object pixels
+
+                    % object pixels are linear idxs from the mask (from all objects)
+                    allObjectPixels = find(all_object_pixels);
+
+                    % get the buffer pixels of this object
+                    objectBufferPixels = obj.Object(i).BufferIdxList;
+
+                    % keep only the elements in bufferPixels that are not in allObjectPixels
+                    newObjectBufferPixels = setdiff(objectBufferPixels,allObjectPixels);
+
+                    %% next, we remove any BG pixels that overlap with any object or buffer pixels
+
+                    % get linear idxs of all buffer pixels
+                    allBufferPixels = all_buffer_pixels;
+
+                    % get the BG pixels of this object
+                    objBGPixels = obj.Object(i).BGIdxList;
+
+                    % keep only the elements in BGPixels that are not in allBufferPixels
+                    newObjectBGPixels = setdiff(objBGPixels,allBufferPixels);
+
+                    % now keep only the elements in newObjectPixels that are not in allObjectPixels
+                    newObjectBGPixels2 = setdiff(newObjectBGPixels,allObjectPixels);
+
+
+                    %% "BUG" IDENTIFIED HERE: If there are too many objects within a small region, code may fail to identify
+                    % any BG or buffer pixels. In that case new_buffer and/or new_BG will be empty. Still need to
+                    % implement a fix for this... (maybe delete the object then re-index if no BG pxs found?)
+                    % however, this is a very rare bug that only causes issues in cases of very low S/N, in which
+                    % DetectObjects() labels most of the BG pixels as objects
+                    % update buffer and BG pixel lists
+                    obj.Object(i).BufferIdxList = newObjectBufferPixels;
+
+                    try
+                        obj.Object(i).BGIdxList = newObjectBGPixels2;
+                        obj.Object(i).BGAverage = mean(obj.rawFPMAverage(obj.Object(i).BGIdxList));
+                    catch
+                        obj.Object(i).BGIdxList = [];
+                        obj.Object(i).BGAverage = NaN;
+                    end
+
+                    % calculate signal and BG levels
+                    obj.Object(i).SignalAverage = mean(obj.rawFPMAverage(obj.Object(i).PixelIdxList));
+                    obj.Object(i).SBRatio = obj.Object(i).SignalAverage / obj.Object(i).BGAverage;
+
+                end
+                % indicate that Local S/B calculation has been one for this image
+                obj.LocalSBDone = true;
+            else
+                error('Cannot calculate local S/B until objects are detected');
+            end
+
+        end
+
+        function ComputeFPMStats(obj)
+
+            fpmStack = obj.ffcFPMStack;
+
+            a = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
+            b = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
+            c = sum(obj.ffcFPMStack,3);
+
+            obj.AnisotropyImage = hypot(a,b)./c;
+        end
+
+
+
+
+%% segmentation, object construction, and basic object feature extraction
+
         % detects objects in this OOPSImage
         function DetectObjects(obj)
             % start by deleting any currently existing objects
             obj.deleteObjects();
 
-            % call dependent 'get' method
+            % get object properties struct
             props = obj.ObjectProperties;
 
             if isempty(props) % if no objects
@@ -385,6 +781,13 @@ classdef OOPSImage < handle
             
         end % end of DetectObjects
         
+
+
+
+
+
+
+
         % delete all objects in this OOPSImage
         function deleteObjects(obj)
             % collect and delete the objects in this image
@@ -478,24 +881,11 @@ classdef OOPSImage < handle
             [obj.Object(Selected).Label] = deal(Label);
         end
         
-        % clear selection status of objects in one OOPSImage
+        % clear selection status of all objects in this image
         function ClearSelection(obj)
             [obj.Object.Selected] = deal(false);
         end
         
-        % return object data grouped by the object labels
-        function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
-            nLabels = length(obj.Settings.ObjectLabels);
-            ObjectDataByLabel = cell(1,nLabels);
-            % for each label
-            for i = 1:nLabels
-                % find idx to all object with that label
-                ObjectLabelIdxs = find([obj.Object.Label]==obj.Settings.ObjectLabels(i));
-                % add [Var2Get] from those objects to cell i of ObjectDataByLabel
-                ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
-            end
-        end
-
         % return all objects in this OOPSImage with the OOPSLabel:Label
         function Objects = getObjectsByLabel(obj,Label)
             % preallocate empty array of objects
@@ -510,132 +900,19 @@ classdef OOPSImage < handle
 
         end
 
-        % calculate pixel-by-pixel OF and azimuth for this image
-        function FindOrderFactor(obj)
-            % get the pixel-normalized, flat-field corrected intensity stack
-            pixelNorm = obj.ffcFPMPixelNorm;
-            % orthogonal polarization difference components
-            a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
-            b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
-            % find Order Factor
-            obj.OF_image = zeros(size(pixelNorm(:,:,1)));
-            obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
-            % find azimuth image
-            obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
-            % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
-            obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
-            % update completion status
-            obj.OFDone = true;
+        % return object data grouped by the object labels
+        function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
+            nLabels = length(obj.Settings.ObjectLabels);
+            ObjectDataByLabel = cell(1,nLabels);
+            % for each label
+            for i = 1:nLabels
+                % find idx to all object with that label
+                ObjectLabelIdxs = find([obj.Object.Label]==obj.Settings.ObjectLabels(i));
+                % add [Var2Get] from those objects to cell i of ObjectDataByLabel
+                ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
+            end
         end
 
-        % detect local S/B ratio for each object in this OOPSImage
-        function obj = FindLocalSB(obj)
-
-            % subfunction that returns linear idxs (w.r.t. full image) to buffer and BG regions for an object
-            function [bufferIdxs, BGIdxs] = getBufferAndBGLists(I,BBox,adjustment,fullSize)
-                % dilate to form the buffer
-                objectBuffer = imdilate(I,ones(7));
-                % dilate further to form the BG
-                objectBG = imdilate(objectBuffer,ones(5));
-                % remove non-BG pixels
-                objectBG(objectBuffer) = 0;
-                % remove non-buffer pixels
-                objectBuffer(I) = 0;
-                % get row and column coordinates of the buffer pixels
-                [bufferR,bufferC] = find(objectBuffer);
-                bufferCoords = [bufferR,bufferC] + BBox([2 1]) - 0.5 - adjustment;
-                % get linear idxs of those pixels
-                bufferIdxs = sub2ind(fullSize,bufferCoords(:,1),bufferCoords(:,2));
-                % get row and column coordinates of the BG pixels
-                [BGR,BGC] = find(objectBG);
-                BGCoords = [BGR,BGC] + BBox([2 1]) - 0.5 - adjustment;
-                % get linear idxs of those pixels
-                BGIdxs = sub2ind(fullSize,BGCoords(:,1),BGCoords(:,2));
-            end
-
-
-            % can't detect local S/B until we detect the objects!
-            if obj.ObjectDetectionDone
-
-                % get nObjects x 1 cell array of padded object subimages
-                paddedObjectImages = {obj.Object(:).RestrictedPaddedMaskSubImage}';
-
-                % get nObjects x 1 cell of object bounding boxes
-                objectBBoxes = {obj.Object(:).BoundingBox}';
-
-                % get nObjects x 1 cell of object padded subarray idx coordinate adjustments
-                objectSubIdxAdjusts = {obj.Object(:).paddedSubarrayIdxAdjustment}';
-
-                % get cell array of object buffer and BG coordinates
-                [bufferIdxs,BGIdxs] = cellfun(@(I,BBox,adjustment,fullSize) getBufferAndBGLists(I,BBox,adjustment,fullSize),...
-                    paddedObjectImages,objectBBoxes,objectSubIdxAdjusts,repmat({[obj.Height obj.Width]},numel(paddedObjectImages),1),'UniformOutput',0);
-
-
-                [obj.Object(:).BufferIdxList] = deal(bufferIdxs{:});
-                [obj.Object(:).BGIdxList] = deal(BGIdxs{:});
-
-                all_object_pixels = obj.bw;
-                all_buffer_pixels = cell2mat(bufferIdxs);
-                %all_BG_pixels = cell2mat(BGIdxs);
-
-                %% now filter the pixels found above
-                % for each object
-                for i = 1:obj.nObjects
-                    %% first, we remove any buffer pixels that overlap with any object pixels
-
-                    % object pixels are linear idxs from the mask (from all objects)
-                    allObjectPixels = find(all_object_pixels);
-
-                    % get the buffer pixels of this object
-                    objectBufferPixels = obj.Object(i).BufferIdxList;
-
-                    % keep only the elements in bufferPixels that are not in allObjectPixels
-                    newObjectBufferPixels = setdiff(objectBufferPixels,allObjectPixels);
-
-                    %% next, we remove any BG pixels that overlap with any object or buffer pixels
-
-                    % get linear idxs of all buffer pixels
-                    allBufferPixels = all_buffer_pixels;
-
-                    % get the BG pixels of this object
-                    objBGPixels = obj.Object(i).BGIdxList;
-
-                    % keep only the elements in BGPixels that are not in allBufferPixels
-                    newObjectBGPixels = setdiff(objBGPixels,allBufferPixels);
-
-                    % now keep only the elements in newObjectPixels that are not in allObjectPixels
-                    newObjectBGPixels2 = setdiff(newObjectBGPixels,allObjectPixels);
-
-
-                    %% "BUG" IDENTIFIED HERE: If there are too many objects within a small region, code may fail to identify
-                    % any BG or buffer pixels. In that case new_buffer and/or new_BG will be empty. Still need to
-                    % implement a fix for this... (maybe delete the object then re-index if no BG pxs found?)
-                    % however, this is a very rare bug that only causes issues in cases of very low S/N, in which
-                    % DetectObjects() labels most of the BG pixels as objects
-                    % update buffer and BG pixel lists
-                    obj.Object(i).BufferIdxList = newObjectBufferPixels;
-
-                    try
-                        obj.Object(i).BGIdxList = newObjectBGPixels2;
-                        obj.Object(i).BGAverage = mean(obj.rawFPMAverage(obj.Object(i).BGIdxList));
-                    catch
-                        obj.Object(i).BGIdxList = [];
-                        obj.Object(i).BGAverage = NaN;
-                    end
-
-                    % calculate signal and BG levels
-                    obj.Object(i).SignalAverage = mean(obj.rawFPMAverage(obj.Object(i).PixelIdxList));
-                    obj.Object(i).SBRatio = obj.Object(i).SignalAverage / obj.Object(i).BGAverage;
-
-                end
-                % indicate that Local S/B calculation has been one for this image
-                obj.LocalSBDone = true;
-            else
-                error('Cannot calculate local S:B until objects are detected');
-            end
-
-        end
-        
         % dependent get methods for image size, resolution
         function Dimensions = get.Dimensions(obj)
             Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
@@ -1344,6 +1621,7 @@ classdef OOPSImage < handle
             % average the raw data (polarization stack)
             obj.rawFPMAverage = mean(im2double(obj.rawFPMStack),3);
 
+            % status tracking variables
             obj.FilesLoaded = replicate.FilesLoaded;
             obj.FFCDone = replicate.FFCDone;
             obj.MaskDone = replicate.MaskDone;
@@ -1366,6 +1644,14 @@ classdef OOPSImage < handle
             obj.EnhancedImg = replicate.EnhancedImg;
 
             obj.MaskName = replicate.MaskName;
+
+            % testing below
+            try
+                obj.MaskType = replicate.MaskType;
+            catch
+
+            end
+            % end testing
 
             obj.IntensityBinCenters = replicate.IntensityBinCenters;
             obj.IntensityHistPlot = replicate.IntensityHistPlot;

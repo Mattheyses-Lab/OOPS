@@ -95,7 +95,6 @@ classdef OOPSObject < handle
         MidlineRelativeAzimuthImage
         PaddedAverageIntensityImageNorm
 
-        
         % we store the centroid as a 2-element vector, no need to store these too
         CentroidX
         CentroidY
@@ -136,15 +135,16 @@ classdef OOPSObject < handle
         % list of values for each object pixel representing the direction normal to the closest midline point
         pixelMidlineNormalList
 
+        % azimuth stats
         AzimuthAverage
         AzimuthStd
         AzimuthAngularDeviation
         MidlineRelativeAzimuth
         NormalRelativeAzimuth
 
+        % midline stats
         Tortuosity
         MidlineLength
-        
         TangentAverage
 
         %% Summaries
@@ -556,6 +556,15 @@ classdef OOPSObject < handle
             end
         end
 
+
+        % scalar outputs in development
+
+        function MeanAnisotropy = get.MeanAnisotropy(obj)
+
+            MeanAnisotropy = mean(obj.Parent.AnisotropyImage(obj.PixelIdxList),'all');
+
+        end
+
 %% summaries
 
         function ObjectSummaryDisplayTable = get.ObjectSummaryDisplayTable(obj)
@@ -575,7 +584,7 @@ classdef OOPSObject < handle
                 "Average signal intensity",...
                 "Average BG intensity",...
                 "Local S/B ratio",...
-                "Original index",...
+                "Index",...
                 "Azimuth average",...
                 "Azimuth standard deviation",...
                 "Azimuth w.r.t. midline",...

@@ -76,6 +76,9 @@
 
         % nImages x nLabels array of the number of objects with each label in this group
         labelCounts double
+
+        % array of all objects in this group
+        allObjects
     
     end
     
@@ -136,6 +139,25 @@
             SelfIdx = find(obj.Parent.Group==obj);
         end
 
+%% settings
+
+        function Settings = get.Settings(obj)
+            try
+                Settings = obj.Parent.Settings;
+            catch
+                Settings = OOPSSettings.empty();
+            end
+        end
+
+        function updateMaskSchemes(obj)
+            for i = 1:obj.nReplicates
+                obj.Replicate(i).updateMaskSchemes();
+            end
+        end
+
+
+%% manipulate objects
+
         function Objects = getObjectsByLabel(obj,Label)
 
             ObjsFound = 0;
@@ -154,6 +176,13 @@
 
         end
 
+        function allObjects = get.allObjects(obj)
+            allObjects = [];
+            for i = 1:obj.nReplicates
+                allObjects = [allObjects, obj.Replicate(i).Object];
+            end
+        end
+
         % apply OOPSLabel:Label to all selected objects in this OOPSGroup
         function LabelSelectedObjects(obj,Label)
             for i = 1:obj.nReplicates
@@ -161,8 +190,114 @@
             end
         end
 
+        function DeleteSelectedObjects(obj)
+            for i = 1:obj.nReplicates
+                obj.Replicate(i).DeleteSelectedObjects();
+            end
+        end
+
+        function DeleteObjectsByLabel(obj,Label)
+            for i = 1:obj.nReplicates
+                obj.Replicate(i).DeleteObjectsByLabel(Label);
+            end
+        end
+
+        % clear selection status of all objects in this group
+        function ClearSelection(obj)
+            for i = 1:obj.nReplicates
+                obj.Replicate(i).ClearSelection();
+            end
+        end
+
+%% retrieve object data
+
+        function TotalObjects = get.TotalObjects(obj)
+            TotalObjects = 0;
+            for i = 1:obj.nReplicates
+                TotalObjects = TotalObjects + obj.Replicate(i).nObjects;
+            end
+        end
+
+        function CurrentObject = get.CurrentObject(obj)
+            cImage = obj.CurrentImage;
+            if ~isempty(cImage)
+                CurrentObject = cImage(1).CurrentObject;
+            else
+                CurrentObject = OOPSObject.empty();
+            end
+        end
+
+        % get x,y data for all objects in group, from first to last replicate
+        %       WILL UPDATE TO ALLOW FOR varargin for more flexibility of use
+        function ObjectData = CombineObjectData(obj,XVar,YVar)
+            
+            count = 0;
+            last = 1;
+
+            % test below
+            ObjectData = [];
+            % end test
+            
+            for i = 1:obj.nReplicates
+                
+                count = count + obj.Replicate(i).nObjects;
+                % column 1 holds x data
+                ObjectData(last:count,1) = [obj.Replicate(i).Object.(XVar)];
+                % column 2 holds y data
+                ObjectData(last:count,2) = [obj.Replicate(i).Object.(YVar)];
+                
+                last = count+1;
+                
+            end
+        end % end of CombineObjectData()
+        
+        function VariableObjectData = GetAllObjectData(obj,Var2Get)
+            % return a list of Var2Get for all objects in the group
+
+            % return if no images exist
+            if obj.nReplicates == 0
+                VariableObjectData = [];
+                return
+            end
+
+            count = 0;
+            last = 1;
+            % line below causes issues with categorical data
+            %VariableObjectData = [];
+            for i = 1:obj.nReplicates
+                count = count + obj.Replicate(i).nObjects;
+                % column 1 holds x data
+                VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
+                last = count+1;
+            end        
+        end
+        
+        function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
+            
+            nLabels = length(obj.Settings.ObjectLabels);
+            
+            % cell array of Object.(Var2Get), grouped by custom label
+            %   single row of cells, each cell holds a vector of object data
+            %   for a single label for all replicates in the group
+            ObjectDataByLabel = cell(1,nLabels);
+            
+            for i = 1:obj.nReplicates
+                % cell array of ObjectDataByLabel for one replicate
+                % each cell is a vector of values for one label
+                ReplicateObjectDataByLabel = obj.Replicate(i).GetObjectDataByLabel(Var2Get);
+                
+                for ii = 1:nLabels
+                    ObjectDataByLabel{ii} = [ObjectDataByLabel{ii} ReplicateObjectDataByLabel{ii}];
+                end
+
+            end
+
+        end
+
+%% manipulate images
+
         function deleteReplicates(obj)
-            % collect and delete the objects in this image
+            % collect and delete the images in this group
             Replicates = obj.Replicate;
             delete(Replicates);
             % clear the placeholders
@@ -206,31 +341,8 @@
                 nReplicates = 0;
             end
         end
-        
-        function TotalObjects = get.TotalObjects(obj)
-            TotalObjects = 0;
-            for i = 1:obj.nReplicates
-                TotalObjects = TotalObjects + obj.Replicate(i).nObjects;
-            end
-        end
-
-        function DeleteSelectedObjects(obj)
-            for i = 1:obj.nReplicates
-                obj.Replicate(i).DeleteSelectedObjects();
-            end
-        end
-
-        function DeleteObjectsByLabel(obj,Label)
-            for i = 1:obj.nReplicates
-                obj.Replicate(i).DeleteObjectsByLabel(Label);
-            end
-        end
-        
-        function ClearSelection(obj)
-            for i = 1:obj.nReplicates
-                obj.Replicate(i).ClearSelection();
-            end
-        end
+       
+%% retrieve image data
         
         function ImageNames = get.ImageNames(obj)
             % new cell array of image names
@@ -245,29 +357,9 @@
                 CurrentImage = OOPSImage.empty();
             end
         end
+        
+%% group status tracking
 
-        function Settings = get.Settings(obj)
-            try
-                Settings = obj.Parent.Settings;
-            catch
-                Settings = OOPSSettings.empty();
-            end
-        end
-        
-        function CurrentObject = get.CurrentObject(obj)
-            cImage = obj.CurrentImage;
-            if ~isempty(cImage)
-                CurrentObject = cImage(1).CurrentObject;
-            else
-                CurrentObject = OOPSObject.empty();
-            end
-        end
-        
-        function ColorString = get.ColorString(obj)
-            ColorStringCell = colornames('MATLAB',obj.Color);
-            ColorString = ColorStringCell{1};         
-        end
-        
         function OFAllDone = get.OFAllDone(obj)
             if obj.nReplicates == 0
                 OFAllDone = false;
@@ -343,75 +435,10 @@
             LocalSBAllDone = true;
         end
 
+%% retrieve group data
+
         function OFAvg = get.OFAvg(obj)
             OFAvg = mean([obj.Replicate(find([obj.Replicate.OFDone])).OFAvg]);
-        end
-
-        % get x,y data for all objects in group, from first to last replicate
-        %       WILL UPDATE TO ALLOW FOR varargin for more flexibility of use
-        function ObjectData = CombineObjectData(obj,XVar,YVar)
-            
-            count = 0;
-            last = 1;
-
-            % test below
-            ObjectData = [];
-            % end test
-            
-            for i = 1:obj.nReplicates
-                
-                count = count + obj.Replicate(i).nObjects;
-                % column 1 holds x data
-                ObjectData(last:count,1) = [obj.Replicate(i).Object.(XVar)];
-                % column 2 holds y data
-                ObjectData(last:count,2) = [obj.Replicate(i).Object.(YVar)];
-                
-                last = count+1;
-                
-            end
-        end % end of CombineObjectData()
-        
-        function VariableObjectData = GetAllObjectData(obj,Var2Get)
-            % return a list of Var2Get for all objects in the group
-
-            % return if no images exist
-            if obj.nReplicates == 0
-                VariableObjectData = [];
-                return
-            end
-
-            count = 0;
-            last = 1;
-            % line below causes issues with categorical data
-            %VariableObjectData = [];
-            for i = 1:obj.nReplicates
-                count = count + obj.Replicate(i).nObjects;
-                % column 1 holds x data
-                VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
-                last = count+1;
-            end        
-        end
-        
-        function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
-            
-            nLabels = length(obj.Settings.ObjectLabels);
-            
-            % cell array of Object.(Var2Get), grouped by custom label
-            %   single row of cells, each cell holds a vector of object data
-            %   for a single label for all replicates in the group
-            ObjectDataByLabel = cell(1,nLabels);
-            
-            for i = 1:obj.nReplicates
-                % cell array of ObjectDataByLabel for one replicate
-                % each cell is a vector of values for one label
-                ReplicateObjectDataByLabel = obj.Replicate(i).GetObjectDataByLabel(Var2Get);
-                
-                for ii = 1:nLabels
-                    ObjectDataByLabel{ii} = [ObjectDataByLabel{ii} ReplicateObjectDataByLabel{ii}];
-                end
-
-            end
-
         end
 
         function GroupSummaryDisplayTable = get.GroupSummaryDisplayTable(obj)
@@ -451,9 +478,14 @@
             labelCounts = zeros(obj.nReplicates,obj.Settings.nLabels);
             % get the counts for each group in the project
             for iIdx = 1:obj.nReplicates
-                % for each group, get the label counts by summing the label counts for each image
+                % get the label counts by summing the label counts for each image
                 labelCounts(iIdx,:) = sum(obj.Replicate(iIdx).labelCounts,1);
             end
+        end
+
+        function ColorString = get.ColorString(obj)
+            ColorStringCell = colornames('MATLAB',obj.Color);
+            ColorString = ColorStringCell{1};         
         end
 
     end
@@ -525,8 +557,6 @@
 
                     % add this stack to our 4D array of stacks, convert to double with the same values
                     rawFFCStacks(:,:,:,i) = im2double(rawFFCStack).*rawFFCRange(2);
-
-
                 end
 
                 % add short and full filenames to this OOPSGroup
@@ -561,6 +591,8 @@
                 if obj.Replicate(i).FFCDone
                     obj.Replicate(i).FlatFieldCorrection();
                 end
+
+
 
                 if obj.Replicate(i).OFDone
                     obj.Replicate(i).FindOrderFactor();
