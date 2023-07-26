@@ -236,7 +236,7 @@ classdef CustomMask < handle
 
         function ClearImageData(obj)
             for i = 1:obj.nImages
-                obj.Images(1).ImageData = [];
+                obj.Images(i).ImageData = [];
             end
         end
 
