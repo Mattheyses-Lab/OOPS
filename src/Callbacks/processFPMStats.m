@@ -25,10 +25,6 @@ function processFPMStats(source,~)
         UpdateLog3(source,['    ',cImage.rawFPMShortName,' (',num2str(i),'/',num2str(nImages),')'],'append');
         % compute the FPM stats
         cImage.FindOrderFactor();
-    
-        % testing below - additional FPM stats
-        cImage.ComputeFPMStats();
-        % end testing
     end
     % end the timer and save the time
     timeElapsed = toc;

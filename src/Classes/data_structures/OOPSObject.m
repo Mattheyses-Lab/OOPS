@@ -555,16 +555,7 @@ classdef OOPSObject < handle
                 Tortuosity = NaN;
             end
         end
-
-
-        % scalar outputs in development
-
-        function MeanAnisotropy = get.MeanAnisotropy(obj)
-
-            MeanAnisotropy = mean(obj.Parent.AnisotropyImage(obj.PixelIdxList),'all');
-
-        end
-
+        
 %% summaries
 
         function ObjectSummaryDisplayTable = get.ObjectSummaryDisplayTable(obj)

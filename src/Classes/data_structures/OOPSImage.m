@@ -613,14 +613,24 @@ classdef OOPSImage < handle
 
         % calculate pixel-by-pixel OF and azimuth for this image
         function FindOrderFactor(obj)
+            % remember to remove comment below!
             % get the pixel-normalized, flat-field corrected intensity stack
             pixelNorm = obj.ffcFPMPixelNorm;
+
+            %% testing only below!
+            % anisotropy instead of OF
+            % a = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
+            % b = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
+            % c = sum(obj.ffcFPMStack,3);
+            % obj.OF_image = hypot(a,b)./c;
+            %% testing only above!
+
             % orthogonal polarization difference components
             a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
             b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
             % find Order Factor
-            obj.OF_image = zeros(size(pixelNorm(:,:,1)));
-            obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
+            % obj.OF_image = zeros(size(pixelNorm(:,:,1)));
+            % obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
             % find azimuth image
             obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
             % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
@@ -734,17 +744,6 @@ classdef OOPSImage < handle
                 error('Cannot calculate local S/B until objects are detected');
             end
 
-        end
-
-        function ComputeFPMStats(obj)
-
-            fpmStack = obj.ffcFPMStack;
-
-            a = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
-            b = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
-            c = sum(obj.ffcFPMStack,3);
-
-            obj.AnisotropyImage = hypot(a,b)./c;
         end
 
 
