@@ -1,4 +1,4 @@
-function NewProject2(source,~)
+function newProject(source,~)
         
         % get the GUI data structure
         OOPSData = guidata(source);

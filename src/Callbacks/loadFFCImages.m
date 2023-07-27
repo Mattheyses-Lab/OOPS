@@ -1,4 +1,4 @@
-function [] = pb_LoadFFCFiles(source,~)
+function loadFFCImages(source,~)
 
     % main data structure
     OOPSData = guidata(source);
@@ -56,14 +56,23 @@ function [] = pb_LoadFFCFiles(source,~)
     % check how many image stacks were selected
     nFFCFiles = numel(FFCFiles);
 
-    % update log
-    UpdateLog3(source,['Opening ',num2str(nFFCFiles),' FFC images...'],'append');
-    
     % preallocate some variables
     FFC_cal_shortname = cell(nFFCFiles,1);
     FFC_cal_fullname = cell(nFFCFiles,1);
+
+
+    % update log
+    UpdateLog3(source,['Opening ',num2str(nFFCFiles),' FFC images...'],'append');
+    
+    % testing below - progress dialog
+    hProgressDialog = uiprogressdlg(OOPSData.Handles.fH,"Message",'Loading flat-field stacks');
+
     
     for i=1:nFFCFiles
+
+        % update the progress dialog
+        hProgressDialog.Message = ['Loading flat-field stacks ',num2str(i),'/',num2str(nFFCFiles)];
+        hProgressDialog.Value = i/nFFCFiles;        
 
         % get the name of this file
         filename = FFCFiles{1,i};
@@ -137,15 +146,20 @@ function [] = pb_LoadFFCFiles(source,~)
     % indicate that at least one FFC file has been loaded
     cGroup.FFCLoaded = true;
 
-    % update log to indicate completion
-    UpdateLog3(source,'Done.','append');
-
     % if files tab is not current, invoke the callback we need to get there
     if ~strcmp(OOPSData.Settings.CurrentTab,'Files')
         feval(OOPSData.Handles.hTabFiles.Callback,OOPSData.Handles.hTabFiles,[]);
+    else
+        % update displayed images (tab switching will automatically update the display)
+        UpdateImages(source);
     end
     
-    UpdateImages(source);
+    % update display
     UpdateSummaryDisplay(source);
-    
+
+    % close the progress dialog
+    close(hProgressDialog);
+
+    % update log
+    UpdateLog3(source,'Done.','append');    
 end

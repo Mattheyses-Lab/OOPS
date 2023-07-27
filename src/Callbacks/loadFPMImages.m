@@ -1,4 +1,4 @@
-function [] = pb_LoadFPMFiles(source,~)
+function loadFPMImages(source,~)
 
     % main data structure
     OOPSData = guidata(source);
@@ -53,8 +53,15 @@ function [] = pb_LoadFPMFiles(source,~)
     % update log
     UpdateLog3(source,['Opening ',num2str(nFiles),' FPM images...'],'append');
 
+    % testing below - progress dialog
+    hProgressDialog = uiprogressdlg(OOPSData.Handles.fH,"Message",'Loading FPM stacks');
+
     % for each file (stack of 4 polarization images)
     for i=1:nFiles
+
+        hProgressDialog.Message = ['Loading FPM stacks ',num2str(i),'/',num2str(nFiles)];
+        hProgressDialog.Value = i/nFiles;
+
 
         % get the name of this file
         rawFPMFileName = FPMFiles{1,i};
@@ -163,16 +170,21 @@ function [] = pb_LoadFPMFiles(source,~)
         cGroup.FFC_Width = OOPSData.CurrentImage.Width;
     end
 
-    % update log to indicate completion
-    UpdateLog3(source,'Done.','append');
-
     % if 'Files' isn't the current 'tab', switch to it
     if ~strcmp(OOPSData.Settings.CurrentTab,'Files')
         feval(OOPSData.Handles.hTabFiles.Callback,OOPSData.Handles.hTabFiles,[]);
+    else
+        % update displayed images (tab switching will automatically update the display)
+        UpdateImages(source);
     end
-    
+
+    % update display
     UpdateImageTree(source);
-    UpdateImages(source);
     UpdateSummaryDisplay(source);
-    
+
+    % close the progress dialog
+    close(hProgressDialog);
+
+    % update log to indicate completion
+    UpdateLog3(source,'Done.','append');    
 end

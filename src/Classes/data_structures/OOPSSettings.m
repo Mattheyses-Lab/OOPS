@@ -107,6 +107,7 @@ classdef OOPSSettings < handle
         MaskName = 'Legacy';
         
         % custom mask schemes
+        CustomSchemes CustomMask
         SchemeNames cell
         SchemePaths cell
         
@@ -193,6 +194,9 @@ classdef OOPSSettings < handle
         % Palettes
         GroupPalette double
         LabelPalette double
+
+        % custom mask schemes
+        ActiveCustomScheme
 
     end
     
@@ -299,6 +303,11 @@ classdef OOPSSettings < handle
                 elseif ispc
                     obj.SchemePaths{i} = [SchemeFilesList(i).folder,'\',SchemeFilesList(i).name];
                 end
+
+                % load the scheme into struct, S
+                S = load(obj.SchemePaths{i});
+                % extract the scheme from the struct into CustomSchemes
+                obj.CustomSchemes(i) = S.(obj.SchemeNames{i});
             end
         end
 
@@ -316,6 +325,15 @@ classdef OOPSSettings < handle
                 catch ME
                     warning(['Error loading file "',fileNames{fileIdx},'": ',ME.getReport]);
                 end
+            end
+        end
+
+        function ActiveCustomScheme = get.ActiveCustomScheme(obj)
+            % if MaskType=='CustomScheme', return the active scheme, otherwise return empty scheme
+            if strcmp(obj.MaskType,'CustomScheme')
+                ActiveCustomScheme = obj.CustomSchemes(ismember(obj.SchemeNames,obj.MaskName));
+            else
+                ActiveCustomScheme = CustomMask.empty();
             end
         end
     

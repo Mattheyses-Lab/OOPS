@@ -21,13 +21,15 @@ classdef OOPSProject < handle
 
         GroupNames
 
-        
         GroupColors (:,3) double
 
         ProjectSummaryDisplayTable
 
         % total number of objects across all groups
         nObjects (1,1) uint16
+
+        % array of all objects in the project
+        allObjects
 
         % nGroups x nLabels array of the number of objects with each label in this project
         labelCounts
@@ -103,6 +105,21 @@ classdef OOPSProject < handle
             [ObjectsToSelect.Selected] = deal(true);
         end
 
+        % returns an array of all objects in this project
+        function allObjects = get.allObjects(obj)
+            allObjects = [];
+            for i = 1:obj.nGroups
+                allObjects = [allObjects,obj.Group(i).allObjects];
+            end
+        end
+
+        % select object by property using one or more property filters
+        function selectObjectsByProperty(obj,filterSet)
+            Objects = obj.allObjects;
+            TF = filterSet.checkMatch(Objects);
+            [Objects(TF).Selected] = deal(true);
+        end
+
          % apply OOPSLabel:Label to all selected objects in project
         function LabelSelectedObjects(obj,Label)
             for i = 1:obj.nGroups
@@ -122,16 +139,6 @@ classdef OOPSProject < handle
             end
         end
 
-        % total number of objects across all groups
-        function nObjects = get.nObjects(obj)
-            %nObjects = sum(obj.Group(:).TotalObjects,"all");
-
-            nObjects = 0;
-            for i = 1:obj.nGroups
-                nObjects = nObjects + obj.Group(i).TotalObjects;
-            end
-        end
-
         % return all objects with Label:Label
         function Objects = getObjectsByLabel(obj,Label)
             Objects = OOPSObject.empty();
@@ -147,7 +154,31 @@ classdef OOPSProject < handle
             end
         end
 
+        % delete all selected objects in this project
+        function DeleteSelectedObjects(obj)
+            for i = 1:obj.nGroups
+                obj.Group(i).DeleteSelectedObjects();
+            end
+        end
+
+        % clear selection status of all objects in this project
+        function ClearSelection(obj)
+            for i = 1:obj.nGroups
+                obj.Group(i).ClearSelection();
+            end
+        end
+
 %% retrieve object data
+
+        % total number of objects across all groups
+        function nObjects = get.nObjects(obj)
+            %nObjects = sum(obj.Group(:).TotalObjects,"all");
+
+            nObjects = 0;
+            for i = 1:obj.nGroups
+                nObjects = nObjects + obj.Group(i).TotalObjects;
+            end
+        end
 
         % return Var2Get data for each object, grouped by object label
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
@@ -365,6 +396,10 @@ classdef OOPSProject < handle
                 obj.Group(i,1) = OOPSGroup.loadobj(proj.Group(i,1));
                 % and set its parent project (this project)
                 obj.Group(i,1).Parent = obj;
+
+                % % testing below
+                obj.Group(i,1).updateMaskSchemes();
+                % % end testing
             end
         end
     end

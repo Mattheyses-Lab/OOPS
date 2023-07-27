@@ -79,15 +79,15 @@ disp('Setting up menubar...')
 
 OOPSData.Handles.hFileMenu = uimenu(OOPSData.Handles.fH,'Text','File');
 % Options for File Menu Button
-OOPSData.Handles.hNewProject = uimenu(OOPSData.Handles.hFileMenu,'Text','&New Project','Callback',@NewProject2);
+OOPSData.Handles.hNewProject = uimenu(OOPSData.Handles.hFileMenu,'Text','&New Project','Callback',@newProject);
 OOPSData.Handles.hNewProject.Accelerator = 'N';
 % menu for loading existing project
-OOPSData.Handles.hLoadProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Load Project','Callback',@LoadProject);
-OOPSData.Handles.hSaveProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Project','Callback',@SaveProject);
+OOPSData.Handles.hLoadProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Load Project','Callback',@loadProject);
+OOPSData.Handles.hSaveProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Project','Callback',@saveProject);
 % load files
-OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FFC Files','Separator','On','Callback',@pb_LoadFFCFiles);
-OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM Files','Callback',@pb_LoadFPMFiles);
-OOPSData.Handles.hLoadReferenceImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load Reference Images','Callback',@LoadReferenceImages);
+OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FFC Files','Separator','On','Callback',@loadFFCImages);
+OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM Files','Callback',@loadFPMImages);
+OOPSData.Handles.hLoadReferenceImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load Reference Images','Callback',@loadReferenceImages);
 % save data
 OOPSData.Handles.hSaveOF = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Data for Selected Images','Separator','On','Callback',@SaveImages);
 OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Object Data','Callback',@SaveObjectData);
@@ -171,24 +171,35 @@ OOPSData.Handles.hTabObjects = uimenu(OOPSData.Handles.hTabMenu,'Text','Objects'
 
 OOPSData.Handles.hProcessMenu = uimenu(OOPSData.Handles.fH,'Text','Process');
 % Process Operations
-OOPSData.Handles.hProcessFFC = uimenu(OOPSData.Handles.hProcessMenu,'Text','Flat-Field Correction','MenuSelectedFcn',@pb_FFC);
-OOPSData.Handles.hProcessMask = uimenu(OOPSData.Handles.hProcessMenu,'Text','Build Mask','MenuSelectedFcn',@CreateMask4);
-OOPSData.Handles.hProcessOF = uimenu(OOPSData.Handles.hProcessMenu,'Text','Order Factor','MenuSelectedFcn',@pb_FindOrderFactor);
-OOPSData.Handles.hProcessLocalSB = uimenu(OOPSData.Handles.hProcessMenu,'Text','Local Signal:Background','MenuSelectedFcn',@pb_FindLocalSB);
+OOPSData.Handles.hProcessFFC = uimenu(OOPSData.Handles.hProcessMenu,'Text','Flat-field correction','MenuSelectedFcn',@processFFC);
+OOPSData.Handles.hProcessMask = uimenu(OOPSData.Handles.hProcessMenu,'Text','Build mask','MenuSelectedFcn',@processMask);
+OOPSData.Handles.hProcessOF = uimenu(OOPSData.Handles.hProcessMenu,'Text','Calculate FPM statistics','MenuSelectedFcn',@processFPMStats);
+OOPSData.Handles.hProcessLocalSB = uimenu(OOPSData.Handles.hProcessMenu,'Text','Local S/B','MenuSelectedFcn',@processLocalSB);
 
 %% Summary Menu Button
 
 OOPSData.Handles.hSummaryMenu = uimenu(OOPSData.Handles.fH,'Text','Summary');
 % Summary choices
-OOPSData.Handles.hSumaryAll = uimenu(OOPSData.Handles.hSummaryMenu,'Text','All Data','MenuSelectedFcn',@ShowSummaryTable);
+OOPSData.Handles.hSumaryAll = uimenu(OOPSData.Handles.hSummaryMenu,'Text','Project','MenuSelectedFcn',@ShowSummaryTable);
 
 %% Objects Menu Button
 OOPSData.Handles.hObjectsMenu = uimenu(OOPSData.Handles.fH,'Text','Objects');
 % Object Actions
-OOPSData.Handles.hDeleteSelectedObjects = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Delete Selected Objects','MenuSelectedFcn',@mbDeleteSelectedObjects);
-OOPSData.Handles.hClearSelection = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Clear Selection','MenuSelectedFcn',@mbClearSelection);
-OOPSData.Handles.hkMeansClustering = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Label Objects with k-means Clustering','MenuSelectedFcn',@mbObjectkmeansClustering);
-OOPSData.Handles.hShowObjectImagesByLabel = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Show Object Images by Label','MenuSelectedFcn',@mbShowObjectImagesByLabel);
+% select
+OOPSData.Handles.hSelectObjectsByProperty = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Select by property','MenuSelectedFcn',@mbSelectObjectsByProperty);
+% delete selected
+OOPSData.Handles.hDeleteSelectedObjects = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Delete selected objects');
+OOPSData.Handles.hDeleteSelectedObjects_InProject = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In project','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Project');
+OOPSData.Handles.hDeleteSelectedObjects_InGroup = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In group','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Group');
+OOPSData.Handles.hDeleteSelectedObjects_InImage = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In image','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Image');
+% clear selection
+OOPSData.Handles.hClearSelection = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Clear selection');
+OOPSData.Handles.hClearSelection_InProject = uimenu(OOPSData.Handles.hClearSelection,'Text','In project','MenuSelectedFcn',@mbClearSelection,'Tag','Project');
+OOPSData.Handles.hClearSelection_InGroup = uimenu(OOPSData.Handles.hClearSelection,'Text','In group','MenuSelectedFcn',@mbClearSelection,'Tag','Group');
+OOPSData.Handles.hClearSelection_InImage = uimenu(OOPSData.Handles.hClearSelection,'Text','In image','MenuSelectedFcn',@mbClearSelection,'Tag','Image');
+
+OOPSData.Handles.hkMeansClustering = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Label with k-means clustering','MenuSelectedFcn',@mbObjectkmeansClustering);
+OOPSData.Handles.hShowObjectImagesByLabel = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Show object images by label','MenuSelectedFcn',@mbShowObjectImagesByLabel);
 %% Plot Menu Button
 OOPSData.Handles.hPlotMenu = uimenu(OOPSData.Handles.fH,'Text','Plot');
 % Plot options
@@ -1785,13 +1796,13 @@ OOPSData.Handles.SelectorGrid.ColumnSpacing = 0;
 
 % group selector (uitree)
 OOPSData.Handles.GroupSelectorPanel = uipanel(OOPSData.Handles.SelectorGrid,...
-    'Title','Group Selection',...
+    'Title','Group',...
     'Visible','Off');
 OOPSData.Handles.GroupSelectorPanelGrid = uigridlayout(OOPSData.Handles.GroupSelectorPanel,[1,1],...
     'Padding',[0 0 0 0]);
 OOPSData.Handles.GroupTree = uitree(OOPSData.Handles.GroupSelectorPanelGrid,...
-    'SelectionChangedFcn',@GroupSelectionChanged,...
-    'NodeTextChangedFcn',@GroupTreeNodeTextChanged,...
+    'SelectionChangedFcn',@changeActiveGroup,...
+    'NodeTextChangedFcn',@groupTreeNodeTextChanged,...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontWeight','bold',...
     'Interruptible','off',...
@@ -1802,28 +1813,28 @@ OOPSData.Handles.GroupTree.Layout.Column = 1;
 OOPSData.Handles.GroupTreeContextMenu = uicontextmenu(OOPSData.Handles.fH);
 OOPSData.Handles.GroupTreeContextMenu_New = uimenu(OOPSData.Handles.GroupTreeContextMenu,...
     'Text','New group',...
-    'MenuSelectedFcn',@AddNewGroup);
+    'MenuSelectedFcn',@addNewGroup);
 OOPSData.Handles.GroupTree.ContextMenu = OOPSData.Handles.GroupTreeContextMenu;
 % context menu for individual groups
 OOPSData.Handles.GroupContextMenu = uicontextmenu(OOPSData.Handles.fH);
 OOPSData.Handles.GroupContextMenu_Delete = uimenu(OOPSData.Handles.GroupContextMenu,...
     'Text','Delete group',...
-    'MenuSelectedFcn',{@DeleteGroup,OOPSData.Handles.fH});
+    'MenuSelectedFcn',{@deleteCurrentGroup,OOPSData.Handles.fH});
 OOPSData.Handles.GroupContextMenu_ChangeColor = uimenu(OOPSData.Handles.GroupContextMenu,...
     'Text','Change color',...
-    'MenuSelectedFcn',{@EditGroupColor,OOPSData.Handles.fH});
+    'MenuSelectedFcn',{@editGroupColor,OOPSData.Handles.fH});
 OOPSData.Handles.GroupContextMenu_New = uimenu(OOPSData.Handles.GroupContextMenu,...
     'Text','New group',...
-    'MenuSelectedFcn',@AddNewGroup);
+    'MenuSelectedFcn',@addNewGroup);
 
 % image selector (uitree)
 OOPSData.Handles.ImageSelectorPanel = uipanel(OOPSData.Handles.SelectorGrid,...
-    'Title','Image Selection',...
+    'Title','Image',...
     'Visible','Off');
 OOPSData.Handles.ImageSelectorPanelGrid = uigridlayout(OOPSData.Handles.ImageSelectorPanel,[1,1],...
     'Padding',[0 0 0 0]);
 OOPSData.Handles.ImageTree = uitree(OOPSData.Handles.ImageSelectorPanelGrid,...
-    'SelectionChangedFcn',@ImageSelectionChanged,...
+    'SelectionChangedFcn',@changeActiveImage,...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontWeight','bold',...
     'Multiselect','on',...
@@ -1835,11 +1846,11 @@ OOPSData.Handles.ImageTree.Layout.Column = 1;
 OOPSData.Handles.ImageContextMenu = uicontextmenu(OOPSData.Handles.fH);
 OOPSData.Handles.ImageContextMenu_Delete = uimenu(OOPSData.Handles.ImageContextMenu,...
     'Text','Delete selected',...
-    'MenuSelectedFcn',{@DeleteImage,OOPSData.Handles.fH});
+    'MenuSelectedFcn',{@deleteImage,OOPSData.Handles.fH});
 
 % object selector (listbox, will replace with tree, but too slow for now)
 OOPSData.Handles.ObjectSelectorPanel = uipanel(OOPSData.Handles.SelectorGrid,...
-    'Title','Object Selection',...
+    'Title','Object',...
     'Visible','Off');
 OOPSData.Handles.ObjectSelectorPanelGrid = uigridlayout(OOPSData.Handles.ObjectSelectorPanel,[1,1],...
     'Padding',[0 0 0 0]);
@@ -1848,8 +1859,8 @@ OOPSData.Handles.ObjectSelector = uilistbox(...
     'Visible','Off',...
     'enable','on',...
     'tag','ObjectListBox',...
-    'Items',{'Select image to view objects...'},...
-    'ValueChangedFcn',@ChangeActiveObject,...
+    'Items',{},...
+    'ValueChangedFcn',@changeActiveObject,...
     'BackgroundColor',[1 1 1],...
     'FontColor',[0 0 0],...
     'FontName',OOPSData.Settings.DefaultFont,...
@@ -2302,7 +2313,7 @@ disp('Setting up object image axes...')
     % restore original values after imshow() call
     OOPSData.Handles.ObjectPolFFCAxH = restore_axis_defaults(OOPSData.Handles.ObjectPolFFCAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
-    OOPSData.Handles.ObjectPolFFCAxH = SetAxisTitle(OOPSData.Handles.ObjectPolFFCAxH,'Flat-Field-Corrected Average Intensity');
+    OOPSData.Handles.ObjectPolFFCAxH = SetAxisTitle(OOPSData.Handles.ObjectPolFFCAxH,'Average intensity');
     OOPSData.Handles.ObjectPolFFCAxH.Colormap = OOPSData.Settings.IntensityColormap;
     OOPSData.Handles.ObjectPolFFCAxH.Toolbar.Visible = 'Off';
     OOPSData.Handles.ObjectPolFFCAxH.Title.Visible = 'Off';
@@ -2330,7 +2341,7 @@ disp('Setting up object image axes...')
     % restore original values after imshow() call
     OOPSData.Handles.ObjectMaskAxH = restore_axis_defaults(OOPSData.Handles.ObjectMaskAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
-    OOPSData.Handles.ObjectMaskAxH = SetAxisTitle(OOPSData.Handles.ObjectMaskAxH,'Object Binary Image');
+    OOPSData.Handles.ObjectMaskAxH = SetAxisTitle(OOPSData.Handles.ObjectMaskAxH,'Mask');
     OOPSData.Handles.ObjectMaskAxH.Title.Visible = 'Off';
     OOPSData.Handles.ObjectMaskAxH.Toolbar.Visible = 'Off';
     OOPSData.Handles.ObjectMaskAxH.HitTest = 'Off';
@@ -2357,7 +2368,7 @@ disp('Setting up object image axes...')
     % restore original values after imshow() call
     OOPSData.Handles.ObjectAzimuthOverlayAxH = restore_axis_defaults(OOPSData.Handles.ObjectAzimuthOverlayAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
-    OOPSData.Handles.ObjectAzimuthOverlayAxH = SetAxisTitle(OOPSData.Handles.ObjectAzimuthOverlayAxH,'Object Azimuth Overlay');
+    OOPSData.Handles.ObjectAzimuthOverlayAxH = SetAxisTitle(OOPSData.Handles.ObjectAzimuthOverlayAxH,'Azimuth stick overlay');
     
     OOPSData.Handles.ObjectAzimuthOverlayAxH.Colormap = OOPSData.Settings.IntensityColormap;
     
@@ -2387,7 +2398,7 @@ disp('Setting up object image axes...')
     % restore original values after imshow() call
     OOPSData.Handles.ObjectOFAxH = restore_axis_defaults(OOPSData.Handles.ObjectOFAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
-    OOPSData.Handles.ObjectOFAxH = SetAxisTitle(OOPSData.Handles.ObjectOFAxH,'Object OF Image');
+    OOPSData.Handles.ObjectOFAxH = SetAxisTitle(OOPSData.Handles.ObjectOFAxH,'OF');
     
     OOPSData.Handles.ObjectOFAxH.Colormap = OOPSData.Settings.OrderFactorColormap;
     
@@ -2456,7 +2467,7 @@ disp('Setting up object image axes...')
     % restore original values after imshow() call
     OOPSData.Handles.ObjectNormIntStackAxH = restore_axis_defaults(OOPSData.Handles.ObjectNormIntStackAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
-    OOPSData.Handles.ObjectNormIntStackAxH = SetAxisTitle(OOPSData.Handles.ObjectNormIntStackAxH,'Stack-Normalized Object Intensity');
+    OOPSData.Handles.ObjectNormIntStackAxH = SetAxisTitle(OOPSData.Handles.ObjectNormIntStackAxH,'Normalized intensity stack');
     OOPSData.Handles.ObjectNormIntStackAxH.Colormap = OOPSData.Settings.IntensityColormap;
     OOPSData.Handles.ObjectNormIntStackAxH.Title.Visible = 'Off';
     OOPSData.Handles.ObjectNormIntStackAxH.Toolbar.Visible = 'Off';
@@ -2509,7 +2520,7 @@ guidata(OOPSData.Handles.fH,OOPSData)
 % set optimum font size for display
 fontsize(OOPSData.Handles.fH,OOPSData.Settings.FontSize,'pixels');
 % update GUI display colors
-UpdateGUITheme();
+UpdateGUITheme(OOPSData.Handles.fH);
 % update summary display
 UpdateSummaryDisplay(OOPSData.Handles.fH);
 
@@ -2755,7 +2766,6 @@ pause(0.5)
         UpdateLog3(source,'Object intensity plot vector graphic copied to clipboard','append');
     end
 
-
     function ObjectIntensityProfileBackgroundColorChanged(source,~)
         if isempty(source.Value)
             % then open the colorpicker to choose a color
@@ -2817,10 +2827,10 @@ pause(0.5)
     function ObjectIntensityProfileAzimuthLinesColorChanged(source,~)
         if isempty(source.Value)
             % then open the colorpicker to choose a color
-            OOPSData.Settings.ObjectIntensityProfileSettings.AzimuthLines = uisetcolor();
+            OOPSData.Settings.ObjectIntensityProfileSettings.AzimuthLinesColor = uisetcolor();
             figure(OOPSData.Handles.fH);
         else
-            OOPSData.Settings.ObjectIntensityProfileSettings.AzimuthLines = source.Value;
+            OOPSData.Settings.ObjectIntensityProfileSettings.AzimuthLinesColor = source.Value;
         end
         UpdateImages(source,{'Objects'});
     end
@@ -2996,77 +3006,6 @@ pause(0.5)
         UpdateLog3(source,'Done.','append');
     end
 
-%% Group uitree callbacks
-
-    function GroupTreeNodeTextChanged(source,event)
-        event.Node.NodeData.GroupName = event.Node.Text;
-        UpdateSummaryDisplay(source,{'Group'});
-    end
-
-    function DeleteGroup(source,~,fH)
-        SelectedNode = fH.CurrentObject;
-        cGroup = SelectedNode.NodeData;
-        UpdateLog3(fH,['Deleting [Group:',cGroup.GroupName,']...'],'append');
-        delete(SelectedNode)
-        OOPSData.DeleteGroup(cGroup)
-        UpdateImageTree(source);
-        UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});        
-        UpdateLog3(fH,'Done.','append');
-    end
-
-    function AddNewGroup(source,~)
-        OOPSData.AddNewGroup(['Untitled Group ',num2str(OOPSData.nGroups+1)]);
-        UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});
-        UpdateGroupTree(source);
-    end
-
-    function EditGroupColor(source,~,fH)
-        SelectedNode = fH.CurrentObject;
-        cGroup = SelectedNode.NodeData;
-        cGroup.Color = uisetcolor();
-        figure(fH);
-        SelectedNode.Icon = makeRGBColorSquare(cGroup.Color,1);
-        if strcmp(OOPSData.Settings.CurrentTab,'Plots')
-            UpdateImages(source);
-        end
-    end
-
-%% Image uitree callbacks
-
-    function DeleteImage(source,~,fH)
-
-        SelectedNodes = OOPSData.Handles.ImageTree.SelectedNodes;
-        %SelectedImages = deal([SelectedNodes(:).NodeData]);
-        UpdateLog3(fH,'Deleting images...','append');
-        delete(SelectedNodes)
-        cGroup = OOPSData.CurrentGroup;
-        cGroup.DeleteSelectedImages();
-        
-        cGroup.CurrentImageIndex = cGroup.CurrentImageIndex(1);
-        UpdateImageTree(source);
-        UpdateImages(source);
-        UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});
-        UpdateLog3(fH,'Done.','append');
-    end
-
-%% Settings type selection
-
-    % change the current view in the settings menu according to user input
-    function ChangeSettingsType(source,event)
-        OOPSData.Handles.([event.PreviousValue,'Grid']).Visible = 'Off';
-        OOPSData.Handles.([event.Value,'Grid']).Visible = 'On';
-        ncols = length(OOPSData.Handles.([event.Value,'Grid']).ColumnWidth);
-        source.Parent = OOPSData.Handles.([event.Value,'Grid']);
-        if ncols > 1
-            source.Layout.Column = [1 ncols];
-        else
-            source.Layout.Column = 1;
-        end
-        OOPSData.Handles.SettingsPanel.Title = [...
-            OOPSData.Handles.SettingsDropDown.Items{ ...
-            ismember(OOPSData.Handles.SettingsDropDown.ItemsData,OOPSData.Handles.SettingsDropDown.Value)}, ...
-            ' Settings'];
-    end
 
 %% Azimuth stick plot callbacks/settings
 
@@ -3300,6 +3239,8 @@ pause(0.5)
 
         end
 
+        % update palette colors
+        UpdatePalettes(source,'Label');
         UpdateLabelTree(source);
         UpdateImages(source);
         UpdateLog3(fH,'Done.','append');
@@ -3337,6 +3278,8 @@ pause(0.5)
             OOPSData.Settings.DeleteObjectLabel(cLabel);
         end
         % update the display
+        % update palette colors
+        UpdatePalettes(source,'Label');
         UpdateLabelTree(source);
         UpdateImages(source);
         UpdateLog3(fH,'Done.','append');
@@ -3408,7 +3351,7 @@ pause(0.5)
         UpdateLog3(fH,'Done.','append');
     end
 
-    function AddNewLabel(~,~)
+    function AddNewLabel(source,~)
         OOPSData.Settings.AddNewObjectLabel([],[]);
         NewLabel = OOPSData.Settings.ObjectLabels(end);
         newNode = uitreenode(OOPSData.Handles.LabelTree,...
@@ -3416,6 +3359,9 @@ pause(0.5)
             'NodeData',NewLabel,...
             'Icon',makeRGBColorSquare(NewLabel.Color,5));
         newNode.ContextMenu = OOPSData.Handles.LabelContextMenu;
+
+        % update palette colors
+        UpdatePalettes(source,'Label');
     end
 
     function EditLabelColor(source,~,fH)
@@ -3449,19 +3395,22 @@ pause(0.5)
     end
 
 %% Callbacks for interactive thresholding
-% Set figure callbacks WindowButtonMotionFcn and WindowButtonUpFcn
+
+    % Set figure callbacks WindowButtonMotionFcn and WindowButtonUpFcn
     function StartUserThresholding(~,~)
         OOPSData.Handles.fH.WindowButtonMotionFcn = @MoveThresholdLine;
         OOPSData.Handles.fH.WindowButtonUpFcn = @StopMovingAndSetThresholdLine;
     end
-% Update display while thresh line is moving
+
+    % Update display while thresh line is moving
     function MoveThresholdLine(source,~)
         OOPSData.Handles.CurrentThresholdLine.Value = round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
         OOPSData.Handles.CurrentThresholdLine.Label = {[OOPSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(OOPSData.Handles.CurrentThresholdLine.Value)]};
         ThresholdLineMoving(source,OOPSData.Handles.CurrentThresholdLine.Value);
         %drawnow
     end
-% Set final thresh position and restore callbacks
+
+    % Set final thresh position and restore callbacks
     function StopMovingAndSetThresholdLine(source,~)
         OOPSData.Handles.CurrentThresholdLine.Value = round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
         OOPSData.Handles.CurrentThresholdLine.Label = {[OOPSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(OOPSData.Handles.CurrentThresholdLine.Value)]};
@@ -3470,6 +3419,10 @@ pause(0.5)
         ThresholdLineMoved(source,OOPSData.Handles.CurrentThresholdLine.Value);
         drawnow
     end
+
+
+
+
 
 %% Callbacks for intensity display scaling
 
@@ -3690,22 +3643,51 @@ pause(0.5)
 
 %% 'Objects' menubar callbacks
 
+    function mbSelectObjectsByProperty(source,~)
+        filterSet = defineFilterSet(...
+            OOPSData.Settings.ObjectPlotVariables,...
+            OOPSData.Settings.ObjectPlotVariablesLong);
+
+        if isempty(filterSet)
+            return
+        else
+            OOPSData.selectObjectsByProperty(filterSet);
+        end
+
+        UpdateImages(source);
+
+    end
+
     function mbDeleteSelectedObjects(source,~)
-        
-        cGroup = OOPSData.CurrentGroup;
-        
-        cGroup.DeleteSelectedObjects();
-        
+        % delete selected objects in project, group, or image
+        switch source.Tag
+            case 'Project'
+                OOPSData.DeleteSelectedObjects();
+            case 'Group'
+                cGroup = OOPSData.CurrentGroup;
+                cGroup.DeleteSelectedObjects();
+            case 'Image'
+                cImage = OOPSData.CurrentImage(1);
+                cImage.DeleteSelectedObjects();
+        end
+
         UpdateImages(source);
         UpdateObjectListBox(source);
         UpdateSummaryDisplay(source,{'Group','Image','Object'});
     end
 
     function mbClearSelection(source,~)
-        
-        cGroup = OOPSData.CurrentGroup;
-        
-        cGroup.ClearSelection();
+        % deselect objects in project, group, or image
+        switch source.Tag
+            case 'Project'
+                OOPSData.ClearSelection();
+            case 'Group'
+                cGroup = OOPSData.CurrentGroup;
+                cGroup.ClearSelection();
+            case 'Image'
+                cImage = OOPSData.CurrentImage(1);
+                cImage.ClearSelection();
+        end
         
         UpdateImages(source);
         UpdateObjectListBox(source);
@@ -3801,14 +3783,6 @@ pause(0.5)
 
         legend(barAx,'Location','eastoutside');
 
-
-
-
-
-
-
-
-
         % move window to the center of the screen
         movegui(fH_ClusterProportions,'center');
         % show the window
@@ -3824,9 +3798,6 @@ pause(0.5)
 
         UpdateLabelTree(source);
         UpdateImages(source);
-
-
-
     end
 
     function mbShowObjectImagesByLabel(~,~)
@@ -3949,8 +3920,6 @@ pause(0.5)
         end
     end
 
-
-
 %% Changing object boxes type
 
     function ChangeObjectBoxType(source,~)
@@ -3986,112 +3955,8 @@ pause(0.5)
                 OOPSData.Settings.GUIHighlightColor = [0 0 0];
         end
         
-        UpdateGUITheme();
+        UpdateGUITheme(source);
         UpdateSummaryDisplay(source);
-    end
-
-    function UpdateGUITheme()
-        GUIBackgroundColor = OOPSData.Settings.GUIBackgroundColor;
-        GUIForegroundColor = OOPSData.Settings.GUIForegroundColor;
-        GUIHighlightColor = OOPSData.Settings.GUIHighlightColor;
-
-        % get all accordion items and their children (cannot retrieve with findobj())
-        accordionItems = OOPSData.Handles.SettingsAccordion.Items;
-        accordionChildren = OOPSData.Handles.SettingsAccordion.Contents;
-
-        % uiaccordionitem
-        set(accordionItems,...
-            'PaneBackgroundColor',GUIBackgroundColor,...
-            'BorderColor',GUIHighlightColor,...
-            'FontColor',GUIForegroundColor,...
-            'TitleBackgroundColor',GUIBackgroundColor);
-
-        % uiaccordion
-        set(OOPSData.Handles.SettingsAccordion,...
-            'BackgroundColor',GUIBackgroundColor);
-
-        % uigridlayout
-        set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uigridlayout'),...
-            'BackgroundColor',GUIBackgroundColor);
-
-        % uipanel
-        set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uipanel'),...
-            'BackgroundColor',GUIBackgroundColor,...
-            'ForegroundColor',GUIForegroundColor,...
-            'HighlightColor',GUIHighlightColor);
-
-        % uitextarea
-        set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uitextarea'),...
-            'FontColor',GUIForegroundColor,...
-            'BackgroundColor',GUIBackgroundColor);
-
-        % axes
-        set(findobj([OOPSData.Handles.fH;accordionChildren],'type','axes'),...
-            'XColor',GUIForegroundColor,...
-            'YColor',GUIForegroundColor,...
-            'Color',GUIBackgroundColor);
-
-        % uilabel
-        set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uilabel'),...
-            'FontColor',GUIForegroundColor,...
-            'BackgroundColor',GUIBackgroundColor);
-
-        % uitable
-        set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uitable'),...
-            'BackgroundColor',GUIBackgroundColor,...
-            'ForegroundColor',GUIForegroundColor);
-
-        % uilistbox
-        set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uilistbox'),...
-            'BackgroundColor',GUIBackgroundColor,...
-            'FontColor',GUIForegroundColor);
-
-        % uitree
-        set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uitree'),...
-            'BackgroundColor',GUIBackgroundColor,...
-            'FontColor',GUIForegroundColor);
-
-        % set swarm plot colors
-        OOPSData.Handles.ScatterPlotGrid.BackgroundColor = OOPSData.Settings.ScatterPlotBackgroundColor;
-        OOPSData.Handles.ScatterPlotAxH.Color = OOPSData.Settings.ScatterPlotBackgroundColor;
-        OOPSData.Handles.ScatterPlotAxH.XAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
-        OOPSData.Handles.ScatterPlotAxH.YAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
-
-        % set scatter plot colors
-        OOPSData.Handles.SwarmPlotGrid.BackgroundColor = OOPSData.Settings.SwarmPlotBackgroundColor;
-        OOPSData.Handles.SwarmPlotAxH.Color = OOPSData.Settings.SwarmPlotBackgroundColor;
-        OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-        OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-
-        % set object intensity profile colors
-        OOPSData.Handles.ObjectIntensityProfileGrid.BackgroundColor = OOPSData.Settings.ObjectIntensityProfileBackgroundColor;
-        OOPSData.Handles.ObjectIntensityPlotAxH.Color = OOPSData.Settings.ObjectIntensityProfileBackgroundColor;
-        OOPSData.Handles.ObjectIntensityPlotAxH.XAxis.Color = OOPSData.Settings.ObjectIntensityProfileForegroundColor;
-        OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Color = OOPSData.Settings.ObjectIntensityProfileForegroundColor;
-        OOPSData.Handles.ImgPanel2.BackgroundColor = OOPSData.Settings.ObjectIntensityProfileBackgroundColor;
-
-        % set intensity slider colors
-        set(OOPSData.Handles.PrimaryIntensitySlider,...
-            'BackgroundColor',GUIBackgroundColor,...
-            'Knob1Color',GUIForegroundColor,...
-            'Knob2Color',GUIForegroundColor,...
-            'RangeColor',GUIForegroundColor,...
-            'MidLineColor',GUIForegroundColor,...
-            'TitleColor',GUIForegroundColor);
-        set(OOPSData.Handles.ReferenceIntensitySlider,...
-            'BackgroundColor',GUIBackgroundColor,...
-            'Knob1Color',GUIForegroundColor,...
-            'Knob2Color',GUIForegroundColor,...
-            'RangeColor',GUIForegroundColor,...
-            'MidLineColor',GUIForegroundColor,...
-            'TitleColor',GUIForegroundColor);
-
-        OOPSData.Handles.CurrentThresholdLine.Color = GUIForegroundColor;
-
-        OOPSData.Handles.OrderFactorAxH.Color = 'Black';
-        OOPSData.Handles.AverageIntensityAxH.Color = 'Black';
-        OOPSData.Handles.AzimuthAxH.Color = 'Black';
-        OOPSData.Handles.MaskAxH.Color = 'Black';
     end
 
     function ChangeGUIColors(source,~)
@@ -4102,7 +3967,7 @@ pause(0.5)
         % uncheck all menubar options for built-in themes
         set(OOPSData.Handles.hGUITheme.Children,'Checked','Off');
         % update the GUI colors
-        UpdateGUITheme();
+        UpdateGUITheme(source);
         % update summary display
         UpdateSummaryDisplay(source);
     end
@@ -4228,130 +4093,18 @@ pause(0.5)
         UpdateLog3(OOPSData.Handles.fH,['Saved new scheme:',SchemeFilesPath,NewSchemeName,'.mat'],'append');
     end
 
-%% Changing active object/image/group indices
-
-    function ChangeActiveObject(source,~)
-        cImage = OOPSData.CurrentImage;
-        cImage.CurrentObjectIdx = source.Value;
-        UpdateSummaryDisplay(source,{'Object'});
-        UpdateImages(source,{'Objects'});
-    end
-
-    function GroupSelectionChanged(source,~)
-        OOPSData.CurrentGroupIndex = source.SelectedNodes(1).NodeData.SelfIdx;
-        % update display of image tree, images, and summary
-        UpdateImageTree(source);
-        UpdateImages(source);
-        UpdateThresholdSlider(source);
-        UpdateIntensitySliders(source);
-        UpdateSummaryDisplay(source,{'Group','Image','Object'});
-    end
-
-    function ImageSelectionChanged(source,~)
-        CurrentGroupIndex = OOPSData.CurrentGroupIndex;
-        SelectedImages = deal([source.SelectedNodes(:).NodeData]);
-        OOPSData.Group(CurrentGroupIndex).CurrentImageIndex = [SelectedImages(:).SelfIdx];
-        % update display of images, object selector, summary
-        UpdateImages(source,{'Files','FFC','Mask','Order Factor','Azimuth','Objects','Polar Plots'});
-        UpdateObjectListBox(source);
-        UpdateThresholdSlider(source);
-        UpdateIntensitySliders(source);
-        UpdateSummaryDisplay(source,{'Image','Object'});
-    end
-
-    function ObjectSelectionChanged(source,~)
-        cImage = OOPSData.CurrentImage;
-        SelectedObjects = deal([source.SelectedNodes(:).NodeData]);
-        cImage.CurrentObjectIdx = [SelectedObjects(:).SelfIdx];
-        % update images and summary
-        UpdateImages(source);
-        UpdateSummaryDisplay(source,{'Image','Object'});
-    end
-
 %% Change summary display type
 
     function ChangeSummaryDisplay(source,~)
         % update the summary display type
         OOPSData.Settings.SummaryDisplayType = OOPSData.Handles.AppInfoSelector.Value;
-
-        %OOPSData.Handles.AppInfoSelector.Parent = OOPSData.Handles.([OOPSData.Handles.AppInfoSelector.Value,'SummaryPanelGrid']);
-        %OOPSData.Handles.AppInfoSelector.Layout.Row = 1;
-
-        % % set the title of the summary panel
-        % OOPSData.Handles.AppInfoPanel.Title = [OOPSData.Settings.SummaryDisplayType,' summary'];
-        % % hide grid layout managers for all summary tables
-        % set(findobj(OOPSData.Handles.AppInfoPanel.Children(),'type','uigridlayout'),'Visible','off');
-        % % show the grid layout manager for the summary type that is active
-        % OOPSData.Handles.([OOPSData.Settings.SummaryDisplayType,'SummaryTableGrid']).Visible = 'on';
-
-
         % update the summary panel with the selected tabular data
         UpdateSummaryDisplay(source);
     end
 
-%% 'Process' menubar callbacks
-
-    function pb_FindLocalSB(source,~)
-        % number of selected images
-        nImages = length(OOPSData.CurrentImage);
-        % update log to indicate # of images we are processing
-        UpdateLog3(source,['Detecting Local S/B for ',num2str(nImages),' images'],'append');
-        % counter to track which image we're on
-        Counter = 1;
-        for cImage = OOPSData.CurrentImage
-            % update log to indicate which image we are on
-            UpdateLog3(source,['    ',cImage.rawFPMShortName,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
-            % detect local S/B for one image
-            cImage.FindLocalSB();
-            % log update to indicate we are done with this image
-            UpdateLog3(source,['        Local S/B detected for ',num2str(cImage.nObjects),' objects...'],'append');
-            % increment counter
-            Counter = Counter+1;
-        end
-        % update log to indicate we are done
-        UpdateLog3(source,'Done.','append');
-        % update summary table
-        UpdateSummaryDisplay(source,{'Group','Image','Object'});
-    end
-
-    function pb_FindOrderFactor(source,~)
-        % number of selected images
-        nImages = length(OOPSData.CurrentImage);
-        % update log to indicate # of images we are processing
-        UpdateLog3(source,['Computing order statistics statistics for ',num2str(nImages),' images'],'append');
-        % counter to track progress
-        Counter = 1;
-        % start a timer
-        tic
-        % detect object azimuth stats for each currently selected image
-        for cImage = OOPSData.CurrentImage
-            % update log to indicate which image we are on
-            UpdateLog3(source,['    ',cImage.rawFPMShortName,' (',num2str(Counter),'/',num2str(nImages),')'],'append');
-            % compute the azimuth stats
-            cImage.FindOrderFactor();
-            % increment the counter
-            Counter = Counter+1;
-        end
-        % end the timer and save the time
-        timeElapsed = toc;
-        % change to the Order Factor 'tab' if not there already
-        if ~strcmp(OOPSData.Settings.CurrentTab,'Order Factor')
-            feval(OOPSData.Handles.hTabOrderFactor.Callback,OOPSData.Handles.hTabOrderFactor,[]);
-        else
-            % update displayed images (tab switching will automatically update the display)
-            UpdateImages(source);
-        end
-        % update summary table
-        UpdateSummaryDisplay(source,{'Group','Image','Object'});
-        % update log with time elapsed
-        UpdateLog3(source,['Time elapsed: ',num2str(timeElapsed),' seconds'],'append');
-        % update log to indicate we are done
-        UpdateLog3(source,'Done.','append');        
-    end
-
 %% Project saving and loading
 
-    function LoadProject(source,~)
+    function loadProject(source,~)
         % alert user to required action (select saved project file to load)
         uialert(OOPSData.Handles.fH,'Select saved project file (.mat)','Load Project File',...
             'Icon','',...
@@ -4425,7 +4178,6 @@ pause(0.5)
         % update swarm plot grouping type drop down
         OOPSData.Handles.SwarmPlotGroupingTypeDropdown.Value = OOPSData.Settings.SwarmPlotGroupingType;
 
-
         % update the display with selected tab
         Tab2Switch2 = OOPSData.Settings.CurrentTab;
         % set 'CurrentTab' to previous current tab before loading project
@@ -4463,7 +4215,7 @@ pause(0.5)
         OOPSData.Handles.(['hObjectBoxType_',OOPSData.Settings.ObjectBoxType]).Checked = 'On';
 
         % update the GUI theme
-        UpdateGUITheme()
+        UpdateGUITheme(source)
 
         % restore old pointer
         OOPSData.Handles.fH.Pointer = OldPointer;
@@ -4471,7 +4223,7 @@ pause(0.5)
         UpdateLog3(source,'Done.','append');
     end
 
-    function SaveProject(source,~)
+    function saveProject(source,~)
 
         uialert(OOPSData.Handles.fH,'Set save location/filename','Save Project File',...
             'Icon','',...
