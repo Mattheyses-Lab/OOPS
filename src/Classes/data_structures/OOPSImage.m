@@ -629,8 +629,8 @@ classdef OOPSImage < handle
             a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
             b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
             % find Order Factor
-            % obj.OF_image = zeros(size(pixelNorm(:,:,1)));
-            % obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
+            obj.OF_image = zeros(size(pixelNorm(:,:,1)));
+            obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
             % find azimuth image
             obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
             % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
