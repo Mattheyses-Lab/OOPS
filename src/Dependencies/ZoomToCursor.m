@@ -332,6 +332,21 @@ function [] = CursorMoving(~,OOPSData)
                     Zoom.ActiveObjectIdx = NaN;
                 end
 
+            case 'CustomStat'
+
+                % get the custom stat associated with the axes
+                thisStat = DynamicAxes.UserData;
+
+                try
+                    DynamicAxes.CursorPositionLabel.Text = ...
+                        [' (X,Y) = (',num2str(realx),...
+                        ',',num2str(realy),') | Zoom: ',...
+                        num2str(ZoomPct),'%',...
+                        ' | ',thisStat.StatisticDisplayName,': ',num2str(OOPSData.CurrentImage(1).(thisStat.StatisticName)(realy,realx))];
+                catch
+                    disp('Warning: Error updating cursor position label')
+                end
+
             otherwise
 
                 try
