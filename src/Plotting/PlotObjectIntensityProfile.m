@@ -34,7 +34,17 @@ function axH = PlotObjectIntensityProfile(...
 
 %% Anonymous fitting functions        
         % Function to fit
-        fit = @(b,x)  b(1).*cos(2.*(x - b(2))) + b(3);
+        %fit = @(b,x)  b(1).*cos(2.*(x - b(2))) + b(3);
+
+        % testing below
+        %fit = @(b,x)  (b(1).*(1 + cos(2.*(x - b(2)))) + b(3))./2;
+
+        % THIS IS THE MOST CORRECT FORM OF THE FIT FUNCTION
+        %   Y = A * ((1+cos(2(X-B))/2) + C
+        % above functions give identical results (in terms of y values), 
+        % but the fit parameters do not match those from a generic cos^2 
+        fit = @(b,x)  b(1) .* ((1 + cos(2.*(x-b(2))))./2) + b(3);
+
         % Least-Squares cost function
         fcn = @(b) sum((fit(b,x) - y).^2);
         % Minimise Least-Squares
