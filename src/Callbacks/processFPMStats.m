@@ -23,8 +23,10 @@ function processFPMStats(source,~)
         hProgressDialog.Value = i/nImages;
         % update log to indicate which image we are on
         UpdateLog3(source,['    ',cImage.rawFPMShortName,' (',num2str(i),'/',num2str(nImages),')'],'append');
-        % compute the FPM stats
+        % compute the OF and azimuth
         cImage.FindOrderFactor();
+        % compute any custom FPM statistics
+        cImage.FindFPMStatistics();
     end
     % end the timer and save the time
     timeElapsed = toc;
