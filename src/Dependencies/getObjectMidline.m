@@ -231,17 +231,36 @@ try
     midlinePathNodes = shortestpath(G,end1,end2);
 
     % if our midline does not include all nodes, remove the bad ones and try again
-    if numel(midlinePathNodes)~=G.numnodes
-        G = subgraph(G,midlinePathNodes);
-        % get the shortest distance between all nodes
-        d = distances(G);
-        % the largest distance represents the path between endpoint nodes
-        [~,maxIdx] = max(d,[],'all');
-        % get node idxs from the linear idx found above (maxIdx)
-        [end1,end2] = ind2sub(size(d),maxIdx);
-        % get the ordered list of nodes representing the midline
-        midlinePathNodes = shortestpath(G,end1,end2);
-    end
+    % if numel(midlinePathNodes)~=G.numnodes
+
+
+    % if numel(midlinePathNodes)~=size(G.Nodes,1)
+    % 
+    %     G = subgraph(G,midlinePathNodes);
+    %     % get the shortest distance between all nodes
+    %     d = distances(G);
+    %     % the largest distance represents the path between endpoint nodes
+    %     [~,maxIdx] = max(d,[],'all');
+    %     % get node idxs from the linear idx found above (maxIdx)
+    %     [end1,end2] = ind2sub(size(d),maxIdx);
+    %     % get the ordered list of nodes representing the midline
+    %     midlinePathNodes = shortestpath(G,end1,end2);
+    % end
+
+
+    % testing below, the code above apparenly runs faster if we skip the if statement all together
+    G = subgraph(G,midlinePathNodes);
+    % get the shortest distance between all nodes
+    d = distances(G);
+    % the largest distance represents the path between endpoint nodes
+    [~,maxIdx] = max(d,[],'all');
+    % get node idxs from the linear idx found above (maxIdx)
+    [end1,end2] = ind2sub(size(d),maxIdx);
+    % get the ordered list of nodes representing the midline
+    midlinePathNodes = shortestpath(G,end1,end2);
+
+
+
 
     % reorder the graph
     G = reordernodes(G,midlinePathNodes);
