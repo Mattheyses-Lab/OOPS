@@ -554,8 +554,8 @@ function [] = UpdateImages(source,varargin)
                     OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group (Label)";
             end
             
-            OOPSData.Handles.SwarmPlotAxH.Title.String = ExpandVariableName(OOPSData.Settings.SwarmPlotYVariable);
-            OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = ExpandVariableName(OOPSData.Settings.SwarmPlotYVariable);            
+            OOPSData.Handles.SwarmPlotAxH.Title.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);
+            OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);            
             
         case 'Polar Plots'
             %% polar histograms
@@ -576,11 +576,11 @@ function [] = UpdateImages(source,varargin)
 
             % set polar data and title for image polar histogram
             OOPSData.Handles.ImagePolarHistogram.polarData = [polarData,polarData+pi];
-            OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',ExpandVariableName(OOPSData.Settings.PolarHistogramVariable)];
+            OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',OOPSData.Settings.expandVariableName(OOPSData.Settings.PolarHistogramVariable)];
 
             % set polar data and title for group polar histogram
             OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
-            OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',ExpandVariableName(OOPSData.Settings.PolarHistogramVariable)];
+            OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',OOPSData.Settings.expandVariableName(OOPSData.Settings.PolarHistogramVariable)];
 
         case 'Objects'
             %% Object Viewer
@@ -824,6 +824,104 @@ function [] = UpdateImages(source,varargin)
             % having a drawnow here can cause an long, unstoppable upddate queue
             % now testing if necessary
             %drawnow limitrate nocallbacks
+
+        otherwise
+            %% CustomFPMStatistic view
+
+            statIdx = ismember(OOPSData.Settings.CurrentTab,OOPSData.Settings.CustomStatisticDisplayNames);
+            thisStat = OOPSData.Settings.CustomStatistics(statIdx);
+            statName = thisStat.StatisticName;
+            statDisplayName = thisStat.StatisticDisplayName;
+            statRange = thisStat.StatisticRange;
+
+            % set the title of the axes/image
+            OOPSData.Handles.CustomStatAxH.Title.String = statDisplayName;
+
+            OOPSData.Handles.CustomStatAxH.UserData = thisStat;
+
+            if OOPSData.Handles.ShowAsOverlayCustomStat.Value == 1
+                % show the OF-intensity composite image
+                try
+                    % get the average intensity image to use as an opacity mask
+                    OverlayIntensity = cImage.I;
+                    % get the raw OF image
+                    statImage = cImage.(statName);
+                    % depending on the selection state of the ScaleToMaxOrderFactor toolbar btn, get the value to scale to
+                    if OOPSData.Handles.ScaleToMaxCustomStat.Value == 1
+                        statMax = max(max(statImage));
+                    else
+                        statMax = statRange(2);
+                    end
+                    % now get the scaled or unscaled OF-intensity RGB overlay
+                    statImageRGB = MaskRGB(ind2rgb(im2uint8(statImage./statMax),OOPSData.Settings.OrderFactorColormap),OverlayIntensity);
+                    % set the image CData
+                    OOPSData.Handles.CustomStatImgH.CData = statImageRGB;
+                    % set the colorbar tick locations
+                    OOPSData.Handles.CustomStatCbar.Ticks = 0:0.1:1;
+                    % set the colorbar tick labels
+                    OOPSData.Handles.CustomStatCbar.TickLabels = round(linspace(statRange(1),statMax,11),2);
+
+                    % reset the default axes limits if zoom is not active
+                    if ~OOPSData.Settings.Zoom.Active
+                        OOPSData.Handles.CustomStatAxH.XLim = [0.5 cImage.Width+0.5];
+                        OOPSData.Handles.CustomStatAxH.YLim = [0.5 cImage.Height+0.5];
+                    end
+                catch
+                    OOPSData.Handles.CustomStatImgH.CData = EmptyImage;
+                    OOPSData.Handles.CustomStatCbar.Ticks = 0:0.1:1;
+                    OOPSData.Handles.CustomStatCbar.TickLabels = 0:0.1:1;
+                    disp(['Warning: Error displaying ',statName,'-intensity composite image'])
+                end
+            else
+                % show the unmasked OF image, scaled or unscaled
+                try
+                    % get the raw OF image
+                    statImage = cImage.(statName);
+                    % if ScaleToMaxOrderFactor toolbar btn is in the on state
+                    if OOPSData.Handles.ScaleToMaxCustomStat.Value == 1
+                        statMax = max(max(statImage));
+                    else
+                        statMax = statRange(2);
+                    end
+                    % set the image CData
+                    OOPSData.Handles.CustomStatImgH.CData = statImage./statMax;
+                    % set the colorbar tick locations
+                    OOPSData.Handles.CustomStatCbar.Ticks = 0:0.1:1;
+                    % set the colorbar tick labels
+                    OOPSData.Handles.CustomStatCbar.TickLabels = round(linspace(statRange(1),statMax,11),2);
+                    % reset the default axes limits if zoom is not active
+                    if ~OOPSData.Settings.Zoom.Active
+                        OOPSData.Handles.CustomStatAxH.XLim = [0.5 cImage.Width+0.5];
+                        OOPSData.Handles.CustomStatAxH.YLim = [0.5 cImage.Height+0.5];
+                    end
+                catch
+                    OOPSData.Handles.CustomStatImgH.CData = EmptyImage;
+                    OOPSData.Handles.CustomStatCbar.Ticks = 0:0.1:1;
+                    OOPSData.Handles.CustomStatCbar.TickLabels = 0:0.1:1;
+                end
+            end
+
+            % show or hide the OF colorbar
+            if OOPSData.Handles.ShowColorbarCustomStat.Value == 1
+                OOPSData.Handles.CustomStatCbar.Visible = 'on';
+            else
+                OOPSData.Handles.CustomStatCbar.Visible = 'off';
+            end
+
+            % change colormap to currently selected Order factor colormap
+            OOPSData.Handles.CustomStatAxH.Colormap = OOPSData.Settings.OrderFactorColormap;
+
+            % if ApplyMask toolbar state button set to true...
+            if OOPSData.Handles.ApplyMaskCustomStat.Value == 1
+                % ...then apply current mask by setting image AlphaData
+                OOPSData.Handles.CustomStatImgH.AlphaData = cImage.bw;
+
+                % % testing below: applying the mask in a different way
+                % OOPSData.Handles.OrderFactorImgH.CData = cImage.MaskedOFImageRGB;
+            end
+
+            % update the display of the average intensity image
+            UpdateAverageIntensity();
              
     end
 
