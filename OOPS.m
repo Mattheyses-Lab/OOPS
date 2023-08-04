@@ -9,7 +9,7 @@ end
 
 % create an instance of OOPSProject
 % this object will hold ALL project data and GUI settings
-OOPSData = OOPSProject;
+OOPSData = OOPSProject();
 
 %% set up splash screen
 
@@ -89,7 +89,7 @@ OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load 
 OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM Files','Callback',@loadFPMImages);
 OOPSData.Handles.hLoadReferenceImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load Reference Images','Callback',@loadReferenceImages);
 % save data
-OOPSData.Handles.hSaveOF = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Data for Selected Images','Separator','On','Callback',@SaveImages);
+OOPSData.Handles.hSaveImageData = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Data for Selected Images','Separator','On','Callback',@SaveImages);
 OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Object Data','Callback',@SaveObjectData);
 % save settings
 OOPSData.Handles.hSaveColormapsSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Colormaps Settings','Separator','On','Callback',@SaveColormapsSettings);
@@ -166,6 +166,22 @@ OOPSData.Handles.hTabAzimuth = uimenu(OOPSData.Handles.hTabMenu,'Text','Azimuth'
 OOPSData.Handles.hTabPlots = uimenu(OOPSData.Handles.hTabMenu,'Text','Plots','MenuSelectedFcn',@TabSelection,'tag','hTabPlots');
 OOPSData.Handles.hTabPolarPlots = uimenu(OOPSData.Handles.hTabMenu,'Text','Polar Plots','MenuSelectedFcn',@TabSelection,'tag','hTabPolarPlots');
 OOPSData.Handles.hTabObjects = uimenu(OOPSData.Handles.hTabMenu,'Text','Objects','MenuSelectedFcn',@TabSelection,'tag','hTabObjects');
+
+
+% add a View option for each custom statistic
+for i = 1:numel(OOPSData.Settings.CustomStatistics)
+    % get the next statistic
+    thisStatistic = OOPSData.Settings.CustomStatistics(i);
+    % create a tab for it, add a separator above the first one
+    OOPSData.Handles.(['hTab',thisStatistic.StatisticName]) = uimenu(OOPSData.Handles.hTabMenu,...
+        'Text',thisStatistic.StatisticDisplayName,...
+        'MenuSelectedFcn',@TabSelection,...
+        'tag',thisStatistic.StatisticName,...
+        'Separator',i==1);
+end
+
+
+
 
 %% Process Menu Button - allows user to perform FFC, generate mask, and generate output images
 
@@ -2003,9 +2019,7 @@ disp('Setting up large image axes...')
         'InnerPosition',[0 0 1 1],...
         'Tag','AverageIntensity',...
         'XTick',[],...
-        'YTick',[],...
-        'Color','Black',...
-        'Visible','off');
+        'YTick',[]);
     % save original values to be restored after calling imshow()
     pbarOriginal = OOPSData.Handles.AverageIntensityAxH.PlotBoxAspectRatio;
     tagOriginal = OOPSData.Handles.AverageIntensityAxH.Tag;
@@ -2039,9 +2053,7 @@ disp('Setting up large image axes...')
         'Tag','OrderFactor',...
         'XTick',[],...
         'YTick',[],...
-        'CLim',[0 1],...
-        'Color','Black',...
-        'Visible','off');
+        'CLim',[0 1]);
     % save original values to be restored after calling imshow()
     pbarOriginal = OOPSData.Handles.OrderFactorAxH.PlotBoxAspectRatio;
     tagOriginal = OOPSData.Handles.OrderFactorAxH.Tag;
@@ -2054,7 +2066,7 @@ disp('Setting up large image axes...')
     clear pbarOriginal tagOriginal
     
     % set axis title
-    OOPSData.Handles.OrderFactorAxH = SetAxisTitle(OOPSData.Handles.OrderFactorAxH,'Pixel-by-pixel Order Factor');
+    OOPSData.Handles.OrderFactorAxH = SetAxisTitle(OOPSData.Handles.OrderFactorAxH,'Order Factor');
 
     % make colorbar and set colormap for the axes, hide the colorbar and disable interactions with it
     OOPSData.Handles.OFCbar = colorbar(OOPSData.Handles.OrderFactorAxH,'location','east','color','white','tag','OFCbar');
@@ -2217,13 +2229,21 @@ disp('Setting up large image axes...')
         'Visible','off');
 
     %% MASK
+    % OOPSData.Handles.MaskAxH = uiaxes(OOPSData.Handles.ImgPanel2,...
+    %     'Units','Normalized',...
+    %     'InnerPosition',[0 0 1 1],...
+    %     'Tag','Mask',...
+    %     'XTick',[],...
+    %     'YTick',[],...
+    %     'Visible','off');
+
     OOPSData.Handles.MaskAxH = uiaxes(OOPSData.Handles.ImgPanel2,...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
         'Tag','Mask',...
         'XTick',[],...
-        'YTick',[],...
-        'Visible','off');
+        'YTick',[]);
+
     % save original values to be restored after calling imshow()
     pbarOriginal = OOPSData.Handles.MaskAxH.PlotBoxAspectRatio;
     tagOriginal = OOPSData.Handles.MaskAxH.Tag;
@@ -2254,9 +2274,7 @@ disp('Setting up large image axes...')
         'InnerPosition',[0 0 1 1],...
         'Tag','Azimuth',...
         'XTick',[],...
-        'YTick',[],...
-        'Color','Black',...
-        'Visible','off');
+        'YTick',[]);
     % save original values to be restored after calling imshow()
     pbarOriginal = OOPSData.Handles.AzimuthAxH.PlotBoxAspectRatio;
     tagOriginal = OOPSData.Handles.AzimuthAxH.Tag;    
@@ -2290,6 +2308,45 @@ disp('Setting up large image axes...')
 
     OOPSData.Handles.AzimuthImgH.Visible = 'Off';
     OOPSData.Handles.AzimuthImgH.HitTest = 'Off';
+
+    %% Custom Statistics
+
+    OOPSData.Handles.CustomStatAxH = uiaxes(OOPSData.Handles.ImgPanel2,...
+        'Units','Normalized',...
+        'InnerPosition',[0 0 1 1],...
+        'Tag','CustomStat',...
+        'XTick',[],...
+        'YTick',[],...
+        'CLim',[0 1]);
+    % save original values to be restored after calling imshow()
+    pbarOriginal = OOPSData.Handles.CustomStatAxH.PlotBoxAspectRatio;
+    tagOriginal = OOPSData.Handles.CustomStatAxH.Tag;
+    % place placeholder image on axis
+    OOPSData.Handles.CustomStatImgH = imshow(full(emptyimage),'Parent',OOPSData.Handles.CustomStatAxH);
+    % set a tag so our callback functions can find the image
+    set(OOPSData.Handles.CustomStatImgH,'Tag','CustomStatImage');
+    % restore original values after imshow() call
+    OOPSData.Handles.CustomStatAxH = restore_axis_defaults(OOPSData.Handles.CustomStatAxH,pbarOriginal,tagOriginal);
+    clear pbarOriginal tagOriginal
+    
+    % set axis title
+    OOPSData.Handles.CustomStatAxH = SetAxisTitle(OOPSData.Handles.CustomStatAxH,'Custom');
+
+    % make colorbar and set colormap for the axes, hide the colorbar and disable interactions with it
+    OOPSData.Handles.CustomStatCbar = colorbar(OOPSData.Handles.CustomStatAxH,'location','east','color','white','tag','OFCbar');
+    OOPSData.Handles.CustomStatAxH.Colormap = OOPSData.Settings.OrderFactorColormap;
+    OOPSData.Handles.CustomStatCbar.Visible = 'Off';
+    OOPSData.Handles.CustomStatCbar.HitTest = 'Off';
+
+    % hide axes toolbar and title, disable click interactivity, disable all default interactivity
+    OOPSData.Handles.CustomStatAxH.Toolbar.Visible = 'Off';
+    OOPSData.Handles.CustomStatAxH.Title.Visible = 'Off';
+    OOPSData.Handles.CustomStatAxH.HitTest = 'Off';
+    disableDefaultInteractivity(OOPSData.Handles.CustomStatAxH);
+    
+    OOPSData.Handles.CustomStatImgH.Visible = 'Off';
+    OOPSData.Handles.CustomStatImgH.HitTest = 'Off';
+
 
 %% CHECKPOINT
 
@@ -2980,13 +3037,13 @@ pause(0.5)
         imagePolarData(isnan(imagePolarData)) = [];
         imagePolarData(imagePolarData<0) = imagePolarData(imagePolarData<0)+pi;
         OOPSData.Handles.ImagePolarHistogram.polarData = [imagePolarData,imagePolarData+pi];
-        OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',ExpandVariableName(source.Value)];
+        OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',OOPSData.Settings.expandVariableName(source.Value)];
 
         groupPolarData = deg2rad([OOPSData.CurrentGroup.GetAllObjectData(source.Value)]);
         groupPolarData(isnan(groupPolarData)) = [];
         groupPolarData(groupPolarData<0) = groupPolarData(groupPolarData<0)+pi;
         OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
-        OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',ExpandVariableName(source.Value)];
+        OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',OOPSData.Settings.expandVariableName(source.Value)];
     end
 
     function SavePolarHistogramSettings(source,~)
@@ -3523,6 +3580,12 @@ pause(0.5)
                 addExportAxesToolbarBtn;
             case 'ObjectAzimuthOverlay'
                 addExportAxesToolbarBtn;
+            case 'CustomStat'
+                addZoomToCursorToolbarBtn;
+                addApplyMaskToolbarBtn;
+                addShowAsOverlayToolbarBtn;
+                addShowColorbarToolbarBtn;
+                addScaleToMaxToolbarBtn;
         end
         
         function addZoomToCursorToolbarBtn
@@ -3859,48 +3922,6 @@ pause(0.5)
 
 %% 'Plot' menubar callbacks
 
-    function mbPlotImageRelativePixelAzimuth(~,~)
-
-        try
-            % get the current image
-            cImage = OOPSData.CurrentImage;
-            % if empty, throw error
-            if isempty(cImage)
-                error('No image found')
-            else
-                cImage = cImage(1);
-            end
-
-            polarData = cImage.AzimuthImage(cImage.bw);
-            polarData(polarData<0) = polarData(polarData<0)+pi;
-            polarData = [polarData, polarData+pi];
-            
-            phistFigure = uifigure("WindowStyle","alwaysontop",...
-                "Name","Polar histogram",...
-                "Units","pixels",...
-                "Position",[0 0 500 500],...
-                "HandleVisibility","on",...
-                "Visible","off");
-
-            movegui(phistFigure,"center")
-
-            polarHistogram = PolarHistogramColorChart(...
-                'parent',phistFigure,...
-                'polarData',polarData,...
-                'wedgeColors',OOPSData.Settings.AzimuthColormap,...
-                'wedgeColorsRepeats',2,...
-                'nBins',48);
-
-            phistFigure.Visible = 'On';
-        catch ME
-            msg = ME.message;
-            uialert(OOPSData.Handles.fH,msg,'Error');
-            return
-        end
-
-
-    end
-
     function ShowImage(source,~)
         try
             % get the current image
@@ -4225,7 +4246,7 @@ pause(0.5)
 
     function saveProject(source,~)
 
-        uialert(OOPSData.Handles.fH,'Set save location/filename','Save Project File',...
+        uialert(OOPSData.Handles.fH,'Set save location/filename','Save project',...
             'Icon','',...
             'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
 
@@ -4263,8 +4284,6 @@ pause(0.5)
 
         % attempt to save the project
         try
-            disp('Retrieving data struct...')
-    
             % % method 1
             % SavedOOPSData = OOPSData.saveobj();
             % disp('Saving data struct...')
@@ -4576,9 +4595,9 @@ pause(0.5)
 %% Axes toolbar callbacks
 
     function tbExportAxes(source,~)
-        % get the toolbar parent of the calling button
+        % get the parent toolbar of the calling button
         ctb = source.Parent;
-        % get the axes parent of that toolbar, which we will export
+        % get the parent axes of that toolbar, which we will export
         cax = ctb.Parent;
 
         uialert(OOPSData.Handles.fH,'Set save location/filename','Export axes',...
@@ -4610,29 +4629,48 @@ pause(0.5)
 
         UpdateLog3(source,'Exporting axes...','append');
 
-        tempfig = uifigure("HandleVisibility","On",...
-            "Visible","off",...
-            "InnerPosition",[0 0 1024 1024],...
-            "AutoResizeChildren","Off");
+        %% exportgraphics method
 
-        tempax = copyobj(cax,tempfig);
-        tempax.Visible = 'On';
-        tempax.XColor = 'Black';
-        tempax.YColor = 'Black';
-        tempax.Box = 'On';
-        tempax.LineWidth = 0.5;
-        tempax.Color = 'Black';
+        % check whether title is visible
+        if cax.Title.Visible
+            cax.Title.Visible = false; % if so, hide it
+            resetTitle = true; % indicate we need to reset the title
+        else
+            resetTitle = false;
+        end
 
-        tempax.Title.String = '';
-        tempax.Units = 'Normalized';
-        tempax.InnerPosition = [0 0 1 1];
+        % export the axes as an image at 600 dpi
+        exportgraphics(cax,[path,filename],"ContentType","image","Resolution",600);
 
-        export_fig([path,filename],tempfig,'-nocrop');
+        % make title visible if resetTitle is true
+        cax.Title.Visible = resetTitle;
 
-        close(tempfig)
+        %% export_fig method
+        % tempfig = uifigure("HandleVisibility","On",...
+        %     "Visible","off",...
+        %     "InnerPosition",[0 0 1024 1024],...
+        %     "AutoResizeChildren","Off");
+        % % copy the axes into the new figure
+        % tempax = copyobj(cax,tempfig);
+        % % set various axes properties that improve export quality
+        % tempax.Visible = 'On';
+        % tempax.XColor = 'Black';
+        % tempax.YColor = 'Black';
+        % tempax.Box = 'On';
+        % tempax.LineWidth = 0.5;
+        % tempax.Color = 'Black';
+        % % hide the title
+        % tempax.Title.String = '';
+        % % set axes unit to normalized
+        % tempax.Units = 'Normalized';
+        % % set axes position to fill the whole figure
+        % tempax.InnerPosition = [0 0 1 1];
+        % % call export_fig with the relevant handle and filename
+        % export_fig([path,filename],tempfig,'-nocrop');
+        % % close the temporary figure
+        % close(tempfig)
 
         UpdateLog3(source,'Done.','append');
-        
     end
 
     function tbApplyMaskStateChanged(source,event)
