@@ -1,4 +1,4 @@
-classdef OOPSObject < handle
+classdef OOPSObject < handle & dynamicprops
     % Object parameters class
     properties
         
@@ -231,6 +231,16 @@ classdef OOPSObject < handle
             % set default object label
             obj.Label = Label;
 
+
+            %% testing below - add dynamic properties
+            obj.addCustomStatistics();
+
+
+            %%
+
+
+
+
         end % end constructor method
 
         % class destructor – simple, any reindexing will be handled by higher level classes (OOPSImage, OOPSGroup)
@@ -294,6 +304,39 @@ classdef OOPSObject < handle
             object.pixelMidlineTangentList = obj.pixelMidlineTangentList;
 
             object.Midline = obj.Midline;
+
+        end
+
+%% dynamic properties
+
+        % add user-defined custom outputs
+        function addCustomStatistics(obj)
+            
+            % get the vector of custom statistic objects
+            customStatistics = obj.Parent.Settings.CustomStatistics;
+
+            for i = 1:numel(customStatistics)
+                thisStatistic = customStatistics(i);
+
+                prop = obj.addprop(thisStatistic.StatisticName);
+                % make the property dependent
+                prop.Dependent = true;
+                % set the Get method for this property
+                prop.GetMethod = @(o) getCustomObjectStatistic(o,thisStatistic.StatisticName);
+            end
+
+        end
+
+        function value = getCustomObjectStatistic(obj,statisticName)
+
+            parentData = obj.Parent.(statisticName);
+
+            % average value across all object pixels
+            try
+                value = mean(parentData(obj.PixelIdxList));
+            catch
+                value = NaN;
+            end
 
         end
 
@@ -819,7 +862,8 @@ classdef OOPSObject < handle
             ObjectLabel = object.Label;
 
             % create new instance of OOPSObject
-            obj = OOPSObject(ObjectProps,OOPSImage.empty(),ObjectLabel);
+            %obj = OOPSObject(ObjectProps,OOPSImage.empty(),ObjectLabel);
+            obj = OOPSObject(ObjectProps,object.Parent,ObjectLabel);
 
             obj.BGIdxList = object.BGIdxList;
             obj.BufferIdxList = object.BufferIdxList;

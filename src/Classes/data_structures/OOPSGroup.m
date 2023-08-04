@@ -56,6 +56,7 @@
         % status tracking for the group
         MaskAllDone logical
         OFAllDone logical
+        FPMStatsAllDone logical
         FFCAllDone logical
         ObjectDetectionAllDone logical
         LocalSBAllDone logical
@@ -84,7 +85,7 @@
     
     methods
         
-        % class constructor method
+        % constructor
         function obj = OOPSGroup(GroupName,Project)
             if nargin > 0
                 obj.GroupName = GroupName;
@@ -135,6 +136,7 @@
 
         end
 
+        % self indexing
         function SelfIdx = get.SelfIdx(obj)
             SelfIdx = find(obj.Parent.Group==obj);
         end
@@ -154,7 +156,6 @@
                 obj.Replicate(i).updateMaskSchemes();
             end
         end
-
 
 %% manipulate objects
 
@@ -227,8 +228,7 @@
             end
         end
 
-        % get x,y data for all objects in group, from first to last replicate
-        %       WILL UPDATE TO ALLOW FOR varargin for more flexibility of use
+        % get array of [XVar,YVar] data for all objects in group
         function ObjectData = CombineObjectData(obj,XVar,YVar)
             
             count = 0;
@@ -241,19 +241,30 @@
             for i = 1:obj.nReplicates
                 
                 count = count + obj.Replicate(i).nObjects;
+
+                % get XData and YData
+                XData = obj.Replicate(i).GetAllObjectData(XVar);
+                YData = obj.Replicate(i).GetAllObjectData(YVar);
+
                 % column 1 holds x data
-                ObjectData(last:count,1) = [obj.Replicate(i).Object.(XVar)];
+                ObjectData(last:count,1) = XData;
                 % column 2 holds y data
-                ObjectData(last:count,2) = [obj.Replicate(i).Object.(YVar)];
+                ObjectData(last:count,2) = YData;
+
+
+                % % column 1 holds x data
+                % ObjectData(last:count,1) = [obj.Replicate(i).Object.(XVar)];
+                % % column 2 holds y data
+                % ObjectData(last:count,2) = [obj.Replicate(i).Object.(YVar)];
                 
                 last = count+1;
                 
             end
-        end % end of CombineObjectData()
+        end
         
+        % return a list of Var2Get for all objects in the group
         function VariableObjectData = GetAllObjectData(obj,Var2Get)
-            % return a list of Var2Get for all objects in the group
-
+            
             % return if no images exist
             if obj.nReplicates == 0
                 VariableObjectData = [];
@@ -266,8 +277,11 @@
             %VariableObjectData = [];
             for i = 1:obj.nReplicates
                 count = count + obj.Replicate(i).nObjects;
-                % column 1 holds x data
-                VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
+                
+                objectData = obj.Replicate(i).GetAllObjectData(Var2Get);
+                VariableObjectData(last:count,1) = objectData;
+
+                % VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
                 last = count+1;
             end        
         end
@@ -333,7 +347,9 @@
             % clear Bad array
             clear Bad
         end
-            
+
+%% retrieve image data
+
         function nReplicates = get.nReplicates(obj)
             if isvalid(obj.Replicate)
                 nReplicates = length(obj.Replicate);
@@ -341,9 +357,7 @@
                 nReplicates = 0;
             end
         end
-       
-%% retrieve image data
-        
+
         function ImageNames = get.ImageNames(obj)
             % new cell array of image names
             ImageNames = {};
@@ -373,6 +387,22 @@
                 end
             end
             OFAllDone = true;
+        end
+
+        function FPMStatsAllDone = get.FPMStatsAllDone(obj)
+            if obj.nReplicates == 0
+                FPMStatsAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nReplicates
+                if ~obj.Replicate(i).CustomFPMStatsDone
+                    FPMStatsAllDone = false;
+                    return
+                end
+            end
+
+            FPMStatsAllDone = true;
         end
 
         function MaskAllDone = get.MaskAllDone(obj)
@@ -494,7 +524,8 @@
 
         function obj = loadobj(group)
 
-            obj = OOPSGroup(group.GroupName,OOPSProject.empty());
+            %obj = OOPSGroup(group.GroupName,OOPSProject.empty());
+            obj = OOPSGroup(group.GroupName,group.Parent);
 
             obj.CurrentImageIndex = group.CurrentImageIndex;
 
@@ -584,19 +615,22 @@
 
             % for each replicate in group
             for i = 1:group.nReplicates
+                % add group handle to the image struct
+                group.Replicate(i).Parent = obj;
                 % load the replicate
                 obj.Replicate(i) = OOPSImage.loadobj(group.Replicate(i));
-                % set its parent group (this group)
-                obj.Replicate(i).Parent = obj;
+
                 if obj.Replicate(i).FFCDone
                     obj.Replicate(i).FlatFieldCorrection();
                 end
 
-
-
                 if obj.Replicate(i).OFDone
                     obj.Replicate(i).FindOrderFactor();
                 end
+
+
+
+
             end
 
         end

@@ -392,11 +392,14 @@ classdef OOPSProject < handle
             obj.Handles = proj.Handles;
             % for each group in the saved data structure
             for i = 1:length(proj.Group)
+                % testing below - attach handle to project
+                proj.Group(i,1).Parent = obj;
+                % end testing
+
                 % load the group
                 obj.Group(i,1) = OOPSGroup.loadobj(proj.Group(i,1));
                 % and set its parent project (this project)
-                obj.Group(i,1).Parent = obj;
-
+                %obj.Group(i,1).Parent = obj;
                 % % testing below
                 obj.Group(i,1).updateMaskSchemes();
                 % % end testing

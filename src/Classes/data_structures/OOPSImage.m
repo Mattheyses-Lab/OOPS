@@ -1,53 +1,41 @@
-classdef OOPSImage < handle
+classdef OOPSImage < handle & dynamicprops
     
-    % normal properties
     properties
-%% Parent/Child
 
         % handle to the OOPSGroup to which this OOPSImage belongs
         Parent OOPSGroup
-
         % array of handles to the objects detected for this OOPSImage
         Object OOPSObject
         
-%% Input Image Properties
+%% FPM stack file properties
         
         % file name of the original input image
         rawFPMFileName (1,:) char
-
         % shortened file name (no path)
         rawFPMShortName (1,:) char
-
         % full name (path and extension)
         rawFPMFullName (1,:) char
-
         % width of the image (number of columns in the image matrix)
         Width (1,1) double
-
         % height of the image (number of the rows in this image)
         Height (1,1) double
-
         % real-world size of the pixels of the raw input data
         rawFPMPixelSize (1,1) double
-
         % class/type of the raw input data ('uint8','uint16',etc)
         rawFPMClass (1,:) char
-
         % intensity range of the raw input data [low high] (based on class)
         rawFPMRange (1,2) double
-
         % file type (extension) of the raw input data
         rawFPMFileType (1,:) char
 
+%% FPM stack image data
+
         % raw input stack, size = [Height,Width,4] variable types depending on user input
         rawFPMStack (:,:,4)
-
         % average of the raw input stack, size = [Height,Width] double
         rawFPMAverage (:,:) double
-
         % flat-field corrected stack, size = [Height,Width,4]
         ffcFPMStack (:,:,4) double
-
         % average of the flat-field corrected stack, size = [Height,Width]
         ffcFPMAverage (:,:) double
 
@@ -57,6 +45,7 @@ classdef OOPSImage < handle
         FFCDone (1,1) logical = false
         MaskDone (1,1) logical = false
         OFDone (1,1) logical = false
+        FPMStatsDone (1,1) logical = false
         ObjectDetectionDone (1,1) logical = false
         LocalSBDone (1,1) logical = false
         ReferenceImageLoaded (1,1) logical = false
@@ -79,7 +68,7 @@ classdef OOPSImage < handle
         I (:,:) double
         EnhancedImg (:,:) double
 
-        % the type of mask applied to this image ('Default', 'Custom')
+        % the type of mask applied to this image ('Default', 'CustomScheme')
         MaskType (1,:) char = 'Default'
 
         % the name of the mask applied to this image (various)
@@ -92,11 +81,12 @@ classdef OOPSImage < handle
         IntensityBinCenters
         IntensityHistPlot
         
-%% Object Data        
+%% Object data
+
         % objects
         CurrentObjectIdx (1,1) uint16 % i.e. no more than 65535 objects per group
         
-%% Reference Image
+%% Reference image
 
         rawReferenceImage (:,:)
         ReferenceImage (:,:) double
@@ -107,12 +97,12 @@ classdef OOPSImage < handle
         rawReferenceShortName (1,:) char
         rawReferenceFileType (1,:) char
         
-%% Output Images
+%% Pixelwise FPM output statistics
 
         AzimuthImage (:,:) double
         OF_image (:,:) double
 
-%% Output Values        
+%% Output values        
         
         % output values
         SBAvg double
@@ -250,6 +240,10 @@ classdef OOPSImage < handle
             obj.OFDone = false;
 
             obj.CurrentObjectIdx = 0;
+
+            % add custom properties
+            obj.addCustomStatistics();
+
         end
         
         % destructor
@@ -338,9 +332,81 @@ classdef OOPSImage < handle
             end
         end
 
+        % add user-defined custom outputs
+        function addCustomStatistics(obj)
+            % get the vector of custom statistic objects
+            customStatistics = obj.Settings.CustomStatistics;
+            for i = 1:numel(customStatistics)
+                % for each statistic
+                thisStatistic = customStatistics(i);
+                % add a dynamic property to obj
+                prop = obj.addprop(thisStatistic.StatisticName);
+            end
+        end
+
+%% retrieve image data
+
+        % dependent get methods for image size, resolution
+        function Dimensions = get.Dimensions(obj)
+            Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
+        end
+        
+        function RealWorldLimits = get.RealWorldLimits(obj)
+            RealWorldLimits = [0 obj.rawFPMPixelSize*obj.Width];
+        end
+
+        % get normalized FFC stack
+        function ffcFPMStack_normalizedbystack = get.ffcFPMStack_normalizedbystack(obj)
+            ffcFPMStack_normalizedbystack = obj.ffcFPMStack./(max(max(max(obj.ffcFPMStack))));
+        end
+         
+        % get normalized raw emission images stack
+        function rawFPMStack_normalizedbystack = get.rawFPMStack_normalizedbystack(obj)
+            rawDataDouble = im2double(obj.rawFPMStack);
+            rawFPMStack_normalizedbystack = rawDataDouble./(max(max(max(rawDataDouble))));
+        end
+
+        function ffcFPMPixelNorm = get.ffcFPMPixelNorm(obj)
+            ffcFPMPixelNorm = obj.ffcFPMStack./max(obj.ffcFPMStack,[],3);
+        end
+
+        function OFAvg = get.OFAvg(obj)
+            % average OF of all pixels identified by the mask
+            try
+                OFAvg = mean(obj.OF_image(obj.bw));
+            catch
+                OFAvg = NaN;
+            end
+        end
+        
+        function OFMax = get.OFMax(obj)
+            % max OF of all pixels identified by the mask
+            try
+                OFMax = max(obj.OF_image(obj.bw));
+            catch
+                OFMax = NaN;
+            end
+        end
+        
+        function OFMin = get.OFMin(obj)
+            % min OF of all pixels identified by the mask
+            try
+                OFMin = min(obj.OF_image(obj.bw));
+            catch
+                OFMin = NaN;
+            end
+        end
+        
+        function OFList = get.OFList(obj)
+            % list of OF in all pixels identified by mask
+            try
+                OFList = obj.OF_image(obj.bw);
+            catch
+                OFList = NaN;
+            end
+        end
 %% processing methods (corrections, FPM stats, local S/B)
 
-        % performs flat field correction for 1 OOPSImage
         function FlatFieldCorrection(obj)
 
             rawFPMStackDouble = im2double(obj.rawFPMStack) .* obj.rawFPMRange(2);
@@ -611,19 +677,24 @@ classdef OOPSImage < handle
 
         end
 
-        % calculate pixel-by-pixel OF and azimuth for this image
         function FindOrderFactor(obj)
             % remember to remove comment below!
             % get the pixel-normalized, flat-field corrected intensity stack
             pixelNorm = obj.ffcFPMPixelNorm;
 
-            %% testing only below!
-            % anisotropy instead of OF
+            %% anisotropy (DeMay)
             % a = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
             % b = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
             % c = sum(obj.ffcFPMStack,3);
             % obj.OF_image = hypot(a,b)./c;
-            %% testing only above!
+
+            %% polarization factor / degree of linear polarization (Mehta, Lee)
+            % S1 = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
+            % S2 = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
+            % S0 = sum(obj.ffcFPMStack,3)./2;
+            % obj.OF_image = hypot(S1,S2)./S0;
+
+
 
             % orthogonal polarization difference components
             a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
@@ -639,7 +710,30 @@ classdef OOPSImage < handle
             obj.OFDone = true;
         end
 
-        % detect local S/B ratio for each object in this OOPSImage
+        function FindFPMStatistics(obj)
+
+
+            % get the vector of custom statistic objects
+            customStatistics = obj.Settings.CustomStatistics;
+
+            if ~(isempty(customStatistics))
+
+                % for each custom statistic
+                for i = 1:numel(customStatistics)
+                    % get the next statistic
+                    thisStatistic = customStatistics(i);
+                    % call the function handle specified by the custom statistic object, store the value in dynamic property
+                    obj.(thisStatistic.StatisticName) = feval(thisStatistic.StatisticFun,obj.ffcFPMStack);
+                end
+                % update the status flag to indicate custom FPM stats were calculated
+                obj.FPMStatsDone = true;
+            else
+                % update the status flag to indicate custom FPM stats were not calculated
+                obj.FPMStatsDone = false;
+            end
+
+        end
+
         function obj = FindLocalSB(obj)
 
             % subfunction that returns linear idxs (w.r.t. full image) to buffer and BG regions for an object
@@ -746,46 +840,35 @@ classdef OOPSImage < handle
 
         end
 
-
-
-
 %% segmentation, object construction, and basic object feature extraction
 
         % detects objects in this OOPSImage
         function DetectObjects(obj)
             % start by deleting any currently existing objects
             obj.deleteObjects();
-
             % get object properties struct
             props = obj.ObjectProperties;
-
-            if isempty(props) % if no objects
+            % if no objects
+            if isempty(props)
                 return % then stop here
             else
                 % get default label from settings object
                 DefaultLabel = obj.Settings.ObjectLabels(1);
-
-                for i = 1:length(props) % for each detected object
+                % for each detected object
+                for i = 1:length(props)
                    % create an instance of OOPSObject
                    obj.Object(i) = OOPSObject(props(i,1),...
                        obj,...
                        DefaultLabel);
                 end
             end
-            
-            % update some status tracking variables
+            % update status flags and CurrentObjectIdx
             obj.ObjectDetectionDone = true;
             obj.CurrentObjectIdx = 1;
             obj.LocalSBDone = false;
-            
-        end % end of DetectObjects
+        end
         
-
-
-
-
-
-
+%% object manipulation (gather, select, delete, etc.)
 
         % delete all objects in this OOPSImage
         function deleteObjects(obj)
@@ -899,8 +982,45 @@ classdef OOPSImage < handle
 
         end
 
+%% retrieve object data
+
+        % get current Object (OOPSObject)
+        function CurrentObject = get.CurrentObject(obj)
+            try
+                CurrentObject = obj.Object(obj.CurrentObjectIdx);
+            catch
+                CurrentObject = OOPSObject.empty();
+            end
+        end
+
+
+        function VariableObjectData = GetAllObjectData(obj,Var2Get)
+            % if the variable is a custom property
+            if obj.Settings.isCustomStatistic(Var2Get)
+                % we have to retrieve it differently
+                VariableObjectData = obj.GetAllCustomObjectData(Var2Get);
+                return
+            end
+
+            VariableObjectData = [obj.Object.(Var2Get)];
+        end
+
+        function VariableObjectData = GetAllCustomObjectData(obj,Var2Get)
+            VariableObjectData = nan(obj.nObjects,1);
+            for i = 1:obj.nObjects
+                VariableObjectData(i,1) = obj.Object(i).(Var2Get);
+            end
+        end
+
         % return object data grouped by the object labels
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
+            % if the variable is a custom property
+            if obj.Settings.isCustomStatistic(Var2Get)
+                % we have to retrieve it differently
+                ObjectDataByLabel = obj.GetCustomObjectDataByLabel(Var2Get);
+                return
+            end
+
             nLabels = length(obj.Settings.ObjectLabels);
             ObjectDataByLabel = cell(1,nLabels);
             % for each label
@@ -910,15 +1030,365 @@ classdef OOPSImage < handle
                 % add [Var2Get] from those objects to cell i of ObjectDataByLabel
                 ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
             end
+
         end
 
-        % dependent get methods for image size, resolution
-        function Dimensions = get.Dimensions(obj)
-            Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
+        % return object data grouped by the object labels
+        function ObjectDataByLabel = GetCustomObjectDataByLabel(obj,Var2Get)
+
+            nLabels = length(obj.Settings.ObjectLabels);
+            ObjectDataByLabel = cell(1,nLabels);
+            % for each label
+            for i = 1:nLabels
+                % find idx to all object with that label
+                ObjectLabelIdxs = find([obj.Object.Label]==obj.Settings.ObjectLabels(i));
+                % the number of objects for which we will retrieve data
+                nIdxs = numel(ObjectLabelIdxs);
+                % preallocate array of nans before looping
+                ObjectDataByLabel{i} = nan(1,nIdxs);
+                for ii = 1:nIdxs
+                    % add Var2Get from each object with the label to cell i of ObjectDataByLabel
+                    ObjectDataByLabel{i}(1,ii) = obj.Object(ObjectLabelIdxs(ii)).(Var2Get);
+                end
+            end
+
         end
-        
-        function RealWorldLimits = get.RealWorldLimits(obj)
-            RealWorldLimits = [0 obj.rawFPMPixelSize*obj.Width];
+
+        % return the number of objects in this OOPSImage
+        function nObjects = get.nObjects(obj)
+            if isvalid(obj.Object)
+                nObjects = length(obj.Object);
+            else
+                nObjects = 0;
+            end
+        end
+
+        function [...
+                AllVertices,...
+                AllCData,...
+                SelectedFaces,...
+                UnselectedFaces...
+                ] = getObjectPatchData(obj)
+
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+
+            % get list of unselected objects
+            Unselected = AllObjects(~[obj.Object.Selected]);
+            % get list of selected objects
+            Selected = AllObjects([obj.Object.Selected]);
+
+            totalnObjects = numel(Unselected)+numel(Selected);
+
+            % highest number of boundary vertices among all objects
+            AllVerticesMax = 0;
+
+            % total number of boundary vertices among all objects
+            AllVerticesSum = 0;
+
+            % for each object
+            for cObject = obj.Object
+                % % get the number of vertices in the simplified boundary
+                % nVertices = size(cObject.SimplifiedBoundary,1);
+                
+                % get the number of vertices in the boundary
+                nVertices = size(cObject.Boundary,1);       
+                % determine the total and max number of vertices
+                AllVerticesSum = AllVerticesSum + nVertices;
+                AllVerticesMax = max(AllVerticesMax,nVertices);
+            end
+
+            % initialize unselected faces matrix (each row is a vector of vertex idxs)
+            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
+            % initialize selected faces matrix (each row is a vector of vertex idxs)
+            SelectedFaces = nan(totalnObjects,AllVerticesMax);
+            % list of boundary coordinates for all objects
+            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
+            % object/face counter
+            Counter = 0;
+            % list of FaceVertexCData for the patch objects we are going to draw
+            AllCData = zeros(AllVerticesSum+totalnObjects,3);
+            % total number of vertices we have created faces for
+            TotalVertices = 0;
+
+            for cObject = obj.Object
+                % increment the object/face counter
+                Counter = Counter + 1;
+                % % get the simplified boundary
+                % thisObjectBoundary = cObject.SimplifiedBoundary;
+                % get the boundary
+                thisObjectBoundary = cObject.Boundary;
+                % determine number of vertices
+                nvertices = size(thisObjectBoundary,1);
+                % obtain vertices idx
+                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
+                % add boundary coordinates to list of vertices
+                AllVertices(AllVerticesIdx,:) = [thisObjectBoundary(:,2) thisObjectBoundary(:,1)];
+                % add CData for each vertex
+                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                % set object faces depending on their selection status
+                switch cObject.Selected
+                    case true
+                        % add vertex idxs to selected faces list
+                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                    case false
+                        % add vertex idxs to unselected faces list
+                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                end
+                % increment the total number of vertices
+                TotalVertices = TotalVertices + nvertices;
+            end
+        end
+
+        function [...
+                AllVertices,...
+                AllCData,...
+                SelectedFaces,...
+                UnselectedFaces...
+                ] = getObjectRectanglePatchData(obj)
+
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+
+            % get list of unselected objects
+            Unselected = AllObjects(~[obj.Object.Selected]);
+            % get list of selected objects
+            Selected = AllObjects([obj.Object.Selected]);
+
+            totalnObjects = numel(Unselected)+numel(Selected);
+
+            % highest number of boundary vertices among all objects
+            AllVerticesMax = 0;
+
+            % total number of boundary vertices among all objects
+            AllVerticesSum = 0;
+
+            % for each object
+            for cObject = obj.Object
+                % % get the number of vertices in the simplified boundary
+                % nVertices = size(cObject.SimplifiedBoundary,1);
+                
+                % get the number of vertices in the boundary
+                nVertices = 4;       
+                % determine the total and max number of vertices
+                AllVerticesSum = AllVerticesSum + nVertices;
+                AllVerticesMax = max(AllVerticesMax,nVertices);
+            end
+
+            % initialize unselected faces matrix (each row is a vector of vertex idxs)
+            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
+            % initialize selected faces matrix (each row is a vector of vertex idxs)
+            SelectedFaces = nan(totalnObjects,AllVerticesMax);
+            % list of boundary coordinates for all objects
+            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
+            % object/face counter
+            Counter = 0;
+            % list of FaceVertexCData for the patch objects we are going to draw
+            AllCData = zeros(AllVerticesSum+totalnObjects,3);
+            % total number of vertices we have created faces for
+            TotalVertices = 0;
+
+            for cObject = obj.Object
+                % increment the object/face counter
+                Counter = Counter + 1;
+                % % get the simplified boundary
+                % thisObjectBoundary = cObject.SimplifiedBoundary;
+                % get the boundary
+                thisObjectBoundary = cObject.expandedBoundingBoxCoordinates;
+                % determine number of vertices
+                nvertices = size(thisObjectBoundary,1);
+                % obtain vertices idx
+                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
+                % add boundary coordinates to list of vertices
+                AllVertices(AllVerticesIdx,:) = thisObjectBoundary;
+                % add CData for each vertex
+                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                % set object faces depending on their selection status
+                switch cObject.Selected
+                    case true
+                        % add vertex idxs to selected faces list
+                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                    case false
+                        % add vertex idxs to unselected faces list
+                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                end
+                % increment the total number of vertices
+                TotalVertices = TotalVertices + nvertices;
+            end
+        end
+
+        % get ObjectProperties
+        function ObjectProperties = get.ObjectProperties(obj)
+
+            % if no objects identified by the label matrix, return empty
+            if max(max(obj.L))==0
+                ObjectProperties = [];
+                return
+            end
+
+            % get morphological properties from regionprops()
+            ObjectProperties = regionprops(full(obj.L),full(obj.bw),...
+                {'Area',...
+                'BoundingBox',...
+                'Centroid',...
+                'Circularity',...
+                'ConvexArea',...
+                'ConvexHull',...
+                'ConvexImage',...
+                'Eccentricity',...
+                'Extent',...
+                'Extrema',...
+                'EquivDiameter',...
+                'FilledArea',...
+                'Image',...
+                'MajorAxisLength',...
+                'MinorAxisLength',...
+                'Orientation',...
+                'Perimeter',...
+                'PixelIdxList',...
+                'PixelList',...
+                'Solidity',...
+                'SubarrayIdx',...
+                'MaxFeretProperties',...
+                'MinFeretProperties'});
+
+            %% get cell arrays of some properties (which we will use to calculate more properties)
+
+            % get fieldnames of the ObjectProperties struct
+            fnames = fieldnames(ObjectProperties);
+            % convert ObjectProperties struct to cell array
+            C = struct2cell(ObjectProperties).';
+            % get object images (using struct fieldnames to find idx to 'Image' column in cell array)
+            ObjectImages = C(:,ismember(fnames,'Image'));
+            % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
+            ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
+            % get object subarray idxs (using fieldnames to find idx to 'SubarrayIdx' column in cell array)
+            ObjectSubarrayIdx = C(:,ismember(fnames,'SubarrayIdx'));
+            % get object pixel idx list (using fieldnames to find idx to 'PixelIdxList' column in cell array)
+            ObjectPixelIdxList = C(:,ismember(fnames,'PixelIdxList'));
+
+
+            %% object padded subarray idxs
+
+            % get cell array of padded subarray idxs (padding=5)
+            paddedSubarrayIdx = cellfun(@(subidx) padSubarrayIdx(subidx,5),ObjectSubarrayIdx,'UniformOutput',0);
+            % deal into ObjectProperties struct
+            ObjectProperties(end).paddedSubarrayIdx = [];
+            [ObjectProperties(:).paddedSubarrayIdx] = deal(paddedSubarrayIdx{:});
+
+            %% object coordinate padding
+
+            % get cell array of object coordinate adjustments [yShift xShift]
+            paddedSubarrayIdxAdjustment = cellfun(@(subidx,paddedsubidx) ...
+                [subidx{1,1}(1)-paddedsubidx{1,1}(1) subidx{1,2}(1)-paddedsubidx{1,2}(1)],...
+                ObjectSubarrayIdx,paddedSubarrayIdx,'UniformOutput',0);
+            % deal into ObjectProperties struct
+            ObjectProperties(end).paddedSubarrayIdxAdjustment = [];
+            [ObjectProperties(:).paddedSubarrayIdxAdjustment] = deal(paddedSubarrayIdxAdjustment{:});
+
+            %% image to padded object coordinate shifts [yShift xShift]
+
+            imageToPaddedObjectShift = cellfun(@(box,padadjust) -1.*box([2 1]) + 0.5 + padadjust, ObjectBBox, paddedSubarrayIdxAdjustment, 'UniformOutput',0);
+            % deal into ObjectProperties struct
+            ObjectProperties(end).imageToPaddedObjectShift = [];
+            [ObjectProperties(:).imageToPaddedObjectShift] = deal(imageToPaddedObjectShift{:});
+
+            %% object padded pixel idx list
+
+            Isz = size(obj.bw);
+
+            paddedPixelIdxList = cellfun(@(pixelidxlist,coordshift,paddedsubidx) getPaddedPixelIdxList(pixelidxlist,coordshift,paddedsubidx),...
+                ObjectPixelIdxList,imageToPaddedObjectShift,paddedSubarrayIdx,...
+                'UniformOutput',0);
+
+            function paddedpixelidxlist = getPaddedPixelIdxList(pixelidxlist,coordshift,paddedsubidx)
+                [r,c] = ind2sub(Isz,pixelidxlist);
+                outSize = [length(paddedsubidx{1,1}) length(paddedsubidx{1,2})];
+                paddedpixelidxlist = sub2ind(outSize,r + coordshift(1),c + coordshift(2));
+            end
+
+            % deal into ObjectProperties struct
+            ObjectProperties(end).paddedPixelIdxList = [];
+            [ObjectProperties(:).paddedPixelIdxList] = deal(paddedPixelIdxList{:});
+
+
+            %% object padded mask images
+
+            paddedSubImage = cellfun(@(paddedsubidx,paddedpixelidxlist) ...
+                getPaddedSubImage(paddedsubidx,paddedpixelidxlist),...
+                paddedSubarrayIdx,paddedPixelIdxList,'UniformOutput',0);
+            % subfuntion to get the padded object subimages
+            function paddedsubimage = getPaddedSubImage(paddedsubidx,paddedpixelidxlist)
+                paddedsubimage = false([length(paddedsubidx{1,1}) length(paddedsubidx{1,2})]);
+                paddedsubimage(paddedpixelidxlist) = true;
+            end
+            % deal into ObjectProperties struct
+            ObjectProperties(end).paddedSubImage = [];
+            [ObjectProperties(:).paddedSubImage] = deal(paddedSubImage{:});
+
+            %% object boundaries
+
+            % get boundaries from ObjectImages
+            B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes','TraceStyle','pixeledge'),ObjectImages,'UniformOutput',0);
+            % add bounding box offsets to boundary coordinates from ObjectImages
+            % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
+            B = cellfun(@(b,box) bsxfun(@plus,b{1},box([2 1]) - 0.5),B,ObjectBBox,'UniformOutput',0);
+            % add object boundaries cell to props struct
+            ObjectProperties(end).BWBoundary = [];
+            [ObjectProperties(:).BWBoundary] = deal(B{:});
+
+
+            %% object midlines
+
+            % get the object midline coordinates w.r.t. the padded object subimage
+            M = parcellfun(@(obj_img) getObjectMidline(obj_img),paddedSubImage,'UniformOutput',0);
+            % add object midline coordinates cell to props struct
+            ObjectProperties(end).Midline = [];
+            [ObjectProperties(:).Midline] = deal(M{:});
+
+            %% object midline and pixel tangents
+
+            % get a list of tangents for each object midline (one tangent per point in the midline)
+            MidlineTangent = cellfun(@(midline) getMidlineTangent(midline), M, 'UniformOutput',0);
+            % get a list of tangents for each pixel in the padded object mask image
+            pixelMidlineTangentList = parcellfun_multi(@(midline,midlinetangent,paddedsubimage) ...
+                getPixelValuesFromCurveValues(midline,midlinetangent,paddedsubimage), ...
+                {M,MidlineTangent,paddedSubImage}, ...
+                'UniformOutput',0);
+            % add object pixelTangentList cell to props struct
+            ObjectProperties(end).pixelMidlineTangentList = [];
+            [ObjectProperties(:).pixelMidlineTangentList] = deal(pixelMidlineTangentList{:});
+
+        end
+
+        function labelCounts = get.labelCounts(obj)
+            % preallocate our array of label counts, one column per unique label
+            labelCounts = zeros(1,obj.Settings.nLabels);
+            % for each unique label
+            for labelIdx = 1:obj.Settings.nLabels
+                % find the number of objects with that label
+                labelCounts(1,labelIdx) = numel(find([obj.Object.Label]==obj.Settings.ObjectLabels(labelIdx,1)));
+            end
+        end
+
+        % get 4-connected object boundaries
+        function ObjectBoundaries4 = get.ObjectBoundaries4(obj)
+            ObjectBoundaries4 = bwboundaries(full(obj.bw),4,'noholes');
+        end
+
+        % get 8-connected object boundaries
+        function ObjectBoundaries8 = get.ObjectBoundaries8(obj)
+            ObjectBoundaries8 = bwboundaries(full(obj.bw),8,'noholes');
+        end
+
+        % get ObjectNames
+        function ObjectNames = get.ObjectNames(obj)
+            ObjectNames = {};
+            try
+                [ObjectNames{1:obj.nObjects,1}] = deal(obj.Object.Name);
+            catch
+                [ObjectNames{1:1}] = 'No Objects Found...';
+            end
         end
 
 %% dependent get methods for various display/processing options specific to this image
@@ -1133,405 +1603,11 @@ classdef OOPSImage < handle
         end
 
 
-%% other dependent 'get' methods
-
-        % get current Object (OOPSObject)
-        function CurrentObject = get.CurrentObject(obj)
-            try
-                CurrentObject = obj.Object(obj.CurrentObjectIdx);
-            catch
-                CurrentObject = OOPSObject.empty();
-            end
-        end
-
-        % get ObjectProperties
-        function ObjectProperties = get.ObjectProperties(obj)
-
-            % if no objects identified by the label matrix, return empty
-            if max(max(obj.L))==0
-                ObjectProperties = [];
-                return
-            end
-
-            % get morphological properties from regionprops()
-            ObjectProperties = regionprops(full(obj.L),full(obj.bw),...
-                {'Area',...
-                'BoundingBox',...
-                'Centroid',...
-                'Circularity',...
-                'ConvexArea',...
-                'ConvexHull',...
-                'ConvexImage',...
-                'Eccentricity',...
-                'Extent',...
-                'Extrema',...
-                'EquivDiameter',...
-                'FilledArea',...
-                'Image',...
-                'MajorAxisLength',...
-                'MinorAxisLength',...
-                'Orientation',...
-                'Perimeter',...
-                'PixelIdxList',...
-                'PixelList',...
-                'Solidity',...
-                'SubarrayIdx',...
-                'MaxFeretProperties',...
-                'MinFeretProperties'});
-
-            %% get cell arrays of some properties (which we will use to calculate more properties)
-
-            % get fieldnames of the ObjectProperties struct
-            fnames = fieldnames(ObjectProperties);
-            % convert ObjectProperties struct to cell array
-            C = struct2cell(ObjectProperties).';
-            % get object images (using struct fieldnames to find idx to 'Image' column in cell array)
-            ObjectImages = C(:,ismember(fnames,'Image'));
-            % get object bounding boxes (using fieldnames to find idx to 'BoundingBox' column in cell array)
-            ObjectBBox = C(:,ismember(fnames,'BoundingBox'));
-            % get object subarray idxs (using fieldnames to find idx to 'SubarrayIdx' column in cell array)
-            ObjectSubarrayIdx = C(:,ismember(fnames,'SubarrayIdx'));
-            % get object pixel idx list (using fieldnames to find idx to 'PixelIdxList' column in cell array)
-            ObjectPixelIdxList = C(:,ismember(fnames,'PixelIdxList'));
-
-
-            %% object padded subarray idxs
-
-            % get cell array of padded subarray idxs (padding=5)
-            paddedSubarrayIdx = cellfun(@(subidx) padSubarrayIdx(subidx,5),ObjectSubarrayIdx,'UniformOutput',0);
-            % deal into ObjectProperties struct
-            ObjectProperties(end).paddedSubarrayIdx = [];
-            [ObjectProperties(:).paddedSubarrayIdx] = deal(paddedSubarrayIdx{:});
-
-            %% object coordinate padding
-
-            % get cell array of object coordinate adjustments [yShift xShift]
-            paddedSubarrayIdxAdjustment = cellfun(@(subidx,paddedsubidx) ...
-                [subidx{1,1}(1)-paddedsubidx{1,1}(1) subidx{1,2}(1)-paddedsubidx{1,2}(1)],...
-                ObjectSubarrayIdx,paddedSubarrayIdx,'UniformOutput',0);
-            % deal into ObjectProperties struct
-            ObjectProperties(end).paddedSubarrayIdxAdjustment = [];
-            [ObjectProperties(:).paddedSubarrayIdxAdjustment] = deal(paddedSubarrayIdxAdjustment{:});
-
-            %% image to padded object coordinate shifts [yShift xShift]
-
-            imageToPaddedObjectShift = cellfun(@(box,padadjust) -1.*box([2 1]) + 0.5 + padadjust, ObjectBBox, paddedSubarrayIdxAdjustment, 'UniformOutput',0);
-            % deal into ObjectProperties struct
-            ObjectProperties(end).imageToPaddedObjectShift = [];
-            [ObjectProperties(:).imageToPaddedObjectShift] = deal(imageToPaddedObjectShift{:});
-
-            %% object padded pixel idx list
-
-            Isz = size(obj.bw);
-
-            paddedPixelIdxList = cellfun(@(pixelidxlist,coordshift,paddedsubidx) getPaddedPixelIdxList(pixelidxlist,coordshift,paddedsubidx),...
-                ObjectPixelIdxList,imageToPaddedObjectShift,paddedSubarrayIdx,...
-                'UniformOutput',0);
-
-            function paddedpixelidxlist = getPaddedPixelIdxList(pixelidxlist,coordshift,paddedsubidx)
-                [r,c] = ind2sub(Isz,pixelidxlist);
-                outSize = [length(paddedsubidx{1,1}) length(paddedsubidx{1,2})];
-                paddedpixelidxlist = sub2ind(outSize,r + coordshift(1),c + coordshift(2));
-            end
-
-            % deal into ObjectProperties struct
-            ObjectProperties(end).paddedPixelIdxList = [];
-            [ObjectProperties(:).paddedPixelIdxList] = deal(paddedPixelIdxList{:});
-
-
-            %% object padded mask images
-
-            paddedSubImage = cellfun(@(paddedsubidx,paddedpixelidxlist) ...
-                getPaddedSubImage(paddedsubidx,paddedpixelidxlist),...
-                paddedSubarrayIdx,paddedPixelIdxList,'UniformOutput',0);
-            % subfuntion to get the padded object subimages
-            function paddedsubimage = getPaddedSubImage(paddedsubidx,paddedpixelidxlist)
-                paddedsubimage = false([length(paddedsubidx{1,1}) length(paddedsubidx{1,2})]);
-                paddedsubimage(paddedpixelidxlist) = true;
-            end
-            % deal into ObjectProperties struct
-            ObjectProperties(end).paddedSubImage = [];
-            [ObjectProperties(:).paddedSubImage] = deal(paddedSubImage{:});
-
-            %% object boundaries
-
-            % get boundaries from ObjectImages
-            B = cellfun(@(obj_img)bwboundaries(obj_img,8,'noholes','TraceStyle','pixeledge'),ObjectImages,'UniformOutput',0);
-            % add bounding box offsets to boundary coordinates from ObjectImages
-            % box([2 1]) gives the (y,x) coordinates of the top-left corner of the box
-            B = cellfun(@(b,box) bsxfun(@plus,b{1},box([2 1]) - 0.5),B,ObjectBBox,'UniformOutput',0);
-            % add object boundaries cell to props struct
-            ObjectProperties(end).BWBoundary = [];
-            [ObjectProperties(:).BWBoundary] = deal(B{:});
-
-
-            %% object midlines
-
-            % get the object midline coordinates w.r.t. the padded object subimage
-            M = parcellfun(@(obj_img) getObjectMidline(obj_img),paddedSubImage,'UniformOutput',0);
-            % add object midline coordinates cell to props struct
-            ObjectProperties(end).Midline = [];
-            [ObjectProperties(:).Midline] = deal(M{:});
-
-            %% object midline and pixel tangents
-
-            % get a list of tangents for each object midline (one tangent per point in the midline)
-            MidlineTangent = cellfun(@(midline) getMidlineTangent(midline), M, 'UniformOutput',0);
-            % get a list of tangents for each pixel in the padded object mask image
-            pixelMidlineTangentList = parcellfun_multi(@(midline,midlinetangent,paddedsubimage) ...
-                getPixelValuesFromCurveValues(midline,midlinetangent,paddedsubimage), ...
-                {M,MidlineTangent,paddedSubImage}, ...
-                'UniformOutput',0);
-            % add object pixelTangentList cell to props struct
-            ObjectProperties(end).pixelMidlineTangentList = [];
-            [ObjectProperties(:).pixelMidlineTangentList] = deal(pixelMidlineTangentList{:});
-
-        end
-
-        % get 4-connected object boundaries
-        function ObjectBoundaries4 = get.ObjectBoundaries4(obj)
-            ObjectBoundaries4 = bwboundaries(full(obj.bw),4,'noholes');
-        end
-
-        % get 8-connected object boundaries
-        function ObjectBoundaries8 = get.ObjectBoundaries8(obj)
-            ObjectBoundaries8 = bwboundaries(full(obj.bw),8,'noholes');
-        end
-
-        % get ObjectNames
-        function ObjectNames = get.ObjectNames(obj)
-            ObjectNames = {};
-            try
-                [ObjectNames{1:obj.nObjects,1}] = deal(obj.Object.Name);
-            catch
-                [ObjectNames{1:1}] = 'No Objects Found...';
-            end
-            
-        end
         
-        function [...
-                AllVertices,...
-                AllCData,...
-                SelectedFaces,...
-                UnselectedFaces...
-                ] = getObjectPatchData(obj)
 
-            % get handles to all objects in this image
-            AllObjects = obj.Object;
 
-            % get list of unselected objects
-            Unselected = AllObjects(~[obj.Object.Selected]);
-            % get list of selected objects
-            Selected = AllObjects([obj.Object.Selected]);
 
-            totalnObjects = numel(Unselected)+numel(Selected);
 
-            % highest number of boundary vertices among all objects
-            AllVerticesMax = 0;
-
-            % total number of boundary vertices among all objects
-            AllVerticesSum = 0;
-
-            % for each object
-            for cObject = obj.Object
-                % % get the number of vertices in the simplified boundary
-                % nVertices = size(cObject.SimplifiedBoundary,1);
-                
-                % get the number of vertices in the boundary
-                nVertices = size(cObject.Boundary,1);       
-                % determine the total and max number of vertices
-                AllVerticesSum = AllVerticesSum + nVertices;
-                AllVerticesMax = max(AllVerticesMax,nVertices);
-            end
-
-            % initialize unselected faces matrix (each row is a vector of vertex idxs)
-            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
-            % initialize selected faces matrix (each row is a vector of vertex idxs)
-            SelectedFaces = nan(totalnObjects,AllVerticesMax);
-            % list of boundary coordinates for all objects
-            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
-            % object/face counter
-            Counter = 0;
-            % list of FaceVertexCData for the patch objects we are going to draw
-            AllCData = zeros(AllVerticesSum+totalnObjects,3);
-            % total number of vertices we have created faces for
-            TotalVertices = 0;
-
-            for cObject = obj.Object
-                % increment the object/face counter
-                Counter = Counter + 1;
-                % % get the simplified boundary
-                % thisObjectBoundary = cObject.SimplifiedBoundary;
-                % get the boundary
-                thisObjectBoundary = cObject.Boundary;
-                % determine number of vertices
-                nvertices = size(thisObjectBoundary,1);
-                % obtain vertices idx
-                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
-                % add boundary coordinates to list of vertices
-                AllVertices(AllVerticesIdx,:) = [thisObjectBoundary(:,2) thisObjectBoundary(:,1)];
-                % add CData for each vertex
-                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
-                % set object faces depending on their selection status
-                switch cObject.Selected
-                    case true
-                        % add vertex idxs to selected faces list
-                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
-                    case false
-                        % add vertex idxs to unselected faces list
-                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
-                end
-                % increment the total number of vertices
-                TotalVertices = TotalVertices + nvertices;
-            end
-        end
-
-        function [...
-                AllVertices,...
-                AllCData,...
-                SelectedFaces,...
-                UnselectedFaces...
-                ] = getObjectRectanglePatchData(obj)
-
-            % get handles to all objects in this image
-            AllObjects = obj.Object;
-
-            % get list of unselected objects
-            Unselected = AllObjects(~[obj.Object.Selected]);
-            % get list of selected objects
-            Selected = AllObjects([obj.Object.Selected]);
-
-            totalnObjects = numel(Unselected)+numel(Selected);
-
-            % highest number of boundary vertices among all objects
-            AllVerticesMax = 0;
-
-            % total number of boundary vertices among all objects
-            AllVerticesSum = 0;
-
-            % for each object
-            for cObject = obj.Object
-                % % get the number of vertices in the simplified boundary
-                % nVertices = size(cObject.SimplifiedBoundary,1);
-                
-                % get the number of vertices in the boundary
-                nVertices = 4;       
-                % determine the total and max number of vertices
-                AllVerticesSum = AllVerticesSum + nVertices;
-                AllVerticesMax = max(AllVerticesMax,nVertices);
-            end
-
-            % initialize unselected faces matrix (each row is a vector of vertex idxs)
-            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
-            % initialize selected faces matrix (each row is a vector of vertex idxs)
-            SelectedFaces = nan(totalnObjects,AllVerticesMax);
-            % list of boundary coordinates for all objects
-            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
-            % object/face counter
-            Counter = 0;
-            % list of FaceVertexCData for the patch objects we are going to draw
-            AllCData = zeros(AllVerticesSum+totalnObjects,3);
-            % total number of vertices we have created faces for
-            TotalVertices = 0;
-
-            for cObject = obj.Object
-                % increment the object/face counter
-                Counter = Counter + 1;
-                % % get the simplified boundary
-                % thisObjectBoundary = cObject.SimplifiedBoundary;
-                % get the boundary
-                thisObjectBoundary = cObject.expandedBoundingBoxCoordinates;
-                % determine number of vertices
-                nvertices = size(thisObjectBoundary,1);
-                % obtain vertices idx
-                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
-                % add boundary coordinates to list of vertices
-                AllVertices(AllVerticesIdx,:) = thisObjectBoundary;
-                % add CData for each vertex
-                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
-                % set object faces depending on their selection status
-                switch cObject.Selected
-                    case true
-                        % add vertex idxs to selected faces list
-                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
-                    case false
-                        % add vertex idxs to unselected faces list
-                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
-                end
-                % increment the total number of vertices
-                TotalVertices = TotalVertices + nvertices;
-            end
-        end
-
-        % return the number of objects in this OOPSImage
-        function nObjects = get.nObjects(obj)
-            if isvalid(obj.Object)
-                nObjects = length(obj.Object);
-            else
-                nObjects = 0;
-            end
-        end
-
-        function labelCounts = get.labelCounts(obj)
-            % preallocate our array of label counts, one column per unique label
-            labelCounts = zeros(1,obj.Settings.nLabels);
-            % for each unique label
-            for labelIdx = 1:obj.Settings.nLabels
-                % find the number of objects with that label
-                labelCounts(1,labelIdx) = numel(find([obj.Object.Label]==obj.Settings.ObjectLabels(labelIdx,1)));
-            end
-        end
-        
-%% Normalize Image Stacks
-
-        % get normalized FFC stack
-        function ffcFPMStack_normalizedbystack = get.ffcFPMStack_normalizedbystack(obj)
-            ffcFPMStack_normalizedbystack = obj.ffcFPMStack./(max(max(max(obj.ffcFPMStack))));
-        end
-         
-        % get normalized raw emission images stack
-        function rawFPMStack_normalizedbystack = get.rawFPMStack_normalizedbystack(obj)
-            rawDataDouble = im2double(obj.rawFPMStack);
-            rawFPMStack_normalizedbystack = rawDataDouble./(max(max(max(rawDataDouble))));
-        end
-
-%% dependent 'get' methods for object output values
-
-        function OFAvg = get.OFAvg(obj)
-            % average OF of all pixels identified by the mask
-            try
-                OFAvg = mean(obj.OF_image(obj.bw));
-            catch
-                OFAvg = NaN;
-            end
-        end
-        
-        function OFMax = get.OFMax(obj)
-            % max OF of all pixels identified by the mask
-            try
-                OFMax = max(obj.OF_image(obj.bw));
-            catch
-                OFMax = NaN;
-            end
-        end
-        
-        function OFMin = get.OFMin(obj)
-            % min OF of all pixels identified by the mask
-            try
-                OFMin = min(obj.OF_image(obj.bw));
-            catch
-                OFMin = NaN;
-            end
-        end
-        
-        function OFList = get.OFList(obj)
-            % list of OF in all pixels identified by mask
-            try
-                OFList = obj.OF_image(obj.bw);
-            catch
-                OFList = NaN;
-            end
-        end
 
 %% dependent 'get' methods for filtered object output values
 
@@ -1562,19 +1638,13 @@ classdef OOPSImage < handle
             end
         end
 
-%% dependent 'get' methods for intermediates that do not need to constantly be in memory
-
-        function ffcFPMPixelNorm = get.ffcFPMPixelNorm(obj)
-            ffcFPMPixelNorm = obj.ffcFPMStack./max(obj.ffcFPMStack,[],3);
-        end
-
-
     end
 
     methods (Static)
         function obj = loadobj(replicate)
 
-            obj = OOPSImage(OOPSGroup.empty());
+            % obj = OOPSImage(OOPSGroup.empty());
+            obj = OOPSImage(replicate.Parent);
 
             % info about the image path and rawFPMFileName
             obj.rawFPMFileName = replicate.rawFPMFileName;
@@ -1662,10 +1732,14 @@ classdef OOPSImage < handle
 
             obj.CurrentObjectIdx = replicate.CurrentObjectIdx;
 
-            for i = 1:length(replicate.Object) % for each detected object
+            for i = 1:length(replicate.Object)
+                % testing below - add image handle to the object struct
+                replicate.Object(i).Parent = obj;
                 % create an instance of OOPSObject
                 obj.Object(i) = OOPSObject.loadobj(replicate.Object(i));
-                obj.Object(i).Parent = obj;
+
+
+                %obj.Object(i).Parent = obj;
             end
         end
     end
