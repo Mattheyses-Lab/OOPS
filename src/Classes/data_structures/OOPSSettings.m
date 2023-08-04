@@ -114,6 +114,12 @@ classdef OOPSSettings < handle
         % object box type ('Box','Boundary',etc...)
         ObjectBoxType = 'Box';
 
+        % objects describing user-defined custom output statistics
+        CustomStatistics CustomFPMStatistic
+        CustomStatisticFileNames cell
+        CustomStatisticPaths cell
+        CustomStatisticNames cell
+
     end
 
     properties (Dependent = true)
@@ -198,11 +204,14 @@ classdef OOPSSettings < handle
         % custom mask schemes
         ActiveCustomScheme
 
+        % custom FPM statistics
+        CustomStatisticDisplayNames cell
+
     end
     
     methods
         
-        % constructor method
+        % constructor
         function obj = OOPSSettings()
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize(1);
@@ -250,7 +259,13 @@ classdef OOPSSettings < handle
             catch
                 warning('Unable to load custom mask schemes...')
             end
-            
+
+            try 
+                obj.LoadCustomStatistics();
+            catch
+                warning('Unable to load custom outputs...')
+            end
+
         end
 
         % saveobj method
@@ -288,6 +303,27 @@ classdef OOPSSettings < handle
 
         end
 
+%% load user settings/schemes/custom statistics
+
+        % load various settings files
+        function updateSettingsFromFiles(obj,fileNames)
+            % generalized function to update various settings by loading the indicated file(s)
+            % fileNames is a cell array of char vectors with names of settings mat files
+            for fileIdx = 1:numel(fileNames)
+                try
+                    % load the mat file indicated by fileNames{fileIdx} as a struct
+                    file = load(fileNames{fileIdx});
+                    % get the filedName of the loaded struct, not hardcoded in case it changes or we add more settings
+                    fieldName = fieldnames(file);
+                    % store the settings in the associated class property
+                    obj.(fieldName{1}) = file.(fieldName{1});
+                catch ME
+                    warning(['Error loading file "',fileNames{fileIdx},'": ',ME.getReport]);
+                end
+            end
+        end
+
+        % load custom mask schemes
         function LoadCustomMaskSchemes(obj)
             if ismac || isunix
                 SchemeFilesList = dir(fullfile([obj.MainPath,'/assets/segmentation_schemes'],'*.mat'));
@@ -311,22 +347,36 @@ classdef OOPSSettings < handle
             end
         end
 
-        function updateSettingsFromFiles(obj,fileNames)
-            % generalized function to update various settings by loading the indicated file(s)
-            % fileNames is a cell array of char vectors with names of settings mat files
-            for fileIdx = 1:numel(fileNames)
-                try
-                    % load the mat file indicated by fileNames{fileIdx} as a struct
-                    file = load(fileNames{fileIdx});
-                    % get the filedName of the loaded struct, not hardcoded in case it changes or we add more settings
-                    fieldName = fieldnames(file);
-                    % store the settings in the associated class property
-                    obj.(fieldName{1}) = file.(fieldName{1});
-                catch ME
-                    warning(['Error loading file "',fileNames{fileIdx},'": ',ME.getReport]);
+        % load custom statistics
+        function LoadCustomStatistics(obj)
+            if ismac || isunix
+                CustomStatisticFilesList = dir(fullfile([obj.MainPath,'/assets/custom_statistics'],'*.mat'));
+            elseif ispc
+                CustomStatisticFilesList = dir(fullfile([obj.MainPath,'\assets\custom_statistics'],'*.mat'));
+            end
+
+            for i = 1:numel(CustomStatisticFilesList)
+                SplitName = strsplit(CustomStatisticFilesList(i).name,'.');
+                obj.CustomStatisticFileNames{i} = SplitName{1};
+                if ismac || isunix
+                    obj.CustomStatisticPaths{i} = [CustomStatisticFilesList(i).folder,'/',CustomStatisticFilesList(i).name];
+                elseif ispc
+                    obj.CustomStatisticPaths{i} = [CustomStatisticFilesList(i).folder,'\',CustomStatisticFilesList(i).name];
                 end
+
+                % load the scheme into struct, S
+                S = load(obj.CustomStatisticPaths{i});
+                % extract the scheme from the struct into CustomSchemes
+                obj.CustomStatistics(i) = S.(obj.CustomStatisticFileNames{i});
+
+                % add a new (dynamic) object variable to the list
+                obj.ObjectPlotVariables{end+1} = obj.CustomStatistics(i).StatisticName;
+                % add the name of each statistic to CustomStatisticNames
+                obj.CustomStatisticNames{end+1} = obj.CustomStatistics(i).StatisticName;
             end
         end
+
+%% custom schemes
 
         function ActiveCustomScheme = get.ActiveCustomScheme(obj)
             % if MaskType=='CustomScheme', return the active scheme, otherwise return empty scheme
@@ -336,6 +386,25 @@ classdef OOPSSettings < handle
                 ActiveCustomScheme = CustomMask.empty();
             end
         end
+
+%% custom statistics
+
+        function TF = isCustomStatistic(obj,variableToCheck)
+            TF = ismember(variableToCheck,obj.CustomStatisticNames);
+        end
+
+        function CustomStatisticDisplayNames = get.CustomStatisticDisplayNames(obj)
+            % preallocate cell array to hold custom statistic display names
+            CustomStatisticDisplayNames = cell(size(obj.CustomStatistics));
+            % for each custom statistic
+            for statIdx = 1:numel(obj.CustomStatistics)
+                % add its display name to the cell
+                CustomStatisticDisplayNames{statIdx} = obj.CustomStatistics(statIdx).StatisticDisplayName;
+            end
+        end
+
+
+%% object label management
     
         function AddNewObjectLabel(obj,LabelName,LabelColor)
             if isempty(LabelColor)
@@ -399,17 +468,19 @@ classdef OOPSSettings < handle
             delete(Label2Delete);
         end
 
+%% object plot variables
+
         function ObjectPlotVariablesLong = get.ObjectPlotVariablesLong(obj)
             ObjectPlotVariablesLong = cell(size(obj.ObjectPlotVariables));
             for varIdx = 1:numel(obj.ObjectPlotVariables)
-                ObjectPlotVariablesLong{varIdx} = ExpandVariableName(obj.ObjectPlotVariables{varIdx});
+                ObjectPlotVariablesLong{varIdx} = obj.expandVariableName(obj.ObjectPlotVariables{varIdx});
             end
         end
 
         function ObjectPolarPlotVariablesLong = get.ObjectPolarPlotVariablesLong(obj)
             ObjectPolarPlotVariablesLong = cell(size(obj.ObjectPolarPlotVariables));
             for varIdx = 1:numel(obj.ObjectPolarPlotVariables)
-                ObjectPolarPlotVariablesLong{varIdx} = ExpandVariableName(obj.ObjectPolarPlotVariables{varIdx});
+                ObjectPolarPlotVariablesLong{varIdx} = obj.expandVariableName(obj.ObjectPolarPlotVariables{varIdx});
             end
         end
 
@@ -633,7 +704,7 @@ classdef OOPSSettings < handle
             ObjectAzimuthColorMode = obj.ObjectAzimuthDisplaySettings.ColorMode;
         end
 
-
+%% object labels settings
 
         function nLabels = get.nLabels(obj)
             % find number of unique object labels
@@ -648,6 +719,72 @@ classdef OOPSSettings < handle
                 LabelColors(i,:) = obj.ObjectLabels(i).Color;
             end
         end
+
+%% variable names settings
+
+        function NameOut = expandVariableName(obj,NameIn)
+            switch NameIn
+                case 'OFAvg'
+                    NameOut = 'Mean OF';
+                case 'SBRatio'
+                    NameOut = 'Local S/B';
+                case 'Area'
+                    NameOut = 'Area';
+                case 'Perimeter'
+                    NameOut = 'Perimeter';
+                case 'Circularity'
+                    NameOut = 'Circularity';
+                case 'SignalAverage'
+                    NameOut = 'Mean Raw Intensity';
+                case 'MaxFeretDiameter'
+                    NameOut = 'Maximum Feret Diameter';
+                case 'MinFeretDiameter'
+                    NameOut = 'Minimum Feret Diameter';
+                case 'MajorAxisLength'
+                    NameOut = 'Major Axis Length';
+                case 'MinorAxisLength'
+                    NameOut = 'Minor Axis Length';
+                case 'Eccentricity'
+                    NameOut = 'Eccentricity';
+                case 'BGAverage'
+                    NameOut = 'Mean BG Intensity';
+                case 'AzimuthAverage'
+                    NameOut = 'Mean Azimuth';
+                case 'AzimuthStd'
+                    NameOut = 'Azimuth Circular Standard Deviation';
+                case 'Orientation'
+                    NameOut = 'Orientation';
+                case 'EquivDiameter'
+                    NameOut = 'Equivalent Diameter';
+                case 'ConvexArea'
+                    NameOut = 'Convex Area';
+                case 'MidlineRelativeAzimuth'
+                    NameOut = 'Mean Azimuth (Midline)';
+                case 'NormalRelativeAzimuth'
+                    NameOut = 'Mean Azimuth (Midline Normal)';
+                case 'MidlineLength'
+                    NameOut = 'Midline Length';
+                case 'AzimuthAngularDeviation'
+                    NameOut = 'Azimuth Angular Deviation';
+                otherwise
+                    % check if the input is a custom statistic
+                    if obj.isCustomStatistic(NameIn)
+                        % if so, find the matching CustomFPMStatistic object
+                        thisStatistic = obj.CustomStatistics(ismember(NameIn,obj.CustomStatisticNames));
+                        % then get the corresponding display name
+                        NameOut = thisStatistic.StatisticDisplayName;
+                    else
+                        % otherwise just return the input
+                        NameOut = NameIn;
+                    end
+            end
+
+
+        end
+
+
+
+
 
     end
 
