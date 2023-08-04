@@ -43,6 +43,10 @@ axH.XLim = [0 nPlots+1];
 
 % the variable we wish to plot, as indicated by user selection in SwarmPlot settings panel
 Var2Plot = OOPSData.Settings.SwarmPlotYVariable;
+
+% display name of the variable used for axes and data tip labels
+varDisplayName = OOPSData.Settings.expandVariableName(Var2Plot);
+
 % gather the data: cell array of Var2Get values, one row of cells per group, one column of cells per label
 LabelObjectData = OOPSData.GetObjectDataByLabel(Var2Plot);
 % get object SelfIdxs for data tips
@@ -98,7 +102,7 @@ for i = 1:nGroups
             elseif nRemoved > 0
                 % if data were missing some (but not all) objects, warn the user by sending an update to the log window
                 UpdateLog3(source,['Warning: ',...
-                    ExpandVariableName(Var2Plot),...
+                    varDisplayName,...
                     ' data missing for ',...
                     num2str(nRemoved),...
                     ' objects with [Label:',...
@@ -154,7 +158,7 @@ for i = 1:nGroups
             hSwarmPlot(PlotIdx).DataTipTemplate.DataTipRows(2) = dataTipTextRow("Image",categorical(LabelObjectImageNames{i,ii}));
             hSwarmPlot(PlotIdx).DataTipTemplate.DataTipRows(3) = dataTipTextRow("Object",LabelObjectSelfIdxs{i,ii});
             hSwarmPlot(PlotIdx).DataTipTemplate.DataTipRows(4) = dataTipTextRow("Label",categorical(LabelObjectLabelNames{i,ii}));
-            hSwarmPlot(PlotIdx).DataTipTemplate.DataTipRows(5) = dataTipTextRow(ExpandVariableName(Var2Plot),Y{PlotIdx});
+            hSwarmPlot(PlotIdx).DataTipTemplate.DataTipRows(5) = dataTipTextRow(varDisplayName,Y{PlotIdx});
             hSwarmPlot(PlotIdx).HitTest = 'On';
             % get the mean, std, and n of this group
             GroupMean = mean(Y{PlotIdx});
@@ -224,7 +228,7 @@ for i = 1:nGroups
         catch me
             switch me.message
                 case "Object data missing"
-                    UpdateLog3(source,['Warning: [',ExpandVariableName(Var2Plot),'] data missing for objects with [Label:',OOPSData.Settings.ObjectLabels(ii).Name,'] in [Group:',OOPSData.Group(i).GroupName,']'],'append');
+                    UpdateLog3(source,['Warning: [',varDisplayName,'] data missing for objects with [Label:',OOPSData.Settings.ObjectLabels(ii).Name,'] in [Group:',OOPSData.Group(i).GroupName,']'],'append');
                 otherwise
                     UpdateLog3(source,['Warning: ',me.message],'append');
             end

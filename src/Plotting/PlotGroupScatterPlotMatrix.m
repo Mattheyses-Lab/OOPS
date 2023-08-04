@@ -6,7 +6,8 @@ function PlotGroupScatterPlotMatrix(source,~)
     OOPSData = guidata(source);
 
     % get settings for the scatterplot matrix
-    ScatterPlotMatrixSettings = getScatterPlotMatrixSettings(OOPSData.Settings.ObjectPlotVariables);
+    ScatterPlotMatrixSettings = getScatterPlotMatrixSettings(...
+        OOPSData.Settings.ObjectPlotVariables,OOPSData.Settings.ObjectPlotVariablesLong);
 
     % make sure the settings are valid (will be empty if invalid)
     if isempty(ScatterPlotMatrixSettings)
@@ -19,7 +20,7 @@ function PlotGroupScatterPlotMatrix(source,~)
 
         nVariables = numel(variableList);
 
-        variableListLong = cellfun(@(varname) ExpandVariableName(varname),variableList,'UniformOutput',0);
+        variableListLong = cellfun(@(varname) OOPSData.Settings.expandVariableName(varname),variableList,'UniformOutput',0);
 
     end
 
