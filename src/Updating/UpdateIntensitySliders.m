@@ -1,7 +1,6 @@
-function UpdateIntensitySliders(source)
-
+function UpdateIntensitySliders(~)
     OOPSData = guidata(source);
-
+    
     cImage = OOPSData.CurrentImage;
 
     if ~isempty(cImage)
