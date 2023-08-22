@@ -1,5 +1,5 @@
 function [amplitude,phase,XFit,YFit] = fitToSquaredCosine(Y)
-% given an mxnx3 intensity stack, fits to a squared cosine and returns the normalized peak-to-peak amplitude and phase (in radians)
+% given an mxnx4 intensity stack, fits to a squared cosine and returns the normalized peak-to-peak amplitude and phase (in radians)
 X = [0,pi/4,pi/2,3*pi/4];
 
 Ysz = size(Y,1:2);
@@ -87,11 +87,6 @@ for i = 1:numel(amplitude)
 
     % M = modulation depth
     %M = (maxCurveFit-minCurveFit)/(maxCurveFit+minCurveFit);
-
-    % below works for pre-normalized values (I think)
-    % amplitude(i) = (maxCurveFit-minCurveFit);
-
-    
 
 end
 
