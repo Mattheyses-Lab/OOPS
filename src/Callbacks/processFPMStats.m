@@ -7,7 +7,7 @@ function processFPMStats(source,~)
     nImages = numel(OOPSData.CurrentImage);
 
     % update log to indicate # of images we are processing
-    UpdateLog3(source,['Computing order statistics statistics for ',num2str(nImages),' images'],'append');
+    UpdateLog3(source,['Computing FPM statistics statistics for ',num2str(nImages),' images'],'append');
 
     % start a timer
     tic
@@ -23,8 +23,6 @@ function processFPMStats(source,~)
         hProgressDialog.Value = i/nImages;
         % update log to indicate which image we are on
         UpdateLog3(source,['    ',cImage.rawFPMShortName,' (',num2str(i),'/',num2str(nImages),')'],'append');
-        % compute the OF and azimuth
-        cImage.FindOrderFactor();
         % compute any custom FPM statistics
         cImage.FindFPMStatistics();
     end
@@ -32,8 +30,8 @@ function processFPMStats(source,~)
     timeElapsed = toc;
 
     % change to the Order Factor 'tab' if not there already
-    if ~strcmp(OOPSData.Settings.CurrentTab,'Order Factor')
-        feval(OOPSData.Handles.hTabOrderFactor.Callback,OOPSData.Handles.hTabOrderFactor,[]);
+    if ~strcmp(OOPSData.Settings.CurrentTab,'Order')
+        feval(OOPSData.Handles.hTabOrder.Callback,OOPSData.Handles.hTabOrder,[]);
     else
         % update displayed images (tab switching will automatically update the display)
         UpdateImages(source);
@@ -41,7 +39,9 @@ function processFPMStats(source,~)
 
     % update summary table
     UpdateSummaryDisplay(source,{'Group','Image','Object'});
-    
+    % update the intensity sliders
+    UpdateIntensitySliders(source)
+
     % update log with time elapsed
     UpdateLog3(source,['Time elapsed: ',num2str(timeElapsed),' seconds'],'append');
 
