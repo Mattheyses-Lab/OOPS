@@ -24,11 +24,9 @@ function [] = UpdateImages(source,varargin)
         end
     end
 
-
-    
     switch OOPSData.Settings.CurrentTab
+
         case 'Files'
-            %% FILES
             cGroup = OOPSData.CurrentGroup;
             try
                 for i = 1:4
@@ -52,7 +50,6 @@ function [] = UpdateImages(source,varargin)
                 end                
             end
         case 'FFC'
-            %% FFC
             % flat-field corrected images
             try
                 images = cImage.ffcFPMStack_normalizedbystack;
@@ -66,7 +63,7 @@ function [] = UpdateImages(source,varargin)
                 end                      
             end
 
-            % raw data images, normalized to stack max
+            % raw images, normalized to stack max
             try
                 images = cImage.rawFPMStack_normalizedbystack;
                 for i = 1:4
@@ -80,9 +77,6 @@ function [] = UpdateImages(source,varargin)
             end         
 
         case 'Mask'
-            %% VIEW MASK
-            %UpdateSliders();
-            
             % display mask image
             try
                 OOPSData.Handles.MaskImgH.CData = cImage.bw;
@@ -201,91 +195,13 @@ function [] = UpdateImages(source,varargin)
                 end
             end
             
-            UpdateAverageIntensity();            
+            UpdateAverageIntensityImage(source);            
 
 
-        case 'Order Factor'
-            %% Order Factor Tab
-            % Order Factor
-            if OOPSData.Handles.ShowAsOverlayOrderFactor.Value == 1
-                % show the OF-intensity composite image
-                try
-                    % get the average intensity image to use as an opacity mask
-                    OverlayIntensity = cImage.I;
-                    % get the raw OF image
-                    OF = cImage.OF_image;
-                    % depending on the selection state of the ScaleToMaxOrderFactor toolbar btn, get the value to scale to
-                    if OOPSData.Handles.ScaleToMaxOrderFactor.Value == 1
-                        maxOF = max(max(OF));
-                    else
-                        maxOF = 1;
-                    end
-                    % now get the scaled or unscaled OF-intensity RGB overlay
-                    OFRGB = MaskRGB(ind2rgb(im2uint8(OF./maxOF),OOPSData.Settings.OrderFactorColormap),OverlayIntensity);
-                    % set the image CData
-                    OOPSData.Handles.OrderFactorImgH.CData = OFRGB;
-                    % set the colorbar tick locations
-                    OOPSData.Handles.OFCbar.Ticks = 0:0.1:1;
-                    % set the colorbar tick labels
-                    OOPSData.Handles.OFCbar.TickLabels = round(linspace(0,maxOF,11),2);
-                    % reset the default axes limits if zoom is not active
-                    if ~OOPSData.Settings.Zoom.Active
-                        OOPSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
-                        OOPSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
-                    end
-                catch
-                    OOPSData.Handles.OrderFactorImgH.CData = EmptyImage;
-                    OOPSData.Handles.OFCbar.Ticks = 0:0.1:1;
-                    OOPSData.Handles.OFCbar.TickLabels = 0:0.1:1;
-                    disp('Warning: Error displaying OF-intensity composite image')
-                end
-            else
-                % show the unmasked OF image, scaled or unscaled
-                try
-                    % get the raw OF image
-                    OF = cImage.OF_image;
-                    % if ScaleToMaxOrderFactor toolbar btn is in the on state
-                    if OOPSData.Handles.ScaleToMaxOrderFactor.Value == 1
-                        maxOF = max(max(OF));
-                    else
-                        maxOF = 1;
-                    end
-                    % set the image CData
-                    OOPSData.Handles.OrderFactorImgH.CData = OF./maxOF;
-                    % set the colorbar tick locations
-                    OOPSData.Handles.OFCbar.Ticks = 0:0.1:1;
-                    % set the colorbar tick labels
-                    OOPSData.Handles.OFCbar.TickLabels = round(linspace(0,maxOF,11),2);
-                    % reset the default axes limits if zoom is not active
-                    if ~OOPSData.Settings.Zoom.Active
-                        OOPSData.Handles.OrderFactorAxH.XLim = [0.5 cImage.Width+0.5];
-                        OOPSData.Handles.OrderFactorAxH.YLim = [0.5 cImage.Height+0.5];
-                    end
-                catch
-                    OOPSData.Handles.OrderFactorImgH.CData = EmptyImage;
-                    OOPSData.Handles.OFCbar.Ticks = 0:0.1:1;
-                    OOPSData.Handles.OFCbar.TickLabels = 0:0.1:1;
-                end
-            end
+        case 'Order'
 
-            % show or hide the OF colorbar
-            if OOPSData.Handles.ShowColorbarOrderFactor.Value == 1
-                OOPSData.Handles.OFCbar.Visible = 'on';
-            else
-                OOPSData.Handles.OFCbar.Visible = 'off';
-            end
-
-            % change colormap to currently selected Order factor colormap
-            OOPSData.Handles.OrderFactorAxH.Colormap = OOPSData.Settings.OrderFactorColormap;
-
-            % if ApplyMask toolbar state button set to true...
-            if OOPSData.Handles.ApplyMaskOrderFactor.Value == 1
-                % ...then apply current mask by setting image AlphaData
-                OOPSData.Handles.OrderFactorImgH.AlphaData = cImage.bw;
-
-                % % testing below: applying the mask in a different way
-                % OOPSData.Handles.OrderFactorImgH.CData = cImage.MaskedOFImageRGB;
-            end
+            % update the Order image CData, colorbar, and AlphaData
+            UpdateOrderImage(source);
 
             if any(isvalid(OOPSData.Handles.ObjectBoxes))
                 delete(OOPSData.Handles.ObjectBoxes);
@@ -408,122 +324,24 @@ function [] = UpdateImages(source,varargin)
                 end
             end
 
-            UpdateAverageIntensity();
+            UpdateAverageIntensityImage(source);
 
             % this drawnow line might be causing issues
             %drawnow
 
         case 'Azimuth'
-            %% Azimuth
-            UpdateAverageIntensity();
 
-            try
-                if OOPSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value == 1
-                    % no enhancement
-                    %OverlayIntensity = imadjust(cImage.I,stretchlim(cImage.I));
-                    OverlayIntensity = cImage.I;
+            % update the average intensity image axes
+            UpdateAverageIntensityImage(source);
 
-                    % BEST WORKING HSV DISPLAY
-                    % HSV image with H,S,V = azimuth,OF,intensity
-                    Az = cImage.AzimuthImage;
-                    Az(Az<0) = Az(Az<0)+pi;
-                    Az = Az./pi;
-
-                    OF = cImage.OF_image;
-                    OF = OF./max(max(OF));
-
-                    AzimuthHSV = makeHSVSpecial(Az,OF,OverlayIntensity);
-
-                    OOPSData.Handles.AzimuthImgH.CData = AzimuthHSV;
-                elseif OOPSData.Handles.ShowAsOverlayAzimuth.Value == 1
-                    I = cImage.I;
-                    AzimuthRGB = cImage.AzimuthRGB;
-                    AzimuthRGBMasked = MaskRGB(AzimuthRGB,I);
-                    OOPSData.Handles.AzimuthImgH.CData = AzimuthRGBMasked;
-                else
-                    OOPSData.Handles.AzimuthImgH.CData = cImage.AzimuthImage;
-                    OOPSData.Handles.AzimuthAxH.CLim = [-pi,pi]; % very important to set for proper display colors
-                    if ~OOPSData.Settings.Zoom.Active
-                        OOPSData.Handles.AzimuthAxH.XLim = [0.5 cImage.Width+0.5];
-                        OOPSData.Handles.AzimuthAxH.YLim = [0.5 cImage.Height+0.5];
-                    end
-                end
-            catch
-                OOPSData.Handles.AzimuthImgH.CData = EmptyImage;
-                disp('Warning: Error displaying azimuth image')
-            end
-
-            % show or hide the azimuth colorbar
-            if OOPSData.Handles.ShowColorbarAzimuth.Value == 1
-                set(OOPSData.Handles.PhaseBarComponents,'Visible','on');
-            else
-                set(OOPSData.Handles.PhaseBarComponents,'Visible','off');
-            end
-
+            % update the Azimuth image CData, colorbar, and AlphaData
+            UpdateAzimuthImage(source);
             
-            azimuthMap = repmat(OOPSData.Settings.AzimuthColormap,2,1);
-            OOPSData.Handles.AzimuthAxH.Colormap = azimuthMap;
-            
-            % if ApplyMask state button set to true, apply current mask by setting AlphaData
-            if OOPSData.Handles.ApplyMaskAzimuth.Value == 1
-                try
-                    OOPSData.Handles.AzimuthImgH.AlphaData = cImage.bw;
-                catch
-                    OOPSData.Handles.AzimuthImgH.AlphaData = 1;
-                    disp('Warning: Error applying mask to azimuth image')
-                end
-            end
-
-            try
-                delete(OOPSData.Handles.AzimuthLines);
-            catch
-                disp('Warning: Could not delete Azimuth lines')
-            end
-
-            try
-                LineMask = cImage.bw;
-                LineScaleDown = OOPSData.Settings.AzimuthScaleDownFactor;
-    
-                if LineScaleDown > 1
-                    ScaleDownMask = makeSpacedCheckerboard(size(LineMask),LineScaleDown);
-                    LineMask = LineMask & logical(ScaleDownMask);
-                end
-
-                [y,x] = find(LineMask==1);
-                theta = cImage.AzimuthImage(LineMask);
-                rho = cImage.OF_image(LineMask);
-    
-                ColorMode = OOPSData.Settings.AzimuthColorMode;
-                LineWidth = OOPSData.Settings.AzimuthLineWidth;
-                LineAlpha = OOPSData.Settings.AzimuthLineAlpha;
-                LineScale = OOPSData.Settings.AzimuthLineScale;
-    
-                switch ColorMode
-                    case 'Magnitude'
-                        Colormap = OOPSData.Settings.OrderFactorColormap;
-                    case 'Direction'
-                        Colormap = azimuthMap;
-                    case 'Mono'
-                        Colormap = [1 1 1];
-                end
-
-                OOPSData.Handles.AzimuthLines = QuiverPatch2(OOPSData.Handles.AverageIntensityAxH,...
-                    x,...
-                    y,...
-                    theta,...
-                    rho,...
-                    ColorMode,...
-                    Colormap,...
-                    LineWidth,...
-                    LineAlpha,...
-                    LineScale);
-
-            catch
-                disp('Warning: Error displaying azimuth sticks')
-            end
+            % update azimuth stick overlay on the average intensity axes
+            UpdateAzimuthStickOverlay(source);
 
         case 'Plots'
-            %% Scatter and swarm plots
+
             try
                 delete(OOPSData.Handles.ScatterPlotAxH.Children)
             catch
@@ -558,7 +376,6 @@ function [] = UpdateImages(source,varargin)
             OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);            
             
         case 'Polar Plots'
-            %% polar histograms
 
             if isempty(cImage)
                 polarData = [];
@@ -583,15 +400,15 @@ function [] = UpdateImages(source,varargin)
             OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',OOPSData.Settings.expandVariableName(OOPSData.Settings.PolarHistogramVariable)];
 
         case 'Objects'
-            %% Object Viewer
+
             try
                 % get handle to the current object
                 cObject = cImage.CurrentObject;
                 % get object mask image, restricted -> does not include nearby objects
                 % within padded object bounding box
-                RestrictedPaddedObjMask = cObject.paddedSubImage;
+                paddedSubImage = cObject.paddedSubImage;
                 % pad the object subarrayidx with 5 pixels per side
-                PaddedSubarrayIdx = padSubarrayIdx(cObject.SubarrayIdx,5);
+                paddedSubarrayIdx = padSubarrayIdx(cObject.SubarrayIdx,5);
             catch
                 disp('Warning: Error retrieving object data')
             end
@@ -602,13 +419,13 @@ function [] = UpdateImages(source,varargin)
 
             try
                 % initialize pixel-normalized intensity stack for curve fitting
-                PaddedObjPixelNormIntensity = zeros([size(RestrictedPaddedObjMask),4]);
+                PaddedObjPixelNormIntensity = zeros([size(paddedSubImage),4]);
                 % get pixel-normalized intensity stack for curve fitting
-                PaddedObjPixelNormIntensity(:) = cObject.Parent.ffcFPMPixelNorm(PaddedSubarrayIdx{:},:);
+                PaddedObjPixelNormIntensity(:) = cObject.Parent.ffcFPMPixelNorm(paddedSubarrayIdx{:},:);
                 % calculate and plot object intensity curve fits
                 OOPSData.Handles.ObjectIntensityPlotAxH = PlotObjectIntensityProfile([0,pi/4,pi/2,3*(pi/4)],...
                     PaddedObjPixelNormIntensity,...
-                    RestrictedPaddedObjMask,...
+                    paddedSubImage,...
                     OOPSData.Handles.ObjectIntensityPlotAxH,...
                     OOPSData.Settings.ObjectIntensityProfileFitLineColor,...
                     OOPSData.Settings.ObjectIntensityProfilePixelLinesColor,...
@@ -628,23 +445,22 @@ function [] = UpdateImages(source,varargin)
 
             % display object binary image
             try
-                %OOPSData.Handles.ObjectMaskImgH.CData = cObject.RestrictedPaddedMaskSubImage;
-
                 % testing below - use RGB instead of logical for easier exporting
                 OOPSData.Handles.ObjectMaskImgH.CData = cObject.MaskImageRGB;
-
+                OOPSData.Handles.ObjectMaskAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
+                OOPSData.Handles.ObjectMaskAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
             catch
                 disp('Warning: Error displaying object binary image');
                 OOPSData.Handles.ObjectMaskImgH.CData = EmptyImage;
             end
             
-            % display object OF image
+            % display object Order image
             try
-                ObjectOFImg = cObject.PaddedOFSubImage;
-                OOPSData.Handles.ObjectOFImgH.CData = ObjectOFImg;
+                ObjectOrderImg = cObject.PaddedOrderSubImage;
+                OOPSData.Handles.ObjectOrderImgH.CData = ObjectOrderImg;
             catch
-                disp('Warning: Error displaying object OF image');
-                OOPSData.Handles.ObjectOFImgH.CData = EmptyImage;
+                disp('Warning: Error displaying object Order image');
+                OOPSData.Handles.ObjectOrderImgH.CData = EmptyImage;
             end
 
             % display the (padded) intensity image of the object
@@ -679,8 +495,6 @@ function [] = UpdateImages(source,varargin)
 
             try
 
-                azimuthMap = repmat(OOPSData.Settings.AzimuthColormap,2,1);
-
                 LineMask = cObject.paddedSubImage;
                 LineScaleDown = OOPSData.Settings.ObjectAzimuthScaleDownFactor;
     
@@ -694,14 +508,13 @@ function [] = UpdateImages(source,varargin)
                 % azimuth line directions
                 theta = cObject.PaddedAzimuthSubImage(LineMask);
                 % azimuth line lengths
-                rho = cObject.PaddedOFSubImage(LineMask);
+                rho = cObject.PaddedOrderSubImage(LineMask);
                 % settings controlling line appearance
                 ColorMode = OOPSData.Settings.ObjectAzimuthColorMode;
                 LineWidth = OOPSData.Settings.ObjectAzimuthLineWidth;
                 LineAlpha = OOPSData.Settings.ObjectAzimuthLineAlpha;
                 LineScale = OOPSData.Settings.ObjectAzimuthLineScale;
 
-                %ColorMode = 'RelativeDirection';
 
                 if strcmp(ColorMode,'RelativeDirection')
                     theta2 = cObject.MidlineRelativeAzimuthImage(LineMask);
@@ -711,9 +524,9 @@ function [] = UpdateImages(source,varargin)
     
                 switch ColorMode
                     case 'Magnitude'
-                        Colormap = OOPSData.Settings.OrderFactorColormap;
+                        Colormap = OOPSData.Settings.OrderColormap;
                     case {'Direction','RelativeDirection'}
-                        Colormap = azimuthMap;
+                        Colormap = repmat(OOPSData.Settings.AzimuthColormap,2,1);
                     case 'Mono'
                         Colormap = [1 1 1];
                 end
@@ -748,22 +561,13 @@ function [] = UpdateImages(source,varargin)
                 % UpdateLog3(source,['Error displaying object azimuth sticks: ',ME.message],'append');
             end
 
-            % retrieve the object midline coordinates
-            Midline = cObject.Midline;
-            % if not empty...
-            if ~isempty(Midline) && ~any(isnan(Midline(:)))
-                % then attempt to plot the midline coordinates
-                try
-                    % % plot as a primitive line
-                    % OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectAzimuthOverlayAxH,...
-                    %     'XData',Midline(:,1),...
-                    %     'YData',Midline(:,2),...
-                    %     'Marker','none',...
-                    %     'LineStyle','-',...
-                    %     'LineWidth',2,...
-                    %     'Color',[0 0 0]);
 
-                    % plot as a primitive line
+            try
+                % retrieve the object midline coordinates
+                Midline = cObject.Midline;
+                % if not empty...
+                if ~isempty(Midline) && ~any(isnan(Midline(:)))
+                    % plot midline coordinates as a primitive line
                     OOPSData.Handles.ObjectMidlinePlot = line(OOPSData.Handles.ObjectMaskAxH,...
                         'XData',Midline(:,1),...
                         'YData',Midline(:,2),...
@@ -771,18 +575,21 @@ function [] = UpdateImages(source,varargin)
                         'LineStyle','-',...
                         'LineWidth',2,...
                         'Color',[0 0 0]);
-                    
-                catch ME
-                    UpdateLog3(source,['Warning: Error displaying object midline: ', ME.message],'append');
-                    % % reset the axes limits to match the object image size
-                    % OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
-                    % OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
-
-                    OOPSData.Handles.ObjectMaskAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
-                    OOPSData.Handles.ObjectMaskAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
-
                 end
+
+                OOPSData.Handles.ObjectMaskAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
+                OOPSData.Handles.ObjectMaskAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
+
+            catch ME
+                UpdateLog3(source,['Warning: Error displaying object midline: ', ME.message],'append');
+                % % reset the axes limits to match the object image size
+                % OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
+                % OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
+
+                OOPSData.Handles.ObjectMaskAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
+                OOPSData.Handles.ObjectMaskAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
             end
+
 
             % try and plot the object boundary
             try
@@ -795,43 +602,41 @@ function [] = UpdateImages(source,varargin)
                     'Color',cObject.Label.Color,...
                     'LineWidth',3);
             catch ME
-                msg = getReport(ME);
-                warning(['Error displaying object boundary: ', msg]);
+                UpdateLog3(source,['Warning: Error displaying object boundary: ', ME.message],'append');
             end
 
 
             try
                 % initialize stack-normalized intensity stack for display
-                PaddedObjNormIntensity = zeros([size(RestrictedPaddedObjMask),4]);
+                PaddedObjNormIntensity = zeros([size(paddedSubImage),4]);
                 % get stack-normalized intensity stack for display
-                PaddedObjNormIntensity(:) = cObject.Parent.ffcFPMStack(PaddedSubarrayIdx{:},:);
+                PaddedObjNormIntensity(:) = cObject.Parent.ffcFPMStack(paddedSubarrayIdx{:},:);
                 % normalize to stack maximum
                 % PaddedObjNormIntensity = PaddedObjNormIntensity./max(max(max(PaddedObjNormIntensity)));
                 % rescale the object intensity stack to the range [0 1]
                 PaddedObjNormIntensity = Scale0To1(PaddedObjNormIntensity);
-
                 % show stack-normalized object intensity stack
                 OOPSData.Handles.ObjectNormIntStackImgH.CData = [PaddedObjNormIntensity(:,:,1),...
                     PaddedObjNormIntensity(:,:,2),...
                     PaddedObjNormIntensity(:,:,3),...
                     PaddedObjNormIntensity(:,:,4)];
-
             catch
                 disp('Warning: Error displaying stack-normalized object intensity')
                 OOPSData.Handles.ObjectNormIntStackImgH.CData = repmat(EmptyImage,1,4);
             end
 
-            % having a drawnow here can cause an long, unstoppable upddate queue
-            % now testing if necessary
-            %drawnow limitrate nocallbacks
-
         otherwise
             %% CustomFPMStatistic view
 
+            % get the idx of the custom stat to display based on the selected menu option
             statIdx = ismember(OOPSData.Settings.CurrentTab,OOPSData.Settings.CustomStatisticDisplayNames);
+            % get the stat
             thisStat = OOPSData.Settings.CustomStatistics(statIdx);
+            % get the name of the variable holding the stat
             statName = thisStat.StatisticName;
+            % get the display name of the stat
             statDisplayName = thisStat.StatisticDisplayName;
+            % get the output range of the stat
             statRange = thisStat.StatisticRange;
 
             % set the title of the axes/image
@@ -839,21 +644,21 @@ function [] = UpdateImages(source,varargin)
 
             OOPSData.Handles.CustomStatAxH.UserData = thisStat;
 
-            if OOPSData.Handles.ShowAsOverlayCustomStat.Value == 1
-                % show the OF-intensity composite image
+            if OOPSData.Handles.ShowAsOverlayCustomStat.Value
+                % show the Order-intensity composite image
                 try
                     % get the average intensity image to use as an opacity mask
                     OverlayIntensity = cImage.I;
-                    % get the raw OF image
+                    % get the raw Order image
                     statImage = cImage.(statName);
-                    % depending on the selection state of the ScaleToMaxOrderFactor toolbar btn, get the value to scale to
+                    % depending on the selection state of the ScaleToMaxOrder toolbar btn, get the value to scale to
                     if OOPSData.Handles.ScaleToMaxCustomStat.Value == 1
                         statMax = max(max(statImage));
                     else
                         statMax = statRange(2);
                     end
-                    % now get the scaled or unscaled OF-intensity RGB overlay
-                    statImageRGB = MaskRGB(ind2rgb(im2uint8(statImage./statMax),OOPSData.Settings.OrderFactorColormap),OverlayIntensity);
+                    % now get the scaled or unscaled Order-intensity RGB overlay
+                    statImageRGB = MaskRGB(ind2rgb(im2uint8(statImage./statMax),OOPSData.Settings.OrderColormap),OverlayIntensity);
                     % set the image CData
                     OOPSData.Handles.CustomStatImgH.CData = statImageRGB;
                     % set the colorbar tick locations
@@ -873,11 +678,11 @@ function [] = UpdateImages(source,varargin)
                     disp(['Warning: Error displaying ',statName,'-intensity composite image'])
                 end
             else
-                % show the unmasked OF image, scaled or unscaled
+                % show the unmasked image, scaled or unscaled
                 try
-                    % get the raw OF image
+                    % get the raw image
                     statImage = cImage.(statName);
-                    % if ScaleToMaxOrderFactor toolbar btn is in the on state
+                    % if ScaleToMaxCustomStat toolbar btn is on
                     if OOPSData.Handles.ScaleToMaxCustomStat.Value == 1
                         statMax = max(max(statImage));
                     else
@@ -901,64 +706,25 @@ function [] = UpdateImages(source,varargin)
                 end
             end
 
-            % show or hide the OF colorbar
+            % show or hide the colorbar
             if OOPSData.Handles.ShowColorbarCustomStat.Value == 1
                 OOPSData.Handles.CustomStatCbar.Visible = 'on';
             else
                 OOPSData.Handles.CustomStatCbar.Visible = 'off';
             end
 
-            % change colormap to currently selected Order factor colormap
-            OOPSData.Handles.CustomStatAxH.Colormap = OOPSData.Settings.OrderFactorColormap;
+            % change colormap to currently selected Order colormap
+            OOPSData.Handles.CustomStatAxH.Colormap = OOPSData.Settings.OrderColormap;
 
             % if ApplyMask toolbar state button set to true...
             if OOPSData.Handles.ApplyMaskCustomStat.Value == 1
                 % ...then apply current mask by setting image AlphaData
                 OOPSData.Handles.CustomStatImgH.AlphaData = cImage.bw;
-
-                % % testing below: applying the mask in a different way
-                % OOPSData.Handles.OrderFactorImgH.CData = cImage.MaskedOFImageRGB;
             end
 
             % update the display of the average intensity image
-            UpdateAverageIntensity();
+            UpdateAverageIntensityImage(source);
              
-    end
-
-    function UpdateAverageIntensity()
-
-        if isempty(cImage)
-            OOPSData.Handles.AverageIntensityImgH.CData = EmptyImage;
-            return
-        end
-
-        if ~OOPSData.Settings.Zoom.Active
-            OOPSData.Handles.AverageIntensityAxH.XLim = [0.5 cImage.Width+0.5];
-            OOPSData.Handles.AverageIntensityAxH.YLim = [0.5 cImage.Height+0.5];
-        end
-
-        % if ApplyMask state button set to true, apply current mask by setting AlphaData
-        if OOPSData.Handles.ApplyMaskAverageIntensity.Value == 1
-            OOPSData.Handles.AverageIntensityImgH.AlphaData = cImage.bw;
-        end
-
-        % make avg intensity/reference composite RGB, if applicable
-        if cImage.ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value == 1
-            % get the intensity-reference overlay RGB image
-            OOPSData.Handles.AverageIntensityImgH.CData = ...
-                CompositeRGB(Scale0To1(cImage.I),...
-                OOPSData.Settings.IntensityColormap,...
-                cImage.PrimaryIntensityDisplayLimits,...
-                Scale0To1(cImage.ReferenceImage),...
-                OOPSData.Settings.ReferenceColormap,...
-                cImage.ReferenceIntensityDisplayLimits);
-            % set axes CLim
-            OOPSData.Handles.AverageIntensityAxH.CLim = [0 255];
-        else % just show avg intensity
-            OOPSData.Handles.AverageIntensityImgH.CData = Scale0To1(cImage.I);
-            OOPSData.Handles.AverageIntensityAxH.CLim = cImage.PrimaryIntensityDisplayLimits;
-        end
-
     end
 
 end

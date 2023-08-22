@@ -11,10 +11,10 @@ function UpdateThresholdSlider(source)
     if isempty(cImage)
         % prevent interaction with thresh slider
         OOPSData.Handles.ThreshAxH.HitTest = 'Off';
-
+        % set threshold panel title to indicate no image is selected
         OOPSData.Handles.ImageOperationsPanel.Title = 'No image selected';
-        % get histogram counts from random data
-        [~,HistPlot] = BuildHistogram(rand(1024,1024));
+        % get histogram counts from empty data
+        [~,HistPlot] = BuildHistogram([]);
         % set the data on our threshold slider axes
         OOPSData.Handles.ThreshBar.YData = HistPlot;
         % set thresh line to 0
@@ -27,20 +27,19 @@ function UpdateThresholdSlider(source)
     OOPSData.Handles.ImageOperationsPanel.Title = cImage.ThreshPanelTitle();
 
     if cImage.ManualThreshEnabled
+        % enable the threshold slider
         OOPSData.Handles.ThreshAxH.HitTest = 'On';
         [cImage.IntensityBinCenters,cImage.IntensityHistPlot] = BuildHistogram(cImage.EnhancedImg);
-        %OOPSData.Handles.ThreshBar.XData = cImage.IntensityBinCenters;
 
         OOPSData.Handles.ThreshBar.YData = cImage.IntensityHistPlot;
         OOPSData.Handles.CurrentThresholdLine.Value = cImage.level;
         OOPSData.Handles.CurrentThresholdLine.Label = {[cImage.ThreshStatisticName,' = ',num2str(OOPSData.Handles.CurrentThresholdLine.Value)]};
     else
         OOPSData.Handles.ThreshAxH.HitTest = 'Off';
-        % get histogram counts from random data
+        % get histogram counts from empty data
         [~,HistPlot] = BuildHistogram([]);
         % set the data on our threshold slider axes
         OOPSData.Handles.ThreshBar.YData = HistPlot;
-
         % set thresh line to 0
         OOPSData.Handles.CurrentThresholdLine.Value = 0;
         % don't display a label

@@ -1,4 +1,4 @@
-function UpdateIntensitySliders(~)
+function UpdateIntensitySliders(source)
     OOPSData = guidata(source);
     
     cImage = OOPSData.CurrentImage;
@@ -16,8 +16,12 @@ function UpdateIntensitySliders(~)
     end
 
     OOPSData.Handles.PrimaryIntensitySlider.HitTest = 'On';
-    OOPSData.Handles.ReferenceIntensitySlider.HitTest = 'On';
-    OOPSData.Handles.OrderSlider.HitTest = 'On';
+
+    % only enable reference limits slider if reference image is loaded
+    OOPSData.Handles.ReferenceIntensitySlider.HitTest = cImage.ReferenceImageLoaded;
+
+    % only enable order limits slider if FPM stats are done
+    OOPSData.Handles.OrderSlider.HitTest = cImage.FPMStatsDone;
 
     try
         OOPSData.Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
@@ -32,7 +36,18 @@ function UpdateIntensitySliders(~)
     end
 
     try
-        OOPSData.Handles.OrderSlider.Value = cImage.OrderDisplayLimits;
+        if OOPSData.Handles.ScaleToMaxOrder.Value
+            if cImage.FPMStatsDone
+                cImage.OrderDisplayLimits = [0 max(cImage.OrderImage,[],"all")];
+            else
+                cImage.OrderDisplayLimits = [0 1];
+            end
+            OOPSData.Handles.OrderSlider.Value = cImage.OrderDisplayLimits;
+
+            OOPSData.Handles.ScaleToMaxOrder.Value = true;
+        else
+            OOPSData.Handles.OrderSlider.Value = cImage.OrderDisplayLimits;
+        end
     catch
         OOPSData.Handles.OrderSlider.Value = [0 1];
     end
