@@ -1,4 +1,10 @@
 function Midline = getObjectMidline(I,Options)
+%%
+%  getObjectMidline  Detects the centerline of a binary object
+
+
+
+
 %% input validation
 arguments
     I {mustBeA(I,'logical')}
