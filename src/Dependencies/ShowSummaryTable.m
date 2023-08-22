@@ -1,9 +1,9 @@
-function ShowSummaryTable(source,event)
+function ShowSummaryTable(source,~)
 
     % get the summary table
     T = SaveOOPSData(source);
     
-    % get handles
+    % handle to the main data structure
     OOPSData = guidata(source);
 
     % new figure to show summary table
@@ -12,10 +12,7 @@ function ShowSummaryTable(source,event)
     % uitable to hold data
     uit = uitable(SummaryFig,'data',T);
 
+    % make uitable fill the figure
     uit.Units = 'normalized';
     uit.Position = [0 0 1 1];
-    
-    % maximize table size within figure window
-    %uit.Position = SummaryFig.InnerPosition;
-
 end
