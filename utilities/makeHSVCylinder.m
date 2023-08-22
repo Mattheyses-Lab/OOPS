@@ -116,7 +116,7 @@ if missingWedgeSize > 0
         repmat(linspace(0,1,colorRes),colorRes,1),... % S
         repmat([linspace(0,1,colorRes)].',1,colorRes)... % V
         ));
-    % plot the plane as a surface
+    % % plot the plane as a surface
     surf(x2,y2,z2,c2,'FaceColor', 'texturemap', 'EdgeColor','none');
 end
 
@@ -154,7 +154,8 @@ set(gca,'Visible','Off');
 [circleX,circleY] = getCircleCoordinates(0,0,cylinderRadius,360);
 
 % set the default viewing angle of the axis
-view(hAx,45,30);
+%view(hAx,45,30);
+view(hAx,0,30);
 
 % draw the default outline lines
 [outlineX,outlineY,outlineZ] = getOutlineCoordinates();
