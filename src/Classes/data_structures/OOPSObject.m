@@ -85,8 +85,9 @@ classdef OOPSObject < handle & dynamicprops
         InterpreterFriendlyImageName
 
         % various object images
-        PaddedOFSubImage
-        MaskedOFSubImage
+        PaddedOrderSubImage
+        MaxScaledOrderSubImage
+        MaskedOrderSubImage
         PaddedFFCIntensitySubImage
         PaddedMaskSubImage
         RestrictedPaddedMaskSubImage
@@ -102,11 +103,11 @@ classdef OOPSObject < handle & dynamicprops
         % depends on selection status
         SelectionBoxLineWidth
         
-        % OF properties of this object, dependent on OF image of Parent
-        OFAvg
-        OFMin
-        OFMax
-        OFPixelValues
+        % Order properties of this object, dependent on Order image of Parent
+        OrderAvg
+        OrderMin
+        OrderMax
+        OrderPixelValues
         
         % object label properties, depend on currently applied label (OOPSLabel object)
         LabelIdx
@@ -156,8 +157,10 @@ classdef OOPSObject < handle & dynamicprops
 
         % horizontal montage object intensity stack, scaled across the stack to [0 1]
         IntensityStackNormMontageRGB
-        % unmasked OF
-        OFImageRGB
+        % unmasked Order
+        OrderImageRGB
+        % unmasked Order, scaled to parent image max
+        MaxScaledOrderImageRGB
         % label image of signal and BG regions
         SBRegionsRGB
         % average intensity image normalized to max
@@ -317,11 +320,11 @@ classdef OOPSObject < handle & dynamicprops
 
             for i = 1:numel(customStatistics)
                 thisStatistic = customStatistics(i);
-
+                % add a custom prop with name specified by the custom statistic object
                 prop = obj.addprop(thisStatistic.StatisticName);
                 % make the property dependent
                 prop.Dependent = true;
-                % set the Get method for this property
+                % set the Get method for this property, pass in the property name so we know how to calculate it
                 prop.GetMethod = @(o) getCustomObjectStatistic(o,thisStatistic.StatisticName);
             end
 
@@ -465,12 +468,12 @@ classdef OOPSObject < handle & dynamicprops
 
 %% value lists (same order as pixel idx list)
 
-        function OFPixelValues = get.OFPixelValues(obj)
-            % list of OF in all object pixels
+        function OrderPixelValues = get.OrderPixelValues(obj)
+            % list of Order in all object pixels
             try
-                OFPixelValues = obj.Parent.OF_image(obj.PixelIdxList);
+                OrderPixelValues = obj.Parent.OrderImage(obj.PixelIdxList);
             catch
-                OFPixelValues = NaN;
+                OrderPixelValues = NaN;
             end
         end        
 
@@ -494,30 +497,30 @@ classdef OOPSObject < handle & dynamicprops
         
 %% scalar output values
 
-        function OFAvg = get.OFAvg(obj)
-            % average OF of all pixels identified by the mask
+        function OrderAvg = get.OrderAvg(obj)
+            % average Order of all pixels identified by the mask
             try
-                OFAvg = mean(obj.Parent.OF_image(obj.PixelIdxList));
+                OrderAvg = mean(obj.Parent.OrderImage(obj.PixelIdxList));
             catch
-                OFAvg = NaN;
+                OrderAvg = NaN;
             end
         end
         
-        function OFMax = get.OFMax(obj)
-            % max OF of all pixels in the object mask
+        function OrderMax = get.OrderMax(obj)
+            % max Order of all pixels in the object mask
             try
-                OFMax = max(obj.Parent.OF_image(obj.PixelIdxList));
+                OrderMax = max(obj.Parent.OrderImage(obj.PixelIdxList));
             catch
-                OFMax = NaN;
+                OrderMax = NaN;
             end
         end
         
-        function OFMin = get.OFMin(obj)
-            % min OF of all pixels in the object mask
+        function OrderMin = get.OrderMin(obj)
+            % min Order of all pixels in the object mask
             try
-                OFMin = min(obj.Parent.OF_image(obj.PixelIdxList));
+                OrderMin = min(obj.Parent.OrderImage(obj.PixelIdxList));
             catch
-                OFMin = NaN;
+                OrderMin = NaN;
             end
         end
 
@@ -606,7 +609,7 @@ classdef OOPSObject < handle & dynamicprops
             varNames = [...
                 "Name",...
                 "Label",...
-                "Mean OF",...
+                "Mean Order",...
                 "Pixel area",...
                 "Convex area",...
                 "Perimeter",...
@@ -630,7 +633,7 @@ classdef OOPSObject < handle & dynamicprops
             ObjectSummaryDisplayTable = table(...
                 {obj.Name},...
                 {obj.Label.Name},...
-                {obj.OFAvg},...
+                {obj.OrderAvg},...
                 {obj.Area},...
                 {obj.ConvexArea},...
                 {obj.Perimeter},...
@@ -661,15 +664,19 @@ classdef OOPSObject < handle & dynamicprops
 
 %% object subimages
 
-        function PaddedOFSubImage = get.PaddedOFSubImage(obj)
-            PaddedOFSubImage = obj.Parent.OF_image(obj.paddedSubarrayIdx{:});
+        function PaddedOrderSubImage = get.PaddedOrderSubImage(obj)
+            PaddedOrderSubImage = obj.Parent.OrderImage(obj.paddedSubarrayIdx{:});
         end        
 
-        function MaskedOFSubImage = get.MaskedOFSubImage(obj)
-            % OFImage = obj.Parent.OF_image;
-            MaskedOFSubImage = zeros(size(obj.Image));
+        function MaxScaledOrderSubImage = get.MaxScaledOrderSubImage(obj)
+            MaxScaledOrderSubImage = obj.Parent.MaxScaledOrderImage(obj.paddedSubarrayIdx{:});
+        end
+
+        function MaskedOrderSubImage = get.MaskedOrderSubImage(obj)
+            % OrderImage = obj.Parent.OrderImage;
+            MaskedOrderSubImage = zeros(size(obj.Image));
             % masked
-            MaskedOFSubImage(obj.Image) = obj.Parent.OF_image(obj.PixelIdxList);
+            MaskedOrderSubImage(obj.Image) = obj.Parent.OrderImage(obj.PixelIdxList);
         end
 
         function PaddedAzimuthSubImage = get.PaddedAzimuthSubImage(obj)
@@ -728,8 +735,12 @@ classdef OOPSObject < handle & dynamicprops
             IntensityStackNormMontageRGB = ind2rgb(im2uint8(IntensityStackNormMontage),obj.Parent.Settings.IntensityColormap);
         end
 
-        function OFImageRGB = get.OFImageRGB(obj)
-            OFImageRGB = ind2rgb(im2uint8(obj.PaddedOFSubImage),obj.Parent.Settings.OrderFactorColormap);
+        function OrderImageRGB = get.OrderImageRGB(obj)
+            OrderImageRGB = ind2rgb(im2uint8(obj.PaddedOrderSubImage),obj.Parent.Settings.OrderColormap);
+        end
+
+        function MaxScaledOrderImageRGB = get.MaxScaledOrderImageRGB(obj)
+            MaxScaledOrderImageRGB = ind2rgb(im2uint8(obj.MaxScaledOrderSubImage),obj.Parent.Settings.OrderColormap);
         end
 
         function SBRegionsRGB = get.SBRegionsRGB(obj)

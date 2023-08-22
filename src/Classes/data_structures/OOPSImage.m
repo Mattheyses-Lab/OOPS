@@ -15,9 +15,9 @@ classdef OOPSImage < handle & dynamicprops
         rawFPMShortName (1,:) char
         % full name (path and extension)
         rawFPMFullName (1,:) char
-        % width of the image (number of columns in the image matrix)
+        % number of columns in the image
         Width (1,1) double
-        % height of the image (number of the rows in this image)
+        % number of the rows in this image
         Height (1,1) double
         % real-world size of the pixels of the raw input data
         rawFPMPixelSize (1,1) double
@@ -44,7 +44,6 @@ classdef OOPSImage < handle & dynamicprops
         FilesLoaded (1,1) logical = false
         FFCDone (1,1) logical = false
         MaskDone (1,1) logical = false
-        OFDone (1,1) logical = false
         FPMStatsDone (1,1) logical = false
         ObjectDetectionDone (1,1) logical = false
         LocalSBDone (1,1) logical = false
@@ -54,29 +53,21 @@ classdef OOPSImage < handle & dynamicprops
 
         % image mask
         bw (:,:) logical
-        
         % label matrix that defines the objects
         L (:,:) double
-
         % whether the mask intensity threshold has been manually adjusted
         ThresholdAdjusted (1,1) logical = false
-
         % the intensity threshold used to generate the mask (only for certain mask types)
         level (1,1) double
-        
         % masking steps
         I (:,:) double
         EnhancedImg (:,:) double
-
         % the type of mask applied to this image ('Default', 'CustomScheme')
         MaskType (1,:) char = 'Default'
-
         % the name of the mask applied to this image (various)
         MaskName (1,:) char = 'Legacy'
-
         % handle to the custom mask scheme (if one was used)
         CustomScheme CustomMask = CustomMask.empty()
-        
         % mask threshold adjustment (for display purposes)
         IntensityBinCenters
         IntensityHistPlot
@@ -100,7 +91,7 @@ classdef OOPSImage < handle & dynamicprops
 %% Pixelwise FPM output statistics
 
         AzimuthImage (:,:) double
-        OF_image (:,:) double
+        OrderImage (:,:) double
 
 %% Output values        
         
@@ -111,38 +102,71 @@ classdef OOPSImage < handle & dynamicprops
 
         PrimaryIntensityDisplayLimits (1,2) double = [0 1];
         ReferenceIntensityDisplayLimits (1,2) double = [0 1];
+        OrderDisplayLimits (1,2) double = [0 1];
  
     end
     
     % dependent properties (not stored in memory, calculated each time they are retrieved)
     properties (Dependent = true)
         
+        % min and max average intensity in the same scale as the original input data
+        averageIntensityRealLimits
+
         % flat-field corrected intensity stack, normalized to the max in the 3rd dimension
         ffcFPMPixelNorm
 
-        % OF image in RGB format
-        OFImageRGB
+        % Average intensity image scaled to user-defined display limits
+        UserScaledAverageIntensityImage
+        % Average intensity image scaled to user-defined display limits, RGB format
+        UserScaledAverageIntensityImageRGB
+        MaxScaledAverageIntensityImageRGB
 
-        % OF image with mask applied | masked pixels = 0
-        MaskedOFImage
+        ReferenceImageRGB
+        UserScaledReferenceImage
+        UserScaledReferenceImageRGB
+        UserScaledAverageIntensityReferenceCompositeRGB
 
-        % OF image in RGB format with mask applied | masked pixels = [0 0 0] (black)
-        MaskedOFImageRGB
+        % Order image in RGB format
+        OrderImageRGB
 
-        % OF-intensity overlay in RGB format, unscaled OF
-        OFIntensityOverlayRGB
+        % Order image scaled to user-defined display limits
+        UserScaledOrderImage
+        % Order image scaled to user-defined display limits, RGB format
+        UserScaledOrderImageRGB
 
-        % OF-intensity overlay in RGB format, with OF scaled to image maximum
-        ScaledOFIntensityOverlayRGB
+        % Order image with mask applied | masked pixels = 0
+        MaskedOrderImage
+        % Order image in RGB format with mask applied | masked pixels = [0 0 0] (black)
+        MaskedOrderImageRGB
+
+        % Order image normalized to image maximum
+        MaxScaledOrderImage
+        % Order image in RGB format, with Order scaled to image maximum
+        MaxScaledOrderImageRGB
+
+        % Order-intensity overlay in RGB format, unscaled Order
+        OrderIntensityOverlayRGB
+        % Order-intensity overlay in RGB format, with Order scaled to image maximum
+        MaxScaledOrderIntensityOverlayRGB
+        % Order-intensity overlay in RGB format, with Order and intensity scaled according to user
+        UserScaledOrderIntensityOverlayRGB
+
 
         % azimuth image in RGB format
         AzimuthRGB
-
         % masked azimuth image in RGB format | masked pixels = [0 0 0] (black)
         MaskedAzimuthRGB
+        % Azimuth-intensity-Order HSV image in RGB format
+        AzimuthOrderIntensityHSV
+        % Azimuth-intensity-Order HSV image in RGB format, with Order and intensity scaled according to user
+        UserScaledAzimuthOrderIntensityHSV
+        % Azimuth-intensity overlay in RGB format
+        AzimuthIntensityOverlayRGB
+        % Azimuth-intensity overlay in RGB format, with intensity scaled according to user
+        UserScaledAzimuthIntensityOverlayRGB
 
-        % Azimuth-intensity-OF HSV image in RGB format
-        AzimuthOFIntensityHSV
+
+
 
         % RGB format mask for saving
         MaskRGBImage
@@ -180,21 +204,21 @@ classdef OOPSImage < handle & dynamicprops
         % 2-element vector describing the limits of the image in real-world coordinates
         RealWorldLimits (1,2) double        
         
-        % average OF among all objects
-        OFAvg (1,1) double
+        % average Order among all objects
+        OrderAvg (1,1) double
 
-        % maximum OF among all objects
-        OFMax (1,1) double
+        % maximum Order among all objects
+        OrderMax (1,1) double
 
-        % minimum OF among all objects
-        OFMin (1,1) double
+        % minimum Order among all objects
+        OrderMin (1,1) double
 
-        % list of pixel OFs for all of the pixels in the image mask
-        OFList (:,1) double
+        % list of pixel Orders for all of the pixels in the image mask
+        OrderList (:,1) double
 
         % various filtered output
         bw_filt
-        FilteredOFAvg
+        FilteredOrderAvg
 
         % index of this image in [obj.Parent.Replicate()]
         SelfIdx (1,1)
@@ -234,11 +258,7 @@ classdef OOPSImage < handle & dynamicprops
             obj.Width = 0;
             obj.Height = 0;
             
-            % status tracking (false by default)
-            obj.ThresholdAdjusted = false;
-            obj.MaskDone = false;
-            obj.OFDone = false;
-
+            
             obj.CurrentObjectIdx = 0;
 
             % add custom properties
@@ -267,7 +287,7 @@ classdef OOPSImage < handle & dynamicprops
             replicate.FilesLoaded = obj.FilesLoaded;
             replicate.FFCDone = obj.FFCDone;
             replicate.MaskDone = obj.MaskDone;
-            replicate.OFDone = obj.OFDone;
+            replicate.FPMStatsDone = obj.FPMStatsDone;
             replicate.ObjectDetectionDone = obj.ObjectDetectionDone;
             replicate.LocalSBDone = obj.LocalSBDone;
             replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
@@ -346,6 +366,10 @@ classdef OOPSImage < handle & dynamicprops
 
 %% retrieve image data
 
+        function averageIntensityRealLimits = get.averageIntensityRealLimits(obj)
+            averageIntensityRealLimits = [min(min(obj.ffcFPMAverage)) max(max(obj.ffcFPMAverage))];
+        end
+
         % dependent get methods for image size, resolution
         function Dimensions = get.Dimensions(obj)
             Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
@@ -367,42 +391,46 @@ classdef OOPSImage < handle & dynamicprops
         end
 
         function ffcFPMPixelNorm = get.ffcFPMPixelNorm(obj)
-            ffcFPMPixelNorm = obj.ffcFPMStack./max(obj.ffcFPMStack,[],3);
+            % OLD NORMALIZATION METHOD BELOW
+            % ffcFPMPixelNorm = obj.ffcFPMStack./max(obj.ffcFPMStack,[],3);
+
+            % NEW NORMALIZATION METHOD
+            ffcFPMPixelNorm = obj.ffcFPMStack./(sum(obj.ffcFPMStack,3)./2);
         end
 
-        function OFAvg = get.OFAvg(obj)
-            % average OF of all pixels identified by the mask
+        function OrderAvg = get.OrderAvg(obj)
+            % average Order of all pixels identified by the mask
             try
-                OFAvg = mean(obj.OF_image(obj.bw));
+                OrderAvg = mean(obj.OrderImage(obj.bw));
             catch
-                OFAvg = NaN;
+                OrderAvg = NaN;
             end
         end
         
-        function OFMax = get.OFMax(obj)
-            % max OF of all pixels identified by the mask
+        function OrderMax = get.OrderMax(obj)
+            % max Order of all pixels identified by the mask
             try
-                OFMax = max(obj.OF_image(obj.bw));
+                OrderMax = max(obj.OrderImage(obj.bw));
             catch
-                OFMax = NaN;
+                OrderMax = NaN;
             end
         end
         
-        function OFMin = get.OFMin(obj)
-            % min OF of all pixels identified by the mask
+        function OrderMin = get.OrderMin(obj)
+            % min Order of all pixels identified by the mask
             try
-                OFMin = min(obj.OF_image(obj.bw));
+                OrderMin = min(obj.OrderImage(obj.bw));
             catch
-                OFMin = NaN;
+                OrderMin = NaN;
             end
         end
         
-        function OFList = get.OFList(obj)
-            % list of OF in all pixels identified by mask
+        function OrderList = get.OrderList(obj)
+            % list of Order in all pixels identified by mask
             try
-                OFList = obj.OF_image(obj.bw);
+                OrderList = obj.OrderImage(obj.bw);
             catch
-                OFList = NaN;
+                OrderList = NaN;
             end
         end
 %% processing methods (corrections, FPM stats, local S/B)
@@ -677,7 +705,7 @@ classdef OOPSImage < handle & dynamicprops
 
         end
 
-        function FindOrderFactor(obj)
+        function FindOrder(obj)
             % remember to remove comment below!
             % get the pixel-normalized, flat-field corrected intensity stack
             pixelNorm = obj.ffcFPMPixelNorm;
@@ -686,13 +714,13 @@ classdef OOPSImage < handle & dynamicprops
             % a = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
             % b = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
             % c = sum(obj.ffcFPMStack,3);
-            % obj.OF_image = hypot(a,b)./c;
+            % obj.OrderImage = hypot(a,b)./c;
 
             %% polarization factor / degree of linear polarization (Mehta, Lee)
             % S1 = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
             % S2 = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
             % S0 = sum(obj.ffcFPMStack,3)./2;
-            % obj.OF_image = hypot(S1,S2)./S0;
+            % obj.OrderImage = hypot(S1,S2)./S0;
 
 
 
@@ -700,18 +728,38 @@ classdef OOPSImage < handle & dynamicprops
             a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
             b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
             % find Order Factor
-            obj.OF_image = zeros(size(pixelNorm(:,:,1)));
-            obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
+            obj.OrderImage = zeros(size(pixelNorm(:,:,1)));
+            obj.OrderImage(:) = sqrt(a(:).^2+b(:).^2);
             % find azimuth image
             obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
             % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
             obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
-            % update completion status
-            obj.OFDone = true;
+            % % update completion status
+            % obj.OrderDone = true;
         end
 
         function FindFPMStatistics(obj)
 
+            % default order parameter and azimuth
+
+            % get the pixel-normalized, flat-field corrected intensity stack
+            pixelNorm = obj.ffcFPMPixelNorm;
+
+            % orthogonal polarization difference components
+            a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
+            b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
+            % find Order Factor
+            obj.OrderImage = zeros(size(pixelNorm(:,:,1)));
+            obj.OrderImage(:) = sqrt(a(:).^2+b(:).^2);
+            % find azimuth image
+            obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
+            % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
+            obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
+
+
+
+
+            % custom order statistics
 
             % get the vector of custom statistic objects
             customStatistics = obj.Settings.CustomStatistics;
@@ -723,15 +771,13 @@ classdef OOPSImage < handle & dynamicprops
                     % get the next statistic
                     thisStatistic = customStatistics(i);
                     % call the function handle specified by the custom statistic object, store the value in dynamic property
-                    obj.(thisStatistic.StatisticName) = feval(thisStatistic.StatisticFun,obj.ffcFPMStack);
+                    %obj.(thisStatistic.StatisticName) = feval(thisStatistic.StatisticFun,obj.ffcFPMStack);
+                    obj.(thisStatistic.StatisticName) = thisStatistic.StatisticFun(obj.ffcFPMStack);
                 end
-                % update the status flag to indicate custom FPM stats were calculated
-                obj.FPMStatsDone = true;
-            else
-                % update the status flag to indicate custom FPM stats were not calculated
-                obj.FPMStatsDone = false;
             end
 
+            % update the status flag to indicate custom FPM stats were calculated
+            obj.FPMStatsDone = true;
         end
 
         function obj = FindLocalSB(obj)
@@ -992,7 +1038,6 @@ classdef OOPSImage < handle & dynamicprops
                 CurrentObject = OOPSObject.empty();
             end
         end
-
 
         function VariableObjectData = GetAllObjectData(obj,Var2Get)
             % if the variable is a custom property
@@ -1391,7 +1436,7 @@ classdef OOPSImage < handle & dynamicprops
             end
         end
 
-%% dependent get methods for various display/processing options specific to this image
+%% dependent Get methods for various display/processing options specific to this image
 
         function ThreshPanelTitle = get.ThreshPanelTitle(obj)
             switch obj.MaskType
@@ -1477,12 +1522,12 @@ classdef OOPSImage < handle & dynamicprops
                 "Threshold adjusted",...
                 "Number of objects",...
                 "Mask name",...
-                "Mean pixel OF",...
-                "Mean pixel OF (filtered)",...
+                "Mean pixel Order",...
+                "Mean pixel Order (filtered)",...
                 "Files loaded",...
                 "FFC performed",...
                 "Mask generated",...
-                "OF/azimuth calculated",...
+                "Order/azimuth calculated",...
                 "Objects detected",...
                 "Local S/B calculated"];
 
@@ -1495,12 +1540,12 @@ classdef OOPSImage < handle & dynamicprops
                 {Logical2String(obj.ThresholdAdjusted)},...
                 {obj.nObjects},...
                 {obj.MaskName},...
-                {obj.OFAvg},...
-                {obj.FilteredOFAvg},...
+                {obj.OrderAvg},...
+                {obj.FilteredOrderAvg},...
                 {Logical2String(obj.FilesLoaded)},...
                 {Logical2String(obj.FFCDone)},...
                 {Logical2String(obj.MaskDone)},...
-                {Logical2String(obj.OFDone)},...
+                {Logical2String(obj.FPMStatsDone)},...
                 {Logical2String(obj.ObjectDetectionDone)},...
                 {Logical2String(obj.LocalSBDone)},...
                 'VariableNames',varNames,...
@@ -1514,19 +1559,31 @@ classdef OOPSImage < handle & dynamicprops
 
 %% RGB output images
 
-        function OFImageRGB = get.OFImageRGB(obj)
-            OFImageRGB = ind2rgb(im2uint8(obj.OF_image),obj.Settings.OrderFactorColormap);
+        function OrderImageRGB = get.OrderImageRGB(obj)
+            %OrderImageRGB = ind2rgb(im2uint8(obj.OrderImage),obj.Settings.OrderColormap);
+            % testing below
+            OrderImageRGB = vecind2rgb(im2uint8(obj.OrderImage),obj.Settings.OrderColormap);
         end
 
-        function MaskedOFImage = get.MaskedOFImage(obj)
-            % get the full OF image
-            MaskedOFImage = obj.OF_image;
+        function MaxScaledOrderImage = get.MaxScaledOrderImage(obj)
+            % scale the Order image to the image maximum
+            MaxScaledOrderImage = obj.OrderImage./max(max(obj.OrderImage));
+        end
+
+        function MaxScaledOrderImageRGB = get.MaxScaledOrderImageRGB(obj)
+            % get scaled Order image, convert to RGB
+            MaxScaledOrderImageRGB = ind2rgb(im2uint8(obj.MaxScaledOrderImage),obj.Settings.OrderColormap);
+        end
+
+        function MaskedOrderImage = get.MaskedOrderImage(obj)
+            % get the full Order image
+            MaskedOrderImage = obj.OrderImage;
             % set any pixels outside the mask to 0
-            MaskedOFImage(~obj.bw) = 0;
+            MaskedOrderImage(~obj.bw) = 0;
         end
 
-        function MaskedOFImageRGB = get.MaskedOFImageRGB(obj)
-            MaskedOFImageRGB = MaskRGB(obj.OFImageRGB,obj.bw);
+        function MaskedOrderImageRGB = get.MaskedOrderImageRGB(obj)
+            MaskedOrderImageRGB = MaskRGB(obj.OrderImageRGB,obj.bw);
         end
 
         function AzimuthRGB = get.AzimuthRGB(obj)
@@ -1543,7 +1600,7 @@ classdef OOPSImage < handle & dynamicprops
             MaskedAzimuthRGB = MaskRGB(obj.AzimuthRGB,obj.bw);
         end
 
-        function AzimuthOFIntensityHSV = get.AzimuthOFIntensityHSV(obj)
+        function AzimuthOrderIntensityHSV = get.AzimuthOrderIntensityHSV(obj)
             % get 'V' data (intensity image)
             OverlayIntensity = obj.I;
 
@@ -1555,33 +1612,79 @@ classdef OOPSImage < handle & dynamicprops
             AzimuthData = AzimuthData./pi;
 
             % get 'S' data (scaled order factor image)
-            OF = obj.OF_image;
-            OF = OF./max(max(OF));
+            Order = obj.OrderImage;
+            % Order = Order./max(max(Order));
 
             % combine to make HSV image (in RGB format)
-            AzimuthOFIntensityHSV = makeHSVSpecial(AzimuthData,OF,OverlayIntensity);
+            AzimuthOrderIntensityHSV = makeHSVSpecial(AzimuthData,Order,OverlayIntensity);
         end
 
-        function ScaledOFIntensityOverlayRGB = get.ScaledOFIntensityOverlayRGB(obj)
-            % get the average intensity image to use as an opacity mask
-            OverlayIntensity = obj.I;
-            % get the raw OF image
-            OF = obj.OF_image;
-            % get the maximum OF in the image
-            maxOF = max(max(OF));
-            % now get the scaled OF-intensity RGB overlay
-            ScaledOFIntensityOverlayRGB = ...
-                MaskRGB(ind2rgb(im2uint8(OF./maxOF),obj.Settings.OrderFactorColormap),OverlayIntensity);
+        function UserScaledAzimuthOrderIntensityHSV = get.UserScaledAzimuthOrderIntensityHSV(obj)
+            % get 'V' data (intensity image)
+            OverlayIntensity = obj.UserScaledAverageIntensityImage;
+
+            % get 'H' data (azimuth image)
+            AzimuthData = obj.AzimuthImage;
+            % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
+            AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
+            % scale values to [0 1]
+            AzimuthData = AzimuthData./pi;
+
+            % get 'S' data (scaled order factor image)
+            Order = obj.UserScaledOrderImage;
+
+            % combine to make HSV image (in RGB format)
+            UserScaledAzimuthOrderIntensityHSV = makeHSVSpecial(AzimuthData,Order,OverlayIntensity);
         end
 
-        function OFIntensityOverlayRGB = get.OFIntensityOverlayRGB(obj)
+        function AzimuthIntensityOverlayRGB = get.AzimuthIntensityOverlayRGB(obj)
+            AzimuthIntensityOverlayRGB = MaskRGB(obj.AzimuthRGB,obj.I);
+        end
+
+        function UserScaledAzimuthIntensityOverlayRGB = get.UserScaledAzimuthIntensityOverlayRGB(obj)
+            UserScaledAzimuthIntensityOverlayRGB = MaskRGB(obj.AzimuthRGB,obj.UserScaledAverageIntensityImage);
+        end
+
+        function MaxScaledOrderIntensityOverlayRGB = get.MaxScaledOrderIntensityOverlayRGB(obj)
             % get the average intensity image to use as an opacity mask
             OverlayIntensity = obj.I;
-            % get the raw OF image
-            OF = obj.OF_image;
-            % now get the scaled OF-intensity RGB overlay
-            OFIntensityOverlayRGB = ...
-                MaskRGB(ind2rgb(im2uint8(OF),obj.Settings.OrderFactorColormap),OverlayIntensity);
+            % get the raw Order image
+            Order = obj.OrderImage;
+            % get the maximum Order in the image
+            maxOrder = max(max(Order));
+            % now get the scaled Order-intensity RGB overlay
+            MaxScaledOrderIntensityOverlayRGB = ...
+                MaskRGB(ind2rgb(im2uint8(Order./maxOrder),obj.Settings.OrderColormap),OverlayIntensity);
+        end
+
+        function UserScaledOrderImage = get.UserScaledOrderImage(obj)
+            UserScaledOrderImage = imadjust(obj.OrderImage,obj.OrderDisplayLimits,[0 1]);
+        end
+
+        function UserScaledOrderImageRGB = get.UserScaledOrderImageRGB(obj)
+            %UserScaledOrderImageRGB = ind2rgb(im2uint8(obj.UserScaledOrderImage),obj.Settings.OrderColormap);
+
+            % testing below - in early testing this is ~twice as fast as built-in ind2rgb()
+            UserScaledOrderImageRGB = vecind2rgb(im2uint8(obj.UserScaledOrderImage),obj.Settings.OrderColormap);
+        end
+
+        function UserScaledOrderIntensityOverlayRGB = get.UserScaledOrderIntensityOverlayRGB(obj)
+            % get the user-scaled average intensity image to use as an opacity mask
+            OverlayIntensity = obj.UserScaledAverageIntensityImage;
+            % get the user-scaled Order image in RGB format
+            Order = obj.UserScaledOrderImageRGB;
+            % now get the user-scaled Order-intensity overlay in RGB format
+            UserScaledOrderIntensityOverlayRGB = MaskRGB(Order,OverlayIntensity);
+        end
+
+        function OrderIntensityOverlayRGB = get.OrderIntensityOverlayRGB(obj)
+            % get the average intensity image to use as an opacity mask
+            OverlayIntensity = obj.I;
+            % get the raw Order image
+            Order = obj.OrderImage;
+            % now get the Order-intensity RGB overlay
+            OrderIntensityOverlayRGB = ...
+                MaskRGB(ind2rgb(im2uint8(Order),obj.Settings.OrderColormap),OverlayIntensity);
         end
 
         function MaskRGBImage = get.MaskRGBImage(obj)
@@ -1602,12 +1705,38 @@ classdef OOPSImage < handle & dynamicprops
             ObjectLabelImageRGB = label2rgb(ObjectLabelImage,obj.Settings.LabelColors,zeroColor);
         end
 
+        function MaxScaledAverageIntensityImageRGB = get.MaxScaledAverageIntensityImageRGB(obj)
+            MaxScaledAverageIntensityImageRGB = ...
+                vecind2rgb(im2uint8(obj.I),obj.Settings.IntensityColormap);
+        end
 
-        
+        function UserScaledAverageIntensityImage = get.UserScaledAverageIntensityImage(obj)
+            UserScaledAverageIntensityImage = imadjust(obj.I,obj.PrimaryIntensityDisplayLimits,[0 1]);
+        end
 
+        function UserScaledAverageIntensityImageRGB = get.UserScaledAverageIntensityImageRGB(obj)
+            UserScaledAverageIntensityImageRGB = ...
+                vecind2rgb(im2uint8(obj.UserScaledAverageIntensityImage),obj.Settings.IntensityColormap);
+        end
 
+        function UserScaledReferenceImage = get.UserScaledReferenceImage(obj)
+            UserScaledReferenceImage = ...
+                imadjust(obj.ReferenceImage,obj.ReferenceIntensityDisplayLimits,[0 1]);
+        end
 
+        function UserScaledReferenceImageRGB = get.UserScaledReferenceImageRGB(obj)
+            UserScaledReferenceImageRGB = vecind2rgb(im2uint8(obj.UserScaledReferenceImage),obj.Settings.ReferenceColormap);
+        end
 
+        function ReferenceImageRGB = get.ReferenceImageRGB(obj)
+            ReferenceImageRGB = vecind2rgb(im2uint8(obj.ReferenceImage),obj.Settings.ReferenceColormap);
+        end
+
+        function UserScaledAverageIntensityReferenceCompositeRGB = get.UserScaledAverageIntensityReferenceCompositeRGB(obj)
+            % combine user-scaled average intensity RGB and user-scaled reference intensity RGB
+            UserScaledAverageIntensityReferenceCompositeRGB = ...
+                obj.UserScaledAverageIntensityImageRGB + obj.UserScaledReferenceImageRGB;
+        end
 
 %% dependent 'get' methods for filtered object output values
 
@@ -1629,12 +1758,12 @@ classdef OOPSImage < handle & dynamicprops
 
         end
 
-        function FilteredOFAvg = get.FilteredOFAvg(obj)
-            % average OF of all pixels identified by the mask
+        function FilteredOrderAvg = get.FilteredOrderAvg(obj)
+            % average Order of all pixels identified by the mask
             try
-                FilteredOFAvg = mean(obj.OF_image(obj.bw_filt));
+                FilteredOrderAvg = mean(obj.OrderImage(obj.bw_filt));
             catch
-                FilteredOFAvg = NaN;
+                FilteredOrderAvg = NaN;
             end
         end
 
@@ -1694,7 +1823,17 @@ classdef OOPSImage < handle & dynamicprops
             obj.FilesLoaded = replicate.FilesLoaded;
             obj.FFCDone = replicate.FFCDone;
             obj.MaskDone = replicate.MaskDone;
-            obj.OFDone = replicate.OFDone;
+
+            % testing below
+            try
+                obj.FPMStatsDone = replicate.FPMStatsDone;
+            catch
+                obj.FPMStatsDone = replicate.OFDone;
+            end
+            % end testing
+
+
+
             obj.ObjectDetectionDone = replicate.ObjectDetectionDone;
             obj.LocalSBDone = replicate.LocalSBDone;
             obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;

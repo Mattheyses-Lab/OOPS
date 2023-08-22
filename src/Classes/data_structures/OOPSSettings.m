@@ -1,10 +1,12 @@
 classdef OOPSSettings < handle
-    %OOPSSettings - OOPSGUI project & display settings
-    %   An instance of this class holds and determines various 
-    %   settings for a single run of OOPS GUI
-    
+%% OOPSSettings  Settings class for Object-Oriented Polarization Software (OOPS)
+%
+%   An instance of this class loads, stores, and determines various
+%   settings for a single run of the OOPS GUI
+
     properties
 
+        % zoom settings used by ZoomToCursor
         Zoom = struct('XRange',0,...
             'YRange',0,...
             'ZRange',0,...
@@ -31,19 +33,21 @@ classdef OOPSSettings < handle
         % most recently accessed directory
         LastDirectory = pwd;
 
-        % path to main code directory (path with OOPS.m)
+        % path to directory containing OOPS.m
         MainPath char
 
+        % the type of currently displayed summary table
         SummaryDisplayType = 'Project';
         
-        % current and previous tabs selected in GUI
+        % currently selected 'tab' in the OOPS GUI
         CurrentTab = 'Files';
+        % previously selected 'tab' in the OOPS GUI
         PreviousTab = 'Files';
         
-        % size of the display (to set main window Position)
+        % drawable size of the main display (to set main window Position property)
         ScreenSize
 
-        % starts as optimized font size (px) based on size of display, user can change
+        % size of the font across graphics objects in the GUI
         FontSize
 
         % themes and colors for GUI display
@@ -93,17 +97,18 @@ classdef OOPSSettings < handle
         % object labeling
         ObjectLabels OOPSLabel
         
-        % Fonts
+        % default font used in most graphics objects (excluding plots)
         DefaultFont char
+        % default font used in plots
         DefaultPlotFont = 'Arial';
         
-        % default px size (um/px)
+        % real world size of each input pixel (micron/px)
         PixelSize = 0.1083;
 
-        % type of mask to generate and use for object detection (Default, CustomScheme, or CustomUpload)
+        % type of mask to generate and use for object detection ('Default', 'CustomScheme', or 'CustomUpload')
         MaskType = 'Default';
 
-        % various names
+        % name of current masking scheme (i.e. the scheme that will be applied upon Process>Mask)
         MaskName = 'Legacy';
         
         % custom mask schemes
@@ -111,10 +116,10 @@ classdef OOPSSettings < handle
         SchemeNames cell
         SchemePaths cell
         
-        % object box type ('Box','Boundary',etc...)
+        % object box type ('Box' or 'Boundary')
         ObjectBoxType = 'Box';
 
-        % objects describing user-defined custom output statistics
+        % user-defined custom output statistics
         CustomStatistics CustomFPMStatistic
         CustomStatisticFileNames cell
         CustomStatisticPaths cell
@@ -124,14 +129,15 @@ classdef OOPSSettings < handle
 
     properties (Dependent = true)
 
-        % AzimuthDisplaySettings
+        %% azimuth display settings
         AzimuthLineAlpha
         AzimuthLineWidth
         AzimuthLineScale
         AzimuthScaleDownFactor
         AzimuthColorMode
+        AzimuthObjectMask
 
-        % ScatterPlotSettings
+        % scatterplot settings
         ScatterPlotXVariable
         ScatterPlotYVariable
         ScatterPlotMarkerSize
@@ -140,7 +146,7 @@ classdef OOPSSettings < handle
         ScatterPlotForegroundColor
         ScatterPlotLegendVisible
 
-        % SwarmPlotSettings
+        % swarmplot settings
         SwarmPlotYVariable
         SwarmPlotGroupingType
         SwarmPlotColorMode
@@ -151,7 +157,7 @@ classdef OOPSSettings < handle
         SwarmPlotMarkerSize
         SwarmPlotErrorBarsVisible
 
-        % PolarHistogramSettings
+        % polar histogram settings
         PolarHistogramnBins
         PolarHistogramWedgeFaceAlpha
         PolarHistogramCircleBackgroundColor
@@ -193,7 +199,7 @@ classdef OOPSSettings < handle
         % selected colormaps for different image types
         % must be 256x3 double with values in the range [0 1]
         IntensityColormap double
-        OrderFactorColormap double
+        OrderColormap double
         ReferenceColormap double
         AzimuthColormap double
 
@@ -211,10 +217,12 @@ classdef OOPSSettings < handle
     
     methods
         
-        % constructor
+%% constructor
+
         function obj = OOPSSettings()
+            % constructor
             % size of main monitor
-            obj.ScreenSize = GetMaximizedScreenSize(1);
+            obj.ScreenSize = GetMaximizedScreenSize();
             % optimum font size
             obj.FontSize = max(ceil(obj.ScreenSize(4)*.01),11);
             % set up default object label (OOPSLabel object)
@@ -268,8 +276,10 @@ classdef OOPSSettings < handle
 
         end
 
-        % saveobj method
+%% saveobj method
+
         function settings = saveobj(obj)
+            % saves an instance of this class to a .mat file
 
             settings.SummaryDisplayType = obj.SummaryDisplayType;
 
@@ -305,7 +315,6 @@ classdef OOPSSettings < handle
 
 %% load user settings/schemes/custom statistics
 
-        % load various settings files
         function updateSettingsFromFiles(obj,fileNames)
             % generalized function to update various settings by loading the indicated file(s)
             % fileNames is a cell array of char vectors with names of settings mat files
@@ -390,6 +399,7 @@ classdef OOPSSettings < handle
 %% custom statistics
 
         function TF = isCustomStatistic(obj,variableToCheck)
+            % check whether a given variable is a custom statistic
             TF = ismember(variableToCheck,obj.CustomStatisticNames);
         end
 
@@ -407,22 +417,29 @@ classdef OOPSSettings < handle
 %% object label management
     
         function AddNewObjectLabel(obj,LabelName,LabelColor)
+            % add a new OOPSLabel to the project
+
+            % get a unique color for the new label
             if isempty(LabelColor)
                 LabelColor = obj.getUniqueLabelColor;
             end
-
+            % create a default name for the new label if none was given
             if isempty(LabelName)
-                LabelName = ['Untitled Label ',num2str(obj.nLabels+1)];
+                LabelName = ['Label ',num2str(obj.nLabels+1)];
             end
+            % add the OOPSLabel object to ObjectLabels
             obj.ObjectLabels(end+1,1) = OOPSLabel(LabelName,LabelColor,obj);
         end
 
-        % find unique group color based on existing group colors
+        
         function NewColor = getUniqueLabelColor(obj)
+            % find unique label color based on existing label colors
 
+            % get the active label palette
             labelPalette = obj.LabelPalette;
+            % number of colors in the palette
             nPaletteColors = size(labelPalette,1);
-
+            % if more labels than colors, automatically assign unique color
             if obj.nLabels >= nPaletteColors
                 CurrentColors = obj.LabelColors;
                 BGColors = [1 1 1;0 0 0];
@@ -430,7 +447,6 @@ classdef OOPSSettings < handle
             else
                 NewColor = labelPalette(obj.nLabels+1,:);
             end
-
         end
 
         function UpdateLabelColors(obj)
@@ -490,8 +506,8 @@ classdef OOPSSettings < handle
             IntensityColormap = obj.ColormapsSettings.Intensity.Map;
         end
 
-        function OrderFactorColormap = get.OrderFactorColormap(obj)
-            OrderFactorColormap = obj.ColormapsSettings.OrderFactor.Map;
+        function OrderColormap = get.OrderColormap(obj)
+            OrderColormap = obj.ColormapsSettings.Order.Map;
         end
 
         function ReferenceColormap = get.ReferenceColormap(obj)
@@ -532,6 +548,10 @@ classdef OOPSSettings < handle
 
         function AzimuthColorMode = get.AzimuthColorMode(obj)
             AzimuthColorMode = obj.AzimuthDisplaySettings.ColorMode;
+        end
+
+        function AzimuthObjectMask = get.AzimuthObjectMask(obj)
+            AzimuthObjectMask = obj.AzimuthDisplaySettings.ObjectMask;
         end
 
 %% scatter plot settings        
@@ -724,8 +744,8 @@ classdef OOPSSettings < handle
 
         function NameOut = expandVariableName(obj,NameIn)
             switch NameIn
-                case 'OFAvg'
-                    NameOut = 'Mean OF';
+                case 'OrderAvg'
+                    NameOut = 'Mean Order';
                 case 'SBRatio'
                     NameOut = 'Local S/B';
                 case 'Area'
@@ -778,19 +798,14 @@ classdef OOPSSettings < handle
                         NameOut = NameIn;
                     end
             end
-
-
         end
-
-
-
-
 
     end
 
     methods (Static)
 
         function obj = loadobj(settings)
+            % load and construct an instance of this class from a .mat file
 
             % create the default settings object, to which we will add our saved settings
             obj = OOPSSettings();
