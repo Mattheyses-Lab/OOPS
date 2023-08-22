@@ -177,7 +177,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
 
     % add a custom toolbar button for pan/zoom to cursor behavior 
     btn = axtoolbarbtn(tb,'state');
-    btn.Icon = 'MagnifyingGlassBlackAndYellow.png';
+    btn.Icon = 'MagnifyingGlassIcon.png';
     btn.ValueChangedFcn = @generalZoomToCursor;
     btn.Tag = ['ZoomToCursor',ImageDisplayAxes.Tag];
     btn.Tooltip = 'Zoom to cursor';
