@@ -14,7 +14,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
         RangeColor = [0 0 0];
         YDist = 0;
         Title = 'Range Slider';
-        TitleColor = [1 1 1];
+        TitleColor = [0 0 0];
         TitleBGColor = 'none';
         TickColor = [0 0 0];
         LabelColor = [1 1 1];
@@ -51,8 +51,9 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
         Label (1,1) matlab.ui.control.Label
     end
     
-    properties (Dependent = true)
+    properties (Dependent = true, Access=private)
         CurrentPoint
+        ParentFig
     end
     
     methods (Access=protected)
@@ -69,7 +70,8 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
 
             obj.Label = uilabel(obj.Grid,...
                 "Text",obj.Title,...
-                "FontColor",obj.TitleColor);
+                "FontColor",obj.TitleColor,...
+                "FontSize",obj.FontSize);
             obj.Label.Layout.Row = 1;
 
             
@@ -159,10 +161,13 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
                     obj.Knob(2).ButtonDownFcn = '';
             end
 
+            obj.Label.FontSize = obj.FontSize;
+
             obj.Grid.RowHeight{2} = obj.sliderRowHeight;
 
             obj.RangeAxes.XLim = obj.Limits;
             obj.RangeAxes.FontSize = obj.FontSize;
+            obj.RangeAxes.XColor = obj.TitleColor;
 
             obj.Knob(1).Color = obj.Knob1Color;
             obj.Knob(1).EdgeColor = obj.Knob1EdgeColor;
@@ -195,21 +200,21 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             function StartMovingKnob1(obj)
                 obj.Knob(1).KnobSize = 12;
                 % store old callbacks so we can reset later
-                obj.OldWindowButtonMotionFcn = get(gcf,'WindowButtonMotionFcn');
-                obj.OldWindowButtonUpFcn = get(gcf,'WindowButtonUpFcn');
+                obj.OldWindowButtonMotionFcn = get(obj.ParentFig,'WindowButtonMotionFcn');
+                obj.OldWindowButtonUpFcn = get(obj.ParentFig,'WindowButtonUpFcn');
                 % set callbacks to adjust sliders
-                set(gcf,'WindowButtonUpFcn',@(o,e) obj.StopMovingAndRestoreCallbacks());
-                set(gcf,'WindowButtonMotionFcn',@(o,e) obj.MoveKnob1());
+                set(obj.ParentFig,'WindowButtonUpFcn',@(o,e) obj.StopMovingAndRestoreCallbacks());
+                set(obj.ParentFig,'WindowButtonMotionFcn',@(o,e) obj.MoveKnob1());
             end
 
             function StartMovingKnob2(obj)
                 obj.Knob(2).KnobSize = 12;
                 % store old callbacks so we can reset later
-                obj.OldWindowButtonMotionFcn = get(gcf,'WindowButtonMotionFcn');
-                obj.OldWindowButtonUpFcn = get(gcf,'WindowButtonUpFcn');
+                obj.OldWindowButtonMotionFcn = get(obj.ParentFig,'WindowButtonMotionFcn');
+                obj.OldWindowButtonUpFcn = get(obj.ParentFig,'WindowButtonUpFcn');
                 % set callbacks to adjust sliders
-                set(gcf,'WindowButtonUpFcn',@(o,e) obj.StopMovingAndRestoreCallbacks());
-                set(gcf,'WindowButtonMotionFcn',@(o,e) obj.MoveKnob2());
+                set(obj.ParentFig,'WindowButtonUpFcn',@(o,e) obj.StopMovingAndRestoreCallbacks());
+                set(obj.ParentFig,'WindowButtonMotionFcn',@(o,e) obj.MoveKnob2());
             end
             
             function HandleKnob1ValueChanged(obj)
@@ -232,7 +237,7 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
 
             function sliderRowHeight = get.sliderRowHeight(obj)
                 % sliderRowHeight = obj.FontSize + 20;
-                sliderRowHeight = 20;
+                sliderRowHeight = 20 + obj.FontSize;
             end
             
             function Value = get.Value(obj)
@@ -240,8 +245,8 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             end
             
             function set.Value(obj,val)
-                obj.Knob(1).Value = val(1);
-                obj.Knob(2).Value = val(2);
+                obj.Knob(1).Value = max(val(1),obj.Limits(1));
+                obj.Knob(2).Value = min(val(2),obj.Limits(2));
                 obj.RangeLine.XData = val;
             end
 
@@ -251,6 +256,10 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
 
             function CurrentPoint = get.CurrentPoint(obj)
                 CurrentPoint = obj.RangeAxes.CurrentPoint(1,1);
+            end
+
+            function ParentFig = get.ParentFig(obj)
+                ParentFig = ancestor(obj,'Figure');
             end
             
             function MoveKnob1(obj)
@@ -264,8 +273,12 @@ classdef RangeSlider < matlab.ui.componentcontainer.ComponentContainer
             end
 
             function StopMovingAndRestoreCallbacks(obj)
-                set(gcf,'WindowButtonMotionFcn',obj.OldWindowButtonMotionFcn);
-                set(gcf,'WindowButtonUpFcn',obj.OldWindowButtonUpFcn);
+                % set(gcf,'WindowButtonMotionFcn',obj.OldWindowButtonMotionFcn);
+                % set(gcf,'WindowButtonUpFcn',obj.OldWindowButtonUpFcn);
+                set(obj.ParentFig,'WindowButtonMotionFcn',obj.OldWindowButtonMotionFcn);
+                set(obj.ParentFig,'WindowButtonUpFcn',obj.OldWindowButtonUpFcn);
+
+
                 obj.Knob(1).KnobSize = 10;
                 obj.Knob(2).KnobSize = 10;
             end
