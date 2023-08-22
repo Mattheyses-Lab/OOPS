@@ -1,4 +1,5 @@
 function diffs = getAzimuthDiff(ref,check)
+% likely no longer used - check this
 % get the smallest angle between intersecting azimuths, 
 % assuming opposite directions are equivalent and lines intersect at the origin
 % (i.e. theta = 30° = -150°)
