@@ -43,7 +43,7 @@ end
 [Y,X] = find(LineMask);
 
 theta = cImage.AzimuthImage(LineMask);
-rho = cImage.OF_image(LineMask);
+rho = cImage.OrderImage(LineMask);
 
 ColorMode = OOPSData.Settings.AzimuthColorMode;
 LineWidth = OOPSData.Settings.AzimuthLineWidth;
@@ -52,7 +52,7 @@ LineScale = OOPSData.Settings.AzimuthLineScale;
 
 switch ColorMode
     case 'Magnitude'
-        Colormap = OOPSData.Settings.OrderFactorColormap;
+        Colormap = OOPSData.Settings.OrderColormap;
     case 'Direction'
         Colormap = repmat(OOPSData.Settings.AzimuthColormap,2,1);
     case 'Mono'
