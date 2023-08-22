@@ -1,4 +1,4 @@
-function LineScanAxes = PlotOrderFactorLineScan(LineScanAxes,ScanLinePosition,Img,RealWorldLims,Mask)
+function LineScanAxes = PlotOrderLineScan(LineScanAxes,ScanLinePosition,Img,RealWorldLims,Mask)
 % ScanLinePosition: 2x2 array, [x1,y1;x2,y2]
 %   (same format given by the Position property of a line drawn with DrawLine())
 

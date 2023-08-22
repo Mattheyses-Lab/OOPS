@@ -82,20 +82,20 @@ end
 
 %% Add or subtract an offset from each curve so glabal max = 1
 CurveFitsNormalized = CurveFit;
-MaxY = max(cell2mat(CurveFitsNormalized));
-if MaxY>1
-    Offset = MaxY-1;
-    %disp(['Max y fit value > 1, subtracting ',num2str(Offset),' offset from each pixel fit...']);
-    for i = 1:nPixels
-        CurveFitsNormalized{i} = CurveFitsNormalized{i}-Offset;
-    end
-else
-    Offset = 1-MaxY;
-    %disp(['Max y fit value < 1, adding ',num2str(Offset),' offset to each pixel fit...']);
-    for i = 1:nPixels
-        CurveFitsNormalized{i} = CurveFitsNormalized{i}+Offset;
-    end
-end
+% MaxY = max(cell2mat(CurveFitsNormalized));
+% if MaxY>1
+%     Offset = MaxY-1;
+%     %disp(['Max y fit value > 1, subtracting ',num2str(Offset),' offset from each pixel fit...']);
+%     for i = 1:nPixels
+%         CurveFitsNormalized{i} = CurveFitsNormalized{i}-Offset;
+%     end
+% else
+%     Offset = 1-MaxY;
+%     %disp(['Max y fit value < 1, adding ',num2str(Offset),' offset to each pixel fit...']);
+%     for i = 1:nPixels
+%         CurveFitsNormalized{i} = CurveFitsNormalized{i}+Offset;
+%     end
+% end
 
 % initialize vector to sum up fits
 CurveFitSum = zeros(size(CurveFit{1}));
@@ -197,7 +197,7 @@ hold off
 
 
 set(axH,'XLim',[0 pi]);
-set(axH,'YLim',[0.5 1]);
+set(axH,'YLim',[0 1]);
 
 
 movegui(figH,'center')

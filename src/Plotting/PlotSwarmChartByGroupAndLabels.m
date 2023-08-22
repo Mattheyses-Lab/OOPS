@@ -250,7 +250,7 @@ set(findobj(axH,'type','line'),'Visible','on');
 switch OOPSData.Settings.SwarmPlotColorMode
     case 'Magnitude'
         % color the points according to magnitude using the currently selected Order factor colormap
-        axH.Colormap = OOPSData.Settings.OrderFactorColormap;
+        axH.Colormap = OOPSData.Settings.OrderColormap;
         % set the color limits
         axH.CLim = axH.YLim;
     case 'Group'
