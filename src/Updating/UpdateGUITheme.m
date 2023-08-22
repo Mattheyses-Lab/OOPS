@@ -75,7 +75,6 @@ function UpdateGUITheme(source)
     OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
     
     % set object intensity profile colors
-    OOPSData.Handles.ObjectIntensityProfileGrid.BackgroundColor = OOPSData.Settings.ObjectIntensityProfileBackgroundColor;
     OOPSData.Handles.ObjectIntensityPlotAxH.Color = OOPSData.Settings.ObjectIntensityProfileBackgroundColor;
     OOPSData.Handles.ObjectIntensityPlotAxH.XAxis.Color = OOPSData.Settings.ObjectIntensityProfileForegroundColor;
     OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Color = OOPSData.Settings.ObjectIntensityProfileForegroundColor;
@@ -96,10 +95,17 @@ function UpdateGUITheme(source)
         'RangeColor',GUIForegroundColor,...
         'MidLineColor',GUIForegroundColor,...
         'TitleColor',GUIForegroundColor);
+    set(OOPSData.Handles.OrderSlider,...
+        'BackgroundColor',GUIBackgroundColor,...
+        'Knob1Color',GUIForegroundColor,...
+        'Knob2Color',GUIForegroundColor,...
+        'RangeColor',GUIForegroundColor,...
+        'MidLineColor',GUIForegroundColor,...
+        'TitleColor',GUIForegroundColor);
     
     OOPSData.Handles.CurrentThresholdLine.Color = GUIForegroundColor;
     
-    OOPSData.Handles.OrderFactorAxH.Color = 'Black';
+    OOPSData.Handles.OrderAxH.Color = 'Black';
     OOPSData.Handles.AverageIntensityAxH.Color = 'Black';
     OOPSData.Handles.AzimuthAxH.Color = 'Black';
     OOPSData.Handles.MaskAxH.Color = 'Black';
