@@ -107,10 +107,11 @@ classdef OOPSProject < handle
 
         % returns an array of all objects in this project
         function allObjects = get.allObjects(obj)
-            allObjects = [];
-            for i = 1:obj.nGroups
-                allObjects = [allObjects,obj.Group(i).allObjects];
-            end
+            % allObjects = [];
+            % for i = 1:obj.nGroups
+            %     allObjects = [allObjects,obj.Group(i).allObjects];
+            % end
+            allObjects = cat(2,obj.Group(:).allObjects);
         end
 
         % select object by property using one or more property filters
@@ -172,8 +173,6 @@ classdef OOPSProject < handle
 
         % total number of objects across all groups
         function nObjects = get.nObjects(obj)
-            %nObjects = sum(obj.Group(:).TotalObjects,"all");
-
             nObjects = 0;
             for i = 1:obj.nGroups
                 nObjects = nObjects + obj.Group(i).TotalObjects;
@@ -340,11 +339,11 @@ classdef OOPSProject < handle
                 CurrentImage = cGroup.CurrentImage; 
             else
                 % otherwise, return empty
-                CurrentImage = OOPSImage.empty(); 
+                CurrentImage = OOPSImage.empty();
             end
         end
 
-%% retrieve project summary
+%% summary tables
 
         function ProjectSummaryDisplayTable = get.ProjectSummaryDisplayTable(obj)
 
@@ -377,6 +376,19 @@ classdef OOPSProject < handle
             ProjectSummaryDisplayTable = rows2vars(ProjectSummaryDisplayTable,"VariableNamingRule","preserve");
 
             ProjectSummaryDisplayTable.Properties.RowNames = varNames;
+        end
+
+        % return a struct containing the name and object data table of each group
+        function stackedData = stackedObjectDataTable(obj)
+            % preallocate the stacked data structure
+            stackedData = repmat(struct('Group','','Data',[]), 1, obj.nGroups);
+            % for each group in the project
+            for i = 1:obj.nGroups
+                % add the group name
+                stackedData(i).Group = obj.Group(i).GroupName;
+                % add the table data
+                stackedData(i).Data = obj.Group(i).objectDataTableForExport();
+            end
         end
 
     end
