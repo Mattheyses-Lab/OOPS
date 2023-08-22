@@ -31,16 +31,13 @@ function Composite = CompositeRGB(IM1,map1,Limits1,IM2,map2,Limits2)
         IM2 = im2double(IM2);
     end
 
+    % may not need these lines?
     % scale each image to its maximum intensity
-    IM1 = IM1./max(max(IM1));
-    IM2 = IM2./max(max(IM2));
+    % IM1 = IM1./max(max(IM1));
+    % IM2 = IM2./max(max(IM2));
 
     % default gamma = 1, comment this line and add gamma to inputs for control over the gamma value
     gamma = 1;
-
-    % scale intensity to fall within the range [0 255] and convert type to uint8
-    IM1 = uint8(IM1*255);
-    IM2 = uint8(IM2*255);
     
     % uncomment for 'automated' intensity scaling
 %    Limits1 = stretchlim(IM1);
@@ -50,11 +47,16 @@ function Composite = CompositeRGB(IM1,map1,Limits1,IM2,map2,Limits2)
     IM1 = imadjust(IM1,Limits1,[0 1],gamma);
     IM2 = imadjust(IM2,Limits2,[0 1],gamma);
 
+
+
+
+
     % convert each of the indexed images to RGB images using the colormaps provided by user
-    RGB1 = ind2rgb(IM1,map1);
-    RGB2 = ind2rgb(IM2,map2);
+    RGB1 = ind2rgb(im2uint8(IM1),map1);
+    RGB2 = ind2rgb(im2uint8(IM2),map2);
 
     % make the composite by adding RGB images for each channel
     Composite = RGB1+RGB2;
+
 
 end
