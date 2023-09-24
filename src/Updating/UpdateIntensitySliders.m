@@ -23,6 +23,8 @@ function UpdateIntensitySliders(source)
     % only enable order limits slider if FPM stats are done
     OOPSData.Handles.OrderSlider.HitTest = cImage.FPMStatsDone;
 
+
+
     try
         OOPSData.Handles.PrimaryIntensitySlider.Value = cImage.PrimaryIntensityDisplayLimits;
     catch
@@ -51,5 +53,39 @@ function UpdateIntensitySliders(source)
     catch
         OOPSData.Handles.OrderSlider.Value = [0 1];
     end
+
+
+    for i = 1:numel(OOPSData.Settings.CustomStatistics)
+
+        thisStatistic = OOPSData.Settings.CustomStatistics(i);
+
+        statName = thisStatistic.StatisticName;
+        statDisplayName = thisStatistic.StatisticDisplayName;
+
+        % enable or disable this custom slider depending on whether its tab is active
+        OOPSData.Handles.([statName,'Slider']).HitTest = cImage.FPMStatsDone;
+
+        try
+            if OOPSData.Handles.ScaleToMaxCustomStat.Value && strcmp(OOPSData.Settings.CurrentTab,statDisplayName)
+                if cImage.FPMStatsDone
+                    cImage.([statName,'DisplayLimits']) = [0 max(cImage.([statName,'Image']),[],"all")];
+                else
+                    cImage.([statName,'DisplayLimits']) = cImage.([statName,'DisplayRange']);
+                end
+                OOPSData.Handles.([statName,'Slider']).Value = cImage.([statName,'DisplayLimits']);
+    
+                OOPSData.Handles.ScaleToMaxCustomStat.Value = true;
+            else
+                OOPSData.Handles.([statName,'Slider']).Value = cImage.([statName,'DisplayLimits']);
+            end
+        catch
+            OOPSData.Handles.([statName,'Slider']).Value = OOPSData.Handles.([statName,'Slider']).Limits;
+        end
+
+    end
+
+
+
+
 
 end
