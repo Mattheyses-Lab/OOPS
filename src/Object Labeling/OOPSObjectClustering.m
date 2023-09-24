@@ -37,15 +37,7 @@ switch nClustersMode
             Sums(1,i) = sum(S);
         end
 
-        % % plot Sums of within-cluster point-to-centroid distances
-        % figure('Name','Within-Cluster Sums');
-        % plot(1:10,Sums);
-        % xlabel('Number of clusters (k)');
-        % ylabel('Sum of within-cluster point-to-centroid distances');
-
         % evaluate the clusters using the user-selected criterion
-
-
         switch Criterion
             case 'CalinskiHarabasz'
                 ClusterEvalObj = evalclusters(ObjectData,clust,Criterion);
