@@ -25,7 +25,7 @@ function PlotGroupScatterPlotMatrix(source,~)
     end
 
     % get object data for the selected variables
-    objectData = OOPSData.getAllObjectData(variableList);
+    objectData = OOPSData.getConcatenatedObjectData(variableList);
 
     % create the main figure
     fH_GroupScatterPlotMatrix = uifigure(...
@@ -39,10 +39,10 @@ function PlotGroupScatterPlotMatrix(source,~)
     % get colors for each object based on ColorMode
     switch ColorMode
         case 'Group'
-            objectGroupIdxs = OOPSData.getAllObjectData({'GroupIdx'});
+            objectGroupIdxs = OOPSData.getConcatenatedObjectData({'GroupIdx'});
             objectGroupColors = OOPSData.GroupColors;
         case 'Label'
-            objectGroupIdxs = OOPSData.getAllObjectData({'LabelIdx'});
+            objectGroupIdxs = OOPSData.getConcatenatedObjectData({'LabelIdx'});
             objectGroupColors = OOPSData.Settings.LabelColors;
     end
 
