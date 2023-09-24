@@ -6,10 +6,10 @@
         Parent OOPSProject
 
         % the user-defined name of this group
-        GroupName char        
+        GroupName char
 
         % array of handles to the OOPSImages in this group
-        Replicate OOPSImage
+        Replicate (:,1) OOPSImage
 
         % indexing group members (Replicate/OOPSImage objects)
         CurrentImageIndex double
@@ -354,7 +354,7 @@
 
         function nReplicates = get.nReplicates(obj)
             if isvalid(obj.Replicate)
-                nReplicates = length(obj.Replicate);
+                nReplicates = numel(obj.Replicate);
             else
                 nReplicates = 0;
             end

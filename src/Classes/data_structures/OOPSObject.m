@@ -82,7 +82,7 @@ classdef OOPSObject < handle & dynamicprops
         % name of this object's parent image
         ImageName
         % name of this object's parent image, but with some special characters preceeded by '\'
-        InterpreterFriendlyImageName
+        texFriendlyImageName
 
         % various object images
         PaddedOrderSubImage
@@ -332,7 +332,7 @@ classdef OOPSObject < handle & dynamicprops
 
         function value = getCustomObjectStatistic(obj,statisticName)
 
-            parentData = obj.Parent.(statisticName);
+            parentData = obj.Parent.([statisticName,'Image']);
 
             % average value across all object pixels
             try
@@ -384,13 +384,10 @@ classdef OOPSObject < handle & dynamicprops
             ImageName = categorical({obj.Parent.rawFPMShortName});
         end
 
-        function InterpreterFriendlyImageName = get.InterpreterFriendlyImageName(obj)
-            % nameSplit = strsplit(obj.Parent.rawFPMShortName,'_');
-            % InterpreterFriendlyImageName = categorical({strjoin(nameSplit,"\_")});
-
+        function texFriendlyImageName = get.texFriendlyImageName(obj)
             % testing below
             nameSplit = strsplit(obj.Parent.rawFPMShortName,'_');
-            InterpreterFriendlyImageName = convertCharsToStrings(strjoin(nameSplit,"\_"));
+            texFriendlyImageName = convertCharsToStrings(strjoin(nameSplit,"\_"));
         end
 
 %% selection status

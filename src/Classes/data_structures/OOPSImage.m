@@ -4,8 +4,8 @@ classdef OOPSImage < handle & dynamicprops
 
         % handle to the OOPSGroup to which this OOPSImage belongs
         Parent OOPSGroup
-        % array of handles to the objects detected for this OOPSImage
-        Object OOPSObject
+        % column vector of handles to the OOPSObject objects in this OOPSImage
+        Object (:,1) OOPSObject
         
 %% FPM stack file properties
         
@@ -356,13 +356,59 @@ classdef OOPSImage < handle & dynamicprops
         function addCustomStatistics(obj)
             % get the vector of custom statistic objects
             customStatistics = obj.Settings.CustomStatistics;
+            % for each custom statistic
             for i = 1:numel(customStatistics)
-                % for each statistic
+                % get the statistic
                 thisStatistic = customStatistics(i);
-                % add a dynamic property to obj
-                prop = obj.addprop(thisStatistic.StatisticName);
+                statName = thisStatistic.StatisticName;
+                statRange = thisStatistic.StatisticRange;
+
+                % add a dynamic property to obj to hold the image data
+                prop = obj.addprop([statName,'Image']);
+
+                % add a dynamic property to obj to hold the display limits
+                displayLimitsProp = obj.addprop([statName,'DisplayLimits']);
+                % set the default value
+                obj.([statName,'DisplayLimits']) = statRange;
+
+                % add a dynamic property to obj to hold the display range
+                displayRangeProp = obj.addprop([statName,'DisplayRange']);
+                % set the default value
+                obj.([statName,'DisplayRange']) = statRange;
+
+
+                % add a dynamic property to obj to hold the user scaled image
+                userScaledImageProp = obj.addprop(['UserScaled',statName,'Image']);
+                userScaledImageProp.Dependent = true;
+                % set the Get method for this property, pass in the property name so we know how to calculate it
+                userScaledImageProp.GetMethod = @(o) getCustomUserScaledImage(o,statName);
+
+                % add a dynamic property to obj to hold the user scaled image
+                userScaledIntensityOverlayRGBProp = obj.addprop(['UserScaled',statName,'IntensityOverlayRGB']);
+                userScaledIntensityOverlayRGBProp.Dependent = true;
+                % set the Get method for this property, pass in the property name so we know how to calculate it
+                userScaledIntensityOverlayRGBProp.GetMethod = @(o) getCustomUserScaledIntensityOverlayRGB(o,statName);
             end
         end
+
+
+        function value = getCustomUserScaledImage(obj,statName)
+            % normalize the image data so that values [obj.xDisplayRange(1) obj.xDisplayRange(2)] maps to [0 1]
+            % where "x" is the name of the custom statistic
+            normalizedImageData = normalizeFromRange(obj.([statName,'Image']),obj.([statName,'DisplayRange']));
+            % do the same with the display limits
+            normalizedDisplayLimits = normalizeFromRange(obj.([statName,'DisplayLimits']),obj.([statName,'DisplayRange']));
+            % adjust the image data (values cannot be interpreted directly unless the display range is [0 1]
+            value = imadjust(normalizedImageData,normalizedDisplayLimits,[0 1]);
+        end
+
+        function value = getCustomUserScaledIntensityOverlayRGB(obj,statName)
+            % get the normalized, user-scaled image data
+            imageData = obj.(['UserScaled',statName,'Image']);
+            % convert to uint8, then to RGB
+            value = MaskRGB(vecind2rgb(im2uint8(imageData),obj.Settings.OrderColormap),obj.UserScaledAverageIntensityImage);
+        end
+
 
 %% retrieve image data
 
@@ -772,7 +818,7 @@ classdef OOPSImage < handle & dynamicprops
                     thisStatistic = customStatistics(i);
                     % call the function handle specified by the custom statistic object, store the value in dynamic property
                     %obj.(thisStatistic.StatisticName) = feval(thisStatistic.StatisticFun,obj.ffcFPMStack);
-                    obj.(thisStatistic.StatisticName) = thisStatistic.StatisticFun(obj.ffcFPMStack);
+                    obj.([thisStatistic.StatisticName,'Image']) = thisStatistic.StatisticFun(obj.ffcFPMStack);
                 end
             end
 
@@ -1089,12 +1135,25 @@ classdef OOPSImage < handle & dynamicprops
                 ObjectLabelIdxs = find([obj.Object.Label]==obj.Settings.ObjectLabels(i));
                 % the number of objects for which we will retrieve data
                 nIdxs = numel(ObjectLabelIdxs);
+
+
+                % % preallocate array of nans before looping
+                % ObjectDataByLabel{i} = nan(1,nIdxs);
+                % for ii = 1:nIdxs
+                %     % add Var2Get from each object with the label to cell i of ObjectDataByLabel
+                %     ObjectDataByLabel{i}(1,ii) = obj.Object(ObjectLabelIdxs(ii)).(Var2Get);
+                % end
+
+
                 % preallocate array of nans before looping
-                ObjectDataByLabel{i} = nan(1,nIdxs);
+                ObjectDataByLabel{i} = nan(nIdxs,1);
                 for ii = 1:nIdxs
                     % add Var2Get from each object with the label to cell i of ObjectDataByLabel
-                    ObjectDataByLabel{i}(1,ii) = obj.Object(ObjectLabelIdxs(ii)).(Var2Get);
+                    ObjectDataByLabel{i}(ii,1) = obj.Object(ObjectLabelIdxs(ii)).(Var2Get);
                 end
+
+
+
             end
 
         end
@@ -1102,7 +1161,7 @@ classdef OOPSImage < handle & dynamicprops
         % return the number of objects in this OOPSImage
         function nObjects = get.nObjects(obj)
             if isvalid(obj.Object)
-                nObjects = length(obj.Object);
+                nObjects = numel(obj.Object);
             else
                 nObjects = 0;
             end
@@ -1132,7 +1191,7 @@ classdef OOPSImage < handle & dynamicprops
             AllVerticesSum = 0;
 
             % for each object
-            for cObject = obj.Object
+            for cObject = obj.Object'
                 % % get the number of vertices in the simplified boundary
                 % nVertices = size(cObject.SimplifiedBoundary,1);
                 
@@ -1156,7 +1215,7 @@ classdef OOPSImage < handle & dynamicprops
             % total number of vertices we have created faces for
             TotalVertices = 0;
 
-            for cObject = obj.Object
+            for cObject = obj.Object'
                 % increment the object/face counter
                 Counter = Counter + 1;
                 % % get the simplified boundary
@@ -1170,7 +1229,12 @@ classdef OOPSImage < handle & dynamicprops
                 % add boundary coordinates to list of vertices
                 AllVertices(AllVerticesIdx,:) = [thisObjectBoundary(:,2) thisObjectBoundary(:,1)];
                 % add CData for each vertex
-                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                switch obj.Settings.ObjectSelectionColorMode
+                    case 'Label'
+                        AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                    case 'Custom'
+                        AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+obj.Settings.ObjectSelectionColor;
+                end
                 % set object faces depending on their selection status
                 switch cObject.Selected
                     case true
@@ -1209,7 +1273,7 @@ classdef OOPSImage < handle & dynamicprops
             AllVerticesSum = 0;
 
             % for each object
-            for cObject = obj.Object
+            for cObject = obj.Object'
                 % % get the number of vertices in the simplified boundary
                 % nVertices = size(cObject.SimplifiedBoundary,1);
                 
@@ -1233,7 +1297,7 @@ classdef OOPSImage < handle & dynamicprops
             % total number of vertices we have created faces for
             TotalVertices = 0;
 
-            for cObject = obj.Object
+            for cObject = obj.Object'
                 % increment the object/face counter
                 Counter = Counter + 1;
                 % % get the simplified boundary
@@ -1247,7 +1311,12 @@ classdef OOPSImage < handle & dynamicprops
                 % add boundary coordinates to list of vertices
                 AllVertices(AllVerticesIdx,:) = thisObjectBoundary;
                 % add CData for each vertex
-                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                switch obj.Settings.ObjectSelectionColorMode
+                    case 'Label'
+                        AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                    case 'Custom'
+                        AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+obj.Settings.ObjectSelectionColor;
+                end
                 % set object faces depending on their selection status
                 switch cObject.Selected
                     case true
@@ -1523,7 +1592,6 @@ classdef OOPSImage < handle & dynamicprops
                 "Number of objects",...
                 "Mask name",...
                 "Mean pixel Order",...
-                "Mean pixel Order (filtered)",...
                 "Files loaded",...
                 "FFC performed",...
                 "Mask generated",...
@@ -1541,7 +1609,6 @@ classdef OOPSImage < handle & dynamicprops
                 {obj.nObjects},...
                 {obj.MaskName},...
                 {obj.OrderAvg},...
-                {obj.FilteredOrderAvg},...
                 {Logical2String(obj.FilesLoaded)},...
                 {Logical2String(obj.FFCDone)},...
                 {Logical2String(obj.MaskDone)},...

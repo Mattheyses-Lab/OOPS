@@ -179,7 +179,7 @@ classdef OOPSProject < handle
             end
         end
 
-        % return Var2Get data for each object, grouped by object label
+        % return Var2Get data for each object, grouped by object group and label
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
             nLabels = length(obj.Settings.ObjectLabels);
 
@@ -194,8 +194,19 @@ classdef OOPSProject < handle
             end
         end
 
+        % return Var2Get data for each object, grouped by object group
+        function ObjectDataByGroup = GetObjectDataByGroup(obj,Var2Get)
+            % cell array to hold all object data for the project, split by group
+            %   each row is one group
+            ObjectDataByGroup = cell(obj.nGroups,1);
+
+            for i = 1:obj.nGroups
+                ObjectDataByGroup{i,:} = obj.Group(i).GetAllObjectData(Var2Get);
+            end
+        end
+
         % get array of object data with one column for each specified variable in the list, vars
-        function objectData = getAllObjectData(obj,vars)
+        function objectData = getConcatenatedObjectData(obj,vars)
             % vars is a cell array of char vectors, each specifying an object data variable
             % note, we could also retrieve all the objects first then access the data at the object level
             % will test that in the future
