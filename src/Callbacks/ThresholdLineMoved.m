@@ -3,15 +3,11 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
 % calculate the new mask of the currently selected image, update the display,
 % then detect the new objects defined by the mask
 
+    % handle to the main data structure
     OOPSData = guidata(source);
-
-    Handles = OOPSData.Handles;   
     
-    % get main channel (currently selected) of current replicate
+    % currently selected image (first if multiple selected)
     MainReplicate = OOPSData.CurrentImage(1);
-
-    rows = MainReplicate.Height;
-    cols = MainReplicate.Width;
 
 
     switch MainReplicate.MaskType
@@ -37,7 +33,8 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
                     % set ThresholdAdjusted flag
                     MainReplicate.ThresholdAdjusted = true;
                     % update mask display
-                    Handles.MaskImgH.CData = bw;
+                    %Handles.MaskImgH.CData = bw;
+                    updateTempAlphaData(bw);
                 case 'Adaptive'
                     IM = MainReplicate.I;
                     % build the mask with an adaptive threshold
@@ -60,7 +57,8 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
                     % threshold has been adjusted
                     MainReplicate.ThresholdAdjusted = 1;
                     % update mask display
-                    Handles.MaskImgH.CData = bw;
+                    %Handles.MaskImgH.CData = bw;
+                    updateTempAlphaData(bw);
                 otherwise
                     return
             end
@@ -93,7 +91,8 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
                     % threshold has been adjusted
                     MainReplicate.ThresholdAdjusted = 1;
                     % update mask display
-                    Handles.MaskImgH.CData = bw;
+                    %Handles.MaskImgH.CData = bw;
+                    updateTempAlphaData(bw);
                 case 'Adaptive'
                     IM = MainReplicate.EnhancedImg;
                     % get adaptive threshold params
@@ -126,7 +125,8 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
                     % threshold has been adjusted
                     MainReplicate.ThresholdAdjusted = 1;
                     % update mask display
-                    Handles.MaskImgH.CData = bw;
+                    %Handles.MaskImgH.CData = bw;
+                    updateTempAlphaData(bw);
             end
     end
     
@@ -136,5 +136,26 @@ function [] = ThresholdLineMoved(source,ThresholdLevel)
     
     UpdateImages(source);
     UpdateSummaryDisplay(source,{'Group','Image','Object'});
+
+    function updateTempAlphaData(alphaData)
+        switch OOPSData.Settings.CurrentTab
+            case {'Files','FFC','Objects','Plots','Polar Plots'}
+                return
+            case 'Mask'
+                OOPSData.Handles.MaskImgH.CData = alphaData;
+            case 'Order'
+                if OOPSData.Handles.ApplyMaskOrder.Value
+                    OOPSData.Handles.OrderImgH.AlphaData = alphaData;
+                end
+            case 'Azimuth'
+                if OOPSData.Handles.ApplyMaskAzimuth.Value
+                    OOPSData.Handles.AzimuthImgH.AlphaData = alphaData;
+                end
+            otherwise
+                if OOPSData.Handles.ApplyMaskCustomStat.Value
+                    OOPSData.Handles.CustomStatImgH.AlphaData = alphaData;
+                end
+        end
+    end
 
 end
