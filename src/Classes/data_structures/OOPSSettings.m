@@ -88,6 +88,9 @@ classdef OOPSSettings < handle
         % object azimuth display settings
         ObjectAzimuthDisplaySettings struct
 
+        % object selection settings
+        ObjectSelectionSettings struct
+
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
 
@@ -116,8 +119,8 @@ classdef OOPSSettings < handle
         SchemeNames cell
         SchemePaths cell
         
-        % object box type ('Box' or 'Boundary')
-        ObjectBoxType = 'Box';
+        % % object box type ('Box' or 'Boundary')
+        % ObjectBoxType = 'Box';
 
         % user-defined custom output statistics
         CustomStatistics CustomFPMStatistic
@@ -152,10 +155,24 @@ classdef OOPSSettings < handle
         SwarmPlotColorMode
         SwarmPlotBackgroundColor
         SwarmPlotForegroundColor
-        SwarmPlotErrorBarColor
+        SwarmPlotErrorBarsColor
         SwarmPlotMarkerFaceAlpha
         SwarmPlotMarkerSize
         SwarmPlotErrorBarsVisible
+
+        % new swarmplot settings in development
+        SwarmPlotPointsVisible
+        SwarmPlotMarkerEdgeColorMode
+        SwarmPlotMarkerEdgeColor
+        SwarmPlotXJitterWidth
+        SwarmPlotViolinsVisible
+        SwarmPlotViolinEdgeColorMode
+        SwarmPlotViolinEdgeColor
+        SwarmPlotViolinFaceColorMode
+        SwarmPlotViolinFaceColor
+        SwarmPlotErrorBarsColorMode
+        
+
 
         % polar histogram settings
         PolarHistogramnBins
@@ -186,6 +203,13 @@ classdef OOPSSettings < handle
         ObjectAzimuthLineScale
         ObjectAzimuthScaleDownFactor
         ObjectAzimuthColorMode
+
+        % ObjectSelectionSettings
+        ObjectSelectionBoxType
+        ObjectSelectionColorMode
+        ObjectSelectionColor
+        ObjectSelectionLineWidth
+        ObjectSelectionSelectedLineWidth
 
         % Object variables "long" names
         ObjectPlotVariablesLong
@@ -258,7 +282,8 @@ classdef OOPSSettings < handle
                 'PolarHistogramSettings.mat',...
                 'ObjectPolarPlotVariables.mat',...
                 'ObjectIntensityProfileSettings.mat',...
-                'ObjectAzimuthDisplaySettings.mat'};
+                'ObjectAzimuthDisplaySettings.mat',...
+                'ObjectSelectionSettings.mat'};
 
             obj.updateSettingsFromFiles(settingsFiles);
 
@@ -273,6 +298,9 @@ classdef OOPSSettings < handle
             catch
                 warning('Unable to load custom outputs...')
             end
+
+            % testing below
+            obj.UpdateLabelColors();
 
         end
 
@@ -308,8 +336,8 @@ classdef OOPSSettings < handle
             % various names
             settings.MaskName = obj.MaskName;
 
-            % object box type ('Box' or 'Boundary')
-            settings.ObjectBoxType = obj.ObjectBoxType;
+            % % object box type ('Box' or 'Boundary')
+            % settings.ObjectBoxType = obj.ObjectBoxType;
 
         end
 
@@ -606,8 +634,8 @@ classdef OOPSSettings < handle
             SwarmPlotForegroundColor = obj.SwarmPlotSettings.ForegroundColor;
         end
 
-        function SwarmPlotErrorBarColor = get.SwarmPlotErrorBarColor(obj)
-            SwarmPlotErrorBarColor = obj.SwarmPlotSettings.ErrorBarColor;
+        function SwarmPlotErrorBarsColor = get.SwarmPlotErrorBarsColor(obj)
+            SwarmPlotErrorBarsColor = obj.SwarmPlotSettings.ErrorBarsColor;
         end
 
         function SwarmPlotMarkerFaceAlpha = get.SwarmPlotMarkerFaceAlpha(obj)
@@ -620,6 +648,46 @@ classdef OOPSSettings < handle
 
         function SwarmPlotErrorBarsVisible = get.SwarmPlotErrorBarsVisible(obj)
             SwarmPlotErrorBarsVisible = obj.SwarmPlotSettings.ErrorBarsVisible;
+        end
+
+        function SwarmPlotPointsVisible = get.SwarmPlotPointsVisible(obj)
+            SwarmPlotPointsVisible = obj.SwarmPlotSettings.PointsVisible;
+        end
+
+        function SwarmPlotMarkerEdgeColorMode = get.SwarmPlotMarkerEdgeColorMode(obj)
+            SwarmPlotMarkerEdgeColorMode = obj.SwarmPlotSettings.MarkerEdgeColorMode;
+        end
+
+        function SwarmPlotMarkerEdgeColor = get.SwarmPlotMarkerEdgeColor(obj)
+            SwarmPlotMarkerEdgeColor = obj.SwarmPlotSettings.MarkerEdgeColor;
+        end
+
+        function SwarmPlotXJitterWidth = get.SwarmPlotXJitterWidth(obj)
+            SwarmPlotXJitterWidth = obj.SwarmPlotSettings.XJitterWidth;
+        end        
+
+        function SwarmPlotViolinsVisible = get.SwarmPlotViolinsVisible(obj)
+            SwarmPlotViolinsVisible = obj.SwarmPlotSettings.ViolinsVisible;
+        end
+
+        function SwarmPlotViolinEdgeColorMode = get.SwarmPlotViolinEdgeColorMode(obj)
+            SwarmPlotViolinEdgeColorMode = obj.SwarmPlotSettings.ViolinEdgeColorMode;
+        end
+
+        function SwarmPlotViolinEdgeColor = get.SwarmPlotViolinEdgeColor(obj)
+            SwarmPlotViolinEdgeColor = obj.SwarmPlotSettings.ViolinEdgeColor;
+        end
+
+        function SwarmPlotViolinFaceColorMode = get.SwarmPlotViolinFaceColorMode(obj)
+            SwarmPlotViolinFaceColorMode = obj.SwarmPlotSettings.ViolinFaceColorMode;
+        end
+
+        function SwarmPlotViolinFaceColor = get.SwarmPlotViolinFaceColor(obj)
+            SwarmPlotViolinFaceColor = obj.SwarmPlotSettings.ViolinFaceColor;
+        end
+
+        function SwarmPlotErrorBarsColorMode = get.SwarmPlotErrorBarsColorMode(obj)
+            SwarmPlotErrorBarsColorMode = obj.SwarmPlotSettings.ErrorBarsColorMode;
         end
 
 %% polar histogram settings        
@@ -722,6 +790,29 @@ classdef OOPSSettings < handle
 
         function ObjectAzimuthColorMode = get.ObjectAzimuthColorMode(obj)
             ObjectAzimuthColorMode = obj.ObjectAzimuthDisplaySettings.ColorMode;
+        end
+
+
+%% object selection settings
+
+        function ObjectSelectionBoxType = get.ObjectSelectionBoxType(obj)
+            ObjectSelectionBoxType = obj.ObjectSelectionSettings.BoxType;
+        end
+        
+        function ObjectSelectionColorMode = get.ObjectSelectionColorMode(obj)
+            ObjectSelectionColorMode = obj.ObjectSelectionSettings.ColorMode;
+        end
+        
+        function ObjectSelectionColor = get.ObjectSelectionColor(obj)
+            ObjectSelectionColor = obj.ObjectSelectionSettings.Color;
+        end
+        
+        function ObjectSelectionLineWidth = get.ObjectSelectionLineWidth(obj)
+            ObjectSelectionLineWidth = obj.ObjectSelectionSettings.LineWidth;
+        end
+        
+        function ObjectSelectionSelectedLineWidth = get.ObjectSelectionSelectedLineWidth(obj)
+            ObjectSelectionSelectedLineWidth = obj.ObjectSelectionSettings.SelectedLineWidth;
         end
 
 %% object labels settings
@@ -842,8 +933,8 @@ classdef OOPSSettings < handle
             % various names
             obj.MaskName = settings.MaskName;
 
-            % object box type ('Box' or 'Boundary')
-            obj.ObjectBoxType = settings.ObjectBoxType;
+            % % object box type ('Box' or 'Boundary')
+            % obj.ObjectBoxType = settings.ObjectBoxType;
         end
 
     end
