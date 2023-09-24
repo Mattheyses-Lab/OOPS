@@ -30,6 +30,7 @@ function Outputs = SimpleFormFig(Name,Params,FontColor,BackgroundColor)
     % turn on figure visibility
     hFig.Visible = 'On';
 
+    % place focus on the first editfield
     hSimpleForm.focusFirst();    
 
     % wait until the figure is closed

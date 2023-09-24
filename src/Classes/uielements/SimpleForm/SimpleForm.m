@@ -14,10 +14,6 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
         Outputs
     end
     
-    properties (Dependent = true)
-        %
-    end
-    
     events (HasCallbackProperty, NotifyAccess = protected)
         %WindowClosing % WindowClosing callback property will be generated
         %nParamsChanged
@@ -37,18 +33,20 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
             
             obj.Units = 'normalized';
             obj.Position = [0 0 1 1];
-            obj.Grid = uigridlayout(obj,[(obj.nParams)+1 1]);
+            obj.Grid = uigridlayout(obj,[obj.nParams+1 2],'RowHeight',[repmat({20},1,obj.nParams),{'fit'}],'ColumnWidth',{'fit','1x'});
+
 
             for i = 1:obj.nParams
-                obj.EditFieldLabels(i) = uilabel(obj.Grid,"Text",obj.Params{i});
+                obj.EditFieldLabels(i) = uilabel(obj.Grid,"Text","placeholder");
                 obj.EditFieldLabels(i).Layout.Row = i;
                 obj.EditFieldLabels(i).Layout.Column = 1;
-
+    
                 obj.EditFields(i) = uieditfield(obj.Grid);
-                obj.EditFields(i).Placeholder = obj.Params{i};
+                obj.EditFields(i).Placeholder = "placeholder";
                 obj.EditFields(i).Layout.Row = i;
                 obj.EditFields(i).Layout.Column = 2;
             end
+
 
             obj.ButtonGrid = uigridlayout(obj.Grid,[2 3]);
             obj.ButtonGrid.Padding = [0 0 0 0];
@@ -71,32 +69,57 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
         
         function update(obj)
 
-            obj.Grid.BackgroundColor = obj.BGColor;
+            try
 
-            delete(obj.EditFieldLabels);
-            delete(obj.EditFields);
+                obj.EditFields = obj.EditFields(isvalid(obj.EditFields));
+                obj.EditFieldLabels = obj.EditFieldLabels(isvalid(obj.EditFieldLabels));
+    
+                n_Params = obj.nParams;
+                n_EditFields = numel(obj.EditFields);
+    
+                obj.Grid.BackgroundColor = obj.BGColor;
+    
+    
+                if n_EditFields < n_Params % need to make more edit fields
+                    for i = n_EditFields+1:n_Params
+                        obj.EditFieldLabels(i) = uilabel(obj.Grid);
+                        obj.EditFields(i) = uieditfield(obj.Grid);
+                    end
+                elseif n_EditFields > n_Params % need to delete some edit fields
+                    delete(obj.EditFields(n_Params+1:n_EditFields));
+                    delete(obj.EditFieldLabels(n_Params+1:n_EditFields));
+                end
+    
+                % update size of grid container
+                obj.Grid.RowHeight = [repmat({20},1,obj.nParams),{'fit'}];
+    
+                for i = 1:obj.nParams
+    
+                    obj.EditFieldLabels(i).Layout.Row = i;
+                    obj.EditFieldLabels(i).Layout.Column = 1;
+    
+                    obj.EditFields(i).Layout.Row = i;
+                    obj.EditFields(i).Layout.Column = 2;
+    
+    
+                    obj.EditFieldLabels(i).FontColor = obj.FontColor;
+                    obj.EditFieldLabels(i).Text = obj.Params{i};
+    
+                    obj.EditFields(i).Placeholder = obj.Params{i};
+                end
+    
+                obj.ButtonGrid.Layout.Row = obj.nParams+1;
+                obj.ButtonGrid.Layout.Column = [1 2];
+                obj.ButtonGrid.BackgroundColor = obj.BGColor;
+                
+                obj.Grid.ColumnWidth = {'fit','1x'};
 
-            for i = 1:numel(obj.Params)
+                % reorder the children so that pressing tab functions as expected
+                obj.Grid.Children = [obj.EditFields,obj.EditFieldLabels,obj.ButtonGrid];
 
-                obj.EditFieldLabels(i) = uilabel(obj.Grid,"Text",obj.Params{i});
-                obj.EditFieldLabels(i).Layout.Row = i;
-                obj.EditFieldLabels(i).Layout.Column = 1;
-                obj.EditFieldLabels(i).FontColor = obj.FontColor;
-
-                obj.EditFields(i) = uieditfield(obj.Grid);
-                obj.EditFields(i).Placeholder = obj.Params{i};
-                obj.EditFields(i).Layout.Row = i;
-                obj.EditFields(i).Layout.Column = 2;
-
-                obj.Grid.RowHeight{i} = 20;
+            catch ME
+                disp(ME.getReport)
             end
-
-            obj.ButtonGrid.Layout.Row = obj.nParams+1;
-            obj.ButtonGrid.Layout.Column = [1 2];
-            obj.ButtonGrid.BackgroundColor = obj.BGColor;
-            
-            obj.Grid.RowHeight{obj.nParams+1} = 50;
-            obj.Grid.ColumnWidth = {'fit','1x'};
 
         end
         
