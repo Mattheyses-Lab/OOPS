@@ -40,6 +40,7 @@ function UpdateAverageIntensityImage(source)
             OOPSData.Handles.AverageIntensityAxH.YLim = [0.5 cImage.Height+0.5];
         end
     catch
+        disp('Warning: Error displaying Average Intensity image...')
         % set placeholders
         OOPSData.Handles.AverageIntensityImgH.CData = EmptyImage;
         OOPSData.Handles.AverageIntensityAxH.XLim = [0.5 size(EmptyImage,2)+0.5];
