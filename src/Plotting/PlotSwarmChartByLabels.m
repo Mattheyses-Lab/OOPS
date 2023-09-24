@@ -15,7 +15,7 @@ end
 axH.Visible = 'off';
 
 % get settings for the swarm plot
-ErrorBarColor = OOPSData.Settings.SwarmPlotErrorBarColor;
+ErrorBarColor = OOPSData.Settings.SwarmPlotErrorBarsColor;
 ErrorBarsVisible = OOPSData.Settings.SwarmPlotErrorBarsVisible;
 MarkerSize = OOPSData.Settings.SwarmPlotMarkerSize;
 MarkerFaceAlpha = OOPSData.Settings.SwarmPlotMarkerFaceAlpha;
@@ -43,7 +43,7 @@ LabelObjectSelfIdxs = CurrentGroup.GetObjectDataByLabel('SelfIdx');
 % get object GroupName for data tips
 LabelObjectGroupNames = CurrentGroup.GetObjectDataByLabel('GroupName');
 % get object ImageName for data tips
-LabelObjectImageNames = CurrentGroup.GetObjectDataByLabel('InterpreterFriendlyImageName');
+LabelObjectImageNames = CurrentGroup.GetObjectDataByLabel('texFriendlyImageName');
 % get object LabelName for data tips
 LabelObjectLabelNames = CurrentGroup.GetObjectDataByLabel('LabelName');
 % get object GroupIdx for plot colors

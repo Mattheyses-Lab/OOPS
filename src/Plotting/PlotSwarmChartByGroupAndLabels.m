@@ -15,7 +15,7 @@ end
 axH.Visible = 'off';
 
 % get settings for the swarm plot
-ErrorBarColor = OOPSData.Settings.SwarmPlotErrorBarColor;
+ErrorBarColor = OOPSData.Settings.SwarmPlotErrorBarsColor;
 ErrorBarsVisible = OOPSData.Settings.SwarmPlotErrorBarsVisible;
 MarkerSize = OOPSData.Settings.SwarmPlotMarkerSize;
 MarkerFaceAlpha = OOPSData.Settings.SwarmPlotMarkerFaceAlpha;
@@ -54,7 +54,7 @@ LabelObjectSelfIdxs = OOPSData.GetObjectDataByLabel('SelfIdx');
 % get object GroupName for data tips
 LabelObjectGroupNames = OOPSData.GetObjectDataByLabel('GroupName');
 % get object ImageName for data tips
-LabelObjectImageNames = OOPSData.GetObjectDataByLabel('InterpreterFriendlyImageName');
+LabelObjectImageNames = OOPSData.GetObjectDataByLabel('texFriendlyImageName');
 % get object LabelName for data tips
 LabelObjectLabelNames = OOPSData.GetObjectDataByLabel('LabelName');
 % get object GroupIdx for plot colors
@@ -153,6 +153,8 @@ for i = 1:nGroups
                         'HitTest','off',...
                         'Visible','off');
             end
+            % set the interpreter to none so names display correctly
+            % hSwarmPlot(PlotIdx).DataTipTemplate.Interpreter = 'none';
             % build data tips for each plot marker of the swarm chart
             hSwarmPlot(PlotIdx).DataTipTemplate.DataTipRows(1) = dataTipTextRow("Group",categorical(LabelObjectGroupNames{i,ii}));
             hSwarmPlot(PlotIdx).DataTipTemplate.DataTipRows(2) = dataTipTextRow("Image",categorical(LabelObjectImageNames{i,ii}));
