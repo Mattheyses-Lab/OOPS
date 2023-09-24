@@ -190,7 +190,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     NewOperationGrid = uigridlayout(MainGrid,[4,2],'BackgroundColor','Black');
     NewOperationGrid.Layout.Column = 3;
     NewOperationGrid.Layout.Row = [1 2];
-    NewOperationGrid.RowHeight = {'fit','fit','1x',20};
+    NewOperationGrid.RowHeight = {'1x','1x','1x',20};
     NewOperationGrid.ColumnWidth = {'1x','1x'};
     NewOperationGrid.Padding = [0 0 0 0];
     NewOperationGrid.RowSpacing = 5;
@@ -419,6 +419,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
 
     EditOperationButton = uibutton(NewOperationGrid,...
         "Text","Edit operation",...
+        "Enable","off",...
         "ButtonPushedFcn",@EditOperation);
     EditOperationButton.Layout.Row = 4;
     EditOperationButton.Layout.Column = 2;
@@ -841,53 +842,53 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     EdgeDetectionOptionsTargetDropdown.Layout.Row = 1;
     EdgeDetectionOptionsTargetDropdown.Layout.Column = 2;
 
-%% BWMorphology operations
+%% bwmorph operations
 
-    BWMorphologyOptions = {};
+    bwmorphOptions = {};
 
     % grid to hold the options
-    BWMorphologyOptionsGrid = uigridlayout(OperationParamsPanel,[2 2],...
-        'Tag','BWMorphologyOptionsGrid',...
+    bwmorphOptionsGrid = uigridlayout(OperationParamsPanel,[2 2],...
+        'Tag','bwmorphOptionsGrid',...
         'Visible','Off');
-    BWMorphologyOptionsGrid.RowHeight = {20, 20};
-    BWMorphologyOptionsGrid.ColumnWidth = {'1x','1x'};
+    bwmorphOptionsGrid.RowHeight = {20, 20};
+    bwmorphOptionsGrid.ColumnWidth = {'1x','1x'};
 
     % target
-    BWMorphologyOptionsTargetLabel = uilabel(BWMorphologyOptionsGrid,...
+    bwmorphOptionsTargetLabel = uilabel(bwmorphOptionsGrid,...
         "Text","Target image",...
         "Visible","off",...
-        "Tag","BWMorphologyTarget");
-    BWMorphologyOptionsTargetLabel.Layout.Row = 1;
-    BWMorphologyOptionsTargetLabel.Layout.Column = 1;
+        "Tag","bwmorphTarget");
+    bwmorphOptionsTargetLabel.Layout.Row = 1;
+    bwmorphOptionsTargetLabel.Layout.Column = 1;
 
-    BWMorphologyOptionsTargetDropdown = uidropdown(BWMorphologyOptionsGrid,...
+    bwmorphOptionsTargetDropdown = uidropdown(bwmorphOptionsGrid,...
         "Items",Scheme.ImagesTextDisplay,...
         "ItemsData",Scheme.Images,...
         "Value",Scheme.Images(1),...
         "Visible","off",...
-        "Tag","BWMorphologyTarget");
-    BWMorphologyOptionsTargetDropdown.Layout.Row = 1;
-    BWMorphologyOptionsTargetDropdown.Layout.Column = 2;
+        "Tag","bwmorphTarget");
+    bwmorphOptionsTargetDropdown.Layout.Row = 1;
+    bwmorphOptionsTargetDropdown.Layout.Column = 2;
 
     % target
-    BWMorphologyOptionsNLabel = uilabel(BWMorphologyOptionsGrid,...
+    bwmorphOptionsNLabel = uilabel(bwmorphOptionsGrid,...
         "Text","n",...
         "Visible","off",...
-        "Tag","BWMorphologyOperations",...
-        "UserData",{'Skeletonize'});
-    BWMorphologyOptionsNLabel.Layout.Row = 2;
-    BWMorphologyOptionsNLabel.Layout.Column = 1;
+        "Tag","bwmorphOperations",...
+        "UserData",CustomMask.bwmorphOperations);
+    bwmorphOptionsNLabel.Layout.Row = 2;
+    bwmorphOptionsNLabel.Layout.Column = 1;
 
-    BWMorphologyOptionsNEditfield = uieditfield(BWMorphologyOptionsGrid,...
+    bwmorphOptionsNEditfield = uieditfield(bwmorphOptionsGrid,...
         'numeric',...
         "Limits",[1 Inf],...
         "Value",Inf,...
-        "Tag","BWMorphologyOperations",...
-        "ValueChangedFcn",@UpdateBWMorphologyOptions,...
+        "Tag","bwmorphOperations",...
+        "ValueChangedFcn",@UpdatebwmorphOptions,...
         "Visible","off",...
-        "UserData",{'Skeletonize'});
-    BWMorphologyOptionsNEditfield.Layout.Row = 2;
-    BWMorphologyOptionsNEditfield.Layout.Column = 2;
+        "UserData",CustomMask.bwmorphOperations);
+    bwmorphOptionsNEditfield.Layout.Row = 2;
+    bwmorphOptionsNEditfield.Layout.Column = 2;
 
 %% cleaning up, getting ready to start
 
@@ -916,6 +917,9 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         if Scheme.CurrentOperationIdx==1
             return
         end
+
+        EditOperationButton.Enable = Scheme.CurrentOperationIdx~=1;
+
         CurrentOp = Scheme.CurrentOperation;
         PreviousOperationType = OperationTypeSelector.Value;
         %PreviousOperationName = OperationNameSelector.Value;
@@ -1141,12 +1145,12 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
                 EdgeDetectionOptions = {};
                 NamedParams = {};
 
-            case 'BWMorphology'
+            case 'bwmorph'
 
-                BWMorphologyOptionsTargetDropdown.Value = CurrentOp.Target;
+                bwmorphOptionsTargetDropdown.Value = CurrentOp.Target;
                 n = CurrentOp.ParamsMap('n');
-                BWMorphologyOptionsNEditfield.Value = n;
-                BWMorphologyOptions = {n};
+                bwmorphOptionsNEditfield.Value = n;
+                bwmorphOptions = {n};
                 NamedParams = {'n',n};
 
         end
@@ -1247,9 +1251,9 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         EdgeDetectionOptionsTargetDropdown.ItemsData = Scheme.Images;
         EdgeDetectionOptionsTargetDropdown.Value = Scheme.Images(end);
 
-        BWMorphologyOptionsTargetDropdown.Items = Scheme.ImagesTextDisplay;
-        BWMorphologyOptionsTargetDropdown.ItemsData = Scheme.Images;
-        BWMorphologyOptionsTargetDropdown.Value = Scheme.Images(end);
+        bwmorphOptionsTargetDropdown.Items = Scheme.ImagesTextDisplay;
+        bwmorphOptionsTargetDropdown.ItemsData = Scheme.Images;
+        bwmorphOptionsTargetDropdown.Value = Scheme.Images(end);
     end
 
     function OpenContrastTool(~,~)
@@ -1303,7 +1307,7 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
             %     set(findobj(fHMaskMaker,"UserData",[OperationTypeSelector.Value,'ALL']),"Visible","on");
             %     % turn back on objects for the specific selected operation (indicated by UserData property)
             %     set(findobj(fHMaskMaker,"UserData",OperationNameSelector.Value),"Visible","on");
-            case {'Special','ImageFilter','ContrastEnhancement','Binarize','Arithmetic','BWMorphology'}
+            case {'Special','ImageFilter','ContrastEnhancement','Binarize','Arithmetic','bwmorph'}
                 % get all objects associated with the operation type specified by OperationTypeSelector.Value
                 OperationTypeObjects = findobj(fHMaskMaker,"Tag",[OperationTypeSelector.Value,'Operations']);
                 % set Visibiity to 'off'
@@ -1417,9 +1421,9 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
         NamedParams = {};
     end
 
-    function UpdateBWMorphologyOptions(~,~)
-        n = BWMorphologyOptionsNEditfield.Value;
-        BWMorphologyOptions = {n};
+    function UpdatebwmorphOptions(~,~)
+        n = bwmorphOptionsNEditfield.Value;
+        bwmorphOptions = {n};
         NamedParams = {'n',n};
     end
 
@@ -1547,16 +1551,20 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
                     UpdateEdgeDetectionOptions();
                     Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,EdgeDetectionOptions,NamedParams{:});
                 end
-            case 'BWMorphology'
-                Target = BWMorphologyOptionsTargetDropdown.Value;
+            case 'bwmorph'
+                Target = bwmorphOptionsTargetDropdown.Value;
                 if isValidEditTarget(Target)
-                    UpdateBWMorphologyOptions();
-                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,BWMorphologyOptions,NamedParams{:});
+                    UpdatebwmorphOptions();
+                    Scheme.EditOperation(CurrentOperationIdx,OperationType,OperationName,Target,bwmorphOptions,NamedParams{:});
                 end
         end
 
-        % execute the step that we just added
-        Scheme.ExecuteFromStep(CurrentOperationIdx);
+        try
+            % execute the step that we just added
+            Scheme.ExecuteFromStep(CurrentOperationIdx);
+        catch ME
+            uialert(fHMaskMaker,ME.message,'Error');
+        end
 
         Scheme.CurrentImageIdx = CurrentOperationIdx;
         Scheme.CurrentOperationIdx = CurrentOperationIdx;
@@ -1625,14 +1633,18 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
                 Target = EdgeDetectionOptionsTargetDropdown.Value;
                 UpdateEdgeDetectionOptions();
                 Scheme.AddOperation(OperationType,OperationName,Target,EdgeDetectionOptions,NamedParams{:});
-            case 'BWMorphology'
-                Target = BWMorphologyOptionsTargetDropdown.Value;
-                UpdateBWMorphologyOptions();
-                Scheme.AddOperation(OperationType,OperationName,Target,BWMorphologyOptions,NamedParams{:});
+            case 'bwmorph'
+                Target = bwmorphOptionsTargetDropdown.Value;
+                UpdatebwmorphOptions();
+                Scheme.AddOperation(OperationType,OperationName,Target,bwmorphOptions,NamedParams{:});
         end
 
-        % execute the step that we just added
-        Scheme.ExecuteStep(Scheme.nOperations);
+        try
+            % execute the step that we just added
+            Scheme.ExecuteStep(Scheme.nOperations);
+        catch ME
+            uialert(fHMaskMaker,ME.message,'Error');
+        end
 
         Scheme.CurrentImageIdx = Scheme.nImages;
         Scheme.CurrentOperationIdx = Scheme.nOperations;
