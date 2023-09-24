@@ -126,38 +126,13 @@ function [] = UpdateImages(source,varargin)
                 % do nothing
             end
             
-
-
+            % update the scatter plot
             OOPSData.Handles.hScatterPlot = PlotGroupScatterPlot(source,...
                 OOPSData.Handles.ScatterPlotAxH);
 
-            
+            % update the swarm chart
+            UpdateSwarmChart(source);
 
-            xPlotGroupSwarmChart(source);
-
-
-            % try
-            %     delete(OOPSData.Handles.SwarmPlotAxH.Children)
-            % catch
-            %     % do nothing
-            % end            
-            % 
-            % 
-            % switch OOPSData.Settings.SwarmPlotGroupingType
-            %     case 'Group'
-            %         OOPSData.Handles.hSwarmChart = PlotGroupSwarmChart(source,OOPSData.Handles.SwarmPlotAxH);
-            %         OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
-            %     case 'Label'
-            %         OOPSData.Handles.hSwarmChart = PlotSwarmChartByLabels(source,OOPSData.Handles.SwarmPlotAxH);
-            %         OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Label";
-            %     case 'Both'
-            %         OOPSData.Handles.hSwarmChart = PlotSwarmChartByGroupAndLabels(source,OOPSData.Handles.SwarmPlotAxH);
-            %         OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group (Label)";
-            % end
-            % 
-            % OOPSData.Handles.SwarmPlotAxH.Title.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);
-            % OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);            
-            
         case 'Polar Plots'
 
             if isempty(cImage)
