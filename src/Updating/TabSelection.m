@@ -148,15 +148,21 @@ function TabSelection(source,~)
             OOPSData.Handles.ScatterPlotAxH.HitTest = 'Off';
 
             % hide the swarm plot
-            OOPSData.Handles.SwarmPlotGrid.Visible = 'Off';
-            delete(OOPSData.Handles.SwarmPlotAxH.Children)
-    
-            OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'Off';
-            OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
-            OOPSData.Handles.SwarmPlotAxH.Visible = 'Off';
-            OOPSData.Handles.SwarmPlotAxH.XAxis.Label.Visible = 'Off';
-            OOPSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'Off';
-            OOPSData.Handles.SwarmPlotAxH.HitTest = 'Off';
+
+            % OOPSData.Handles.SwarmPlotGrid.Visible = 'Off';
+            % delete(OOPSData.Handles.SwarmPlotAxH.Children)
+            % 
+            % OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'Off';
+            % OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
+            % OOPSData.Handles.SwarmPlotAxH.Visible = 'Off';
+            % OOPSData.Handles.SwarmPlotAxH.XAxis.Label.Visible = 'Off';
+            % OOPSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'Off';
+            % OOPSData.Handles.SwarmPlotAxH.HitTest = 'Off';
+
+
+            OOPSData.Handles.SwarmPlot.Visible = 'Off';
+
+
     
         case 'Polar Plots'
 
@@ -373,13 +379,18 @@ function TabSelection(source,~)
             OOPSData.Handles.ScatterPlotAxH.YAxis.Label.Visible = 'On';
             OOPSData.Handles.ScatterPlotAxH.HitTest = 'On';
 
-            OOPSData.Handles.SwarmPlotGrid.Visible = 'On';
-            OOPSData.Handles.SwarmPlotAxH.Visible = 'On';
-            OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'On';
-            OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'On';
-            OOPSData.Handles.SwarmPlotAxH.XAxis.Label.Visible = 'On';
-            OOPSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'On';
-            OOPSData.Handles.SwarmPlotAxH.HitTest = 'On';
+            % OOPSData.Handles.SwarmPlotGrid.Visible = 'On';
+            % OOPSData.Handles.SwarmPlotAxH.Visible = 'On';
+            % OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'On';
+            % OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'On';
+            % OOPSData.Handles.SwarmPlotAxH.XAxis.Label.Visible = 'On';
+            % OOPSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'On';
+            % OOPSData.Handles.SwarmPlotAxH.HitTest = 'On';
+
+            OOPSData.Handles.SwarmPlot.Visible = 'On';
+
+
+            
 
             OOPSData.Handles.ImgPanel1.Visible = 'On';
             OOPSData.Handles.ImgPanel2.Visible = 'On';
