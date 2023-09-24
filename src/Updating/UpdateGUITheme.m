@@ -5,7 +5,24 @@ function UpdateGUITheme(source)
     GUIBackgroundColor = OOPSData.Settings.GUIBackgroundColor;
     GUIForegroundColor = OOPSData.Settings.GUIForegroundColor;
     GUIHighlightColor = OOPSData.Settings.GUIHighlightColor;
-    
+
+
+    % % testing below
+    % GUIPanelTitleBackgroundColor = [0.9 0.9 0.9];
+    % GUIPanelTitleFontColor = [0 0 0];
+    % GUIPanelBorderColor = [1 1 1];
+    % GUIAccordionTitleBackgroundColor = [0.9 0.9 0.9];
+    % GUIAccordionTitleFontColor = [0 0 0];
+    % GUIAccordionBorderColor = [1 1 1];
+    % % end testing
+
+    GUIPanelTitleBackgroundColor = GUIBackgroundColor;
+    GUIPanelTitleFontColor = GUIForegroundColor;
+    GUIPanelBorderColor = GUIHighlightColor;
+    GUIAccordionTitleBackgroundColor = GUIBackgroundColor;
+    GUIAccordionTitleFontColor = GUIForegroundColor;
+    GUIAccordionBorderColor = GUIHighlightColor;
+
     % get all accordion items and their children (cannot retrieve with findobj())
     accordionItems = OOPSData.Handles.SettingsAccordion.Items;
     accordionChildren = OOPSData.Handles.SettingsAccordion.Contents;
@@ -13,9 +30,9 @@ function UpdateGUITheme(source)
     % uiaccordionitem
     set(accordionItems,...
         'PaneBackgroundColor',GUIBackgroundColor,...
-        'BorderColor',GUIHighlightColor,...
-        'FontColor',GUIForegroundColor,...
-        'TitleBackgroundColor',GUIBackgroundColor);
+        'BorderColor',GUIAccordionBorderColor,...
+        'FontColor',GUIAccordionTitleFontColor,...
+        'TitleBackgroundColor',GUIAccordionTitleBackgroundColor);
     
     % uiaccordion
     set(OOPSData.Handles.SettingsAccordion,...
@@ -27,9 +44,9 @@ function UpdateGUITheme(source)
     
     % uipanel
     set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uipanel'),...
-        'BackgroundColor',GUIBackgroundColor,...
-        'ForegroundColor',GUIForegroundColor,...
-        'HighlightColor',GUIHighlightColor);
+        'BackgroundColor',GUIPanelTitleBackgroundColor,...
+        'ForegroundColor',GUIPanelTitleFontColor,...
+        'HighlightColor',GUIPanelBorderColor);
     
     % uitextarea
     set(findobj([OOPSData.Handles.fH;accordionChildren],'type','uitextarea'),...
@@ -62,17 +79,21 @@ function UpdateGUITheme(source)
         'BackgroundColor',GUIBackgroundColor,...
         'FontColor',GUIForegroundColor);
     
-    % set swarm plot colors
+    % set scatter plot colors
     OOPSData.Handles.ScatterPlotGrid.BackgroundColor = OOPSData.Settings.ScatterPlotBackgroundColor;
     OOPSData.Handles.ScatterPlotAxH.Color = OOPSData.Settings.ScatterPlotBackgroundColor;
     OOPSData.Handles.ScatterPlotAxH.XAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
     OOPSData.Handles.ScatterPlotAxH.YAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
     
-    % set scatter plot colors
-    OOPSData.Handles.SwarmPlotGrid.BackgroundColor = OOPSData.Settings.SwarmPlotBackgroundColor;
-    OOPSData.Handles.SwarmPlotAxH.Color = OOPSData.Settings.SwarmPlotBackgroundColor;
-    OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-    OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
+    % % set swarm plot colors
+    % OOPSData.Handles.SwarmPlotGrid.BackgroundColor = OOPSData.Settings.SwarmPlotBackgroundColor;
+    % OOPSData.Handles.SwarmPlotAxH.Color = OOPSData.Settings.SwarmPlotBackgroundColor;
+    % OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
+    % OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
+
+    set(OOPSData.Handles.SwarmPlot,...
+        'BackgroundColor',OOPSData.Settings.SwarmPlotBackgroundColor,...
+        'ForegroundColor',OOPSData.Settings.SwarmPlotForegroundColor);
     
     % set object intensity profile colors
     OOPSData.Handles.ObjectIntensityPlotAxH.Color = OOPSData.Settings.ObjectIntensityProfileBackgroundColor;
@@ -80,7 +101,7 @@ function UpdateGUITheme(source)
     OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Color = OOPSData.Settings.ObjectIntensityProfileForegroundColor;
     OOPSData.Handles.ImgPanel2.BackgroundColor = OOPSData.Settings.ObjectIntensityProfileBackgroundColor;
     
-    % set intensity slider colors
+    % set built-in intensity slider colors
     set(OOPSData.Handles.PrimaryIntensitySlider,...
         'BackgroundColor',GUIBackgroundColor,...
         'Knob1Color',GUIForegroundColor,...
@@ -102,7 +123,19 @@ function UpdateGUITheme(source)
         'RangeColor',GUIForegroundColor,...
         'MidLineColor',GUIForegroundColor,...
         'TitleColor',GUIForegroundColor);
-    
+
+    % set custom intensity slider colors
+    for i = 1:numel(OOPSData.Settings.CustomStatistics)
+        set(OOPSData.Handles.([OOPSData.Settings.CustomStatistics(i).StatisticName,'Slider']),...
+            'BackgroundColor',GUIBackgroundColor,...
+            'Knob1Color',GUIForegroundColor,...
+            'Knob2Color',GUIForegroundColor,...
+            'RangeColor',GUIForegroundColor,...
+            'MidLineColor',GUIForegroundColor,...
+            'TitleColor',GUIForegroundColor);
+    end
+
+
     OOPSData.Handles.CurrentThresholdLine.Color = GUIForegroundColor;
     
     OOPSData.Handles.OrderAxH.Color = 'Black';
