@@ -1,10 +1,12 @@
 classdef OOPSSettings < handle
-    %OOPSSettings - OOPSGUI project & display settings
-    %   An instance of this class holds and determines various 
-    %   settings for a single run of OOPS GUI
-    
+%% OOPSSettings  Settings class for Object-Oriented Polarization Software (OOPS)
+%
+%   An instance of this class loads, stores, and determines various
+%   settings for a single run of the OOPS GUI
+
     properties
 
+        % zoom settings used by ZoomToCursor
         Zoom = struct('XRange',0,...
             'YRange',0,...
             'ZRange',0,...
@@ -31,19 +33,21 @@ classdef OOPSSettings < handle
         % most recently accessed directory
         LastDirectory = pwd;
 
-        % path to main code directory (path with OOPS.m)
+        % path to directory containing OOPS.m
         MainPath char
 
+        % the type of currently displayed summary table
         SummaryDisplayType = 'Project';
         
-        % current and previous tabs selected in GUI
+        % currently selected 'tab' in the OOPS GUI
         CurrentTab = 'Files';
+        % previously selected 'tab' in the OOPS GUI
         PreviousTab = 'Files';
         
-        % size of the display (to set main window Position)
+        % drawable size of the main display (to set main window Position property)
         ScreenSize
 
-        % starts as optimized font size (px) based on size of display, user can change
+        % size of the font across graphics objects in the GUI
         FontSize
 
         % themes and colors for GUI display
@@ -84,6 +88,9 @@ classdef OOPSSettings < handle
         % object azimuth display settings
         ObjectAzimuthDisplaySettings struct
 
+        % object selection settings
+        ObjectSelectionSettings struct
+
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
 
@@ -93,17 +100,18 @@ classdef OOPSSettings < handle
         % object labeling
         ObjectLabels OOPSLabel
         
-        % Fonts
+        % default font used in most graphics objects (excluding plots)
         DefaultFont char
+        % default font used in plots
         DefaultPlotFont = 'Arial';
         
-        % default px size (um/px)
+        % real world size of each input pixel (micron/px)
         PixelSize = 0.1083;
 
-        % type of mask to generate and use for object detection (Default, CustomScheme, or CustomUpload)
+        % type of mask to generate and use for object detection ('Default', 'CustomScheme', or 'CustomUpload')
         MaskType = 'Default';
 
-        % various names
+        % name of current masking scheme (i.e. the scheme that will be applied upon Process>Mask)
         MaskName = 'Legacy';
         
         % custom mask schemes
@@ -111,21 +119,28 @@ classdef OOPSSettings < handle
         SchemeNames cell
         SchemePaths cell
         
-        % object box type ('Box','Boundary',etc...)
-        ObjectBoxType = 'Box';
+        % % object box type ('Box' or 'Boundary')
+        % ObjectBoxType = 'Box';
+
+        % user-defined custom output statistics
+        CustomStatistics CustomFPMStatistic
+        CustomStatisticFileNames cell
+        CustomStatisticPaths cell
+        CustomStatisticNames cell
 
     end
 
     properties (Dependent = true)
 
-        % AzimuthDisplaySettings
+        %% azimuth display settings
         AzimuthLineAlpha
         AzimuthLineWidth
         AzimuthLineScale
         AzimuthScaleDownFactor
         AzimuthColorMode
+        AzimuthObjectMask
 
-        % ScatterPlotSettings
+        % scatterplot settings
         ScatterPlotXVariable
         ScatterPlotYVariable
         ScatterPlotMarkerSize
@@ -134,18 +149,32 @@ classdef OOPSSettings < handle
         ScatterPlotForegroundColor
         ScatterPlotLegendVisible
 
-        % SwarmPlotSettings
+        % swarmplot settings
         SwarmPlotYVariable
         SwarmPlotGroupingType
         SwarmPlotColorMode
         SwarmPlotBackgroundColor
         SwarmPlotForegroundColor
-        SwarmPlotErrorBarColor
+        SwarmPlotErrorBarsColor
         SwarmPlotMarkerFaceAlpha
         SwarmPlotMarkerSize
         SwarmPlotErrorBarsVisible
 
-        % PolarHistogramSettings
+        % new swarmplot settings in development
+        SwarmPlotPointsVisible
+        SwarmPlotMarkerEdgeColorMode
+        SwarmPlotMarkerEdgeColor
+        SwarmPlotXJitterWidth
+        SwarmPlotViolinsVisible
+        SwarmPlotViolinEdgeColorMode
+        SwarmPlotViolinEdgeColor
+        SwarmPlotViolinFaceColorMode
+        SwarmPlotViolinFaceColor
+        SwarmPlotErrorBarsColorMode
+        
+
+
+        % polar histogram settings
         PolarHistogramnBins
         PolarHistogramWedgeFaceAlpha
         PolarHistogramCircleBackgroundColor
@@ -175,6 +204,13 @@ classdef OOPSSettings < handle
         ObjectAzimuthScaleDownFactor
         ObjectAzimuthColorMode
 
+        % ObjectSelectionSettings
+        ObjectSelectionBoxType
+        ObjectSelectionColorMode
+        ObjectSelectionColor
+        ObjectSelectionLineWidth
+        ObjectSelectionSelectedLineWidth
+
         % Object variables "long" names
         ObjectPlotVariablesLong
 
@@ -187,7 +223,7 @@ classdef OOPSSettings < handle
         % selected colormaps for different image types
         % must be 256x3 double with values in the range [0 1]
         IntensityColormap double
-        OrderFactorColormap double
+        OrderColormap double
         ReferenceColormap double
         AzimuthColormap double
 
@@ -198,14 +234,19 @@ classdef OOPSSettings < handle
         % custom mask schemes
         ActiveCustomScheme
 
+        % custom FPM statistics
+        CustomStatisticDisplayNames cell
+
     end
     
     methods
         
-        % constructor method
+%% constructor
+
         function obj = OOPSSettings()
+            % constructor
             % size of main monitor
-            obj.ScreenSize = GetMaximizedScreenSize(1);
+            obj.ScreenSize = GetMaximizedScreenSize();
             % optimum font size
             obj.FontSize = max(ceil(obj.ScreenSize(4)*.01),11);
             % set up default object label (OOPSLabel object)
@@ -241,7 +282,8 @@ classdef OOPSSettings < handle
                 'PolarHistogramSettings.mat',...
                 'ObjectPolarPlotVariables.mat',...
                 'ObjectIntensityProfileSettings.mat',...
-                'ObjectAzimuthDisplaySettings.mat'};
+                'ObjectAzimuthDisplaySettings.mat',...
+                'ObjectSelectionSettings.mat'};
 
             obj.updateSettingsFromFiles(settingsFiles);
 
@@ -250,11 +292,22 @@ classdef OOPSSettings < handle
             catch
                 warning('Unable to load custom mask schemes...')
             end
-            
+
+            try 
+                obj.LoadCustomStatistics();
+            catch
+                warning('Unable to load custom outputs...')
+            end
+
+            % testing below
+            obj.UpdateLabelColors();
+
         end
 
-        % saveobj method
+%% saveobj method
+
         function settings = saveobj(obj)
+            % saves an instance of this class to a .mat file
 
             settings.SummaryDisplayType = obj.SummaryDisplayType;
 
@@ -283,11 +336,31 @@ classdef OOPSSettings < handle
             % various names
             settings.MaskName = obj.MaskName;
 
-            % object box type ('Box' or 'Boundary')
-            settings.ObjectBoxType = obj.ObjectBoxType;
+            % % object box type ('Box' or 'Boundary')
+            % settings.ObjectBoxType = obj.ObjectBoxType;
 
         end
 
+%% load user settings/schemes/custom statistics
+
+        function updateSettingsFromFiles(obj,fileNames)
+            % generalized function to update various settings by loading the indicated file(s)
+            % fileNames is a cell array of char vectors with names of settings mat files
+            for fileIdx = 1:numel(fileNames)
+                try
+                    % load the mat file indicated by fileNames{fileIdx} as a struct
+                    file = load(fileNames{fileIdx});
+                    % get the filedName of the loaded struct, not hardcoded in case it changes or we add more settings
+                    fieldName = fieldnames(file);
+                    % store the settings in the associated class property
+                    obj.(fieldName{1}) = file.(fieldName{1});
+                catch ME
+                    warning(['Error loading file "',fileNames{fileIdx},'": ',ME.getReport]);
+                end
+            end
+        end
+
+        % load custom mask schemes
         function LoadCustomMaskSchemes(obj)
             if ismac || isunix
                 SchemeFilesList = dir(fullfile([obj.MainPath,'/assets/segmentation_schemes'],'*.mat'));
@@ -311,22 +384,36 @@ classdef OOPSSettings < handle
             end
         end
 
-        function updateSettingsFromFiles(obj,fileNames)
-            % generalized function to update various settings by loading the indicated file(s)
-            % fileNames is a cell array of char vectors with names of settings mat files
-            for fileIdx = 1:numel(fileNames)
-                try
-                    % load the mat file indicated by fileNames{fileIdx} as a struct
-                    file = load(fileNames{fileIdx});
-                    % get the filedName of the loaded struct, not hardcoded in case it changes or we add more settings
-                    fieldName = fieldnames(file);
-                    % store the settings in the associated class property
-                    obj.(fieldName{1}) = file.(fieldName{1});
-                catch ME
-                    warning(['Error loading file "',fileNames{fileIdx},'": ',ME.getReport]);
+        % load custom statistics
+        function LoadCustomStatistics(obj)
+            if ismac || isunix
+                CustomStatisticFilesList = dir(fullfile([obj.MainPath,'/assets/custom_statistics'],'*.mat'));
+            elseif ispc
+                CustomStatisticFilesList = dir(fullfile([obj.MainPath,'\assets\custom_statistics'],'*.mat'));
+            end
+
+            for i = 1:numel(CustomStatisticFilesList)
+                SplitName = strsplit(CustomStatisticFilesList(i).name,'.');
+                obj.CustomStatisticFileNames{i} = SplitName{1};
+                if ismac || isunix
+                    obj.CustomStatisticPaths{i} = [CustomStatisticFilesList(i).folder,'/',CustomStatisticFilesList(i).name];
+                elseif ispc
+                    obj.CustomStatisticPaths{i} = [CustomStatisticFilesList(i).folder,'\',CustomStatisticFilesList(i).name];
                 end
+
+                % load the scheme into struct, S
+                S = load(obj.CustomStatisticPaths{i});
+                % extract the scheme from the struct into CustomSchemes
+                obj.CustomStatistics(i) = S.(obj.CustomStatisticFileNames{i});
+
+                % add a new (dynamic) object variable to the list
+                obj.ObjectPlotVariables{end+1} = obj.CustomStatistics(i).StatisticName;
+                % add the name of each statistic to CustomStatisticNames
+                obj.CustomStatisticNames{end+1} = obj.CustomStatistics(i).StatisticName;
             end
         end
+
+%% custom schemes
 
         function ActiveCustomScheme = get.ActiveCustomScheme(obj)
             % if MaskType=='CustomScheme', return the active scheme, otherwise return empty scheme
@@ -336,24 +423,51 @@ classdef OOPSSettings < handle
                 ActiveCustomScheme = CustomMask.empty();
             end
         end
+
+%% custom statistics
+
+        function TF = isCustomStatistic(obj,variableToCheck)
+            % check whether a given variable is a custom statistic
+            TF = ismember(variableToCheck,obj.CustomStatisticNames);
+        end
+
+        function CustomStatisticDisplayNames = get.CustomStatisticDisplayNames(obj)
+            % preallocate cell array to hold custom statistic display names
+            CustomStatisticDisplayNames = cell(size(obj.CustomStatistics));
+            % for each custom statistic
+            for statIdx = 1:numel(obj.CustomStatistics)
+                % add its display name to the cell
+                CustomStatisticDisplayNames{statIdx} = obj.CustomStatistics(statIdx).StatisticDisplayName;
+            end
+        end
+
+
+%% object label management
     
         function AddNewObjectLabel(obj,LabelName,LabelColor)
+            % add a new OOPSLabel to the project
+
+            % get a unique color for the new label
             if isempty(LabelColor)
                 LabelColor = obj.getUniqueLabelColor;
             end
-
+            % create a default name for the new label if none was given
             if isempty(LabelName)
-                LabelName = ['Untitled Label ',num2str(obj.nLabels+1)];
+                LabelName = ['Label ',num2str(obj.nLabels+1)];
             end
+            % add the OOPSLabel object to ObjectLabels
             obj.ObjectLabels(end+1,1) = OOPSLabel(LabelName,LabelColor,obj);
         end
 
-        % find unique group color based on existing group colors
+        
         function NewColor = getUniqueLabelColor(obj)
+            % find unique label color based on existing label colors
 
+            % get the active label palette
             labelPalette = obj.LabelPalette;
+            % number of colors in the palette
             nPaletteColors = size(labelPalette,1);
-
+            % if more labels than colors, automatically assign unique color
             if obj.nLabels >= nPaletteColors
                 CurrentColors = obj.LabelColors;
                 BGColors = [1 1 1;0 0 0];
@@ -361,7 +475,6 @@ classdef OOPSSettings < handle
             else
                 NewColor = labelPalette(obj.nLabels+1,:);
             end
-
         end
 
         function UpdateLabelColors(obj)
@@ -399,17 +512,19 @@ classdef OOPSSettings < handle
             delete(Label2Delete);
         end
 
+%% object plot variables
+
         function ObjectPlotVariablesLong = get.ObjectPlotVariablesLong(obj)
             ObjectPlotVariablesLong = cell(size(obj.ObjectPlotVariables));
             for varIdx = 1:numel(obj.ObjectPlotVariables)
-                ObjectPlotVariablesLong{varIdx} = ExpandVariableName(obj.ObjectPlotVariables{varIdx});
+                ObjectPlotVariablesLong{varIdx} = obj.expandVariableName(obj.ObjectPlotVariables{varIdx});
             end
         end
 
         function ObjectPolarPlotVariablesLong = get.ObjectPolarPlotVariablesLong(obj)
             ObjectPolarPlotVariablesLong = cell(size(obj.ObjectPolarPlotVariables));
             for varIdx = 1:numel(obj.ObjectPolarPlotVariables)
-                ObjectPolarPlotVariablesLong{varIdx} = ExpandVariableName(obj.ObjectPolarPlotVariables{varIdx});
+                ObjectPolarPlotVariablesLong{varIdx} = obj.expandVariableName(obj.ObjectPolarPlotVariables{varIdx});
             end
         end
 
@@ -419,8 +534,8 @@ classdef OOPSSettings < handle
             IntensityColormap = obj.ColormapsSettings.Intensity.Map;
         end
 
-        function OrderFactorColormap = get.OrderFactorColormap(obj)
-            OrderFactorColormap = obj.ColormapsSettings.OrderFactor.Map;
+        function OrderColormap = get.OrderColormap(obj)
+            OrderColormap = obj.ColormapsSettings.Order.Map;
         end
 
         function ReferenceColormap = get.ReferenceColormap(obj)
@@ -461,6 +576,10 @@ classdef OOPSSettings < handle
 
         function AzimuthColorMode = get.AzimuthColorMode(obj)
             AzimuthColorMode = obj.AzimuthDisplaySettings.ColorMode;
+        end
+
+        function AzimuthObjectMask = get.AzimuthObjectMask(obj)
+            AzimuthObjectMask = obj.AzimuthDisplaySettings.ObjectMask;
         end
 
 %% scatter plot settings        
@@ -515,8 +634,8 @@ classdef OOPSSettings < handle
             SwarmPlotForegroundColor = obj.SwarmPlotSettings.ForegroundColor;
         end
 
-        function SwarmPlotErrorBarColor = get.SwarmPlotErrorBarColor(obj)
-            SwarmPlotErrorBarColor = obj.SwarmPlotSettings.ErrorBarColor;
+        function SwarmPlotErrorBarsColor = get.SwarmPlotErrorBarsColor(obj)
+            SwarmPlotErrorBarsColor = obj.SwarmPlotSettings.ErrorBarsColor;
         end
 
         function SwarmPlotMarkerFaceAlpha = get.SwarmPlotMarkerFaceAlpha(obj)
@@ -529,6 +648,46 @@ classdef OOPSSettings < handle
 
         function SwarmPlotErrorBarsVisible = get.SwarmPlotErrorBarsVisible(obj)
             SwarmPlotErrorBarsVisible = obj.SwarmPlotSettings.ErrorBarsVisible;
+        end
+
+        function SwarmPlotPointsVisible = get.SwarmPlotPointsVisible(obj)
+            SwarmPlotPointsVisible = obj.SwarmPlotSettings.PointsVisible;
+        end
+
+        function SwarmPlotMarkerEdgeColorMode = get.SwarmPlotMarkerEdgeColorMode(obj)
+            SwarmPlotMarkerEdgeColorMode = obj.SwarmPlotSettings.MarkerEdgeColorMode;
+        end
+
+        function SwarmPlotMarkerEdgeColor = get.SwarmPlotMarkerEdgeColor(obj)
+            SwarmPlotMarkerEdgeColor = obj.SwarmPlotSettings.MarkerEdgeColor;
+        end
+
+        function SwarmPlotXJitterWidth = get.SwarmPlotXJitterWidth(obj)
+            SwarmPlotXJitterWidth = obj.SwarmPlotSettings.XJitterWidth;
+        end        
+
+        function SwarmPlotViolinsVisible = get.SwarmPlotViolinsVisible(obj)
+            SwarmPlotViolinsVisible = obj.SwarmPlotSettings.ViolinsVisible;
+        end
+
+        function SwarmPlotViolinEdgeColorMode = get.SwarmPlotViolinEdgeColorMode(obj)
+            SwarmPlotViolinEdgeColorMode = obj.SwarmPlotSettings.ViolinEdgeColorMode;
+        end
+
+        function SwarmPlotViolinEdgeColor = get.SwarmPlotViolinEdgeColor(obj)
+            SwarmPlotViolinEdgeColor = obj.SwarmPlotSettings.ViolinEdgeColor;
+        end
+
+        function SwarmPlotViolinFaceColorMode = get.SwarmPlotViolinFaceColorMode(obj)
+            SwarmPlotViolinFaceColorMode = obj.SwarmPlotSettings.ViolinFaceColorMode;
+        end
+
+        function SwarmPlotViolinFaceColor = get.SwarmPlotViolinFaceColor(obj)
+            SwarmPlotViolinFaceColor = obj.SwarmPlotSettings.ViolinFaceColor;
+        end
+
+        function SwarmPlotErrorBarsColorMode = get.SwarmPlotErrorBarsColorMode(obj)
+            SwarmPlotErrorBarsColorMode = obj.SwarmPlotSettings.ErrorBarsColorMode;
         end
 
 %% polar histogram settings        
@@ -634,6 +793,29 @@ classdef OOPSSettings < handle
         end
 
 
+%% object selection settings
+
+        function ObjectSelectionBoxType = get.ObjectSelectionBoxType(obj)
+            ObjectSelectionBoxType = obj.ObjectSelectionSettings.BoxType;
+        end
+        
+        function ObjectSelectionColorMode = get.ObjectSelectionColorMode(obj)
+            ObjectSelectionColorMode = obj.ObjectSelectionSettings.ColorMode;
+        end
+        
+        function ObjectSelectionColor = get.ObjectSelectionColor(obj)
+            ObjectSelectionColor = obj.ObjectSelectionSettings.Color;
+        end
+        
+        function ObjectSelectionLineWidth = get.ObjectSelectionLineWidth(obj)
+            ObjectSelectionLineWidth = obj.ObjectSelectionSettings.LineWidth;
+        end
+        
+        function ObjectSelectionSelectedLineWidth = get.ObjectSelectionSelectedLineWidth(obj)
+            ObjectSelectionSelectedLineWidth = obj.ObjectSelectionSettings.SelectedLineWidth;
+        end
+
+%% object labels settings
 
         function nLabels = get.nLabels(obj)
             % find number of unique object labels
@@ -649,11 +831,72 @@ classdef OOPSSettings < handle
             end
         end
 
+%% variable names settings
+
+        function NameOut = expandVariableName(obj,NameIn)
+            switch NameIn
+                case 'OrderAvg'
+                    NameOut = 'Mean Order';
+                case 'SBRatio'
+                    NameOut = 'Local S/B';
+                case 'Area'
+                    NameOut = 'Area';
+                case 'Perimeter'
+                    NameOut = 'Perimeter';
+                case 'Circularity'
+                    NameOut = 'Circularity';
+                case 'SignalAverage'
+                    NameOut = 'Mean Raw Intensity';
+                case 'MaxFeretDiameter'
+                    NameOut = 'Maximum Feret Diameter';
+                case 'MinFeretDiameter'
+                    NameOut = 'Minimum Feret Diameter';
+                case 'MajorAxisLength'
+                    NameOut = 'Major Axis Length';
+                case 'MinorAxisLength'
+                    NameOut = 'Minor Axis Length';
+                case 'Eccentricity'
+                    NameOut = 'Eccentricity';
+                case 'BGAverage'
+                    NameOut = 'Mean BG Intensity';
+                case 'AzimuthAverage'
+                    NameOut = 'Mean Azimuth';
+                case 'AzimuthStd'
+                    NameOut = 'Azimuth Circular Standard Deviation';
+                case 'Orientation'
+                    NameOut = 'Orientation';
+                case 'EquivDiameter'
+                    NameOut = 'Equivalent Diameter';
+                case 'ConvexArea'
+                    NameOut = 'Convex Area';
+                case 'MidlineRelativeAzimuth'
+                    NameOut = 'Mean Azimuth (Midline)';
+                case 'NormalRelativeAzimuth'
+                    NameOut = 'Mean Azimuth (Midline Normal)';
+                case 'MidlineLength'
+                    NameOut = 'Midline Length';
+                case 'AzimuthAngularDeviation'
+                    NameOut = 'Azimuth Angular Deviation';
+                otherwise
+                    % check if the input is a custom statistic
+                    if obj.isCustomStatistic(NameIn)
+                        % if so, find the matching CustomFPMStatistic object
+                        thisStatistic = obj.CustomStatistics(ismember(NameIn,obj.CustomStatisticNames));
+                        % then get the corresponding display name
+                        NameOut = thisStatistic.StatisticDisplayName;
+                    else
+                        % otherwise just return the input
+                        NameOut = NameIn;
+                    end
+            end
+        end
+
     end
 
     methods (Static)
 
         function obj = loadobj(settings)
+            % load and construct an instance of this class from a .mat file
 
             % create the default settings object, to which we will add our saved settings
             obj = OOPSSettings();
@@ -690,8 +933,8 @@ classdef OOPSSettings < handle
             % various names
             obj.MaskName = settings.MaskName;
 
-            % object box type ('Box' or 'Boundary')
-            obj.ObjectBoxType = settings.ObjectBoxType;
+            % % object box type ('Box' or 'Boundary')
+            % obj.ObjectBoxType = settings.ObjectBoxType;
         end
 
     end

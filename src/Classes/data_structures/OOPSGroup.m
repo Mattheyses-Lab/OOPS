@@ -6,10 +6,10 @@
         Parent OOPSProject
 
         % the user-defined name of this group
-        GroupName char        
+        GroupName char
 
         % array of handles to the OOPSImages in this group
-        Replicate OOPSImage
+        Replicate (:,1) OOPSImage
 
         % indexing group members (Replicate/OOPSImage objects)
         CurrentImageIndex double
@@ -55,13 +55,14 @@
         
         % status tracking for the group
         MaskAllDone logical
-        OFAllDone logical
+        %FPMStatsAllDone logical
+        FPMStatsAllDone logical
         FFCAllDone logical
         ObjectDetectionAllDone logical
         LocalSBAllDone logical
         
-        % pixel-average OF for all images in this OOPSGroup for which OF has been calculated
-        OFAvg double
+        % pixel-average Order for all images in this OOPSGroup for which Order has been calculated
+        OrderAvg double
         
         % name of the color of this OOPSGroup
         ColorString char
@@ -84,7 +85,7 @@
     
     methods
         
-        % class constructor method
+        % constructor
         function obj = OOPSGroup(GroupName,Project)
             if nargin > 0
                 obj.GroupName = GroupName;
@@ -135,6 +136,7 @@
 
         end
 
+        % self indexing
         function SelfIdx = get.SelfIdx(obj)
             SelfIdx = find(obj.Parent.Group==obj);
         end
@@ -155,12 +157,11 @@
             end
         end
 
-
 %% manipulate objects
 
         function Objects = getObjectsByLabel(obj,Label)
 
-            ObjsFound = 0;
+            %ObjsFound = 0;
             Objects = OOPSObject.empty();
 
             if obj.nReplicates>=1
@@ -177,10 +178,12 @@
         end
 
         function allObjects = get.allObjects(obj)
-            allObjects = [];
-            for i = 1:obj.nReplicates
-                allObjects = [allObjects, obj.Replicate(i).Object];
-            end
+            % allObjects = [];
+            % for i = 1:obj.nReplicates
+            %     allObjects = [allObjects, obj.Replicate(i).Object];
+            % end
+
+            allObjects = cat(2,obj.Replicate(:).Object);
         end
 
         % apply OOPSLabel:Label to all selected objects in this OOPSGroup
@@ -227,8 +230,7 @@
             end
         end
 
-        % get x,y data for all objects in group, from first to last replicate
-        %       WILL UPDATE TO ALLOW FOR varargin for more flexibility of use
+        % get array of [XVar,YVar] data for all objects in group
         function ObjectData = CombineObjectData(obj,XVar,YVar)
             
             count = 0;
@@ -241,19 +243,30 @@
             for i = 1:obj.nReplicates
                 
                 count = count + obj.Replicate(i).nObjects;
+
+                % get XData and YData
+                XData = obj.Replicate(i).GetAllObjectData(XVar);
+                YData = obj.Replicate(i).GetAllObjectData(YVar);
+
                 % column 1 holds x data
-                ObjectData(last:count,1) = [obj.Replicate(i).Object.(XVar)];
+                ObjectData(last:count,1) = XData;
                 % column 2 holds y data
-                ObjectData(last:count,2) = [obj.Replicate(i).Object.(YVar)];
+                ObjectData(last:count,2) = YData;
+
+
+                % % column 1 holds x data
+                % ObjectData(last:count,1) = [obj.Replicate(i).Object.(XVar)];
+                % % column 2 holds y data
+                % ObjectData(last:count,2) = [obj.Replicate(i).Object.(YVar)];
                 
                 last = count+1;
                 
             end
-        end % end of CombineObjectData()
+        end
         
+        % return a list of Var2Get for all objects in the group
         function VariableObjectData = GetAllObjectData(obj,Var2Get)
-            % return a list of Var2Get for all objects in the group
-
+            
             % return if no images exist
             if obj.nReplicates == 0
                 VariableObjectData = [];
@@ -266,8 +279,11 @@
             %VariableObjectData = [];
             for i = 1:obj.nReplicates
                 count = count + obj.Replicate(i).nObjects;
-                % column 1 holds x data
-                VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
+                
+                objectData = obj.Replicate(i).GetAllObjectData(Var2Get);
+                VariableObjectData(last:count,1) = objectData;
+
+                % VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
                 last = count+1;
             end        
         end
@@ -333,17 +349,17 @@
             % clear Bad array
             clear Bad
         end
-            
+
+%% retrieve image data
+
         function nReplicates = get.nReplicates(obj)
             if isvalid(obj.Replicate)
-                nReplicates = length(obj.Replicate);
+                nReplicates = numel(obj.Replicate);
             else
                 nReplicates = 0;
             end
         end
-       
-%% retrieve image data
-        
+
         function ImageNames = get.ImageNames(obj)
             % new cell array of image names
             ImageNames = {};
@@ -360,19 +376,20 @@
         
 %% group status tracking
 
-        function OFAllDone = get.OFAllDone(obj)
+        function FPMStatsAllDone = get.FPMStatsAllDone(obj)
             if obj.nReplicates == 0
-                OFAllDone = false;
+                FPMStatsAllDone = false;
                 return
             end
             
             for i = 1:obj.nReplicates
-                if ~obj.Replicate(i).OFDone
-                    OFAllDone = false;
+                if ~obj.Replicate(i).FPMStatsDone
+                    FPMStatsAllDone = false;
                     return
                 end
             end
-            OFAllDone = true;
+
+            FPMStatsAllDone = true;
         end
 
         function MaskAllDone = get.MaskAllDone(obj)
@@ -437,8 +454,8 @@
 
 %% retrieve group data
 
-        function OFAvg = get.OFAvg(obj)
-            OFAvg = mean([obj.Replicate(find([obj.Replicate.OFDone])).OFAvg]);
+        function OrderAvg = get.OrderAvg(obj)
+            OrderAvg = mean([obj.Replicate(find([obj.Replicate.FPMStatsDone])).OrderAvg]);
         end
 
         function GroupSummaryDisplayTable = get.GroupSummaryDisplayTable(obj)
@@ -446,11 +463,11 @@
                 "FFC files loaded",...
                 "FPM files loaded",...
                 "Number of replicates",...
-                "Mean pixel OF",...
+                "Mean pixel Order",...
                 "Total objects",...
                 "FFC performed",...
                 "Mask generated",...
-                "OF/azimuth calculated",...
+                "Order/azimuth calculated",...
                 "Objects detected",...
                 "Local S/B calculated"];
 
@@ -458,11 +475,11 @@
                 {obj.FFCLoaded},...
                 {obj.FPMFilesLoaded},...
                 {obj.nReplicates},...
-                {obj.OFAvg},...
+                {obj.OrderAvg},...
                 {obj.TotalObjects},...
                 {obj.FFCAllDone},...
                 {obj.MaskAllDone},...
-                {obj.OFAllDone},...
+                {obj.FPMStatsAllDone},...
                 {obj.ObjectDetectionAllDone},...
                 {obj.LocalSBAllDone},...
                 'VariableNames',varNames,...
@@ -488,13 +505,115 @@
             ColorString = ColorStringCell{1};         
         end
 
+%% collect data for export
+
+        function tableOut = objectDataTableForExport(obj)
+
+            dataStruct = struct(...
+                'GroupIdx',0,...
+                'GroupName',[],...
+                'ImageIdx',0,...
+                'ImageName',[],...
+                'ObjectIdx',0,...
+                'Area',0,...
+                'AzimuthAngularDeviation',0,...
+                'AzimuthAverage',0,...
+                'AzimuthStd',0,...
+                'BGAverage',0,...
+                'Circularity',0,...
+                'ConvexArea',0,...
+                'Eccentricity',0,...
+                'EquivDiameter',0,...
+                'Extent',0,...
+                'LabelName','',...
+                'MajorAxisLength',0,...
+                'MaxFeretDiameter',0,...
+                'MidlineLength',0,...
+                'MidlineRelativeAzimuth',0,...
+                'MinFeretDiameter',0,...
+                'MinorAxisLength',0,...
+                'NormalRelativeAzimuth',0,...
+                'OrderAvg',0,...
+                'Perimeter',0,...
+                'SBRatio',0,...
+                'SignalAverage',0,...
+                'Solidity',0,...
+                'Tortuosity',0);
+
+            % get the custom stats
+            customStats = obj.Settings.CustomStatisticNames;
+            % the number of custom stats
+            nCustomStats = numel(customStats);
+            % add a field for each custom stat
+            for statIdx = 1:numel(nCustomStats)
+                dataStruct.(customStats{statIdx}) = 0;
+            end
+
+            MasterIdx = 1;
+        
+            for j = 1:obj.nReplicates
+        
+                for k = 1:obj.Replicate(j).nObjects
+        
+                    % get the object
+                    thisObject = obj.Replicate(j).Object(k);
+        
+                    % add group, image, and object names/idxs to the table
+                    dataStruct(MasterIdx).GroupIdx = obj.SelfIdx;
+                    dataStruct(MasterIdx).GroupName = obj.GroupName;
+                    dataStruct(MasterIdx).ImageIdx = j;
+                    dataStruct(MasterIdx).ImageName = obj.Replicate(j).rawFPMShortName;
+                    dataStruct(MasterIdx).ObjectIdx = k;
+        
+                    % add object data to the table for each built-in property
+                    dataStruct(MasterIdx).Area = thisObject.Area;
+                    dataStruct(MasterIdx).AzimuthAngularDeviation = thisObject.AzimuthAngularDeviation;
+                    dataStruct(MasterIdx).AzimuthAverage = thisObject.AzimuthAverage;
+                    dataStruct(MasterIdx).AzimuthStd = thisObject.AzimuthStd;
+                    dataStruct(MasterIdx).BGAverage = thisObject.BGAverage;
+                    dataStruct(MasterIdx).Circularity = thisObject.Circularity;
+                    dataStruct(MasterIdx).ConvexArea = thisObject.ConvexArea;
+                    dataStruct(MasterIdx).Eccentricity = thisObject.Eccentricity;
+                    dataStruct(MasterIdx).EquivDiameter = thisObject.EquivDiameter;
+                    dataStruct(MasterIdx).Extent = thisObject.Extent;
+                    dataStruct(MasterIdx).LabelName = thisObject.LabelName;
+                    dataStruct(MasterIdx).MajorAxisLength = thisObject.MajorAxisLength;
+                    dataStruct(MasterIdx).MaxFeretDiameter = thisObject.MaxFeretDiameter;
+                    dataStruct(MasterIdx).MidlineLength = thisObject.MidlineLength;
+                    dataStruct(MasterIdx).MidlineRelativeAzimuth = thisObject.MidlineRelativeAzimuth;
+                    dataStruct(MasterIdx).MinFeretDiameter = thisObject.MinFeretDiameter;
+                    dataStruct(MasterIdx).MinorAxisLength = thisObject.MinorAxisLength;
+                    dataStruct(MasterIdx).NormalRelativeAzimuth = thisObject.NormalRelativeAzimuth;
+                    dataStruct(MasterIdx).OrderAvg = thisObject.OrderAvg;
+                    dataStruct(MasterIdx).Perimeter = thisObject.Perimeter;
+                    dataStruct(MasterIdx).SBRatio = thisObject.SBRatio;
+                    dataStruct(MasterIdx).SignalAverage = thisObject.SignalAverage;
+                    dataStruct(MasterIdx).Solidity = thisObject.Solidity;
+                    dataStruct(MasterIdx).Tortuosity = thisObject.Tortuosity;
+
+                    % add object data for each custom property
+                    for statIdx = 1:numel(nCustomStats)
+                        dataStruct(MasterIdx).(customStats{statIdx}) = thisObject.(customStats{statIdx});
+                    end
+
+                    MasterIdx = MasterIdx+1;
+        
+                end % end objects
+        
+            end % end images
+        
+            tableOut = struct2table(dataStruct);
+        
+        end
+
     end
 
     methods (Static)
 
         function obj = loadobj(group)
 
-            obj = OOPSGroup(group.GroupName,OOPSProject.empty());
+            %obj = OOPSGroup(group.GroupName,OOPSProject.empty());
+            obj = OOPSGroup(group.GroupName,group.Parent);
 
             obj.CurrentImageIndex = group.CurrentImageIndex;
 
@@ -584,19 +703,22 @@
 
             % for each replicate in group
             for i = 1:group.nReplicates
+                % add group handle to the image struct
+                group.Replicate(i).Parent = obj;
                 % load the replicate
                 obj.Replicate(i) = OOPSImage.loadobj(group.Replicate(i));
-                % set its parent group (this group)
-                obj.Replicate(i).Parent = obj;
+
                 if obj.Replicate(i).FFCDone
                     obj.Replicate(i).FlatFieldCorrection();
                 end
 
-
-
-                if obj.Replicate(i).OFDone
-                    obj.Replicate(i).FindOrderFactor();
+                if obj.Replicate(i).FPMStatsDone
+                    obj.Replicate(i).FindFPMStatistics();
                 end
+
+
+
+
             end
 
         end

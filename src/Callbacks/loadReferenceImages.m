@@ -1,13 +1,18 @@
 function loadReferenceImages(source,~)
 % main data structure
 OOPSData = guidata(source);
-% idx to the group that we will be loading data for
-GroupIndex = OOPSData.CurrentGroupIndex;
 
-% the group we will be loading data for
-cGroup = OOPSData.Group(GroupIndex);
+% current image(s) selection
+cImage = OOPSData.CurrentImage;
 
-uialert(OOPSData.Handles.fH,'Select .nd2 reference images',...
+% ensure the proper number of reference images was selected
+if isempty(cImage)
+    uialert(OOPSData.Handles.fH,'Load FPM stacks first','Error'); return
+end
+
+% alert dialog indicate required action
+uialert(OOPSData.Handles.fH,...
+    ['Select ',num2str(numel(cImage)),' reference images'],...
     'Load Reference Images',...
     'Icon','',...
     'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
@@ -16,53 +21,67 @@ uiwait(OOPSData.Handles.fH);
 % hide main window
 OOPSData.Handles.fH.Visible = 'Off';
 
+% load the Bio-Formats library into the MATLAB environment
+% so we can call uigetfile with filters for all extensions
+% supported by Bio-Formats
+if bfCheckJavaPath()
+    fileExtensions = bfGetFileExtensions();
+else
+    fileExtensions = {'*'};
+end
+
 try
     % get reference image files (single or multiple)
-    [referenceFiles, referencePath, ~] = uigetfile({'*.nd2','*.tif'},...
-        'Select .nd2 reference images',...
+    [referenceFiles, referencePath, ~] = uigetfile(fileExtensions,...
+        ['Select ',num2str(numel(cImage)),' reference images'],...
         'MultiSelect','on',...
         OOPSData.Settings.LastDirectory);
 catch
     % get reference image files (single or multiple)
-    [referenceFiles, referencePath, ~] = uigetfile({'*.nd2','*.tif'},...
-        'Select .nd2 reference images',...
+    [referenceFiles, referencePath, ~] = uigetfile(fileExtensions,...
+        ['Select ',num2str(numel(cImage)),' reference images'],...
         'MultiSelect','on');
 end
 
-% save recent directory
-OOPSData.Settings.LastDirectory = referencePath;
+
 % show main window
 OOPSData.Handles.fH.Visible = 'On';
 % make it active
 figure(OOPSData.Handles.fH);
 
 if ~iscell(referenceFiles)
-    % if no files selected
-    if referenceFiles == 0
-        % throw error
-        error('No files selected');
-    else
-        % otherwise convert to cell array
+    if referenceFiles == 0 % if no files selected
+        uialert(OOPSData.Handles.fH,'No files selected','Error'); return
+    else % convert to cell array
         referenceFiles = {referenceFiles};
     end
 end
 
-% number of files loaded
+% save recent directory
+OOPSData.Settings.LastDirectory = referencePath;
+
+% number of files selected
 nFiles = numel(referenceFiles);
 
-n = cGroup.nReplicates;
-
-if n~=nFiles
-    msg = 'Number of reference images must match the number of polarization stacks...';
-    uialert(OOPSData.Handles.fH,msg,'Error');
+% ensure the proper number of reference images was selected
+if numel(cImage) ~= nFiles
+    uialert(OOPSData.Handles.fH,'Number of reference images must match the number of polarization stacks','Error'); 
     return
 end
 
-% Update Log Window
+% update log
 UpdateLog3(source,['Opening ' num2str(nFiles) ' reference images...'],'append');
+
+% create progress dialog
+hProgressDialog = uiprogressdlg(OOPSData.Handles.fH,"Message",'Loading reference images');
 
 % for each image
 for i=1:nFiles
+
+    % update the progress dialog
+    hProgressDialog.Message = ['Loading reference images ',num2str(i),'/',num2str(nFiles)];
+    hProgressDialog.Value = i/nFiles;
+
     % get the name of this file
     rawReferenceFileName = referenceFiles{1,i};
     % split on the '.'
@@ -83,37 +102,42 @@ for i=1:nFiles
     [Height,Width] = size(rawReferenceImage);
     % check for valid image dimensions
     try
-        if Height~=cGroup.Replicate(i).Height || Width~=cGroup.Replicate(i).Width
-            error(['Error loading reference images' newline 'Reference image dimensions do not match polarization image dimensions']);
-        end
+        assert(isequal([Height,Width],[cImage(i).Height,cImage(i).Width]),...
+            'Reference image dimensions do not match polarization image dimensions')
     catch ME
-        report = getReport(ME);
-        uialert(OOPSData.Handles.fH,report,'Error');
-        return
+        uialert(OOPSData.Handles.fH,ME.message,'Error'); return
     end
     % get the class of the input
     rawReferenceClass = class(rawReferenceImage);
 
     % add all the data to the OOPSImage
-    cGroup.Replicate(i).rawReferenceImage = rawReferenceImage;
-    cGroup.Replicate(i).ReferenceImage = im2double(cGroup.Replicate(i).rawReferenceImage);
-    cGroup.Replicate(i).rawReferenceClass = rawReferenceClass;
-    cGroup.Replicate(i).rawReferenceFileName = rawReferenceFileName;
-    cGroup.Replicate(i).rawReferenceFullName = rawReferenceFullName;
-    cGroup.Replicate(i).rawReferenceShortName = rawReferenceShortName;
-    cGroup.Replicate(i).rawReferenceFileType = rawReferenceFileType;
-    cGroup.Replicate(i).ReferenceImageLoaded = true;
-    cGroup.Replicate(i).ReferenceImageEnhanced = EnhanceGrayScale(cGroup.Replicate(i).ReferenceImage);
+    cImage(i).rawReferenceImage = rawReferenceImage;
+    cImage(i).ReferenceImage = Scale0To1(im2double(cImage(i).rawReferenceImage));
+    cImage(i).rawReferenceClass = rawReferenceClass;
+    cImage(i).rawReferenceFileName = rawReferenceFileName;
+    cImage(i).rawReferenceFullName = rawReferenceFullName;
+    cImage(i).rawReferenceShortName = rawReferenceShortName;
+    cImage(i).rawReferenceFileType = rawReferenceFileType;
+    cImage(i).ReferenceImageLoaded = true;
+    cImage(i).ReferenceImageEnhanced = EnhanceGrayScale(cImage(i).ReferenceImage);
+
+    % update log to display image dimensions
+    UpdateLog3(source,['Dimensions of ', ...
+        char(cImage(i).rawReferenceFileName), ...
+        ' are ', num2str(Width), ...
+        'x', num2str(Height)], ...
+        'append');
 end
 
-
-UpdateLog3(source,'Done.','append');
-    
 OOPSData.Handles.ShowReferenceImageAverageIntensity.Visible = 'On';
 
 UpdateImages(source);
 UpdateSummaryDisplay(source);
-UpdateListBoxes(source);
 
+% close the progress dialog
+close(hProgressDialog);
+
+% update log to indicate completion
+UpdateLog3(source,'Done.','append');
 
 end

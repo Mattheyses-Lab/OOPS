@@ -9,7 +9,7 @@ end
 
 % create an instance of OOPSProject
 % this object will hold ALL project data and GUI settings
-OOPSData = OOPSProject;
+OOPSData = OOPSProject();
 
 %% set up splash screen
 
@@ -68,7 +68,7 @@ set(OOPSData.Handles.fH,'defaultUipanelAutoResizeChildren','Off');
 set(OOPSData.Handles.fH,'defaultTextFontName',OOPSData.Settings.DefaultFont);
 set(OOPSData.Handles.fH,'defaultTextFontWeight','bold');
 
-% turn off any warning that do not adversely affect computation
+% turn off any warnings that do not adversely affect computation
 warning('off','MATLAB:polyshape:repairedBySimplify');
 
 %% CHECKPOINT
@@ -89,7 +89,7 @@ OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load 
 OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM Files','Callback',@loadFPMImages);
 OOPSData.Handles.hLoadReferenceImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load Reference Images','Callback',@loadReferenceImages);
 % save data
-OOPSData.Handles.hSaveOF = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Data for Selected Images','Separator','On','Callback',@SaveImages);
+OOPSData.Handles.hSaveImageData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export images','Separator','On','Callback',@exportImages);
 OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Object Data','Callback',@SaveObjectData);
 % save settings
 OOPSData.Handles.hSaveColormapsSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Colormaps Settings','Separator','On','Callback',@SaveColormapsSettings);
@@ -146,13 +146,13 @@ OOPSData.Handles.hMaskType_NewScheme = uimenu(OOPSData.Handles.hMaskType_CustomS
     'Separator','on',...
     'Callback',@BuildNewScheme);
 
-% Options for display of object boxes
-OOPSData.Handles.hObjectBoxMenu = uimenu(OOPSData.Handles.hOptionsMenu,'Text','Object boxes','Separator','on');
-% Box type option
-OOPSData.Handles.hObjectBoxType = uimenu(OOPSData.Handles.hObjectBoxMenu,'Text','Box type');
-% options for box type
-OOPSData.Handles.hObjectBoxType_Box = uimenu(OOPSData.Handles.hObjectBoxType,'Text','Box','Checked','On','Callback',@ChangeObjectBoxType);
-OOPSData.Handles.hObjectBoxType_Boundary = uimenu(OOPSData.Handles.hObjectBoxType,'Text','Boundary','Checked','Off','Callback',@ChangeObjectBoxType);
+% % Options for display of object boxes
+% OOPSData.Handles.hObjectBoxMenu = uimenu(OOPSData.Handles.hOptionsMenu,'Text','Object boxes','Separator','on');
+% % Box type option
+% OOPSData.Handles.hObjectBoxType = uimenu(OOPSData.Handles.hObjectBoxMenu,'Text','Box type');
+% % options for box type
+% OOPSData.Handles.hObjectBoxType_Box = uimenu(OOPSData.Handles.hObjectBoxType,'Text','Box','Checked','On','Callback',@ChangeObjectBoxType);
+% OOPSData.Handles.hObjectBoxType_Boundary = uimenu(OOPSData.Handles.hObjectBoxType,'Text','Boundary','Checked','Off','Callback',@ChangeObjectBoxType);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
 
@@ -161,11 +161,23 @@ OOPSData.Handles.hTabMenu = uimenu(OOPSData.Handles.fH,'Text','View');
 OOPSData.Handles.hTabFiles = uimenu(OOPSData.Handles.hTabMenu,'Text','Files','MenuSelectedFcn',@TabSelection,'tag','hTabFiles');
 OOPSData.Handles.hTabFFC = uimenu(OOPSData.Handles.hTabMenu,'Text','FFC','MenuSelectedFcn',@TabSelection,'tag','hTabFFC');
 OOPSData.Handles.hTabMask = uimenu(OOPSData.Handles.hTabMenu,'Text','Mask','MenuSelectedFcn',@TabSelection,'tag','hTabMask');
-OOPSData.Handles.hTabOrderFactor = uimenu(OOPSData.Handles.hTabMenu,'Text','Order Factor','MenuSelectedFcn',@TabSelection,'tag','hTabOrderFactor');
+OOPSData.Handles.hTabOrder = uimenu(OOPSData.Handles.hTabMenu,'Text','Order','MenuSelectedFcn',@TabSelection,'tag','hTabOrder');
 OOPSData.Handles.hTabAzimuth = uimenu(OOPSData.Handles.hTabMenu,'Text','Azimuth','MenuSelectedFcn',@TabSelection,'tag','hTabAzimuth');
 OOPSData.Handles.hTabPlots = uimenu(OOPSData.Handles.hTabMenu,'Text','Plots','MenuSelectedFcn',@TabSelection,'tag','hTabPlots');
 OOPSData.Handles.hTabPolarPlots = uimenu(OOPSData.Handles.hTabMenu,'Text','Polar Plots','MenuSelectedFcn',@TabSelection,'tag','hTabPolarPlots');
 OOPSData.Handles.hTabObjects = uimenu(OOPSData.Handles.hTabMenu,'Text','Objects','MenuSelectedFcn',@TabSelection,'tag','hTabObjects');
+
+% add a View option for each custom statistic
+for i = 1:numel(OOPSData.Settings.CustomStatistics)
+    % get the next statistic
+    thisStatistic = OOPSData.Settings.CustomStatistics(i);
+    % create a tab for it, add a separator above the first one
+    OOPSData.Handles.(['hTab',thisStatistic.StatisticName]) = uimenu(OOPSData.Handles.hTabMenu,...
+        'Text',thisStatistic.StatisticDisplayName,...
+        'MenuSelectedFcn',@TabSelection,...
+        'tag',thisStatistic.StatisticName,...
+        'Separator',i==1);
+end
 
 %% Process Menu Button - allows user to perform FFC, generate mask, and generate output images
 
@@ -173,7 +185,7 @@ OOPSData.Handles.hProcessMenu = uimenu(OOPSData.Handles.fH,'Text','Process');
 % Process Operations
 OOPSData.Handles.hProcessFFC = uimenu(OOPSData.Handles.hProcessMenu,'Text','Flat-field correction','MenuSelectedFcn',@processFFC);
 OOPSData.Handles.hProcessMask = uimenu(OOPSData.Handles.hProcessMenu,'Text','Build mask','MenuSelectedFcn',@processMask);
-OOPSData.Handles.hProcessOF = uimenu(OOPSData.Handles.hProcessMenu,'Text','Calculate FPM statistics','MenuSelectedFcn',@processFPMStats);
+OOPSData.Handles.hProcessOrder = uimenu(OOPSData.Handles.hProcessMenu,'Text','Calculate FPM statistics','MenuSelectedFcn',@processFPMStats);
 OOPSData.Handles.hProcessLocalSB = uimenu(OOPSData.Handles.hProcessMenu,'Text','Local S/B','MenuSelectedFcn',@processLocalSB);
 
 %% Summary Menu Button
@@ -187,12 +199,12 @@ OOPSData.Handles.hObjectsMenu = uimenu(OOPSData.Handles.fH,'Text','Objects');
 % Object Actions
 % select
 OOPSData.Handles.hSelectObjectsByProperty = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Select by property','MenuSelectedFcn',@mbSelectObjectsByProperty);
-% delete selected
+% delete selected objects
 OOPSData.Handles.hDeleteSelectedObjects = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Delete selected objects');
 OOPSData.Handles.hDeleteSelectedObjects_InProject = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In project','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Project');
 OOPSData.Handles.hDeleteSelectedObjects_InGroup = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In group','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Group');
 OOPSData.Handles.hDeleteSelectedObjects_InImage = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In image','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Image');
-% clear selection
+% clear selection status
 OOPSData.Handles.hClearSelection = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Clear selection');
 OOPSData.Handles.hClearSelection_InProject = uimenu(OOPSData.Handles.hClearSelection,'Text','In project','MenuSelectedFcn',@mbClearSelection,'Tag','Project');
 OOPSData.Handles.hClearSelection_InGroup = uimenu(OOPSData.Handles.hClearSelection,'Text','In group','MenuSelectedFcn',@mbClearSelection,'Tag','Group');
@@ -209,16 +221,15 @@ OOPSData.Handles.hPlotFullAzimuthQuiver = uimenu(OOPSData.Handles.hPlotMenu,'Tex
 % Show images
 OOPSData.Handles.hPlot_Images = uimenu(OOPSData.Handles.hPlotMenu,'Text','Images');
 % options for 'Images'
-OOPSData.Handles.hPlot_Images_OFImageRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','OF','Tag','OFImageRGB','MenuSelectedFcn',@ShowImage);
-OOPSData.Handles.hPlot_Images_MaskedOFImageRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Masked OF','Tag','MaskedOFImageRGB','MenuSelectedFcn',@ShowImage);
-OOPSData.Handles.hPlot_Images_OFIntensityOverlayRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','OF-intensity overlay','Tag','OFIntensityOverlayRGB','MenuSelectedFcn',@ShowImage);
-OOPSData.Handles.hPlot_Images_ScaledOFIntensityOverlayRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Scaled OF-intensity overlay','Tag','ScaledOFIntensityOverlayRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_OrderImageRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Order','Tag','OrderImageRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_MaskedOrderImageRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Masked Order','Tag','MaskedOrderImageRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_OrderIntensityOverlayRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Order-intensity overlay','Tag','OrderIntensityOverlayRGB','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_UserScaledOrderIntensityOverlayRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','User-scaled Order-intensity overlay','Tag','UserScaledOrderIntensityOverlayRGB','MenuSelectedFcn',@ShowImage);
 OOPSData.Handles.hPlot_Images_AzimuthRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Azimuth','Tag','AzimuthRGB','MenuSelectedFcn',@ShowImage);
 OOPSData.Handles.hPlot_Images_MaskedAzimuthRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Masked azimuth','Tag','MaskedAzimuthRGB','MenuSelectedFcn',@ShowImage);
-OOPSData.Handles.hPlot_Images_AzimuthOFIntensityOverlayHSV = uimenu(OOPSData.Handles.hPlot_Images,'Text','Azimuth-OF-intensity HSV','Tag','AzimuthOFIntensityHSV','MenuSelectedFcn',@ShowImage);
+OOPSData.Handles.hPlot_Images_AzimuthOrderIntensityOverlayHSV = uimenu(OOPSData.Handles.hPlot_Images,'Text','Azimuth-Order-intensity HSV','Tag','AzimuthOrderIntensityHSV','MenuSelectedFcn',@ShowImage);
 OOPSData.Handles.hPlot_Images_MaskRGBImage = uimenu(OOPSData.Handles.hPlot_Images,'Text','Mask','Tag','MaskRGBImage','MenuSelectedFcn',@ShowImage);
 OOPSData.Handles.hPlot_Images_ObjectLabelImageRGB = uimenu(OOPSData.Handles.hPlot_Images,'Text','Object labels','Tag','ObjectLabelImageRGB','MenuSelectedFcn',@ShowImage);
-
 
 %% draw the menu bar objects and pause for more predictable performance
 
@@ -299,7 +310,8 @@ OOPSData.Handles.ProjectSummaryTableGrid.Layout.Row = 2;
 OOPSData.Handles.ProjectSummaryTable = uitable(OOPSData.Handles.ProjectSummaryTableGrid,...
     "BackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
     "ForegroundColor",OOPSData.Settings.GUIForegroundColor,...
-    "FontName",OOPSData.Settings.DefaultFont);
+    "FontName",OOPSData.Settings.DefaultFont,...
+    "Visible","off");
 
 %% CHECKPOINT
 
@@ -324,6 +336,19 @@ OOPSData.Handles.SettingsPanelGrid = uigridlayout(OOPSData.Handles.SettingsPanel
 % settings accordion - custom ui component
 OOPSData.Handles.SettingsAccordion = uiaccordion(OOPSData.Handles.SettingsPanelGrid,...
     "BackgroundColor",OOPSData.Settings.GUIBackgroundColor);
+
+%% set up some variables used broadly by multiple settings objects
+
+% default matlab colors and colornames
+[colorNames,colorCodes] = colornames('MATLAB');
+colorNames = colorNames';
+colorCodesCell = mat2cell(colorCodes,ones(size(colorCodes,1),1),3)';
+
+
+
+%% CHECKPOINT
+
+disp('Setting up colormaps settings...')
 
 %% colormaps settings
 
@@ -402,7 +427,7 @@ OOPSData.Handles.ExampleColorbar = image(OOPSData.Handles.ExampleColormapAx,...
 OOPSData.Handles.ExampleColormapAx.YLim = [0.5 50.5];
 OOPSData.Handles.ExampleColormapAx.XLim = [0.5 256.5];
 % set the colormap of the axes holding our example image
-OOPSData.Handles.ExampleColormapAx.Colormap = OOPSData.Settings.ColormapsSettings.(ImageTypeFields{k}).Map;  
+OOPSData.Handles.ExampleColormapAx.Colormap = OOPSData.Settings.ColormapsSettings.(ImageTypeFields{1}).Map;  
 
 
 % colormap selector
@@ -432,6 +457,10 @@ for colormapIdx = 1:numel(OOPSData.Handles.ColormapsSelector.Items)
     addStyle(OOPSData.Handles.ColormapsSelector,colormapIconStyles(colormapIdx),"item",colormapIdx);
 end
 
+%% CHECKPOINT
+
+disp('Setting up azimuth display settings...')
+
 %% azimuth display settings
 
 OOPSData.Handles.SettingsAccordion.addItem(...
@@ -450,7 +479,7 @@ set(OOPSData.Handles.AzimuthDisplaySettingsGrid,...
     'Padding',[5 5 5 5],...
     'RowSpacing',5,...
     'ColumnSpacing',5,...
-    'RowHeight',{20,20,20,20,20,20},...
+    'RowHeight',{20,20,20,20,20},...
     'ColumnWidth',{'fit','1x'});
 
 OOPSData.Handles.AzimuthLineAlphaLabel = uilabel(...
@@ -466,7 +495,9 @@ OOPSData.Handles.AzimuthLineAlphaDropdown = uidropdown(...
     'Items',{'0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'},...
     'ItemsData',{0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1},...
     'Value',OOPSData.Settings.AzimuthLineAlpha,...
-    'FontName',OOPSData.Settings.DefaultFont);
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','LineAlpha',...
+    'ValueChangedFcn',@AzimuthDisplaySettingsChanged);
 OOPSData.Handles.AzimuthLineAlphaDropdown.Layout.Row = 1;
 OOPSData.Handles.AzimuthLineAlphaDropdown.Layout.Column = 2;
 
@@ -483,7 +514,9 @@ OOPSData.Handles.AzimuthLineWidthDropdown = uidropdown(...
     'Items',{'1','2','3','4','5','6','7','8','9','10'},...
     'ItemsData',{1,2,3,4,5,6,7,8,9,10},...
     'Value',OOPSData.Settings.AzimuthLineWidth,...
-    'FontName',OOPSData.Settings.DefaultFont);
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','LineWidth',...
+    'ValueChangedFcn',@AzimuthDisplaySettingsChanged);
 OOPSData.Handles.AzimuthLineWidthDropdown.Layout.Row = 2;
 OOPSData.Handles.AzimuthLineWidthDropdown.Layout.Column = 2;
 
@@ -496,9 +529,12 @@ OOPSData.Handles.AzimuthLineScaleLabel.Layout.Row = 3;
 OOPSData.Handles.AzimuthLineScaleLabel.Layout.Column = 1;
 
 OOPSData.Handles.AzimuthLineScaleEditfield = uieditfield(...
+    'numeric',...
     'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
-    'Value',num2str(OOPSData.Settings.AzimuthLineScale),...
-    'FontName',OOPSData.Settings.DefaultFont);
+    'Value',OOPSData.Settings.AzimuthLineScale,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','LineScale',...
+    'ValueChangedFcn',@AzimuthDisplaySettingsChanged);
 OOPSData.Handles.AzimuthLineScaleEditfield.Layout.Row = 3;
 OOPSData.Handles.AzimuthLineScaleEditfield.Layout.Column = 2;
 
@@ -515,7 +551,9 @@ OOPSData.Handles.AzimuthLineScaleDownDropdown = uidropdown(...
     'Items',{'All','Half','Quarter'},...
     'ItemsData',{1,2,4},...
     'Value',OOPSData.Settings.AzimuthScaleDownFactor,...
-    'FontName',OOPSData.Settings.DefaultFont);
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','ScaleDownFactor',...
+    'ValueChangedFcn',@AzimuthDisplaySettingsChanged);
 OOPSData.Handles.AzimuthLineScaleDownDropdown.Layout.Row = 4;
 OOPSData.Handles.AzimuthLineScaleDownDropdown.Layout.Column = 2;
 OOPSData.Handles.AzimuthLineScaleDownDropdown.ItemsData = [1 2 4];
@@ -532,17 +570,34 @@ OOPSData.Handles.AzimuthColorModeDropdown = uidropdown(...
     'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
     'Items',{'Direction','Magnitude','Mono'},...
     'Value',OOPSData.Settings.AzimuthColorMode,...
-    'FontName',OOPSData.Settings.DefaultFont);
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','ColorMode',...
+    'ValueChangedFcn',@AzimuthDisplaySettingsChanged);
 OOPSData.Handles.AzimuthColorModeDropdown.Layout.Row = 5;
 OOPSData.Handles.AzimuthColorModeDropdown.Layout.Column = 2;
 
-OOPSData.Handles.ApplyAzimuthDisplaySettingsButton = uibutton(OOPSData.Handles.AzimuthDisplaySettingsGrid,...
-    'Push',...
-    'Text','Apply',...
-    'ButtonPushedFcn',@ApplyAzimuthSettings,...
-    'FontName',OOPSData.Settings.DefaultFont);
-OOPSData.Handles.ApplyAzimuthDisplaySettingsButton.Layout.Row = 6;
-OOPSData.Handles.ApplyAzimuthDisplaySettingsButton.Layout.Column = [1 2];
+OOPSData.Handles.AzimuthObjectMaskDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
+    'Text','Object mask',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.AzimuthObjectMaskDropdownLabel.Layout.Row = 6;
+OOPSData.Handles.AzimuthObjectMaskDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.AzimuthObjectMaskDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.AzimuthDisplaySettingsGrid,...
+    'Items',{'on','off'},...
+    'ItemsData',{true,false},...
+    'Value',OOPSData.Settings.AzimuthObjectMask,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','ObjectMask',...
+    'ValueChangedFcn',@AzimuthObjectMaskChanged);
+OOPSData.Handles.AzimuthObjectMaskDropdown.Layout.Row = 6;
+OOPSData.Handles.AzimuthObjectMaskDropdown.Layout.Column = 2;
+
+%% CHECKPOINT
+
+disp('Setting up polar histogram settings...')
 
 %% PolarHistogram settings
 
@@ -560,7 +615,7 @@ OOPSData.Handles.PolarHistogramSettingsGrid = OOPSData.Handles.SettingsAccordion
 set(OOPSData.Handles.PolarHistogramSettingsGrid,...
     'BackgroundColor','Black',...
     'Padding',[5 5 5 5],...
-    'RowSpacing',10,...
+    'RowSpacing',5,...
     'ColumnSpacing',5,...
     'RowHeight',{20,20,20,20,20,20,20,20,20,20,20,20,20},...
     'ColumnWidth',{'fit','1x'},...
@@ -825,6 +880,9 @@ OOPSData.Handles.PolarHistogramBackgroundColorDropdown.Layout.Row = 13;
 OOPSData.Handles.PolarHistogramBackgroundColorDropdown.Layout.Column = 2;
 updateColorDropdownStyles(OOPSData.Handles.PolarHistogramBackgroundColorDropdown);
 
+%% CHECKPOINT
+
+disp('Setting up scatterplot settings...')
 
 %% ScatterPlot settings
 
@@ -844,7 +902,7 @@ set(OOPSData.Handles.ScatterPlotSettingsGrid,...
     'Padding',[5 5 5 5],...
     'RowSpacing',5,...
     'ColumnSpacing',5,...
-    'RowHeight',{'1x','1x',20,20,20,20,20},...
+    'RowHeight',{20,20,20,20,20,20,20},...
     'ColumnWidth',{'fit','1x'});
 
 % X-axis variable
@@ -982,6 +1040,10 @@ OOPSData.Handles.ScatterPlotLegendVisibleDropdown = uidropdown('Parent',OOPSData
 OOPSData.Handles.ScatterPlotLegendVisibleDropdown.Layout.Row = 7;
 OOPSData.Handles.ScatterPlotLegendVisibleDropdown.Layout.Column = 2;
 
+%% CHECKPOINT
+
+disp('Setting up swarmplot settings...')
+
 %% SwarmPlot settings
 
 OOPSData.Handles.SettingsAccordion.addItem(...
@@ -1001,9 +1063,8 @@ set(OOPSData.Handles.SwarmPlotSettingsGrid,...
     'Padding',[5 5 5 5],...
     'RowSpacing',5,...
     'ColumnSpacing',5,...
-    'RowHeight',{20,20,20,20,20,20,20,20,20},...
+    'RowHeight',repmat({20},18,1),...
     'ColumnWidth',{'fit','1x'});
-
 
 % variable
 OOPSData.Handles.SwarmPlotYVarDropdownLabel = uilabel(...
@@ -1138,31 +1199,89 @@ OOPSData.Handles.SwarmPlotMarkerFaceAlphaDropdown = uidropdown(...
 OOPSData.Handles.SwarmPlotMarkerFaceAlphaDropdown.Layout.Row = 7;
 OOPSData.Handles.SwarmPlotMarkerFaceAlphaDropdown.Layout.Column = 2;
 
+
+
+
+
+
+
+% error bars color mode
+OOPSData.Handles.SwarmPlotErrorBarsColorModeDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Error bars color mode',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotErrorBarsColorModeDropdownLabel.Layout.Row = 8;
+OOPSData.Handles.SwarmPlotErrorBarsColorModeDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotErrorBarsColorModeDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',{'auto','Custom'},...
+    'Value',OOPSData.Settings.SwarmPlotErrorBarsColorMode,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@SwarmPlotErrorBarsColorModeChanged,...
+    'Tag','ViolinEdgeColorMode');
+OOPSData.Handles.SwarmPlotErrorBarsColorModeDropdown.Layout.Row = 8;
+OOPSData.Handles.SwarmPlotErrorBarsColorModeDropdown.Layout.Column = 2;
+
 % error bars color
-OOPSData.Handles.SwarmPlotErrorBarColorDropdownLabel = uilabel('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
     'Text','Error bars color',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
-OOPSData.Handles.SwarmPlotErrorBarColorDropdownLabel.Layout.Row = 8;
-OOPSData.Handles.SwarmPlotErrorBarColorDropdownLabel.Layout.Column = 1;
+OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel.Layout.Row = 9;
+OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel.Layout.Column = 1;
 
-OOPSData.Handles.SwarmPlotErrorBarColorDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
-    'Items',{'Black','White','Custom'},...
-    'ItemsData',{[0 0 0],[1 1 1],OOPSData.Settings.SwarmPlotErrorBarColor},...
-    'Value',OOPSData.Settings.SwarmPlotErrorBarColor,...
+OOPSData.Handles.SwarmPlotErrorBarsColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',[colorNames, 'Custom'],...
+    'ItemsData',[colorCodesCell, OOPSData.Settings.SwarmPlotErrorBarsColor],...
+    'Value',OOPSData.Settings.SwarmPlotErrorBarsColor,...
     'FontName',OOPSData.Settings.DefaultFont,...
     'ClickedFcn',@colorDropdownClicked,...
-    'UserData',{@SwarmPlotErrorBarColorChanged});
-OOPSData.Handles.SwarmPlotErrorBarColorDropdown.Layout.Row = 8;
-OOPSData.Handles.SwarmPlotErrorBarColorDropdown.Layout.Column = 2;
-updateColorDropdownStyles(OOPSData.Handles.SwarmPlotErrorBarColorDropdown);
+    'UserData',{@SwarmPlotErrorBarsColorChanged});
+OOPSData.Handles.SwarmPlotErrorBarsColorDropdown.Layout.Row = 9;
+OOPSData.Handles.SwarmPlotErrorBarsColorDropdown.Layout.Column = 2;
+updateColorDropdownStyles(OOPSData.Handles.SwarmPlotErrorBarsColorDropdown);
+
+
+
+
+
+
+
+
+
+
+
+
+
+% % error bars color
+% OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel = uilabel('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+%     'Text','Error bars color',...
+%     'FontName',OOPSData.Settings.DefaultFont,...
+%     'FontColor','White');
+% OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel.Layout.Row = 8;
+% OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel.Layout.Column = 1;
+% 
+% OOPSData.Handles.SwarmPlotErrorBarsColorDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+%     'Items',{'Black','White','Custom'},...
+%     'ItemsData',{[0 0 0],[1 1 1],OOPSData.Settings.SwarmPlotErrorBarsColor},...
+%     'Value',OOPSData.Settings.SwarmPlotErrorBarsColor,...
+%     'FontName',OOPSData.Settings.DefaultFont,...
+%     'ClickedFcn',@colorDropdownClicked,...
+%     'UserData',{@SwarmPlotErrorBarColorChanged});
+% OOPSData.Handles.SwarmPlotErrorBarsColorDropdown.Layout.Row = 8;
+% OOPSData.Handles.SwarmPlotErrorBarsColorDropdown.Layout.Column = 2;
+% updateColorDropdownStyles(OOPSData.Handles.SwarmPlotErrorBarsColorDropdown);
 
 % error bars visible
 OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdownLabel = uilabel('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
     'Text','Error bars',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
-OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdownLabel.Layout.Row = 9;
+OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdownLabel.Layout.Row = 10;
 OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdownLabel.Layout.Column = 1;
 
 OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
@@ -1171,8 +1290,188 @@ OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdown = uidropdown('Parent',OOPSDat
     'Value',OOPSData.Settings.SwarmPlotErrorBarsVisible,...
     'FontName',OOPSData.Settings.DefaultFont,...
     'ValueChangedFcn',@SwarmPlotErrorBarsVisibleChanged);
-OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdown.Layout.Row = 9;
+OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdown.Layout.Row = 10;
 OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdown.Layout.Column = 2;
+
+% violin edge color mode
+OOPSData.Handles.SwarmPlotViolinEdgeColorModeDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Violin edge color mode',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotViolinEdgeColorModeDropdownLabel.Layout.Row = 11;
+OOPSData.Handles.SwarmPlotViolinEdgeColorModeDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotViolinEdgeColorModeDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',{'auto','Custom'},...
+    'Value',OOPSData.Settings.SwarmPlotViolinEdgeColorMode,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@SwarmPlotViolinEdgeColorModeChanged,...
+    'Tag','ViolinEdgeColorMode');
+OOPSData.Handles.SwarmPlotViolinEdgeColorModeDropdown.Layout.Row = 11;
+OOPSData.Handles.SwarmPlotViolinEdgeColorModeDropdown.Layout.Column = 2;
+
+% violin edge color
+OOPSData.Handles.SwarmPlotViolinEdgeColorDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Violin edge color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotViolinEdgeColorDropdownLabel.Layout.Row = 12;
+OOPSData.Handles.SwarmPlotViolinEdgeColorDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotViolinEdgeColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',[colorNames, 'Custom'],...
+    'ItemsData',[colorCodesCell, OOPSData.Settings.SwarmPlotViolinEdgeColor],...
+    'Value',OOPSData.Settings.SwarmPlotViolinEdgeColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ClickedFcn',@colorDropdownClicked,...
+    'UserData',{@SwarmPlotViolinEdgeColorChanged});
+OOPSData.Handles.SwarmPlotViolinEdgeColorDropdown.Layout.Row = 12;
+OOPSData.Handles.SwarmPlotViolinEdgeColorDropdown.Layout.Column = 2;
+updateColorDropdownStyles(OOPSData.Handles.SwarmPlotViolinEdgeColorDropdown);
+
+
+% violin face color mode
+OOPSData.Handles.SwarmPlotViolinFaceColorModeDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Violin face color mode',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotViolinFaceColorModeDropdownLabel.Layout.Row = 13;
+OOPSData.Handles.SwarmPlotViolinFaceColorModeDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotViolinFaceColorModeDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',{'auto','Custom'},...
+    'Value',OOPSData.Settings.SwarmPlotViolinFaceColorMode,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@SwarmPlotViolinFaceColorModeChanged,...
+    'Tag','ViolinFaceColorMode');
+OOPSData.Handles.SwarmPlotViolinFaceColorModeDropdown.Layout.Row = 13;
+OOPSData.Handles.SwarmPlotViolinFaceColorModeDropdown.Layout.Column = 2;
+
+% violin face color
+OOPSData.Handles.SwarmPlotViolinFaceColorDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Violin face color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotViolinFaceColorDropdownLabel.Layout.Row = 14;
+OOPSData.Handles.SwarmPlotViolinFaceColorDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotViolinFaceColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',[colorNames, 'Custom'],...
+    'ItemsData',[colorCodesCell, OOPSData.Settings.SwarmPlotViolinFaceColor],...
+    'Value',OOPSData.Settings.SwarmPlotViolinFaceColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ClickedFcn',@colorDropdownClicked,...
+    'UserData',{@SwarmPlotViolinFaceColorChanged});
+OOPSData.Handles.SwarmPlotViolinFaceColorDropdown.Layout.Row = 14;
+OOPSData.Handles.SwarmPlotViolinFaceColorDropdown.Layout.Column = 2;
+updateColorDropdownStyles(OOPSData.Handles.SwarmPlotViolinFaceColorDropdown);
+
+% violins visible
+OOPSData.Handles.SwarmPlotViolinsVisibleDropdownLabel = uilabel('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Show violin outlines',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotViolinsVisibleDropdownLabel.Layout.Row = 15;
+OOPSData.Handles.SwarmPlotViolinsVisibleDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotViolinsVisibleDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',{'On','Off'},...
+    'ItemsData',{true,false},...
+    'Value',OOPSData.Settings.SwarmPlotViolinsVisible,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@SwarmPlotViolinsVisibleChanged);
+OOPSData.Handles.SwarmPlotViolinsVisibleDropdown.Layout.Row = 15;
+OOPSData.Handles.SwarmPlotViolinsVisibleDropdown.Layout.Column = 2;
+
+
+% marker edge color mode
+OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Marker edge color mode',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdownLabel.Layout.Row = 16;
+OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',{'auto','Custom'},...
+    'Value',OOPSData.Settings.SwarmPlotMarkerEdgeColorMode,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@SwarmPlotMarkerEdgeColorModeChanged,...
+    'Tag','MarkerEdgeColorMode');
+OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdown.Layout.Row = 16;
+OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdown.Layout.Column = 2;
+
+
+% marker edge color
+OOPSData.Handles.SwarmPlotMarkerEdgeColorDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Marker edge color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotMarkerEdgeColorDropdownLabel.Layout.Row = 17;
+OOPSData.Handles.SwarmPlotMarkerEdgeColorDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotMarkerEdgeColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',[colorNames, 'Custom'],...
+    'ItemsData',[colorCodesCell, OOPSData.Settings.SwarmPlotMarkerEdgeColor],...
+    'Value',OOPSData.Settings.SwarmPlotMarkerEdgeColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ClickedFcn',@colorDropdownClicked,...
+    'UserData',{@SwarmPlotMarkerEdgeColorChanged});
+OOPSData.Handles.SwarmPlotMarkerEdgeColorDropdown.Layout.Row = 17;
+OOPSData.Handles.SwarmPlotMarkerEdgeColorDropdown.Layout.Column = 2;
+updateColorDropdownStyles(OOPSData.Handles.SwarmPlotMarkerEdgeColorDropdown);
+
+% points visible
+OOPSData.Handles.SwarmPlotPointsVisibleDropdownLabel = uilabel('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','Show all points',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotPointsVisibleDropdownLabel.Layout.Row = 18;
+OOPSData.Handles.SwarmPlotPointsVisibleDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotPointsVisibleDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Items',{'On','Off'},...
+    'ItemsData',{true,false},...
+    'Value',OOPSData.Settings.SwarmPlotPointsVisible,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@SwarmPlotPointsVisibleChanged);
+OOPSData.Handles.SwarmPlotPointsVisibleDropdown.Layout.Row = 18;
+OOPSData.Handles.SwarmPlotPointsVisibleDropdown.Layout.Column = 2;
+
+% x jitter width
+OOPSData.Handles.SwarmPlotXJitterWidthLabel = uilabel(...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Text','X jitter width',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.SwarmPlotXJitterWidthLabel.Layout.Row = 19;
+OOPSData.Handles.SwarmPlotXJitterWidthLabel.Layout.Column = 1;
+
+OOPSData.Handles.SwarmPlotXJitterWidthEditfield = uieditfield(...
+    'numeric',...
+    'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
+    'Value',OOPSData.Settings.SwarmPlotXJitterWidth,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','XJitterWidth',...
+    'ValueChangedFcn',@SwarmPlotXJitterWidthChanged);
+OOPSData.Handles.SwarmPlotXJitterWidthEditfield.Layout.Row = 19;
+OOPSData.Handles.SwarmPlotXJitterWidthEditfield.Layout.Column = 2;
+
+%% CHECKPOINT
+
+disp('Setting up label settings...')
 
 %% Label settings
 
@@ -1228,15 +1527,14 @@ defaultLabelTreeNode = uitreenode(OOPSData.Handles.LabelTree,...
     'ContextMenu',OOPSData.Handles.LabelContextMenu,...
     'Icon',makeRGBColorSquare(OOPSData.Settings.ObjectLabels(1).Color,5));
 
-% testing below
-% % add BG color and font color styles
-% labelNodeStyle = uistyle('BackgroundColor',defaultLabelTreeNode.NodeData.Color,'FontColor',getBWContrastColor(defaultLabelTreeNode.NodeData.Color));
-% addStyle(OOPSData.Handles.LabelTree,labelNodeStyle,"node",defaultLabelTreeNode);
+%% CHECKPOINT
+
+disp('Setting up display limits settings...')
 
 %% Intensity display limits
 
 OOPSData.Handles.SettingsAccordion.addItem(...
-    "Title","Intensity display limits",...
+    "Title","Display limits",...
     "PaneBackgroundColor",[0 0 0],...
     "FontName",OOPSData.Settings.DefaultFont,...
     "FontColor",OOPSData.Settings.GUIForegroundColor,...
@@ -1246,12 +1544,20 @@ OOPSData.Handles.SettingsAccordion.addItem(...
 
 OOPSData.Handles.IntensityDisplayLimitsSettingsGrid = OOPSData.Handles.SettingsAccordion.Items(7).Pane;
 
+% set(OOPSData.Handles.IntensityDisplayLimitsSettingsGrid,...
+%     'BackgroundColor','Black',...
+%     'Padding',[5 5 5 5],...
+%     'RowSpacing',5,...
+%     'ColumnSpacing',0,...
+%     'RowHeight',{'1x','1x','1x'},...
+%     'ColumnWidth',{'1x'});
+
 set(OOPSData.Handles.IntensityDisplayLimitsSettingsGrid,...
     'BackgroundColor','Black',...
     'Padding',[5 5 5 5],...
     'RowSpacing',5,...
     'ColumnSpacing',0,...
-    'RowHeight',{'fit','fit'},...
+    'RowHeight',repmat({'1x'},1,3+numel(OOPSData.Settings.CustomStatistics)),...
     'ColumnWidth',{'1x'});
 
 OOPSData.Handles.PrimaryIntensitySlider = RangeSlider(...
@@ -1293,6 +1599,61 @@ OOPSData.Handles.ReferenceIntensitySlider = RangeSlider(...
     'TickColor','White');
 OOPSData.Handles.ReferenceIntensitySlider.Layout.Row = 2;
 OOPSData.Handles.ReferenceIntensitySlider.ValueChangedFcn = @AdjustReferenceChannelIntensity;
+
+OOPSData.Handles.OrderSlider = RangeSlider(...
+    'Parent',OOPSData.Handles.IntensityDisplayLimitsSettingsGrid,...
+    'Visible','On',...
+    'Limits',[0 1],...
+    'Value',[0 1],...
+    'Knob1Color',[1 1 1],...
+    'Knob1EdgeColor',[0 0 0],...
+    'Knob2Color',[1 1 1],...
+    'Knob2EdgeColor',[0 0 0],...
+    'RangeColor',[1 1 1],...
+    'MidLineColor','#A9A9A9',...
+    'Title','Order',...
+    'TitleColor',[1 1 1],...
+    'BackgroundColor','Black',...
+    'LabelColor','White',...
+    'LabelBGColor','none',...
+    'TickColor','White');
+OOPSData.Handles.OrderSlider.Layout.Row = 3;
+OOPSData.Handles.OrderSlider.ValueChangedFcn = @AdjustOrderDisplayLimits;
+
+% add a slider for each custom statistic
+for i = 1:numel(OOPSData.Settings.CustomStatistics)
+    % get the next statistic
+    thisStatistic = OOPSData.Settings.CustomStatistics(i);
+    % the relevant properties of the statistic
+    statName = thisStatistic.StatisticName;
+    statDisplayName = thisStatistic.StatisticDisplayName;
+    statRange = thisStatistic.StatisticRange;
+    % create the slider
+    OOPSData.Handles.([statName,'Slider']) = RangeSlider(...
+        'Parent',OOPSData.Handles.IntensityDisplayLimitsSettingsGrid,...
+        'Visible','On',...
+        'Limits',statRange,...
+        'Value',statRange,...
+        'Knob1Color',[1 1 1],...
+        'Knob1EdgeColor',[0 0 0],...
+        'Knob2Color',[1 1 1],...
+        'Knob2EdgeColor',[0 0 0],...
+        'RangeColor',[1 1 1],...
+        'MidLineColor','#A9A9A9',...
+        'Title',statDisplayName,...
+        'TitleColor',[1 1 1],...
+        'BackgroundColor','Black',...
+        'LabelColor','White',...
+        'LabelBGColor','none',...
+        'TickColor','White',...
+        'Tag',statName);
+    OOPSData.Handles.([statName,'Slider']).Layout.Row = i+3;
+    OOPSData.Handles.([statName,'Slider']).ValueChangedFcn = @AdjustCustomDisplayLimits;
+end
+
+%% CHECKPOINT
+
+disp('Setting up palettes settings...')
 
 %% Palettes settings
 
@@ -1371,7 +1732,7 @@ OOPSData.Handles.ExamplePalette = image(OOPSData.Handles.ExamplePaletteAx,...
 OOPSData.Handles.ExamplePaletteAx.YLim = [0.5 50.5];
 OOPSData.Handles.ExamplePaletteAx.XLim = [0.5 256.5];
 % set the colormap of the axes holding our example palette image
-OOPSData.Handles.ExamplePaletteAx.Colormap = OOPSData.Settings.PalettesSettings.(PaletteTypeFields{k}).Colors;  
+OOPSData.Handles.ExamplePaletteAx.Colormap = OOPSData.Settings.PalettesSettings.(PaletteTypeFields{1}).Colors;  
 
 % palette selector
 OOPSData.Handles.PalettesPanel = uipanel(OOPSData.Handles.PalettesSettingsGrid,...
@@ -1392,6 +1753,10 @@ OOPSData.Handles.PalettesSelector = uilistbox(OOPSData.Handles.PalettesPanelGrid
     'ValueChangedFcn',@PaletteSelectionChanged,...
     'FontName',OOPSData.Settings.DefaultFont);
 
+%% CHECKPOINT
+
+disp('Setting up object intensity profile settings...')
+
 %% Object intensity profile settings
 
 OOPSData.Handles.SettingsAccordion.addItem(...
@@ -1411,7 +1776,7 @@ set(OOPSData.Handles.ObjectIntensityProfileSettingsGrid,...
     'Padding',[5 5 5 5],...
     'RowSpacing',5,...
     'ColumnSpacing',5,...
-    'RowHeight',{20,20},...
+    'RowHeight',{20,20,20,20,20,20},...
     'ColumnWidth',{'fit','1x'});
 
 % background color
@@ -1540,6 +1905,10 @@ OOPSData.Handles.ObjectIntensityProfileAzimuthLinesColorDropdown.Layout.Row = 6;
 OOPSData.Handles.ObjectIntensityProfileAzimuthLinesColorDropdown.Layout.Column = 2;
 updateColorDropdownStyles(OOPSData.Handles.ObjectIntensityProfileAzimuthLinesColorDropdown);
 
+%% CHECKPOINT
+
+disp('Setting up object azimuth settings...')
+
 %% Object azimuth lines
 
 OOPSData.Handles.SettingsAccordion.addItem(...
@@ -1655,38 +2024,191 @@ OOPSData.Handles.ObjectAzimuthColorModeDropdown = uidropdown(...
 OOPSData.Handles.ObjectAzimuthColorModeDropdown.Layout.Row = 5;
 OOPSData.Handles.ObjectAzimuthColorModeDropdown.Layout.Column = 2;
 
+%% CHECKPOINT
+
+disp('Setting up object selection settings...')
+
+%% Object selection settings
+
+OOPSData.Handles.SettingsAccordion.addItem(...
+    "Title","Object selection",...
+    "PaneBackgroundColor",[0 0 0],...
+    "FontName",OOPSData.Settings.DefaultFont,...
+    "FontColor",OOPSData.Settings.GUIForegroundColor,...
+    "TitleBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
+    "PaneBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
+    "BorderColor" ,OOPSData.Settings.GUIForegroundColor);
+
+OOPSData.Handles.ObjectSelectionSettingsGrid = OOPSData.Handles.SettingsAccordion.Items(11).Pane;
+
+set(OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'BackgroundColor','Black',...
+    'Scrollable','on',...
+    'Padding',[5 5 5 5],...
+    'RowSpacing',5,...
+    'ColumnSpacing',5,...
+    'RowHeight',{20,20,20,20,20},...
+    'ColumnWidth',{'fit','1x'});
+
+% box type
+OOPSData.Handles.ObjectSelectionBoxTypeDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'Text','Box type',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.ObjectSelectionBoxTypeDropdownLabel.Layout.Row = 1;
+OOPSData.Handles.ObjectSelectionBoxTypeDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.ObjectSelectionBoxTypeDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'Items',{'Box','Boundary'},...
+    'Value',OOPSData.Settings.ObjectSelectionBoxType,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@ObjectSelectionSettingsChanged,...
+    'Tag','BoxType');
+OOPSData.Handles.ObjectSelectionBoxTypeDropdown.Layout.Row = 1;
+OOPSData.Handles.ObjectSelectionBoxTypeDropdown.Layout.Column = 2;
+
+% color mode
+OOPSData.Handles.ObjectSelectionColorModeDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'Text','Color mode',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.ObjectSelectionColorModeDropdownLabel.Layout.Row = 2;
+OOPSData.Handles.ObjectSelectionColorModeDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.ObjectSelectionColorModeDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'Items',{'Label','Custom'},...
+    'Value',OOPSData.Settings.ObjectSelectionColorMode,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@ObjectSelectionSettingsChanged,...
+    'Tag','ColorMode');
+OOPSData.Handles.ObjectSelectionColorModeDropdown.Layout.Row = 2;
+OOPSData.Handles.ObjectSelectionColorModeDropdown.Layout.Column = 2;
+
+% color
+%[colorNames,colorCodes] = colornames('MATLAB');
+%colorNames = [colorNames', 'Custom'];
+%colorCodesCell = [mat2cell(colorCodes,ones(size(colorCodes,1),1),3)', OOPSData.Settings.ObjectSelectionColor];
+
+OOPSData.Handles.ObjectSelectionColorDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'Text','Color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.ObjectSelectionColorDropdownLabel.Layout.Row = 3;
+OOPSData.Handles.ObjectSelectionColorDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.ObjectSelectionColorDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'Items',[colorNames, 'Custom'],...
+    'ItemsData',[colorCodesCell, OOPSData.Settings.ObjectSelectionColor],...
+    'Value',OOPSData.Settings.ObjectSelectionColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ClickedFcn',@colorDropdownClicked,...
+    'UserData',{@ObjectSelectionColorChanged});
+OOPSData.Handles.ObjectSelectionColorDropdown.Layout.Row = 3;
+OOPSData.Handles.ObjectSelectionColorDropdown.Layout.Column = 2;
+updateColorDropdownStyles(OOPSData.Handles.ObjectSelectionColorDropdown);
+
+% line width
+OOPSData.Handles.ObjectSelectionLineWidthLabel = uilabel(...
+    'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'Text','Line width',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.ObjectSelectionLineWidthLabel.Layout.Row = 4;
+OOPSData.Handles.ObjectSelectionLineWidthLabel.Layout.Column = 1;
+
+OOPSData.Handles.ObjectSelectionLineWidthEditfield = uieditfield(...
+    OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'numeric',...
+    'Value',OOPSData.Settings.ObjectSelectionLineWidth,...
+    'Limits',[1 5],...
+    'RoundFractionalValues','on',...
+    'ValueDisplayFormat','%.0f points',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@ObjectSelectionSettingsChanged,...
+    'Tag','LineWidth');
+OOPSData.Handles.ObjectSelectionLineWidthEditfield.Layout.Row = 4;
+OOPSData.Handles.ObjectSelectionLineWidthEditfield.Layout.Column = 2;
+
+% selected line width
+OOPSData.Handles.ObjectSelectionSelectedLineWidthLabel = uilabel(...
+    'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'Text','Line width',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.ObjectSelectionSelectedLineWidthLabel.Layout.Row = 5;
+OOPSData.Handles.ObjectSelectionSelectedLineWidthLabel.Layout.Column = 1;
+
+OOPSData.Handles.ObjectSelectionSelectedLineWidthEditfield = uieditfield(...
+    OOPSData.Handles.ObjectSelectionSettingsGrid,...
+    'numeric',...
+    'Value',OOPSData.Settings.ObjectSelectionSelectedLineWidth,...
+    'Limits',[1 5],...
+    'RoundFractionalValues','on',...
+    'ValueDisplayFormat','%.0f points',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@ObjectSelectionSettingsChanged,...
+    'Tag','SelectedLineWidth');
+OOPSData.Handles.ObjectSelectionSelectedLineWidthEditfield.Layout.Row = 5;
+OOPSData.Handles.ObjectSelectionSelectedLineWidthEditfield.Layout.Column = 2;
 
 
-% draw the current figure to update final container sizes
+% % draw the current figure to update final container sizes
+
+% testing without this drawnow command
 drawnow
-pause(0.05)
+pause(0.5)
+
+%% CHECKPOINT
+
+disp('Setting up threshold slider panel...')
 
 %% Mask threshold adjustment panel
 
-OOPSData.Handles.ImageOperationsGrid = uigridlayout(OOPSData.Handles.MainGrid,...
-    [1,1],...
-    'BackgroundColor',[0 0 0],...
-    'Padding',[0 0 0 0],...
-    'ColumnWidth',{'1x'},...
-    'ColumnSpacing',0);
-OOPSData.Handles.ImageOperationsGrid.Layout.Row = 1;
-OOPSData.Handles.ImageOperationsGrid.Layout.Column = [4 5];
+% OOPSData.Handles.ImageOperationsGrid = uigridlayout(OOPSData.Handles.MainGrid,...
+%     [1,1],...
+%     'BackgroundColor',[0 0 0],...
+%     'Padding',[0 0 0 0],...
+%     'ColumnWidth',{'1x'},...
+%     'ColumnSpacing',0);
+% OOPSData.Handles.ImageOperationsGrid.Layout.Row = 1;
+% OOPSData.Handles.ImageOperationsGrid.Layout.Column = [4 5];
 
-OOPSData.Handles.ImageOperationsPanel = uipanel(OOPSData.Handles.ImageOperationsGrid,...
+% OOPSData.Handles.ImageOperationsPanel = uipanel(OOPSData.Handles.ImageOperationsGrid,...
+%     'Visible','Off',...
+%     'Title','Adjust threshhold');
+
+
+% testing below - uncomment above if issue
+OOPSData.Handles.ImageOperationsPanel = uipanel(OOPSData.Handles.MainGrid,...
     'Visible','Off',...
-    'Title','Adjust Otsu threshhold');
+    'Title','Adjust threshhold');
+OOPSData.Handles.ImageOperationsPanel.Layout.Row = 1;
+OOPSData.Handles.ImageOperationsPanel.Layout.Column = [4 5];
+
+
+% end testing
+
+
+
 
 OOPSData.Handles.ThreshSliderGrid = uigridlayout(OOPSData.Handles.ImageOperationsPanel,[1,1],...
     'Padding',[0 0 0 0],...
-    'BackgroundColor','Black');
+    'BackgroundColor','Black',...
+    'Visible','Off');
 % axes to show intensity histogram
 OOPSData.Handles.ThreshAxH = uiaxes(OOPSData.Handles.ThreshSliderGrid,...
     'Color','Black',...
-    'Visible','On',...
-    'FontName',OOPSData.Settings.DefaultFont,...
-    'FontSize',12,...
+    'Visible','Off',...
+    'FontName',OOPSData.Settings.DefaultPlotFont,...
+    'FontSize',OOPSData.Settings.FontSize,...
     'FontWeight','Bold',...
-    'XTick',[],...
+    'XTick',0:0.1:1,...
     'XTickMode','Manual',...
     'XTickLabel',{'0' '0.1' '0.2' '0.3' '0.4' '0.5' '0.6' '0.7' '0.8' '0.9' '1.0'},...
     'XTickLabelMode','Manual',...
@@ -1700,19 +2222,28 @@ OOPSData.Handles.ThreshAxH = uiaxes(OOPSData.Handles.ThreshSliderGrid,...
     'HitTest','off',...
     'ButtonDownFcn',@StartUserThresholding);
 disableDefaultInteractivity(OOPSData.Handles.ThreshAxH);
-% graphics/display sometimes unpredictable when toolbar is visible, let's turn it off
+
+% replace default toolbar with an empty one
+axtoolbar(OOPSData.Handles.ThreshAxH,{});
+% graphics/display sometimes unpredictable when toolbar is visible, turn it off
 OOPSData.Handles.ThreshAxH.Toolbar.Visible = 'Off';
-% generate some random data (1024x1024) for histogram placeholder
-RandomData = rand(1024,1024);
-% build histogram from random data
-[IntensityBinCenters,IntensityHistPlot] = BuildHistogram(RandomData);
-% add histogram info to bar plot, place plot in thresholding axes
-OOPSData.Handles.ThreshBar = bar(OOPSData.Handles.ThreshAxH,IntensityBinCenters,IntensityHistPlot,...
+
+% empty data for the thresh slider
+% 256 bins - left edge of bin 1 = 0, right edge of bin 256 = 1
+binEdges = linspace(0,1,257);
+binCounts = zeros(1,256);
+
+% add histogram info to the histogram, place plot in thresholding axes
+OOPSData.Handles.ThreshBar = histogram(OOPSData.Handles.ThreshAxH,...
+    "BinEdges",binEdges,...
+    "BinCounts",binCounts,...
     'FaceColor',[0.5 0.5 0.5],...
-    'EdgeColor','None',...
-    'PickableParts','None');
+    'EdgeColor',[1 1 1],...
+    'PickableParts','None',...
+    'Visible','off');
+
 % vertical line with draggable behavior for interactive thresholding
-OOPSData.Handles.CurrentThresholdLine = xline(OOPSData.Handles.ThreshAxH,0.5,'-',{'Threshold = 0.5'},...
+OOPSData.Handles.CurrentThresholdLine = xline(OOPSData.Handles.ThreshAxH,0,'-',{''},...
     'Tag','CurrentThresholdLine',...
     'LabelOrientation','Horizontal',...
     'PickableParts','None',...
@@ -1721,17 +2252,21 @@ OOPSData.Handles.CurrentThresholdLine = xline(OOPSData.Handles.ThreshAxH,0.5,'-'
     'FontWeight','Bold',...
     'LineWidth',1.5,...
     'Color','White',...
-    'LabelVerticalAlignment','Middle');
+    'LabelVerticalAlignment','Middle',...
+    'Visible','Off');
 
 clear RandomData
 
+
+% testing without this drawnow command
 drawnow
-pause(0.1)
+pause(0.5)
 
+%% CHECKPOINT
 
+disp('Setting up log window...')
 
-
-%% LogPanel
+%% Log panel
 
 % panel to display log messages (updates user on running/completed processes)
 OOPSData.Handles.LogPanel = uipanel(OOPSData.Handles.MainGrid,...
@@ -1739,6 +2274,21 @@ OOPSData.Handles.LogPanel = uipanel(OOPSData.Handles.MainGrid,...
     'Title','Log');
 OOPSData.Handles.LogPanel.Layout.Row = 4;
 OOPSData.Handles.LogPanel.Layout.Column = [1 5];
+
+OOPSData.Handles.LogWindowGrid = uigridlayout(OOPSData.Handles.LogPanel,[1,1],...
+    'BackgroundColor',[0 0 0],...
+    'Padding',[0 0 0 0],...
+    'Visible','off');
+OOPSData.Handles.LogWindow = uitextarea(OOPSData.Handles.LogWindowGrid,...
+    'HorizontalAlignment','left',...
+    'enable','on',...
+    'tag','LogWindow',...
+    'BackgroundColor','black',...
+    'FontColor','white',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Value',{''},...
+    'Visible','off',...
+    'Editable','off');
 
 %% CHECKPOINT
 
@@ -1777,6 +2327,9 @@ OOPSData.Handles.ImgPanel2.Layout.Column = [4 5];
 OOPSData.Handles.LargePanels = [OOPSData.Handles.ImgPanel1,OOPSData.Handles.ImgPanel2];
 
 %% draw all the panels and pause briefly for more predictable performance
+
+
+% testing without this drawnow command
 drawnow
 pause(0.5)
 
@@ -1869,27 +2422,6 @@ OOPSData.Handles.ObjectSelector = uilistbox(...
     'Visible','Off',...
     'Interruptible','off'); %% might need to change to on
 
-
-
-%% CHECKPOINT
-
-disp('Setting up log window...')
-
-%% Log Window
-OOPSData.Handles.LogWindowGrid = uigridlayout(OOPSData.Handles.LogPanel,[1,1],...
-    'BackgroundColor',[0 0 0],...
-    'Padding',[0 0 0 0]);
-OOPSData.Handles.LogWindow = uitextarea(OOPSData.Handles.LogWindowGrid,...
-    'HorizontalAlignment','left',...
-    'enable','on',...
-    'tag','LogWindow',...
-    'BackgroundColor','black',...
-    'FontColor','white',...
-    'FontName',OOPSData.Settings.DefaultFont,...
-    'Value',{''},...
-    'Visible','off',...
-    'Editable','off');
-
 %% CHECKPOINT
 
 disp('Setting up context menus...')
@@ -1925,7 +2457,7 @@ for k = 1:4
     OOPSData.Handles.FFCAxH(k) = restore_axis_defaults(OOPSData.Handles.FFCAxH(k),pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     
-    OOPSData.Handles.FFCAxH(k) = SetAxisTitle(OOPSData.Handles.FFCAxH(k),['Flat-Field Image (' num2str((k-1)*45) '^{\circ} Excitation)']);
+    OOPSData.Handles.FFCAxH(k) = SetAxisTitle(OOPSData.Handles.FFCAxH(k),['Flat-Field Image (' num2str((k-1)*45) '^{\circ})']);
     OOPSData.Handles.FFCAxH(k).Colormap = OOPSData.Settings.IntensityColormap;
     OOPSData.Handles.FFCImgH(k).HitTest = 'Off';
     
@@ -1952,7 +2484,7 @@ for k = 1:4
     OOPSData.Handles.RawIntensityAxH(k) = restore_axis_defaults(OOPSData.Handles.RawIntensityAxH(k),pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     
-    OOPSData.Handles.RawIntensityAxH(k) = SetAxisTitle(OOPSData.Handles.RawIntensityAxH(k),['Raw Intensity (' num2str((k-1)*45) '^{\circ} Excitation)']);
+    OOPSData.Handles.RawIntensityAxH(k) = SetAxisTitle(OOPSData.Handles.RawIntensityAxH(k),['Raw Intensity (' num2str((k-1)*45) '^{\circ})']);
     OOPSData.Handles.RawIntensityAxH(k).Colormap = OOPSData.Settings.IntensityColormap;
     OOPSData.Handles.RawIntensityImgH(k).HitTest = 'Off';
     
@@ -1980,7 +2512,7 @@ for k = 1:4
     clear pbarOriginal tagOriginal
     
     % set axis title
-    OOPSData.Handles.PolFFCAxH(k) = SetAxisTitle(OOPSData.Handles.PolFFCAxH(k),['Flat-Field Corrected Intensity (' num2str((k-1)*45) '^{\circ} Excitation)']);
+    OOPSData.Handles.PolFFCAxH(k) = SetAxisTitle(OOPSData.Handles.PolFFCAxH(k),['Flat-Field Corrected Intensity (' num2str((k-1)*45) '^{\circ})']);
     
     OOPSData.Handles.PolFFCAxH(k).Colormap = OOPSData.Settings.IntensityColormap;
     OOPSData.Handles.PolFFCAxH(k).Toolbar.Visible = 'Off';
@@ -2004,8 +2536,7 @@ disp('Setting up large image axes...')
         'Tag','AverageIntensity',...
         'XTick',[],...
         'YTick',[],...
-        'Color','Black',...
-        'Visible','off');
+        'CLim',[0 1]);
     % save original values to be restored after calling imshow()
     pbarOriginal = OOPSData.Handles.AverageIntensityAxH.PlotBoxAspectRatio;
     tagOriginal = OOPSData.Handles.AverageIntensityAxH.Tag;
@@ -2019,8 +2550,18 @@ disp('Setting up large image axes...')
     clear pbarOriginal tagOriginal
     
     % set axis title
-    OOPSData.Handles.AverageIntensityAxH = SetAxisTitle(OOPSData.Handles.AverageIntensityAxH,'Average Intensity (Flat-Field Corrected)');
-    % set celormap
+    OOPSData.Handles.AverageIntensityAxH = SetAxisTitle(OOPSData.Handles.AverageIntensityAxH,'Average Intensity');
+
+    % make colorbar and set colormap for the axes, hide the colorbar and disable interactions with it
+    OOPSData.Handles.AverageIntensityCbar = colorbar(OOPSData.Handles.AverageIntensityAxH,...
+        'location','east',...
+        'color','white',...
+        'tag','AverageIntensityCbar',...
+        'Ticks',0:0.1:1);
+    OOPSData.Handles.AverageIntensityCbar.Visible = 'Off';
+    OOPSData.Handles.AverageIntensityCbar.HitTest = 'Off';
+
+    % set colormap
     OOPSData.Handles.AverageIntensityAxH.Colormap = OOPSData.Settings.IntensityColormap;
     % hide axes toolbar and title, turn off hittest
     OOPSData.Handles.AverageIntensityAxH.Toolbar.Visible = 'Off';
@@ -2031,81 +2572,104 @@ disp('Setting up large image axes...')
     OOPSData.Handles.AverageIntensityImgH.Visible = 'Off';
     OOPSData.Handles.AverageIntensityImgH.HitTest = 'Off';
 
-    %% Order Factor
+    %% Order
 
-    OOPSData.Handles.OrderFactorAxH = uiaxes(OOPSData.Handles.ImgPanel2,...
+    OOPSData.Handles.OrderAxH = uiaxes(OOPSData.Handles.ImgPanel2,...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
-        'Tag','OrderFactor',...
+        'Tag','Order',...
         'XTick',[],...
         'YTick',[],...
-        'CLim',[0 1],...
-        'Color','Black',...
-        'Visible','off');
+        'CLim',[0 1]);
     % save original values to be restored after calling imshow()
-    pbarOriginal = OOPSData.Handles.OrderFactorAxH.PlotBoxAspectRatio;
-    tagOriginal = OOPSData.Handles.OrderFactorAxH.Tag;
+    pbarOriginal = OOPSData.Handles.OrderAxH.PlotBoxAspectRatio;
+    tagOriginal = OOPSData.Handles.OrderAxH.Tag;
     % place placeholder image on axis
-    OOPSData.Handles.OrderFactorImgH = imshow(full(emptyimage),'Parent',OOPSData.Handles.OrderFactorAxH);
+    OOPSData.Handles.OrderImgH = imshow(full(emptyimage),'Parent',OOPSData.Handles.OrderAxH);
     % set a tag so our callback functions can find the image
-    set(OOPSData.Handles.OrderFactorImgH,'Tag','OrderFactorImage');
+    set(OOPSData.Handles.OrderImgH,'Tag','OrderImage');
     % restore original values after imshow() call
-    OOPSData.Handles.OrderFactorAxH = restore_axis_defaults(OOPSData.Handles.OrderFactorAxH,pbarOriginal,tagOriginal);
+    OOPSData.Handles.OrderAxH = restore_axis_defaults(OOPSData.Handles.OrderAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     
     % set axis title
-    OOPSData.Handles.OrderFactorAxH = SetAxisTitle(OOPSData.Handles.OrderFactorAxH,'Pixel-by-pixel Order Factor');
+    OOPSData.Handles.OrderAxH = SetAxisTitle(OOPSData.Handles.OrderAxH,'Order');
 
     % make colorbar and set colormap for the axes, hide the colorbar and disable interactions with it
-    OOPSData.Handles.OFCbar = colorbar(OOPSData.Handles.OrderFactorAxH,'location','east','color','white','tag','OFCbar');
-    OOPSData.Handles.OrderFactorAxH.Colormap = OOPSData.Settings.OrderFactorColormap;
-    OOPSData.Handles.OFCbar.Visible = 'Off';
-    OOPSData.Handles.OFCbar.HitTest = 'Off';
-
+    OOPSData.Handles.OrderCbar = colorbar(OOPSData.Handles.OrderAxH,...
+        'location','east',...
+        'color','white',...
+        'tag','OrderCbar',...
+        'Ticks',0:0.1:1);
+    OOPSData.Handles.OrderCbar.Visible = 'Off';
+    OOPSData.Handles.OrderCbar.HitTest = 'Off';
+    OOPSData.Handles.OrderAxH.Colormap = OOPSData.Settings.OrderColormap;
     % hide axes toolbar and title, disable click interactivity, disable all default interactivity
-    OOPSData.Handles.OrderFactorAxH.Toolbar.Visible = 'Off';
-    OOPSData.Handles.OrderFactorAxH.Title.Visible = 'Off';
-    OOPSData.Handles.OrderFactorAxH.HitTest = 'Off';
-    disableDefaultInteractivity(OOPSData.Handles.OrderFactorAxH);
+    OOPSData.Handles.OrderAxH.Toolbar.Visible = 'Off';
+    OOPSData.Handles.OrderAxH.Title.Visible = 'Off';
+    OOPSData.Handles.OrderAxH.HitTest = 'Off';
+    disableDefaultInteractivity(OOPSData.Handles.OrderAxH);
     
-    OOPSData.Handles.OrderFactorImgH.Visible = 'Off';
-    OOPSData.Handles.OrderFactorImgH.HitTest = 'Off';
+    OOPSData.Handles.OrderImgH.Visible = 'Off';
+    OOPSData.Handles.OrderImgH.HitTest = 'Off';
     
     %% Axis for swarm plots
 
-    OOPSData.Handles.SwarmPlotGrid = uigridlayout(OOPSData.Handles.ImgPanel2,[1,1],...
-        'Padding',[0 0 0 0],...
-        'BackgroundColor',OOPSData.Settings.SwarmPlotBackgroundColor,...
-        'Tag','SwarmPlotGrid',...
-        'Visible','Off',...
-        'ColumnWidth',{'1x'},...
-        'RowHeight',{'1x'});
+    % OOPSData.Handles.SwarmPlotGrid = uigridlayout(OOPSData.Handles.ImgPanel2,[1,1],...
+    %     'Padding',[0 0 0 0],...
+    %     'BackgroundColor',OOPSData.Settings.SwarmPlotBackgroundColor,...
+    %     'Tag','SwarmPlotGrid',...
+    %     'Visible','Off',...
+    %     'ColumnWidth',{'1x'},...
+    %     'RowHeight',{'1x'});
+    % 
+    % OOPSData.Handles.SwarmPlotAxH = uiaxes(OOPSData.Handles.SwarmPlotGrid,...
+    %     'Tag','SwarmPlotAxes',...
+    %     'XTick',[],...
+    %     'YTick',[0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0],...
+    %     'NextPlot','Add',...
+    %     'Visible','Off',...
+    %     'Color',OOPSData.Settings.SwarmPlotBackgroundColor,...
+    %     'XColor','White',...
+    %     'YColor','White',...
+    %     'HitTest','Off',...
+    %     'FontName',OOPSData.Settings.DefaultPlotFont);
+    % 
+    % OOPSData.Handles.SwarmPlotAxH.Interactions = dataTipInteraction;
+    % axtoolbar(OOPSData.Handles.SwarmPlotAxH,{});
+    % 
+    % % set axis title
+    % OOPSData.Handles.SwarmPlotAxH = SetAxisTitle(OOPSData.Handles.SwarmPlotAxH,'Object Order (per group)');
+    % OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
+    % OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
+    % OOPSData.Handles.SwarmPlotAxH.XAxis.FontName = OOPSData.Settings.DefaultPlotFont;
+    % OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = "Object Order";
+    % OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
+    % OOPSData.Handles.SwarmPlotAxH.YAxis.FontName = OOPSData.Settings.DefaultPlotFont;
+    % OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
+    % OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'Off';
+    % 
+    % 
+    % % set up context menu for swarm plot
+    % OOPSData.Handles.SwarmPlotContextMenu = uicontextmenu(OOPSData.Handles.fH);
+    % % set up context menu options
+    % OOPSData.Handles.SwarmPlotContextMenu_CopyVector = uimenu(OOPSData.Handles.SwarmPlotContextMenu,...
+    %     'Text','Copy as vector graphic',...
+    %     'MenuSelectedFcn',@CopySwarmPlotVector);
+    % % add the context menu to the axes
+    % OOPSData.Handles.SwarmPlotAxH.ContextMenu = OOPSData.Handles.SwarmPlotContextMenu;
 
-    OOPSData.Handles.SwarmPlotAxH = uiaxes(OOPSData.Handles.SwarmPlotGrid,...
-        'Tag','SwarmPlotAxes',...
-        'XTick',[],...
-        'YTick',[0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0],...
-        'NextPlot','Add',...
-        'Visible','Off',...
-        'Color',OOPSData.Settings.SwarmPlotBackgroundColor,...
-        'XColor','White',...
-        'YColor','White',...
-        'HitTest','Off',...
-        'FontName',OOPSData.Settings.DefaultPlotFont);
-    
-    OOPSData.Handles.SwarmPlotAxH.Interactions = dataTipInteraction;
-    axtoolbar(OOPSData.Handles.SwarmPlotAxH,{});
-
-    % set axis title
-    OOPSData.Handles.SwarmPlotAxH = SetAxisTitle(OOPSData.Handles.SwarmPlotAxH,'Object OF (per group)');
-    OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
-    OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-    OOPSData.Handles.SwarmPlotAxH.XAxis.FontName = OOPSData.Settings.DefaultPlotFont;
-    OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = "Object Order Factor";
-    OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-    OOPSData.Handles.SwarmPlotAxH.YAxis.FontName = OOPSData.Settings.DefaultPlotFont;
-    OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
-    OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'Off';
+    OOPSData.Handles.SwarmPlot = ViolinChart(...
+        "Parent",OOPSData.Handles.ImgPanel2,...
+        "Data",{NaN},...
+        "BackgroundColor",OOPSData.Settings.SwarmPlotBackgroundColor,...
+        "ForegroundColor",OOPSData.Settings.SwarmPlotForegroundColor,...
+        "Title","",...
+        "XJitterWidth",OOPSData.Settings.SwarmPlotXJitterWidth,...
+        "ViolinOutlinesVisible",OOPSData.Settings.SwarmPlotViolinsVisible,...
+        "MarkerFaceAlpha",OOPSData.Settings.SwarmPlotMarkerFaceAlpha,...
+        "ErrorBarsVisible",OOPSData.Settings.SwarmPlotErrorBarsVisible,...
+        "Visible","off");
 
     % set up context menu for swarm plot
     OOPSData.Handles.SwarmPlotContextMenu = uicontextmenu(OOPSData.Handles.fH);
@@ -2114,7 +2678,7 @@ disp('Setting up large image axes...')
         'Text','Copy as vector graphic',...
         'MenuSelectedFcn',@CopySwarmPlotVector);
     % add the context menu to the axes
-    OOPSData.Handles.SwarmPlotAxH.ContextMenu = OOPSData.Handles.SwarmPlotContextMenu;
+    OOPSData.Handles.SwarmPlot.ContextMenu = OOPSData.Handles.SwarmPlotContextMenu;
     
     %% Axis for scatter plots
 
@@ -2142,12 +2706,12 @@ disp('Setting up large image axes...')
     axtoolbar(OOPSData.Handles.ScatterPlotAxH,{});
 
     % set axis title
-    OOPSData.Handles.ScatterPlotAxH = SetAxisTitle(OOPSData.Handles.ScatterPlotAxH,'Object-Average OF vs Local S/B');
+    OOPSData.Handles.ScatterPlotAxH = SetAxisTitle(OOPSData.Handles.ScatterPlotAxH,'Object-Average Order vs Local S/B');
     
     OOPSData.Handles.ScatterPlotAxH.XAxis.Label.String = "Local S/B";
     OOPSData.Handles.ScatterPlotAxH.XAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
     OOPSData.Handles.ScatterPlotAxH.XAxis.Label.FontName = OOPSData.Settings.DefaultPlotFont;
-    OOPSData.Handles.ScatterPlotAxH.YAxis.Label.String = "Object-Average Order Factor";
+    OOPSData.Handles.ScatterPlotAxH.YAxis.Label.String = "Object-Average Order";
     OOPSData.Handles.ScatterPlotAxH.YAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
     OOPSData.Handles.ScatterPlotAxH.YAxis.Label.FontName = OOPSData.Settings.DefaultPlotFont;
     OOPSData.Handles.ScatterPlotAxH.Toolbar.Visible = 'Off';
@@ -2216,14 +2780,15 @@ disp('Setting up large image axes...')
         'Title','Group - Pixel azimuths',...
         'Visible','off');
 
-    %% MASK
+    %% Mask
+
     OOPSData.Handles.MaskAxH = uiaxes(OOPSData.Handles.ImgPanel2,...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
         'Tag','Mask',...
         'XTick',[],...
-        'YTick',[],...
-        'Visible','off');
+        'YTick',[]);
+
     % save original values to be restored after calling imshow()
     pbarOriginal = OOPSData.Handles.MaskAxH.PlotBoxAspectRatio;
     tagOriginal = OOPSData.Handles.MaskAxH.Tag;
@@ -2237,7 +2802,7 @@ disp('Setting up large image axes...')
     clear pbarOriginal tagOriginal
     
     % set axis title
-    OOPSData.Handles.MaskAxH = SetAxisTitle(OOPSData.Handles.MaskAxH,'Binary Mask');
+    OOPSData.Handles.MaskAxH = SetAxisTitle(OOPSData.Handles.MaskAxH,'Mask');
     
     OOPSData.Handles.MaskAxH.Toolbar.Visible = 'Off';
     OOPSData.Handles.MaskAxH.Title.Visible = 'Off';
@@ -2254,9 +2819,7 @@ disp('Setting up large image axes...')
         'InnerPosition',[0 0 1 1],...
         'Tag','Azimuth',...
         'XTick',[],...
-        'YTick',[],...
-        'Color','Black',...
-        'Visible','off');
+        'YTick',[]);
     % save original values to be restored after calling imshow()
     pbarOriginal = OOPSData.Handles.AzimuthAxH.PlotBoxAspectRatio;
     tagOriginal = OOPSData.Handles.AzimuthAxH.Tag;    
@@ -2268,7 +2831,7 @@ disp('Setting up large image axes...')
     OOPSData.Handles.AzimuthAxH = restore_axis_defaults(OOPSData.Handles.AzimuthAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
     % set axis title
-    OOPSData.Handles.AzimuthAxH = SetAxisTitle(OOPSData.Handles.AzimuthAxH,'Pixel-by-pixel Azimuth');
+    OOPSData.Handles.AzimuthAxH = SetAxisTitle(OOPSData.Handles.AzimuthAxH,'Azimuth');
     % get the default azimuth colormap (one half)
     tempmap = hsv;
     % vertically concatenate to make the full map
@@ -2290,6 +2853,45 @@ disp('Setting up large image axes...')
 
     OOPSData.Handles.AzimuthImgH.Visible = 'Off';
     OOPSData.Handles.AzimuthImgH.HitTest = 'Off';
+
+    %% Custom Statistics
+
+    OOPSData.Handles.CustomStatAxH = uiaxes(OOPSData.Handles.ImgPanel2,...
+        'Units','Normalized',...
+        'InnerPosition',[0 0 1 1],...
+        'Tag','CustomStat',...
+        'XTick',[],...
+        'YTick',[],...
+        'CLim',[0 1]);
+    % save original values to be restored after calling imshow()
+    pbarOriginal = OOPSData.Handles.CustomStatAxH.PlotBoxAspectRatio;
+    tagOriginal = OOPSData.Handles.CustomStatAxH.Tag;
+    % place placeholder image on axis
+    OOPSData.Handles.CustomStatImgH = imshow(full(emptyimage),'Parent',OOPSData.Handles.CustomStatAxH);
+    % set a tag so our callback functions can find the image
+    set(OOPSData.Handles.CustomStatImgH,'Tag','CustomStatImage');
+    % restore original values after imshow() call
+    OOPSData.Handles.CustomStatAxH = restore_axis_defaults(OOPSData.Handles.CustomStatAxH,pbarOriginal,tagOriginal);
+    clear pbarOriginal tagOriginal
+    
+    % set axis title
+    OOPSData.Handles.CustomStatAxH = SetAxisTitle(OOPSData.Handles.CustomStatAxH,'Custom');
+
+    % make colorbar and set colormap for the axes, hide the colorbar and disable interactions with it
+    OOPSData.Handles.CustomStatCbar = colorbar(OOPSData.Handles.CustomStatAxH,'location','east','color','white','tag','CustomStatCbar');
+    OOPSData.Handles.CustomStatAxH.Colormap = OOPSData.Settings.OrderColormap;
+    OOPSData.Handles.CustomStatCbar.Visible = 'Off';
+    OOPSData.Handles.CustomStatCbar.HitTest = 'Off';
+
+    % hide axes toolbar and title, disable click interactivity, disable all default interactivity
+    OOPSData.Handles.CustomStatAxH.Toolbar.Visible = 'Off';
+    OOPSData.Handles.CustomStatAxH.Title.Visible = 'Off';
+    OOPSData.Handles.CustomStatAxH.HitTest = 'Off';
+    disableDefaultInteractivity(OOPSData.Handles.CustomStatAxH);
+    
+    OOPSData.Handles.CustomStatImgH.Visible = 'Off';
+    OOPSData.Handles.CustomStatImgH.HitTest = 'Off';
+
 
 %% CHECKPOINT
 
@@ -2380,35 +2982,35 @@ disp('Setting up object image axes...')
     OOPSData.Handles.ObjectAzimuthOverlayImgH.Visible = 'Off';
     OOPSData.Handles.ObjectAzimuthOverlayImgH.HitTest = 'Off';
 
-    %% Object OF Image
+    %% Object Order Image
     
-    OOPSData.Handles.ObjectOFAxH = uiaxes(OOPSData.Handles.SmallPanels(2,1),...
+    OOPSData.Handles.ObjectOrderAxH = uiaxes(OOPSData.Handles.SmallPanels(2,1),...
         'Units','Normalized',...
         'InnerPosition',[0 0 1 1],...
-        'Tag','ObjectOF',...
+        'Tag','ObjectOrder',...
         'XTick',[],...
         'YTick',[]);
     % save original values
-    pbarOriginal = OOPSData.Handles.ObjectOFAxH.PlotBoxAspectRatio;
-    tagOriginal = OOPSData.Handles.ObjectOFAxH.Tag;
+    pbarOriginal = OOPSData.Handles.ObjectOrderAxH.PlotBoxAspectRatio;
+    tagOriginal = OOPSData.Handles.ObjectOrderAxH.Tag;
     % place placeholder image on axis
-    OOPSData.Handles.ObjectOFImgH = imshow(full(emptyimage),'Parent',OOPSData.Handles.ObjectOFAxH);
+    OOPSData.Handles.ObjectOrderImgH = imshow(full(emptyimage),'Parent',OOPSData.Handles.ObjectOrderAxH);
     % set a tag so our callback functions can find the image
-    set(OOPSData.Handles.ObjectOFImgH,'Tag','ObjectOFImage');
+    set(OOPSData.Handles.ObjectOrderImgH,'Tag','ObjectOrderImage');
     % restore original values after imshow() call
-    OOPSData.Handles.ObjectOFAxH = restore_axis_defaults(OOPSData.Handles.ObjectOFAxH,pbarOriginal,tagOriginal);
+    OOPSData.Handles.ObjectOrderAxH = restore_axis_defaults(OOPSData.Handles.ObjectOrderAxH,pbarOriginal,tagOriginal);
     clear pbarOriginal tagOriginal
-    OOPSData.Handles.ObjectOFAxH = SetAxisTitle(OOPSData.Handles.ObjectOFAxH,'OF');
+    OOPSData.Handles.ObjectOrderAxH = SetAxisTitle(OOPSData.Handles.ObjectOrderAxH,'Order');
     
-    OOPSData.Handles.ObjectOFAxH.Colormap = OOPSData.Settings.OrderFactorColormap;
+    OOPSData.Handles.ObjectOrderAxH.Colormap = OOPSData.Settings.OrderColormap;
     
-    OOPSData.Handles.ObjectOFAxH.Title.Visible = 'Off';
-    OOPSData.Handles.ObjectOFAxH.Toolbar.Visible = 'Off';
-    OOPSData.Handles.ObjectOFAxH.HitTest = 'Off';
-    disableDefaultInteractivity(OOPSData.Handles.ObjectOFAxH);
+    OOPSData.Handles.ObjectOrderAxH.Title.Visible = 'Off';
+    OOPSData.Handles.ObjectOrderAxH.Toolbar.Visible = 'Off';
+    OOPSData.Handles.ObjectOrderAxH.HitTest = 'Off';
+    disableDefaultInteractivity(OOPSData.Handles.ObjectOrderAxH);
     
-    OOPSData.Handles.ObjectOFImgH.Visible = 'Off';
-    OOPSData.Handles.ObjectOFImgH.HitTest = 'Off';
+    OOPSData.Handles.ObjectOrderImgH.Visible = 'Off';
+    OOPSData.Handles.ObjectOrderImgH.HitTest = 'Off';
     
     %% Object Intensity Fit Plots
 
@@ -2432,7 +3034,7 @@ disp('Setting up object image axes...')
     OOPSData.Handles.ObjectIntensityPlotAxH.XAxis.Label.String = "Excitation polarization (°)";
     OOPSData.Handles.ObjectIntensityPlotAxH.XAxis.Label.Color = [1 1 0];
     OOPSData.Handles.ObjectIntensityPlotAxH.XAxis.Label.FontName = OOPSData.Settings.DefaultPlotFont;
-    OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.String = "Normalized emission intensity (A.U.)";
+    OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.String = "Normalized intensity (A.U.)";
     OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.Color = [1 1 0];
     OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.FontName = OOPSData.Settings.DefaultPlotFont;
     
@@ -2475,29 +3077,37 @@ disp('Setting up object image axes...')
     
     OOPSData.Handles.ObjectNormIntStackImgH.Visible = 'Off';    
     OOPSData.Handles.ObjectNormIntStackImgH.HitTest = 'Off';
-    
+
 %% Turning on important containers and adjusting some components for proper initial display
 
-set(OOPSData.Handles.AppInfoSelector,'Visible','On');
-
-set(OOPSData.Handles.ProjectSummaryPanelGrid,'Visible','On');
-set(OOPSData.Handles.ProjectSummaryTableGrid,'Visible','On');
-
-set(OOPSData.Handles.AppInfoPanel,'Visible','On');
-set(OOPSData.Handles.SettingsPanel,'Visible','On');
-
-set(OOPSData.Handles.ImageOperationsPanel,'Visible','On');
-set(OOPSData.Handles.ThreshAxH,'Visible','On');
-
-set(OOPSData.Handles.LogPanel,'Visible','On');
-set(OOPSData.Handles.LogWindow,'Visible','On');
+% clean up some properties that may not display correctly
+set(OOPSData.Handles.PolFFCAxH(k),'PlotBoxAspectRatio',[1 1 1]);
 
 set(OOPSData.Handles.SmallPanels,'Visible','On');
+
+set(OOPSData.Handles.AppInfoPanel,'Visible','On');
+set(OOPSData.Handles.ProjectSummaryPanelGrid,'Visible','On');
+set(OOPSData.Handles.AppInfoSelector,'Visible','On');
+set(OOPSData.Handles.ProjectSummaryTableGrid,'Visible','On');
+set(OOPSData.Handles.ProjectSummaryTable,'Visible','On');
+
+set(OOPSData.Handles.SettingsPanel,'Visible','On');
 
 set(OOPSData.Handles.GroupSelectorPanel,'Visible','On');
 set(OOPSData.Handles.ImageSelectorPanel,'Visible','On');
 set(OOPSData.Handles.ObjectSelectorPanel,'Visible','On');
 set(OOPSData.Handles.ObjectSelector,'Visible','On');
+
+set(OOPSData.Handles.LogPanel,'Visible','On');
+set(OOPSData.Handles.LogWindowGrid,'Visible','On');
+set(OOPSData.Handles.LogWindow,'Visible','On');
+
+
+set(OOPSData.Handles.ImageOperationsPanel,'Visible','On');
+set(OOPSData.Handles.ThreshSliderGrid,'Visible','On');
+set(OOPSData.Handles.ThreshAxH,'Visible','On');
+set(OOPSData.Handles.CurrentThresholdLine,'Visible','On');
+set(OOPSData.Handles.ThreshBar,'Visible','On');
 
 % set uipanel linewidth
 set(findobj(OOPSData.Handles.fH,'type','uipanel'),'BorderWidth',1);
@@ -2513,6 +3123,9 @@ OOPSData.Handles.ObjectAzimuthLines = gobjects(1,1);
 OOPSData.Handles.ObjectMidlinePlot = gobjects(1,1);
 OOPSData.Handles.ObjectBoundaryPlot = gobjects(1,1);
 
+% set default on/off state of toolbar buttons
+OOPSData.Handles.ScaleToMaxAzimuth.Visible = 'off';
+
 
 % add OOPSData to the gui using guidata
 % (this is how we will retain access to the data across different functions)
@@ -2523,6 +3136,8 @@ fontsize(OOPSData.Handles.fH,OOPSData.Settings.FontSize,'pixels');
 UpdateGUITheme(OOPSData.Handles.fH);
 % update summary display
 UpdateSummaryDisplay(OOPSData.Handles.fH);
+
+
 
 % % delete the splash screen and clear out java components so we don't run into issues when saving
 % Splash.dispose();
@@ -2543,6 +3158,8 @@ OOPSData.Handles.fH.Visible = 'On';
 
 drawnow
 pause(0.5)
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2607,8 +3224,8 @@ pause(0.5)
         else
             OOPSData.Settings.SwarmPlotSettings.BackgroundColor = source.Value;
         end
-        OOPSData.Handles.SwarmPlotAxH.Color = OOPSData.Settings.SwarmPlotBackgroundColor;
-        OOPSData.Handles.SwarmPlotGrid.BackgroundColor = OOPSData.Settings.SwarmPlotBackgroundColor;
+
+        OOPSData.Handles.SwarmPlot.BackgroundColor = OOPSData.Settings.SwarmPlotBackgroundColor;
     end
 
     function SwarmPlotForegroundColorChanged(source,~)
@@ -2619,20 +3236,27 @@ pause(0.5)
         else
             OOPSData.Settings.SwarmPlotSettings.ForegroundColor = source.Value;
         end
-        OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-        OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
+        
+        OOPSData.Handles.SwarmPlot.ForegroundColor = OOPSData.Settings.SwarmPlotForegroundColor;
     end
 
-    function SwarmPlotErrorBarColorChanged(source,~)
+    function SwarmPlotErrorBarsColorChanged(source,~)
         if isempty(source.Value)
             % then open the colorpicker to choose a color
-            OOPSData.Settings.SwarmPlotSettings.ErrorBarColor = uisetcolor();
+            OOPSData.Settings.SwarmPlotSettings.ErrorBarsColor = uisetcolor();
             figure(OOPSData.Handles.fH);
         else
-            OOPSData.Settings.SwarmPlotSettings.ErrorBarColor = source.Value;
+            OOPSData.Settings.SwarmPlotSettings.ErrorBarsColor = source.Value;
         end
+
+        OOPSData.Handles.SwarmPlot.ErrorBarsColor = OOPSData.Settings.SwarmPlotErrorBarsColor;
+    end
+
+    function SwarmPlotErrorBarsColorModeChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.ErrorBarsColorMode = source.Value;
         UpdateImages(source);
     end
+
 
     function SwarmPlotYVariableChanged(source,~)
         OOPSData.Settings.SwarmPlotSettings.YVariable = source.Value;
@@ -2651,19 +3275,83 @@ pause(0.5)
 
     function SwarmPlotMarkerSizeChanged(source,~)
         OOPSData.Settings.SwarmPlotSettings.MarkerSize = source.Value;
-        set(findobj(OOPSData.Handles.hSwarmChart,'Type','scatter'),...
-            'SizeData',OOPSData.Settings.SwarmPlotSettings.MarkerSize);
+        OOPSData.Handles.SwarmPlot.MarkerSize = OOPSData.Settings.SwarmPlotMarkerSize;
     end
 
     function SwarmPlotMarkerFaceAlphaChanged(source,~)
         OOPSData.Settings.SwarmPlotSettings.MarkerFaceAlpha = source.Value;
-        set(findobj(OOPSData.Handles.hSwarmChart,'Type','scatter'),...
-            'MarkerFaceAlpha',OOPSData.Settings.SwarmPlotSettings.MarkerFaceAlpha);
+        OOPSData.Handles.SwarmPlot.MarkerFaceAlpha = OOPSData.Settings.SwarmPlotMarkerFaceAlpha;
     end
 
     function SwarmPlotErrorBarsVisibleChanged(source,~)
         OOPSData.Settings.SwarmPlotSettings.ErrorBarsVisible = source.Value;
+        OOPSData.Handles.SwarmPlot.ErrorBarsVisible = OOPSData.Settings.SwarmPlotErrorBarsVisible;
+    end
+
+    function SwarmPlotXJitterWidthChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.XJitterWidth = source.Value;
+        OOPSData.Handles.SwarmPlot.XJitterWidth = OOPSData.Settings.SwarmPlotXJitterWidth;
+    end
+
+    function SwarmPlotPointsVisibleChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.PointsVisible = source.Value;
+        OOPSData.Handles.SwarmPlot.PointsVisible = OOPSData.Settings.SwarmPlotPointsVisible;
+    end
+
+    function SwarmPlotViolinFaceColorModeChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.ViolinFaceColorMode = source.Value;
         UpdateImages(source);
+    end
+
+    function SwarmPlotViolinFaceColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.SwarmPlotSettings.ViolinFaceColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.SwarmPlotSettings.ViolinFaceColor = source.Value;
+        end
+
+        OOPSData.Handles.SwarmPlot.ViolinFaceColor = OOPSData.Settings.SwarmPlotViolinFaceColor;
+    end
+
+    function SwarmPlotViolinEdgeColorModeChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.ViolinEdgeColorMode = source.Value;
+        UpdateImages(source);
+    end
+
+    function SwarmPlotViolinEdgeColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.SwarmPlotSettings.ViolinEdgeColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.SwarmPlotSettings.ViolinEdgeColor = source.Value;
+        end
+
+        OOPSData.Handles.SwarmPlot.ViolinEdgeColor = OOPSData.Settings.SwarmPlotViolinEdgeColor;
+    end
+
+    function SwarmPlotViolinsVisibleChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.ViolinsVisible = source.Value;
+        OOPSData.Handles.SwarmPlot.ViolinOutlinesVisible = OOPSData.Settings.SwarmPlotViolinsVisible;
+    end
+
+    function SwarmPlotMarkerEdgeColorModeChanged(source,~)
+        OOPSData.Settings.SwarmPlotSettings.MarkerEdgeColorMode = source.Value;
+        UpdateImages(source);
+    end
+
+    function SwarmPlotMarkerEdgeColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.SwarmPlotSettings.MarkerEdgeColor = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.SwarmPlotSettings.MarkerEdgeColor = source.Value;
+        end
+
+        OOPSData.Handles.SwarmPlot.MarkerEdgeColor = OOPSData.Settings.SwarmPlotMarkerEdgeColor;
     end
 
 
@@ -2980,13 +3668,13 @@ pause(0.5)
         imagePolarData(isnan(imagePolarData)) = [];
         imagePolarData(imagePolarData<0) = imagePolarData(imagePolarData<0)+pi;
         OOPSData.Handles.ImagePolarHistogram.polarData = [imagePolarData,imagePolarData+pi];
-        OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',ExpandVariableName(source.Value)];
+        OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',OOPSData.Settings.expandVariableName(source.Value)];
 
         groupPolarData = deg2rad([OOPSData.CurrentGroup.GetAllObjectData(source.Value)]);
         groupPolarData(isnan(groupPolarData)) = [];
         groupPolarData(groupPolarData<0) = groupPolarData(groupPolarData<0)+pi;
         OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
-        OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',ExpandVariableName(source.Value)];
+        OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',OOPSData.Settings.expandVariableName(source.Value)];
     end
 
     function SavePolarHistogramSettings(source,~)
@@ -3009,15 +3697,45 @@ pause(0.5)
 
 %% Azimuth stick plot callbacks/settings
 
-    function ApplyAzimuthSettings(source,~)
-        OOPSData.Settings.AzimuthDisplaySettings.LineAlpha = OOPSData.Handles.AzimuthLineAlphaDropdown.Value;
-        OOPSData.Settings.AzimuthDisplaySettings.LineWidth = OOPSData.Handles.AzimuthLineWidthDropdown.Value;
-        OOPSData.Settings.AzimuthDisplaySettings.LineScale = str2double(OOPSData.Handles.AzimuthLineScaleEditfield.Value);
-        OOPSData.Settings.AzimuthDisplaySettings.ScaleDownFactor = OOPSData.Handles.AzimuthLineScaleDownDropdown.Value;
-        OOPSData.Settings.AzimuthDisplaySettings.ColorMode = OOPSData.Handles.AzimuthColorModeDropdown.Value;
-        UpdateImages(source);
+    function AzimuthDisplaySettingsChanged(source,~)
+        % set the variable specified by the Tag property of the calling object
+        OOPSData.Settings.AzimuthDisplaySettings.(source.Tag) = source.Value;
+
+        if strcmp(OOPSData.Settings.CurrentTab,'Azimuth')
+            % update the azimuth stick overlay
+            UpdateAzimuthStickOverlay(source);
+        end
     end
 
+    function AzimuthObjectMaskChanged(source,~)
+
+        if OOPSData.Settings.AzimuthObjectMask
+
+            selection = uiconfirm(OOPSData.Handles.fH,...
+                'Plotting azimuth sticks for each pixel is slow and can cause performance issues. Do you wish to continue?',...
+                'Confirm azimuth overlay mode',...
+                'Options',{'Continue','Cancel'},...
+                'Icon','warning',...
+                'DefaultOption',2,...
+                'CancelOption',2);
+    
+            switch selection
+                case 'Continue'
+                    OOPSData.Settings.AzimuthDisplaySettings.ObjectMask = false;
+                case 'Cancel'
+                    OOPSData.Settings.AzimuthDisplaySettings.ObjectMask = true;
+            end
+        else
+            OOPSData.Settings.AzimuthDisplaySettings.ObjectMask = true;
+        end
+        source.Value = OOPSData.Settings.AzimuthObjectMask;
+
+        if strcmp(OOPSData.Settings.CurrentTab,'Azimuth')
+            % update the azimuth stick overlay
+            UpdateAzimuthStickOverlay(source);
+        end
+    end
+    
     function SaveAzimuthDisplaySettings(source,~)
         % saves the currently selected colormaps settings to a .mat file
         % which will be loaded in future sessions by OOPSSettings
@@ -3042,6 +3760,27 @@ pause(0.5)
         OOPSData.Settings.ObjectAzimuthDisplaySettings.(source.Tag) = source.Value;
         UpdateImages(source,{'Objects'});
     end
+
+%% Object selection settings
+
+    function ObjectSelectionSettingsChanged(source,~)
+        % set the variable specified by the Tag property of the calling object
+        OOPSData.Settings.ObjectSelectionSettings.(source.Tag) = source.Value;
+        UpdateObjectBoxes(source);
+    end
+
+    function ObjectSelectionColorChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.ObjectSelectionSettings.Color = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.ObjectSelectionSettings.Color = source.Value;
+        end
+        UpdateObjectBoxes(source);
+    end
+
+
 
 %% Colormaps settings
 
@@ -3082,14 +3821,14 @@ pause(0.5)
                         UpdateCompositeRGB();
                     end
                 end
-            case 'OrderFactor'
-                OrderFactorMap = OOPSData.Settings.OrderFactorColormap;
-                OOPSData.Handles.OrderFactorAxH.Colormap = OrderFactorMap;
-                OOPSData.Handles.ObjectOFAxH.Colormap = OrderFactorMap;
-                OOPSData.Handles.ObjectOFContourAxH.Colormap = OrderFactorMap;
+            case 'Order'
+                OrderMap = OOPSData.Settings.OrderColormap;
+                OOPSData.Handles.OrderAxH.Colormap = OrderMap;
+                OOPSData.Handles.ObjectOrderAxH.Colormap = OrderMap;
+                OOPSData.Handles.CustomStatAxH.Colormap = OrderMap;
                 if (~isempty(OOPSData.CurrentImage) && ...
-                       OOPSData.Handles.ShowAsOverlayOrderFactor.Value && ...
-                       strcmp(OOPSData.Settings.CurrentTab,'Order Factor'))
+                       OOPSData.Handles.ShowAsOverlayOrder.Value && ...
+                       strcmp(OOPSData.Settings.CurrentTab,'Order'))
                     UpdateImages(OOPSData.Handles.fH);
                 end
             case 'Reference'
@@ -3162,7 +3901,7 @@ pause(0.5)
                 OOPSData.Settings.UpdateLabelColors();
                 UpdateLabelTree(source);
                 UpdateSummaryDisplay(source,{'Label','Object'});
-                UpdateImages(source,{'Plots','Mask','Order Factor','Objects'});
+                UpdateImages(source,{'Plots','Mask','Order','Objects'});
         end
     end
 
@@ -3404,25 +4143,39 @@ pause(0.5)
 
     % Update display while thresh line is moving
     function MoveThresholdLine(source,~)
-        OOPSData.Handles.CurrentThresholdLine.Value = round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
+        xPosition = round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
+        OOPSData.Handles.CurrentThresholdLine.Value = xPosition;
         OOPSData.Handles.CurrentThresholdLine.Label = {[OOPSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(OOPSData.Handles.CurrentThresholdLine.Value)]};
+
+        % set the position of the line label
+        switch xPosition > 0.5
+            case true
+                OOPSData.Handles.CurrentThresholdLine.LabelHorizontalAlignment = "left";
+            case false
+                OOPSData.Handles.CurrentThresholdLine.LabelHorizontalAlignment = "right";
+        end
+
         ThresholdLineMoving(source,OOPSData.Handles.CurrentThresholdLine.Value);
-        %drawnow
     end
 
     % Set final thresh position and restore callbacks
     function StopMovingAndSetThresholdLine(source,~)
-        OOPSData.Handles.CurrentThresholdLine.Value = round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
-        OOPSData.Handles.CurrentThresholdLine.Label = {[OOPSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(OOPSData.Handles.CurrentThresholdLine.Value)]};
         OOPSData.Handles.fH.WindowButtonMotionFcn = '';
         OOPSData.Handles.fH.WindowButtonUpFcn = '';
+        xPosition = round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
+        OOPSData.Handles.CurrentThresholdLine.Value = xPosition;
+        OOPSData.Handles.CurrentThresholdLine.Label = {[OOPSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(OOPSData.Handles.CurrentThresholdLine.Value)]};
+
+        % set the position of the line label
+        switch xPosition > 0.5
+            case true
+                OOPSData.Handles.CurrentThresholdLine.LabelHorizontalAlignment = "left";
+            case false
+                OOPSData.Handles.CurrentThresholdLine.LabelHorizontalAlignment = "right";
+        end
         ThresholdLineMoved(source,OOPSData.Handles.CurrentThresholdLine.Value);
         drawnow
     end
-
-
-
-
 
 %% Callbacks for intensity display scaling
 
@@ -3435,10 +4188,27 @@ pause(0.5)
 
         OOPSData.CurrentImage(1).PrimaryIntensityDisplayLimits = source.Value;
 
-        if OOPSData.CurrentImage(1).ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value
-            UpdateCompositeRGB();
-        else
-            OOPSData.Handles.AverageIntensityAxH.CLim = source.Value;
+        if ismember(OOPSData.Settings.CurrentTab,[{'Mask','Order','Azimuth'},OOPSData.Settings.CustomStatisticDisplayNames.'])
+            if OOPSData.CurrentImage(1).ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value
+                UpdateCompositeRGB();
+            else
+                UpdateAverageIntensityImage(source);
+            end
+        end
+
+        switch OOPSData.Settings.CurrentTab
+            case 'Order'
+                if OOPSData.Handles.ShowAsOverlayOrder.Value
+                    UpdateOrderImage(source);
+                end
+            case 'Azimuth'
+                if OOPSData.Handles.ShowAsOverlayAzimuth.Value || OOPSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value
+                    UpdateAzimuthImage(source);
+                end
+            case OOPSData.Settings.CustomStatisticDisplayNames.'
+                if OOPSData.Handles.ShowAsOverlayCustomStat.Value
+                    UpdateCustomStatImage(source);
+                end
         end
 
         drawnow limitrate
@@ -3469,15 +4239,90 @@ pause(0.5)
     end
 
     function UpdateCompositeRGB()
-        OOPSData.Handles.AverageIntensityImgH.CData = ...
-            CompositeRGB(Scale0To1(OOPSData.CurrentImage(1).I),...
-            OOPSData.Settings.IntensityColormap,...
-            OOPSData.CurrentImage(1).PrimaryIntensityDisplayLimits,...
-            Scale0To1(OOPSData.CurrentImage(1).ReferenceImage),...
-            OOPSData.Settings.ReferenceColormap,...
-            OOPSData.CurrentImage(1).ReferenceIntensityDisplayLimits);
-        OOPSData.Handles.AverageIntensityAxH.CLim = [0 255];
+        % OOPSData.Handles.AverageIntensityImgH.CData = ...
+        %     CompositeRGB(Scale0To1(OOPSData.CurrentImage(1).I),...
+        %     OOPSData.Settings.IntensityColormap,...
+        %     OOPSData.CurrentImage(1).PrimaryIntensityDisplayLimits,...
+        %     Scale0To1(OOPSData.CurrentImage(1).ReferenceImage),...
+        %     OOPSData.Settings.ReferenceColormap,...
+        %     OOPSData.CurrentImage(1).ReferenceIntensityDisplayLimits);
+
+        OOPSData.Handles.AverageIntensityImgH.CData = OOPSData.CurrentImage(1).UserScaledAverageIntensityReferenceCompositeRGB;
+        OOPSData.Handles.AverageIntensityAxH.CLim = [0 1];
     end
+
+    function AdjustOrderDisplayLimits(source,~)
+
+        if isempty(OOPSData.CurrentImage)
+            source.Value = [0 1];
+            return
+        end
+
+        if ~OOPSData.CurrentImage(1).FPMStatsDone
+            source.Value = [0 1];
+            return
+        end
+
+        % if scale to max buttons are enabled for Order axes, disable it
+        OOPSData.Handles.ScaleToMaxOrder.Value = false;
+        OOPSData.Handles.ScaleToMaxAzimuth.Value = false;
+
+        OOPSData.CurrentImage(1).OrderDisplayLimits = source.Value;
+
+        switch OOPSData.Settings.CurrentTab
+            case 'Order'
+                UpdateOrderImage(source);
+            case 'Azimuth'
+                if OOPSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value
+                    UpdateAzimuthImage(source);
+                end
+        end
+
+        drawnow limitrate
+
+    end
+
+    function AdjustCustomDisplayLimits(source,~)
+
+        % get the name of the custom statistic corresponding to this slider
+        cStatName = source.Tag;
+
+        if isempty(OOPSData.CurrentImage)
+            source.Value = [0 1];
+            return
+        else
+            cImage = OOPSData.CurrentImage(1);
+        end
+
+        if ~cImage.FPMStatsDone
+            source.Value = cImage.([cStatName,'DisplayRange']);
+            return
+        end
+
+        % if scale to max buttons are enabled for CustomStat axes, disable it
+        OOPSData.Handles.ScaleToMaxCustomStat.Value = false;
+
+        cImage.([cStatName,'DisplayLimits']) = source.Value;
+
+        % get the stat
+        cStatIdx = ismember(OOPSData.Settings.CurrentTab,OOPSData.Settings.CustomStatisticDisplayNames);
+
+        % if not found
+        if ~cStatIdx
+            return
+        else
+            cStat = OOPSData.Settings.CustomStatistics(cStatIdx);
+        end
+
+        if strcmp(OOPSData.Settings.CurrentTab,cStat.StatisticDisplayName)
+            UpdateCustomStatImage(source);
+        end
+
+        drawnow limitrate
+
+    end
+
+
 
 %% Setting axes properties during startup (to be eventually replaced with custom container classes)
 
@@ -3485,6 +4330,7 @@ pause(0.5)
         % restore axis defaults that were changed by imshow()
         axH.YDir = 'reverse';
         axH.PlotBoxAspectRatio = OriginalPlotBoxAspectRatio;
+        axH.PlotBoxAspectRatioMode = 'manual';
         axH.XTick = [];
         axH.YTick = [];
         axH.Tag = OriginalTag;
@@ -3498,7 +4344,7 @@ pause(0.5)
                 addZoomToCursorToolbarBtn;
                 addShowSelectionToolbarBtn;
                 addLassoROIToolbarBtn;
-            case 'OrderFactor'
+            case 'Order'
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
                 addLineScanToolbarBtn;
@@ -3513,6 +4359,7 @@ pause(0.5)
                 addLassoROIToolbarBtn;
                 addShowReferenceImageToolbarBtn;
                 addLineScanToolbarBtn;
+                addShowColorbarToolbarBtn;
                 addExportAxesToolbarBtn;
             case 'Azimuth'
                 addZoomToCursorToolbarBtn;
@@ -3520,14 +4367,21 @@ pause(0.5)
                 addShowAsOverlayToolbarBtn;
                 addShowAzimuthHSVOverlayToolbarBtn;
                 addShowColorbarToolbarBtn;
+                addScaleToMaxToolbarBtn;
                 addExportAxesToolbarBtn;
             case 'ObjectAzimuthOverlay'
                 addExportAxesToolbarBtn;
+            case 'CustomStat'
+                addZoomToCursorToolbarBtn;
+                addApplyMaskToolbarBtn;
+                addShowAsOverlayToolbarBtn;
+                addShowColorbarToolbarBtn;
+                addScaleToMaxToolbarBtn;
         end
         
         function addZoomToCursorToolbarBtn
             btn = axtoolbarbtn(tb,'state');
-            btn.Icon = 'MagnifyingGlassBlackAndYellow.png';
+            btn.Icon = 'MagnifyingGlassIcon.png';
             btn.ValueChangedFcn = @ZoomToCursor;
             btn.Tag = ['ZoomToCursor',axH.Tag];
             btn.Tooltip = 'Zoom to cursor';
@@ -3581,10 +4435,10 @@ pause(0.5)
 
         function addShowAzimuthHSVOverlayToolbarBtn
             btn = axtoolbarbtn(tb,'state');
-            btn.Icon = 'ShowAzimuthHSVOverlay.png';
+            btn.Icon = 'ShowAzimuthHSVOverlayIcon.png';
             btn.ValueChangedFcn = @tbShowAzimuthHSVOverlayStateChanged;
             btn.Tag = ['ShowAzimuthHSVOverlay',axH.Tag];
-            btn.Tooltip = 'Azimuth-OF-Intensity HSV overlay';
+            btn.Tooltip = 'Azimuth-Order-Intensity HSV overlay';
             OOPSData.Handles.(btn.Tag) = btn;
         end
         
@@ -3706,18 +4560,26 @@ pause(0.5)
         end
 
         % gather data for all objects using user-specified variables from above
-        objectData = OOPSData.getAllObjectData(ClusterSettings.variableList);
+        objectData = OOPSData.getConcatenatedObjectData(ClusterSettings.variableList);
         % minimum repeats per iteration to find the best solution (smallest combined sum)
         nRepeats = 10;
-        % call the main clustering function with the inputs above
-        [ClusterIdxs,OptimalK] = OOPSObjectClustering(objectData,...
-            ClusterSettings.nClusters,...
-            nRepeats,...
-            ClusterSettings.nClustersMode,...
-            ClusterSettings.Criterion,...
-            ClusterSettings.DistanceMetric,...
-            ClusterSettings.NormalizationMethod,...
-            ClusterSettings.DisplayEvaluation);
+
+        try
+            % call the main clustering function with the inputs above
+            [ClusterIdxs,OptimalK] = OOPSObjectClustering(objectData,...
+                ClusterSettings.nClusters,...
+                nRepeats,...
+                ClusterSettings.nClustersMode,...
+                ClusterSettings.Criterion,...
+                ClusterSettings.DistanceMetric,...
+                ClusterSettings.NormalizationMethod,...
+                ClusterSettings.DisplayEvaluation);
+        catch ME
+            msg = ME.message;
+            uialert(OOPSData.Handles.fH,msg,'Error');
+            return
+        end
+        
         % in case k was set automatically, adjust number of clusters to match
         nClusters = OptimalK;
         % delete the existing object labels
@@ -3822,7 +4684,7 @@ pause(0.5)
 
             for ObjIdx = 1:numel(Objs)
                 ObjImgs{ObjIdx} = Objs(ObjIdx).PaddedFFCIntensitySubImage();
-                %ObjImgs{ObjIdx} = Objs(ObjIdx).OFImageRGB();
+                %ObjImgs{ObjIdx} = Objs(ObjIdx).OrderImageRGB();
             end
             
             % ObjImgTiles{LabelIdx,1} = imtile(ObjImgs,...
@@ -3859,48 +4721,6 @@ pause(0.5)
 
 %% 'Plot' menubar callbacks
 
-    function mbPlotImageRelativePixelAzimuth(~,~)
-
-        try
-            % get the current image
-            cImage = OOPSData.CurrentImage;
-            % if empty, throw error
-            if isempty(cImage)
-                error('No image found')
-            else
-                cImage = cImage(1);
-            end
-
-            polarData = cImage.AzimuthImage(cImage.bw);
-            polarData(polarData<0) = polarData(polarData<0)+pi;
-            polarData = [polarData, polarData+pi];
-            
-            phistFigure = uifigure("WindowStyle","alwaysontop",...
-                "Name","Polar histogram",...
-                "Units","pixels",...
-                "Position",[0 0 500 500],...
-                "HandleVisibility","on",...
-                "Visible","off");
-
-            movegui(phistFigure,"center")
-
-            polarHistogram = PolarHistogramColorChart(...
-                'parent',phistFigure,...
-                'polarData',polarData,...
-                'wedgeColors',OOPSData.Settings.AzimuthColormap,...
-                'wedgeColorsRepeats',2,...
-                'nBins',48);
-
-            phistFigure.Visible = 'On';
-        catch ME
-            msg = ME.message;
-            uialert(OOPSData.Handles.fH,msg,'Error');
-            return
-        end
-
-
-    end
-
     function ShowImage(source,~)
         try
             % get the current image
@@ -3922,17 +4742,17 @@ pause(0.5)
 
 %% Changing object boxes type
 
-    function ChangeObjectBoxType(source,~)
-        OOPSData.Settings.ObjectBoxType = source.Text;
-        UpdateLog3(source,['Object Box Type Changed to ',source.Text],'append');
-
-        set(OOPSData.Handles.hObjectBoxType.Children(),'Checked','Off');
-        set(OOPSData.Handles.(['hObjectBoxType_',source.Text]),'Checked','On');
-
-        % only update summary overview if 'Project' is selected
-        UpdateSummaryDisplay(source,{'Project'});
-        UpdateImages(source);
-    end
+    % function ChangeObjectBoxType(source,~)
+    %     OOPSData.Settings.ObjectBoxType = source.Text;
+    %     UpdateLog3(source,['Object Box Type Changed to ',source.Text],'append');
+    % 
+    %     set(OOPSData.Handles.hObjectBoxType.Children(),'Checked','Off');
+    %     set(OOPSData.Handles.(['hObjectBoxType_',source.Text]),'Checked','On');
+    % 
+    %     % only update summary overview if 'Project' is selected
+    %     UpdateSummaryDisplay(source,{'Project'});
+    %     UpdateImages(source);
+    % end
 
 %% changing GUI theme (dark or light)
 
@@ -4106,7 +4926,7 @@ pause(0.5)
 
     function loadProject(source,~)
         % alert user to required action (select saved project file to load)
-        uialert(OOPSData.Handles.fH,'Select saved project file (.mat)','Load Project File',...
+        uialert(OOPSData.Handles.fH,'Select saved project file (.mat)','Load project',...
             'Icon','',...
             'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
         % call uiwait() on the main window
@@ -4184,6 +5004,9 @@ pause(0.5)
         OOPSData.Settings.CurrentTab = PreviousTab;
         % find the uimenu that would normally be used to switch to the tab indicated by 'CurrentTab' in the loaded project
         Menu2Pass = findobj(OOPSData.Handles.hTabMenu.Children,'Text',Tab2Switch2);
+        if isempty(Menu2Pass)
+            Menu2Pass = OOPSData.Handles.hTabMenu.Children(1);
+        end
         % update view and display with newly loaded project
         % update group/image/object selection trees
         UpdateGroupTree(source);
@@ -4210,9 +5033,11 @@ pause(0.5)
             case 'CustomScheme'
                 OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.MaskName]).Checked = 'On';
         end
+
+        
         % update object box type options context menu
-        set(OOPSData.Handles.hObjectBoxType.Children,'Checked','off');
-        OOPSData.Handles.(['hObjectBoxType_',OOPSData.Settings.ObjectBoxType]).Checked = 'On';
+        % set(OOPSData.Handles.hObjectBoxType.Children,'Checked','off');
+        % OOPSData.Handles.(['hObjectBoxType_',OOPSData.Settings.ObjectBoxType]).Checked = 'On';
 
         % update the GUI theme
         UpdateGUITheme(source)
@@ -4225,7 +5050,7 @@ pause(0.5)
 
     function saveProject(source,~)
 
-        uialert(OOPSData.Handles.fH,'Set save location/filename','Save Project File',...
+        uialert(OOPSData.Handles.fH,'Choose directory and filename','Save project',...
             'Icon','',...
             'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
 
@@ -4234,9 +5059,9 @@ pause(0.5)
         OOPSData.Handles.fH.Visible = 'Off';
 
         try
-            [filename,path] = uiputfile('*.mat','Set directory and filename',OOPSData.Settings.LastDirectory);
+            [filename,pathname] = uiputfile('*.mat','Choose directory and filename',OOPSData.Settings.LastDirectory);
         catch
-            [filename,path] = uiputfile('*.mat','Set directory and filename');
+            [filename,pathname] = uiputfile('*.mat','Choose directory and filename');
         end
 
         OOPSData.Handles.fH.Visible = 'On';
@@ -4263,8 +5088,6 @@ pause(0.5)
 
         % attempt to save the project
         try
-            disp('Retrieving data struct...')
-    
             % % method 1
             % SavedOOPSData = OOPSData.saveobj();
             % disp('Saving data struct...')
@@ -4274,7 +5097,7 @@ pause(0.5)
             % % method 2
             SavedOOPSData = OOPSData;
             disp('Saving data struct...')
-            save([path,filename],'SavedOOPSData');
+            save([pathname,filename],'SavedOOPSData');
 
             clear SavedOOPSData
         catch ME
@@ -4291,13 +5114,13 @@ pause(0.5)
         OOPSData.Handles.fH.Pointer = OldPointer;
 
         % update log to indicate successful save
-        UpdateLog3(source,['Successfully saved project:',path,filename],'append');
+        UpdateLog3(source,['Successfully saved project:',pathname,filename],'append');
 
     end
 
 %% Data saving/exporting
 
-    function [] = SaveImages(source,~)
+    function SaveImages(source,~)
         
         % get screensize
         ss = OOPSData.Settings.ScreenSize;
@@ -4323,9 +5146,10 @@ pause(0.5)
         
         % cell array of char vectors of possible save options
         SaveOptions = {'Average Intensity Image (8-bit .tif)';...
-            'Order Factor (RGB .png)';...
-            'Masked Order Factor (RGB .png)';...
-            'Scaled OF-Intensity Overlay (RGB .png)';...
+            'Order (RGB .png)';...
+            'Max Scaled Order (RGB .png)';...
+            'Masked Order (RGB .png)';...
+            'Max Scaled Order-Intensity Overlay (RGB .png)';...
             'Azimuth (RGB .png)';...
             'Masked Azimuth (RGB .png)';...
             'Azimuth HSV (RGB .png)';...
@@ -4402,9 +5226,9 @@ pause(0.5)
                 % data struct to hold output variable for current image
                 ImageSummary = struct();
                 ImageSummary.I = cImage.I;
-                % mask and average OF
-                ImageSummary.bw = cImage.bw;
-                ImageSummary.OFAvg = cImage.OFAvg;
+                % mask and average Order
+                ImageSummary.MaskImage = cImage.bw;
+                ImageSummary.OrderAvg = cImage.OrderAvg;
                 % raw data, raw data normalized to stack-max, raw stack-average
                 ImageSummary.rawFPMStack = cImage.rawFPMStack;
                 ImageSummary.rawFPMAverage = cImage.rawFPMAverage;
@@ -4414,40 +5238,48 @@ pause(0.5)
                 % FF-corrected data normalized within each 4-px stack
                 ImageSummary.ffcFPMPixelNorm = cImage.ffcFPMPixelNorm;
                 % output images
-                ImageSummary.OFImage = cImage.OF_image;
-                ImageSummary.MaskedOFImage = cImage.MaskedOFImage;
+                ImageSummary.OrderImage = cImage.OrderImage;
+                ImageSummary.MaskedOrderImage = cImage.MaskedOrderImage;
                 ImageSummary.AzimuthImage = cImage.AzimuthImage;
                 % image info
                 ImageSummary.ImageName = cImage.rawFPMShortName;
-                % calculated obj data (SB,OF,etc.)
+                % calculated obj data (SB,Order,etc.)
                 ImageSummary.ObjectData = GetImageObjectSummary(cImage);
                 
-                name = [loc,'_Output'];
+                name = [loc,'_ImageSummary'];
                 UpdateLog3(source,name,'append');
                 save(name,'ImageSummary');
                 clear ImageSummary
             end
 
-            %% Order Factor
+            %% Order
             
-            if any(strcmp(UserSaveChoices,'Order Factor (RGB .png)'))
-                name = [loc,'-OF_RGB.png'];
+            if any(strcmp(UserSaveChoices,'Order (RGB .png)'))
+                name = [loc,'-Order_RGB.png'];
                 UpdateLog3(source,name,'append');
-                IOut = cImage.OFImageRGB;
+                IOut = cImage.OrderImageRGB;
                 imwrite(IOut,name);
             end
 
-            if any(strcmp(UserSaveChoices,'Masked Order Factor (RGB .png)'))
-                name = [loc,'-MaskedOF_RGB.png'];
+
+            if any(strcmp(UserSaveChoices,'Max Scaled Order (RGB .png)'))
+                name = [loc,'-Scaled_Order_RGB.png'];
                 UpdateLog3(source,name,'append');
-                IOut = cImage.MaskedOFImageRGB;
+                IOut = cImage.MaxScaledOrderImageRGB;
                 imwrite(IOut,name);
             end
 
-            if any(strcmp(UserSaveChoices,'Scaled OF-Intensity Overlay (RGB .png)'))
-                name = [loc,'-ScaledOFIntensityOverlay_RGB.png'];
+            if any(strcmp(UserSaveChoices,'Masked Order (RGB .png)'))
+                name = [loc,'-MaskedOrder_RGB.png'];
                 UpdateLog3(source,name,'append');
-                IOut = cImage.ScaledOFIntensityOverlayRGB;
+                IOut = cImage.MaskedOrderImageRGB;
+                imwrite(IOut,name);
+            end
+
+            if any(strcmp(UserSaveChoices,'Max Scaled Order-Intensity Overlay (RGB .png)'))
+                name = [loc,'-MaxScaledOrderIntensityOverlay_RGB.png'];
+                UpdateLog3(source,name,'append');
+                IOut = cImage.MaxScaledOrderIntensityOverlayRGB;
                 imwrite(IOut,name);
             end
 
@@ -4470,7 +5302,7 @@ pause(0.5)
             if any(strcmp(UserSaveChoices,'Azimuth HSV (RGB .png)'))
                 name = [loc,'-AzimuthHSV_RGB.png'];
                 UpdateLog3(source,name,'append');
-                IOut = cImage.AzimuthOFIntensityHSV;
+                IOut = cImage.AzimuthOrderIntensityHSV;
                 imwrite(IOut,name);
             end
             
@@ -4505,83 +5337,87 @@ pause(0.5)
         
     end % end SaveImages
 
-    function [] = SaveObjectData(source,~)
+    function SaveObjectData(source,~)
         
-        CurrentGroup = OOPSData.CurrentGroup;
-        
-        % alert box to indicate required action
-        uialert(OOPSData.Handles.fH,['Select a directory to save object data for Group:',CurrentGroup.GroupName],'Save object data',...
+        uialert(OOPSData.Handles.fH,'Choose directory and filename','Export object data',...
             'Icon','',...
             'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
-        % prevent interaction with main window until we finish
-        uiwait(OOPSData.Handles.fH);
-        % hide main window
-        OOPSData.Handles.fH.Visible = 'Off';
-        % try to get files from the most recent directory,
-        % otherwise, just use default
-        try
-            UserChoice = uigetdir(OOPSData.Settings.LastDirectory);
-        catch
-            UserChoice = uigetdir(pwd);
-        end
-        % save accessed directory
-        OOPSData.Settings.LastDirectory = UserChoice;
-        % hide main window
-        OOPSData.Handles.fH.Visible = 'On';
-        % make OOPSGUI active figure
-        figure(OOPSData.Handles.fH);
-        % if no files selected, throw error
 
-        if ~UserChoice
-            msg = 'No directory selected...';
+        uiwait(OOPSData.Handles.fH);
+
+        OOPSData.Handles.fH.Visible = 'Off';
+
+        outputFilters = {'*.mat','MAT-files (*.mat)'; '*.xlsx','Excel Workbook (*.xlsx)'};
+
+        try
+            [filename, pathname, filterindex] = uiputfile( ...
+                outputFilters,...
+                'Choose directory and filename',OOPSData.Settings.LastDirectory);
+        catch
+            [filename, pathname, filterindex] = uiputfile( ...
+                outputFilters,...
+                'Choose directory and filename',pwd);
+        end
+
+        OOPSData.Handles.fH.Visible = 'On';
+        figure(OOPSData.Handles.fH);
+
+        % if user selected cancel, return
+        if isequal(filename,0) || isequal(pathname,0)
+            msg = 'Canceled by user';
             uialert(OOPSData.Handles.fH,msg,'Error');
             return
+        else
+            fullFilename = fullfile(pathname,filename);
+            outputType = outputFilters{filterindex,1};
         end
+
+        % store the most recently accessed directory
+        OOPSData.Settings.LastDirectory = pathname;
+
+        UpdateLog3(source,'Exporting object data...','append');
+
+        % get the stacked data tables
+        stackedData = OOPSData.stackedObjectDataTable();
         
-        % control for mac vs pc
-        if ismac || isunix
-            SaveLocation = [UserChoice '/' CurrentGroup.GroupName];
-        elseif ispc
-            SaveLocation = [UserChoice '\' CurrentGroup.GroupName];
+        % get the filename without extension
+        fileParts = strsplit(filename,'.');
+        shortName = fileParts{1};
+
+        % save the file in the format specified by the user
+        switch outputType
+            case '*.mat'
+                % create a struct to hold the data with short filename as field name
+                S.(matlab.lang.makeValidName(shortName)) = stackedData;
+                % save the stacked data struct
+                save(fullFilename,'-struct','S');
+                clear S
+            case '*.xlsx'
+                for groupIdx = 1:length(stackedData)
+                    if groupIdx == 1
+                        writeMode = "replacefile";
+                    else
+                        writeMode = "overwritesheet";
+                    end
+                    writetable(stackedData(groupIdx).Data,...
+                        fullFilename,...
+                        "Sheet",stackedData(groupIdx).Group,...
+                        "WriteMode",writeMode);
+                end
         end
-        
-        UpdateLog3(source,['Saving data for Group:',CurrentGroup.GroupName],'append');
-        
-        % get data table for current group
-        Table2Save = GetGroupObjectSummary(source);
-        
-        % create a struct with dynamic field name for unambiguous naming of the saved variable
-        S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_ObjectSummary'])) = Table2Save;
-        % save the data table
-        save([SaveLocation,'_ObjectSummary','.mat'],'-struct','S');
-        clear S
-        
-        % create a struct with dynamic field name for unambiguous naming of the saved variable
-        S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_AvgOFPerImage'])) = full([CurrentGroup.Replicate(:).OFAvg]');
-        save([SaveLocation,'_AvgOFPerImage','.mat'],'-struct','S');
-        clear S
 
-        %% filtered OF - temporary until a better solution is written (need a way to specify object filters explicitly)
-        % create a struct with dynamic field name for unambiguous naming of the saved variable
-        S.(matlab.lang.makeValidName([CurrentGroup.GroupName,'_AvgFilteredOFPerImage'])) = full([CurrentGroup.Replicate(:).FilteredOFAvg]');
-        save([SaveLocation,'_AvgFilteredOFPerImage','.mat'],'-struct','S');
-        clear S
-
-
-        
         UpdateLog3(source,'Done.','append');
-        
     end
 
 %% Axes toolbar callbacks
 
     function tbExportAxes(source,~)
-        % get the toolbar parent of the calling button
+        % get the parent toolbar of the calling button
         ctb = source.Parent;
-        % get the axes parent of that toolbar, which we will export
+        % get the parent axes of that toolbar, which we will export
         cax = ctb.Parent;
 
-        uialert(OOPSData.Handles.fH,'Set save location/filename','Export axes',...
+        uialert(OOPSData.Handles.fH,'Choose directory and filename','Export axes',...
             'Icon','',...
             'CloseFcn',@(o,e) uiresume(OOPSData.Handles.fH));
 
@@ -4590,49 +5426,68 @@ pause(0.5)
         OOPSData.Handles.fH.Visible = 'Off';
 
         try
-            [filename,path] = uiputfile('*.png',...
-                'Set directory and filename',OOPSData.Settings.LastDirectory);
+            [filename,pathname] = uiputfile('*.png',...
+                'Choose directory and filename',OOPSData.Settings.LastDirectory);
         catch
-            [filename,path] = uiputfile('*.png',...
-                'Set directory and filename');
+            [filename,pathname] = uiputfile('*.png',...
+                'Choose directory and filename');
         end
 
         OOPSData.Handles.fH.Visible = 'On';
         figure(OOPSData.Handles.fH);
 
-        if ~filename
-            msg = 'Invalid filename...';
+        if isequal(filename,0) || isequal(pathname,0)
+            msg = 'Canceled by user';
             uialert(OOPSData.Handles.fH,msg,'Error');
             return
         end
 
-        OOPSData.Settings.LastDirectory = path;
+        OOPSData.Settings.LastDirectory = pathname;
 
         UpdateLog3(source,'Exporting axes...','append');
 
-        tempfig = uifigure("HandleVisibility","On",...
-            "Visible","off",...
-            "InnerPosition",[0 0 1024 1024],...
-            "AutoResizeChildren","Off");
+        %% exportgraphics method
 
-        tempax = copyobj(cax,tempfig);
-        tempax.Visible = 'On';
-        tempax.XColor = 'Black';
-        tempax.YColor = 'Black';
-        tempax.Box = 'On';
-        tempax.LineWidth = 0.5;
-        tempax.Color = 'Black';
+        % check whether title is visible
+        if cax.Title.Visible
+            cax.Title.Visible = false; % if so, hide it
+            resetTitle = true; % indicate we need to reset the title
+        else
+            resetTitle = false;
+        end
 
-        tempax.Title.String = '';
-        tempax.Units = 'Normalized';
-        tempax.InnerPosition = [0 0 1 1];
+        % export the axes as an image at 600 dpi
+        exportgraphics(cax,[pathname,filename],"ContentType","image","Resolution",600);
 
-        export_fig([path,filename],tempfig,'-nocrop');
+        % make title visible if resetTitle is true
+        cax.Title.Visible = resetTitle;
 
-        close(tempfig)
+        %% export_fig method
+        % tempfig = uifigure("HandleVisibility","On",...
+        %     "Visible","off",...
+        %     "InnerPosition",[0 0 1024 1024],...
+        %     "AutoResizeChildren","Off");
+        % % copy the axes into the new figure
+        % tempax = copyobj(cax,tempfig);
+        % % set various axes properties that improve export quality
+        % tempax.Visible = 'On';
+        % tempax.XColor = 'Black';
+        % tempax.YColor = 'Black';
+        % tempax.Box = 'On';
+        % tempax.LineWidth = 0.5;
+        % tempax.Color = 'Black';
+        % % hide the title
+        % tempax.Title.String = '';
+        % % set axes unit to normalized
+        % tempax.Units = 'Normalized';
+        % % set axes position to fill the whole figure
+        % tempax.InnerPosition = [0 0 1 1];
+        % % call export_fig with the relevant handle and filename
+        % export_fig([path,filename],tempfig,'-nocrop');
+        % % close the temporary figure
+        % close(tempfig)
 
         UpdateLog3(source,'Done.','append');
-        
     end
 
     function tbApplyMaskStateChanged(source,event)
@@ -4652,7 +5507,23 @@ pause(0.5)
     end
 
     function tbShowAsOverlayStateChanged(source,~)
-        UpdateImages(source);
+
+        splitTag = strsplit(source.Tag,'ShowAsOverlay');
+        axID = splitTag{2};
+
+        switch axID
+            case 'Order'
+                UpdateOrderImage(source);
+            case 'Azimuth'
+                if source.Value
+                    OOPSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value = "off";
+                end
+                UpdateAzimuthImage(source);
+            otherwise
+                UpdateCustomStatImage(source);
+        end
+
+        %UpdateImages(source);
     end
 
     function tbShowAzimuthHSVOverlayStateChanged(source,~)
@@ -4660,8 +5531,12 @@ pause(0.5)
         if source.Value
             % then make sure the intensity overlay button is not pressed
             OOPSData.Handles.ShowAsOverlayAzimuth.Value = "off";
+            OOPSData.Handles.ScaleToMaxAzimuth.Visible = "on";
+        else
+            OOPSData.Handles.ScaleToMaxAzimuth.Visible = "off";
         end
-        UpdateImages(source);
+        %UpdateImages(source);
+        UpdateAzimuthImage(source);
     end
 
     function tbShowSelectionStateChanged(source,event)
@@ -4683,16 +5558,56 @@ pause(0.5)
         % btnTagSpit = strsplit(source.Tag,'ShowColorbar');
         % imageType = btnTagSplit{2};
         % switch imageType
-        %   case 'OrderFactor'
-        %       OOPSData.Handles.OFcbar.Visible = source.Value;
+        %   case 'Order'
+        %       OOPSData.Handles.Ordercbar.Visible = source.Value;
         %   case 'Azimuth'
         %
         % end
         UpdateImages(source);
     end
 
-    function tbScaleToMaxStateChanged(source,~)
-        UpdateImages(source);
+    function tbScaleToMaxStateChanged(source,event)
+
+        cImage = OOPSData.CurrentImage;
+
+        if ~isempty(cImage)
+            cImage = cImage(1);
+        else
+            source.Value = ~event.Value;
+            return
+        end
+
+        switch source.Tag
+            case 'ScaleToMaxOrder'
+                if event.Value && cImage.FPMStatsDone
+                    OOPSData.Handles.OrderSlider.Value = [0 max(cImage.OrderImage,[],"all")];
+                elseif event.Value && ~cImage.FPMStatsDone
+                    OOPSData.Handles.OrderSlider.Value = [0 1];
+                end
+                OOPSData.Handles.ScaleToMaxOrder.Value = event.Value;
+                OOPSData.Handles.ScaleToMaxAzimuth.Value = event.Value;
+            case 'ScaleToMaxAzimuth'
+                if event.Value && cImage.FPMStatsDone
+                    OOPSData.Handles.OrderSlider.Value = [0 max(cImage.OrderImage,[],"all")];
+                elseif event.Value && ~cImage.FPMStatsDone
+                    OOPSData.Handles.OrderSlider.Value = [0 1];                   
+                end
+                OOPSData.Handles.ScaleToMaxOrder.Value = event.Value;
+                OOPSData.Handles.ScaleToMaxAzimuth.Value = event.Value;
+            case 'ScaleToMaxCustomStat'
+                % get the current custom stat based on the name of the curret tab
+                statIdx = ismember(OOPSData.Settings.CurrentTab,OOPSData.Settings.CustomStatisticDisplayNames);
+                % get the stat
+                cStat = OOPSData.Settings.CustomStatistics(statIdx);
+
+                if event.Value && cImage.FPMStatsDone
+                    OOPSData.Handles.([cStat.StatisticName,'Slider']).Value = [cImage.([cStat.StatisticName,'DisplayRange'])(1) max(cImage.([cStat.StatisticName,'Image']),[],"all")];
+                elseif event.Value && ~cImage.FPMStatsDone
+                    OOPSData.Handles.([cStat.StatisticName,'Slider']).Value = OOPSData.Handles.([cStat.StatisticName,'Slider']).Limits;
+                end
+                OOPSData.Handles.ScaleToMaxCustomStat.Value = event.Value;
+        end
+
     end
 
     function tbShowReferenceImageStateChanged(source,~)
@@ -4754,19 +5669,19 @@ pause(0.5)
                 
                 OOPSData.Handles.LineScanListeners(1) = addlistener(OOPSData.Handles.LineScanROI,'MovingROI',@LineScanROIMoving);
                 OOPSData.Handles.LineScanListeners(2) = addlistener(OOPSData.Handles.LineScanROI,'ROIMoved',@LineScanROIMoved);
-            case 'LineScanOrderFactor'
-                OOPSData.Handles.LineScanROI = images.roi.Line(OOPSData.Handles.OrderFactorAxH,...
+            case 'LineScanOrder'
+                OOPSData.Handles.LineScanROI = images.roi.Line(OOPSData.Handles.OrderAxH,...
                     'Color','Yellow',...
                     'Alpha',0.5,...
-                    'Tag','LineScanOrderFactor');
-                XRange = OOPSData.Handles.OrderFactorAxH.XLim(2)-OOPSData.Handles.OrderFactorAxH.XLim(1);
-                YRange = OOPSData.Handles.OrderFactorAxH.YLim(2)-OOPSData.Handles.OrderFactorAxH.YLim(1);
-                x1 = OOPSData.Handles.OrderFactorAxH.XLim(1)+0.25*XRange;
-                x2 = OOPSData.Handles.OrderFactorAxH.XLim(2)-0.25*XRange;
-                y1 = OOPSData.Handles.OrderFactorAxH.YLim(1)+0.5*YRange;
-                y2 = OOPSData.Handles.OrderFactorAxH.YLim(1)+0.5*YRange;
+                    'Tag','LineScanOrder');
+                XRange = OOPSData.Handles.OrderAxH.XLim(2)-OOPSData.Handles.OrderAxH.XLim(1);
+                YRange = OOPSData.Handles.OrderAxH.YLim(2)-OOPSData.Handles.OrderAxH.YLim(1);
+                x1 = OOPSData.Handles.OrderAxH.XLim(1)+0.25*XRange;
+                x2 = OOPSData.Handles.OrderAxH.XLim(2)-0.25*XRange;
+                y1 = OOPSData.Handles.OrderAxH.YLim(1)+0.5*YRange;
+                y2 = OOPSData.Handles.OrderAxH.YLim(1)+0.5*YRange;
         
-                OOPSData.Handles.LineScanFig = uifigure('Name','Order Factor line scan',...
+                OOPSData.Handles.LineScanFig = uifigure('Name','Order line scan',...
                     'HandleVisibility','On',...
                     'WindowStyle','AlwaysOnTop',...
                     'Units','Normalized',...
@@ -4776,7 +5691,7 @@ pause(0.5)
                 
                 OOPSData.Handles.LineScanAxes = uiaxes(OOPSData.Handles.LineScanFig,'Units','Normalized','OuterPosition',[0 0 1 1]);
                 OOPSData.Handles.LineScanAxes.XLabel.String = 'Distance (um)';
-                OOPSData.Handles.LineScanAxes.YLabel.String = 'Average OF';
+                OOPSData.Handles.LineScanAxes.YLabel.String = 'Average Order';
                 
                 OOPSData.Handles.LineScanROI.Position = [x1 y1; x2 y2];
                 
@@ -4811,18 +5726,18 @@ pause(0.5)
                         cImage.ffcFPMAverage,...
                         cImage.RealWorldLimits);
                 end
-            case 'LineScanOrderFactor'
-                switch OOPSData.Handles.ApplyMaskOrderFactor.Value
+            case 'LineScanOrder'
+                switch OOPSData.Handles.ApplyMaskOrder.Value
                     case true
-                        OOPSData.Handles.LineScanAxes = PlotOrderFactorLineScan(OOPSData.Handles.LineScanAxes,...
+                        OOPSData.Handles.LineScanAxes = PlotOrderLineScan(OOPSData.Handles.LineScanAxes,...
                             OOPSData.Handles.LineScanROI.Position,...
-                            cImage.OF_image,...
+                            cImage.OrderImage,...
                             cImage.RealWorldLimits,...
                             cImage.bw);
                     case false
-                        OOPSData.Handles.LineScanAxes = PlotOrderFactorLineScan(OOPSData.Handles.LineScanAxes,...
+                        OOPSData.Handles.LineScanAxes = PlotOrderLineScan(OOPSData.Handles.LineScanAxes,...
                             OOPSData.Handles.LineScanROI.Position,...
-                            cImage.OF_image,...
+                            cImage.OrderImage,...
                             cImage.RealWorldLimits,...
                             []);
                 end
@@ -4848,18 +5763,18 @@ pause(0.5)
                         cImage.ffcFPMAverage,...
                         cImage.RealWorldLimits);
                 end
-            case 'LineScanOrderFactor'
-                switch OOPSData.Handles.ApplyMaskOrderFactor.Value
+            case 'LineScanOrder'
+                switch OOPSData.Handles.ApplyMaskOrder.Value
                     case true
-                        OOPSData.Handles.LineScanAxes = PlotOrderFactorLineScan(OOPSData.Handles.LineScanAxes,...
+                        OOPSData.Handles.LineScanAxes = PlotOrderLineScan(OOPSData.Handles.LineScanAxes,...
                             OOPSData.Handles.LineScanROI.Position,...
-                            cImage.OF_image,...
+                            cImage.OrderImage,...
                             cImage.RealWorldLimits,...
                             cImage.bw);
                     case false
-                        OOPSData.Handles.LineScanAxes = PlotOrderFactorLineScan(OOPSData.Handles.LineScanAxes,...
+                        OOPSData.Handles.LineScanAxes = PlotOrderLineScan(OOPSData.Handles.LineScanAxes,...
                             OOPSData.Handles.LineScanROI.Position,...
-                            cImage.OF_image,...
+                            cImage.OrderImage,...
                             cImage.RealWorldLimits,...
                             []);
                 end

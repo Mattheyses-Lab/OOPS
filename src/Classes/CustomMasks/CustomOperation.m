@@ -252,6 +252,11 @@ classdef CustomOperation < handle
                                 OutputImage = Inew;
                             case 'SobelGradient'
                                 [OutputImage,~] = imgradient(obj.Target.ImageData,'sobel');
+                            case 'stdfiltBackgroundSubtraction'
+                                I = obj.Target.ImageData;
+                                Istd = stdfilt(I);
+                                %BGMask = Istd <= 0.01;
+                                OutputImage = max(I - mean(I(Istd <= 0.01)),0);
                         end
 
                     case 'Arithmetic'
@@ -284,15 +289,14 @@ classdef CustomOperation < handle
                                 OutputImage = edge(obj.Target.ImageData,"zerocross");
                         end
 
-                    case 'BWMorphology'
-
-                        switch obj.OperationName
-                            case 'Skeletonize'
-                                I = obj.Target.ImageData;
-                                n = obj.OperationParams{1};
-                                OutputImage = bwmorph(I,"skeleton",n);
+                    case 'bwmorph'
+                        I = obj.Target.ImageData;
+                        if ~isa(I,"logical")
+                            error("Target image type must be logical")
                         end
-
+                        
+                        n = obj.OperationParams{1};
+                        OutputImage = bwmorph(I,obj.OperationName,n);
                 end
 
         end

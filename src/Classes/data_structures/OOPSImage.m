@@ -1,53 +1,41 @@
-classdef OOPSImage < handle
+classdef OOPSImage < handle & dynamicprops
     
-    % normal properties
     properties
-%% Parent/Child
 
         % handle to the OOPSGroup to which this OOPSImage belongs
         Parent OOPSGroup
-
-        % array of handles to the objects detected for this OOPSImage
-        Object OOPSObject
+        % column vector of handles to the OOPSObject objects in this OOPSImage
+        Object (:,1) OOPSObject
         
-%% Input Image Properties
+%% FPM stack file properties
         
         % file name of the original input image
         rawFPMFileName (1,:) char
-
         % shortened file name (no path)
         rawFPMShortName (1,:) char
-
         % full name (path and extension)
         rawFPMFullName (1,:) char
-
-        % width of the image (number of columns in the image matrix)
+        % number of columns in the image
         Width (1,1) double
-
-        % height of the image (number of the rows in this image)
+        % number of the rows in this image
         Height (1,1) double
-
         % real-world size of the pixels of the raw input data
         rawFPMPixelSize (1,1) double
-
         % class/type of the raw input data ('uint8','uint16',etc)
         rawFPMClass (1,:) char
-
         % intensity range of the raw input data [low high] (based on class)
         rawFPMRange (1,2) double
-
         % file type (extension) of the raw input data
         rawFPMFileType (1,:) char
 
+%% FPM stack image data
+
         % raw input stack, size = [Height,Width,4] variable types depending on user input
         rawFPMStack (:,:,4)
-
         % average of the raw input stack, size = [Height,Width] double
         rawFPMAverage (:,:) double
-
         % flat-field corrected stack, size = [Height,Width,4]
         ffcFPMStack (:,:,4) double
-
         % average of the flat-field corrected stack, size = [Height,Width]
         ffcFPMAverage (:,:) double
 
@@ -56,7 +44,7 @@ classdef OOPSImage < handle
         FilesLoaded (1,1) logical = false
         FFCDone (1,1) logical = false
         MaskDone (1,1) logical = false
-        OFDone (1,1) logical = false
+        FPMStatsDone (1,1) logical = false
         ObjectDetectionDone (1,1) logical = false
         LocalSBDone (1,1) logical = false
         ReferenceImageLoaded (1,1) logical = false
@@ -65,38 +53,31 @@ classdef OOPSImage < handle
 
         % image mask
         bw (:,:) logical
-        
         % label matrix that defines the objects
         L (:,:) double
-
         % whether the mask intensity threshold has been manually adjusted
         ThresholdAdjusted (1,1) logical = false
-
         % the intensity threshold used to generate the mask (only for certain mask types)
         level (1,1) double
-        
         % masking steps
         I (:,:) double
         EnhancedImg (:,:) double
-
-        % the type of mask applied to this image ('Default', 'Custom')
+        % the type of mask applied to this image ('Default', 'CustomScheme')
         MaskType (1,:) char = 'Default'
-
         % the name of the mask applied to this image (various)
         MaskName (1,:) char = 'Legacy'
-
         % handle to the custom mask scheme (if one was used)
         CustomScheme CustomMask = CustomMask.empty()
-        
         % mask threshold adjustment (for display purposes)
         IntensityBinCenters
         IntensityHistPlot
         
-%% Object Data        
+%% Object data
+
         % objects
         CurrentObjectIdx (1,1) uint16 % i.e. no more than 65535 objects per group
         
-%% Reference Image
+%% Reference image
 
         rawReferenceImage (:,:)
         ReferenceImage (:,:) double
@@ -107,12 +88,12 @@ classdef OOPSImage < handle
         rawReferenceShortName (1,:) char
         rawReferenceFileType (1,:) char
         
-%% Output Images
+%% Pixelwise FPM output statistics
 
         AzimuthImage (:,:) double
-        OF_image (:,:) double
+        OrderImage (:,:) double
 
-%% Output Values        
+%% Output values        
         
         % output values
         SBAvg double
@@ -121,38 +102,71 @@ classdef OOPSImage < handle
 
         PrimaryIntensityDisplayLimits (1,2) double = [0 1];
         ReferenceIntensityDisplayLimits (1,2) double = [0 1];
+        OrderDisplayLimits (1,2) double = [0 1];
  
     end
     
     % dependent properties (not stored in memory, calculated each time they are retrieved)
     properties (Dependent = true)
         
+        % min and max average intensity in the same scale as the original input data
+        averageIntensityRealLimits
+
         % flat-field corrected intensity stack, normalized to the max in the 3rd dimension
         ffcFPMPixelNorm
 
-        % OF image in RGB format
-        OFImageRGB
+        % Average intensity image scaled to user-defined display limits
+        UserScaledAverageIntensityImage
+        % Average intensity image scaled to user-defined display limits, RGB format
+        UserScaledAverageIntensityImageRGB
+        MaxScaledAverageIntensityImageRGB
 
-        % OF image with mask applied | masked pixels = 0
-        MaskedOFImage
+        ReferenceImageRGB
+        UserScaledReferenceImage
+        UserScaledReferenceImageRGB
+        UserScaledAverageIntensityReferenceCompositeRGB
 
-        % OF image in RGB format with mask applied | masked pixels = [0 0 0] (black)
-        MaskedOFImageRGB
+        % Order image in RGB format
+        OrderImageRGB
 
-        % OF-intensity overlay in RGB format, unscaled OF
-        OFIntensityOverlayRGB
+        % Order image scaled to user-defined display limits
+        UserScaledOrderImage
+        % Order image scaled to user-defined display limits, RGB format
+        UserScaledOrderImageRGB
 
-        % OF-intensity overlay in RGB format, with OF scaled to image maximum
-        ScaledOFIntensityOverlayRGB
+        % Order image with mask applied | masked pixels = 0
+        MaskedOrderImage
+        % Order image in RGB format with mask applied | masked pixels = [0 0 0] (black)
+        MaskedOrderImageRGB
+
+        % Order image normalized to image maximum
+        MaxScaledOrderImage
+        % Order image in RGB format, with Order scaled to image maximum
+        MaxScaledOrderImageRGB
+
+        % Order-intensity overlay in RGB format, unscaled Order
+        OrderIntensityOverlayRGB
+        % Order-intensity overlay in RGB format, with Order scaled to image maximum
+        MaxScaledOrderIntensityOverlayRGB
+        % Order-intensity overlay in RGB format, with Order and intensity scaled according to user
+        UserScaledOrderIntensityOverlayRGB
+
 
         % azimuth image in RGB format
         AzimuthRGB
-
         % masked azimuth image in RGB format | masked pixels = [0 0 0] (black)
         MaskedAzimuthRGB
+        % Azimuth-intensity-Order HSV image in RGB format
+        AzimuthOrderIntensityHSV
+        % Azimuth-intensity-Order HSV image in RGB format, with Order and intensity scaled according to user
+        UserScaledAzimuthOrderIntensityHSV
+        % Azimuth-intensity overlay in RGB format
+        AzimuthIntensityOverlayRGB
+        % Azimuth-intensity overlay in RGB format, with intensity scaled according to user
+        UserScaledAzimuthIntensityOverlayRGB
 
-        % Azimuth-intensity-OF HSV image in RGB format
-        AzimuthOFIntensityHSV
+
+
 
         % RGB format mask for saving
         MaskRGBImage
@@ -190,21 +204,21 @@ classdef OOPSImage < handle
         % 2-element vector describing the limits of the image in real-world coordinates
         RealWorldLimits (1,2) double        
         
-        % average OF among all objects
-        OFAvg (1,1) double
+        % average Order among all objects
+        OrderAvg (1,1) double
 
-        % maximum OF among all objects
-        OFMax (1,1) double
+        % maximum Order among all objects
+        OrderMax (1,1) double
 
-        % minimum OF among all objects
-        OFMin (1,1) double
+        % minimum Order among all objects
+        OrderMin (1,1) double
 
-        % list of pixel OFs for all of the pixels in the image mask
-        OFList (:,1) double
+        % list of pixel Orders for all of the pixels in the image mask
+        OrderList (:,1) double
 
         % various filtered output
         bw_filt
-        FilteredOFAvg
+        FilteredOrderAvg
 
         % index of this image in [obj.Parent.Replicate()]
         SelfIdx (1,1)
@@ -244,12 +258,12 @@ classdef OOPSImage < handle
             obj.Width = 0;
             obj.Height = 0;
             
-            % status tracking (false by default)
-            obj.ThresholdAdjusted = false;
-            obj.MaskDone = false;
-            obj.OFDone = false;
-
+            
             obj.CurrentObjectIdx = 0;
+
+            % add custom properties
+            obj.addCustomStatistics();
+
         end
         
         % destructor
@@ -273,7 +287,7 @@ classdef OOPSImage < handle
             replicate.FilesLoaded = obj.FilesLoaded;
             replicate.FFCDone = obj.FFCDone;
             replicate.MaskDone = obj.MaskDone;
-            replicate.OFDone = obj.OFDone;
+            replicate.FPMStatsDone = obj.FPMStatsDone;
             replicate.ObjectDetectionDone = obj.ObjectDetectionDone;
             replicate.LocalSBDone = obj.LocalSBDone;
             replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
@@ -338,9 +352,135 @@ classdef OOPSImage < handle
             end
         end
 
+        % add user-defined custom outputs
+        function addCustomStatistics(obj)
+            % get the vector of custom statistic objects
+            customStatistics = obj.Settings.CustomStatistics;
+            % for each custom statistic
+            for i = 1:numel(customStatistics)
+                % get the statistic
+                thisStatistic = customStatistics(i);
+                statName = thisStatistic.StatisticName;
+                statRange = thisStatistic.StatisticRange;
+
+                % add a dynamic property to obj to hold the image data
+                prop = obj.addprop([statName,'Image']);
+
+                % add a dynamic property to obj to hold the display limits
+                displayLimitsProp = obj.addprop([statName,'DisplayLimits']);
+                % set the default value
+                obj.([statName,'DisplayLimits']) = statRange;
+
+                % add a dynamic property to obj to hold the display range
+                displayRangeProp = obj.addprop([statName,'DisplayRange']);
+                % set the default value
+                obj.([statName,'DisplayRange']) = statRange;
+
+
+                % add a dynamic property to obj to hold the user scaled image
+                userScaledImageProp = obj.addprop(['UserScaled',statName,'Image']);
+                userScaledImageProp.Dependent = true;
+                % set the Get method for this property, pass in the property name so we know how to calculate it
+                userScaledImageProp.GetMethod = @(o) getCustomUserScaledImage(o,statName);
+
+                % add a dynamic property to obj to hold the user scaled image
+                userScaledIntensityOverlayRGBProp = obj.addprop(['UserScaled',statName,'IntensityOverlayRGB']);
+                userScaledIntensityOverlayRGBProp.Dependent = true;
+                % set the Get method for this property, pass in the property name so we know how to calculate it
+                userScaledIntensityOverlayRGBProp.GetMethod = @(o) getCustomUserScaledIntensityOverlayRGB(o,statName);
+            end
+        end
+
+
+        function value = getCustomUserScaledImage(obj,statName)
+            % normalize the image data so that values [obj.xDisplayRange(1) obj.xDisplayRange(2)] maps to [0 1]
+            % where "x" is the name of the custom statistic
+            normalizedImageData = normalizeFromRange(obj.([statName,'Image']),obj.([statName,'DisplayRange']));
+            % do the same with the display limits
+            normalizedDisplayLimits = normalizeFromRange(obj.([statName,'DisplayLimits']),obj.([statName,'DisplayRange']));
+            % adjust the image data (values cannot be interpreted directly unless the display range is [0 1]
+            value = imadjust(normalizedImageData,normalizedDisplayLimits,[0 1]);
+        end
+
+        function value = getCustomUserScaledIntensityOverlayRGB(obj,statName)
+            % get the normalized, user-scaled image data
+            imageData = obj.(['UserScaled',statName,'Image']);
+            % convert to uint8, then to RGB
+            value = MaskRGB(vecind2rgb(im2uint8(imageData),obj.Settings.OrderColormap),obj.UserScaledAverageIntensityImage);
+        end
+
+
+%% retrieve image data
+
+        function averageIntensityRealLimits = get.averageIntensityRealLimits(obj)
+            averageIntensityRealLimits = [min(min(obj.ffcFPMAverage)) max(max(obj.ffcFPMAverage))];
+        end
+
+        % dependent get methods for image size, resolution
+        function Dimensions = get.Dimensions(obj)
+            Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
+        end
+        
+        function RealWorldLimits = get.RealWorldLimits(obj)
+            RealWorldLimits = [0 obj.rawFPMPixelSize*obj.Width];
+        end
+
+        % get normalized FFC stack
+        function ffcFPMStack_normalizedbystack = get.ffcFPMStack_normalizedbystack(obj)
+            ffcFPMStack_normalizedbystack = obj.ffcFPMStack./(max(max(max(obj.ffcFPMStack))));
+        end
+         
+        % get normalized raw emission images stack
+        function rawFPMStack_normalizedbystack = get.rawFPMStack_normalizedbystack(obj)
+            rawDataDouble = im2double(obj.rawFPMStack);
+            rawFPMStack_normalizedbystack = rawDataDouble./(max(max(max(rawDataDouble))));
+        end
+
+        function ffcFPMPixelNorm = get.ffcFPMPixelNorm(obj)
+            % OLD NORMALIZATION METHOD BELOW
+            % ffcFPMPixelNorm = obj.ffcFPMStack./max(obj.ffcFPMStack,[],3);
+
+            % NEW NORMALIZATION METHOD
+            ffcFPMPixelNorm = obj.ffcFPMStack./(sum(obj.ffcFPMStack,3)./2);
+        end
+
+        function OrderAvg = get.OrderAvg(obj)
+            % average Order of all pixels identified by the mask
+            try
+                OrderAvg = mean(obj.OrderImage(obj.bw));
+            catch
+                OrderAvg = NaN;
+            end
+        end
+        
+        function OrderMax = get.OrderMax(obj)
+            % max Order of all pixels identified by the mask
+            try
+                OrderMax = max(obj.OrderImage(obj.bw));
+            catch
+                OrderMax = NaN;
+            end
+        end
+        
+        function OrderMin = get.OrderMin(obj)
+            % min Order of all pixels identified by the mask
+            try
+                OrderMin = min(obj.OrderImage(obj.bw));
+            catch
+                OrderMin = NaN;
+            end
+        end
+        
+        function OrderList = get.OrderList(obj)
+            % list of Order in all pixels identified by mask
+            try
+                OrderList = obj.OrderImage(obj.bw);
+            catch
+                OrderList = NaN;
+            end
+        end
 %% processing methods (corrections, FPM stats, local S/B)
 
-        % performs flat field correction for 1 OOPSImage
         function FlatFieldCorrection(obj)
 
             rawFPMStackDouble = im2double(obj.rawFPMStack) .* obj.rawFPMRange(2);
@@ -611,35 +751,81 @@ classdef OOPSImage < handle
 
         end
 
-        % calculate pixel-by-pixel OF and azimuth for this image
-        function FindOrderFactor(obj)
+        function FindOrder(obj)
             % remember to remove comment below!
             % get the pixel-normalized, flat-field corrected intensity stack
             pixelNorm = obj.ffcFPMPixelNorm;
 
-            %% testing only below!
-            % anisotropy instead of OF
+            %% anisotropy (DeMay)
             % a = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
             % b = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
             % c = sum(obj.ffcFPMStack,3);
-            % obj.OF_image = hypot(a,b)./c;
-            %% testing only above!
+            % obj.OrderImage = hypot(a,b)./c;
+
+            %% polarization factor / degree of linear polarization (Mehta, Lee)
+            % S1 = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
+            % S2 = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
+            % S0 = sum(obj.ffcFPMStack,3)./2;
+            % obj.OrderImage = hypot(S1,S2)./S0;
+
+
 
             % orthogonal polarization difference components
             a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
             b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
             % find Order Factor
-            obj.OF_image = zeros(size(pixelNorm(:,:,1)));
-            obj.OF_image(:) = sqrt(a(:).^2+b(:).^2);
+            obj.OrderImage = zeros(size(pixelNorm(:,:,1)));
+            obj.OrderImage(:) = sqrt(a(:).^2+b(:).^2);
             % find azimuth image
             obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
             % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
             obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
-            % update completion status
-            obj.OFDone = true;
+            % % update completion status
+            % obj.OrderDone = true;
         end
 
-        % detect local S/B ratio for each object in this OOPSImage
+        function FindFPMStatistics(obj)
+
+            % default order parameter and azimuth
+
+            % get the pixel-normalized, flat-field corrected intensity stack
+            pixelNorm = obj.ffcFPMPixelNorm;
+
+            % orthogonal polarization difference components
+            a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
+            b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
+            % find Order Factor
+            obj.OrderImage = zeros(size(pixelNorm(:,:,1)));
+            obj.OrderImage(:) = sqrt(a(:).^2+b(:).^2);
+            % find azimuth image
+            obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
+            % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
+            obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
+
+
+
+
+            % custom order statistics
+
+            % get the vector of custom statistic objects
+            customStatistics = obj.Settings.CustomStatistics;
+
+            if ~(isempty(customStatistics))
+
+                % for each custom statistic
+                for i = 1:numel(customStatistics)
+                    % get the next statistic
+                    thisStatistic = customStatistics(i);
+                    % call the function handle specified by the custom statistic object, store the value in dynamic property
+                    %obj.(thisStatistic.StatisticName) = feval(thisStatistic.StatisticFun,obj.ffcFPMStack);
+                    obj.([thisStatistic.StatisticName,'Image']) = thisStatistic.StatisticFun(obj.ffcFPMStack);
+                end
+            end
+
+            % update the status flag to indicate custom FPM stats were calculated
+            obj.FPMStatsDone = true;
+        end
+
         function obj = FindLocalSB(obj)
 
             % subfunction that returns linear idxs (w.r.t. full image) to buffer and BG regions for an object
@@ -746,46 +932,35 @@ classdef OOPSImage < handle
 
         end
 
-
-
-
 %% segmentation, object construction, and basic object feature extraction
 
         % detects objects in this OOPSImage
         function DetectObjects(obj)
             % start by deleting any currently existing objects
             obj.deleteObjects();
-
             % get object properties struct
             props = obj.ObjectProperties;
-
-            if isempty(props) % if no objects
+            % if no objects
+            if isempty(props)
                 return % then stop here
             else
                 % get default label from settings object
                 DefaultLabel = obj.Settings.ObjectLabels(1);
-
-                for i = 1:length(props) % for each detected object
+                % for each detected object
+                for i = 1:length(props)
                    % create an instance of OOPSObject
                    obj.Object(i) = OOPSObject(props(i,1),...
                        obj,...
                        DefaultLabel);
                 end
             end
-            
-            % update some status tracking variables
+            % update status flags and CurrentObjectIdx
             obj.ObjectDetectionDone = true;
             obj.CurrentObjectIdx = 1;
             obj.LocalSBDone = false;
-            
-        end % end of DetectObjects
+        end
         
-
-
-
-
-
-
+%% object manipulation (gather, select, delete, etc.)
 
         % delete all objects in this OOPSImage
         function deleteObjects(obj)
@@ -899,8 +1074,44 @@ classdef OOPSImage < handle
 
         end
 
+%% retrieve object data
+
+        % get current Object (OOPSObject)
+        function CurrentObject = get.CurrentObject(obj)
+            try
+                CurrentObject = obj.Object(obj.CurrentObjectIdx);
+            catch
+                CurrentObject = OOPSObject.empty();
+            end
+        end
+
+        function VariableObjectData = GetAllObjectData(obj,Var2Get)
+            % if the variable is a custom property
+            if obj.Settings.isCustomStatistic(Var2Get)
+                % we have to retrieve it differently
+                VariableObjectData = obj.GetAllCustomObjectData(Var2Get);
+                return
+            end
+
+            VariableObjectData = [obj.Object.(Var2Get)];
+        end
+
+        function VariableObjectData = GetAllCustomObjectData(obj,Var2Get)
+            VariableObjectData = nan(obj.nObjects,1);
+            for i = 1:obj.nObjects
+                VariableObjectData(i,1) = obj.Object(i).(Var2Get);
+            end
+        end
+
         % return object data grouped by the object labels
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
+            % if the variable is a custom property
+            if obj.Settings.isCustomStatistic(Var2Get)
+                % we have to retrieve it differently
+                ObjectDataByLabel = obj.GetCustomObjectDataByLabel(Var2Get);
+                return
+            end
+
             nLabels = length(obj.Settings.ObjectLabels);
             ObjectDataByLabel = cell(1,nLabels);
             % for each label
@@ -910,237 +1121,213 @@ classdef OOPSImage < handle
                 % add [Var2Get] from those objects to cell i of ObjectDataByLabel
                 ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
             end
+
         end
 
-        % dependent get methods for image size, resolution
-        function Dimensions = get.Dimensions(obj)
-            Dimensions = [num2str(obj.Height),'x',num2str(obj.Width)];
-        end
-        
-        function RealWorldLimits = get.RealWorldLimits(obj)
-            RealWorldLimits = [0 obj.rawFPMPixelSize*obj.Width];
+        % return object data grouped by the object labels
+        function ObjectDataByLabel = GetCustomObjectDataByLabel(obj,Var2Get)
+
+            nLabels = length(obj.Settings.ObjectLabels);
+            ObjectDataByLabel = cell(1,nLabels);
+            % for each label
+            for i = 1:nLabels
+                % find idx to all object with that label
+                ObjectLabelIdxs = find([obj.Object.Label]==obj.Settings.ObjectLabels(i));
+                % the number of objects for which we will retrieve data
+                nIdxs = numel(ObjectLabelIdxs);
+
+
+                % % preallocate array of nans before looping
+                % ObjectDataByLabel{i} = nan(1,nIdxs);
+                % for ii = 1:nIdxs
+                %     % add Var2Get from each object with the label to cell i of ObjectDataByLabel
+                %     ObjectDataByLabel{i}(1,ii) = obj.Object(ObjectLabelIdxs(ii)).(Var2Get);
+                % end
+
+
+                % preallocate array of nans before looping
+                ObjectDataByLabel{i} = nan(nIdxs,1);
+                for ii = 1:nIdxs
+                    % add Var2Get from each object with the label to cell i of ObjectDataByLabel
+                    ObjectDataByLabel{i}(ii,1) = obj.Object(ObjectLabelIdxs(ii)).(Var2Get);
+                end
+
+
+
+            end
+
         end
 
-%% dependent get methods for various display/processing options specific to this image
-
-        function ThreshPanelTitle = get.ThreshPanelTitle(obj)
-            switch obj.MaskType
-                case 'Default'
-                    switch obj.MaskName
-                        case 'Legacy'
-                            ThreshPanelTitle = 'Adjust threshold';
-                        case 'Adaptive'
-                            ThreshPanelTitle = 'Adjust adaptive threshold sensitivity';
-                        otherwise
-                            ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
-                    end
-                case 'CustomScheme'
-                    customScheme = obj.CustomScheme;
-                    switch customScheme.ThreshType
-                        case 'Otsu'
-                            ThreshPanelTitle = 'Adjust threshold';
-                        case 'Adaptive'
-                            ThreshPanelTitle = 'Adjust adaptive threshold sensitivity';
-                        otherwise
-                            ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
-                    end
+        % return the number of objects in this OOPSImage
+        function nObjects = get.nObjects(obj)
+            if isvalid(obj.Object)
+                nObjects = numel(obj.Object);
+            else
+                nObjects = 0;
             end
         end
 
-        function ThreshStatisticName = get.ThreshStatisticName(obj)
-            switch obj.MaskType
-                case 'Default'
-                    switch obj.MaskName
-                        case 'Legacy'
-                            ThreshStatisticName = 'Threshold';
-                        case 'Adaptive'
-                            ThreshStatisticName = 'Adaptive threshold sensitivity';
-                        otherwise
-                            ThreshStatisticName = false;
-                    end
-                case 'CustomScheme'
-                    customScheme = obj.CustomScheme;
-                    switch customScheme.ThreshType
-                        case 'Otsu'
-                            ThreshStatisticName = 'Threshold';
-                        case 'Adaptive'
-                            ThreshStatisticName = 'Adaptive threshold sensitivity';
-                        otherwise
-                            ThreshStatisticName = false;
-                    end
+        function [...
+                AllVertices,...
+                AllCData,...
+                SelectedFaces,...
+                UnselectedFaces...
+                ] = getObjectPatchData(obj)
+
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+
+            % get list of unselected objects
+            Unselected = AllObjects(~[obj.Object.Selected]);
+            % get list of selected objects
+            Selected = AllObjects([obj.Object.Selected]);
+
+            totalnObjects = numel(Unselected)+numel(Selected);
+
+            % highest number of boundary vertices among all objects
+            AllVerticesMax = 0;
+
+            % total number of boundary vertices among all objects
+            AllVerticesSum = 0;
+
+            % for each object
+            for cObject = obj.Object'
+                % % get the number of vertices in the simplified boundary
+                % nVertices = size(cObject.SimplifiedBoundary,1);
+                
+                % get the number of vertices in the boundary
+                nVertices = size(cObject.Boundary,1);       
+                % determine the total and max number of vertices
+                AllVerticesSum = AllVerticesSum + nVertices;
+                AllVerticesMax = max(AllVerticesMax,nVertices);
             end
-            % when set to false, will throw an error that we will catch when updating display
-        end
 
-        function ManualThreshEnabled = get.ManualThreshEnabled(obj)
-            switch obj.MaskType
-                case 'Default'
-                    switch obj.MaskName
-                        case 'Legacy'
-                            ManualThreshEnabled = true;
-                        case 'Adaptive'
-                            ManualThreshEnabled = true;
-                        otherwise
-                            ManualThreshEnabled = false;
-                    end
-                case 'CustomScheme'
-                    customScheme = obj.CustomScheme;
-                    switch customScheme.ThreshType
-                        case 'Otsu'
-                            ManualThreshEnabled = true;
-                        case 'Adaptive'
-                            ManualThreshEnabled = true;
-                        otherwise
-                            ManualThreshEnabled = false;
-                    end
+            % initialize unselected faces matrix (each row is a vector of vertex idxs)
+            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
+            % initialize selected faces matrix (each row is a vector of vertex idxs)
+            SelectedFaces = nan(totalnObjects,AllVerticesMax);
+            % list of boundary coordinates for all objects
+            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
+            % object/face counter
+            Counter = 0;
+            % list of FaceVertexCData for the patch objects we are going to draw
+            AllCData = zeros(AllVerticesSum+totalnObjects,3);
+            % total number of vertices we have created faces for
+            TotalVertices = 0;
+
+            for cObject = obj.Object'
+                % increment the object/face counter
+                Counter = Counter + 1;
+                % % get the simplified boundary
+                % thisObjectBoundary = cObject.SimplifiedBoundary;
+                % get the boundary
+                thisObjectBoundary = cObject.Boundary;
+                % determine number of vertices
+                nvertices = size(thisObjectBoundary,1);
+                % obtain vertices idx
+                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
+                % add boundary coordinates to list of vertices
+                AllVertices(AllVerticesIdx,:) = [thisObjectBoundary(:,2) thisObjectBoundary(:,1)];
+                % add CData for each vertex
+                switch obj.Settings.ObjectSelectionColorMode
+                    case 'Label'
+                        AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                    case 'Custom'
+                        AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+obj.Settings.ObjectSelectionColor;
+                end
+                % set object faces depending on their selection status
+                switch cObject.Selected
+                    case true
+                        % add vertex idxs to selected faces list
+                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                    case false
+                        % add vertex idxs to unselected faces list
+                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                end
+                % increment the total number of vertices
+                TotalVertices = TotalVertices + nvertices;
             end
         end
 
-        function ImageSummaryDisplayTable = get.ImageSummaryDisplayTable(obj)
+        function [...
+                AllVertices,...
+                AllCData,...
+                SelectedFaces,...
+                UnselectedFaces...
+                ] = getObjectRectanglePatchData(obj)
 
-            varNames = [...
-                "Name",...
-                "Dimensions",...
-                "Input image class",...
-                "Pixel size",...
-                "Mask threshold",...
-                "Threshold adjusted",...
-                "Number of objects",...
-                "Mask name",...
-                "Mean pixel OF",...
-                "Mean pixel OF (filtered)",...
-                "Files loaded",...
-                "FFC performed",...
-                "Mask generated",...
-                "OF/azimuth calculated",...
-                "Objects detected",...
-                "Local S/B calculated"];
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
 
-            ImageSummaryDisplayTable = table(...
-                {obj.rawFPMShortName},...
-                {obj.Dimensions},...
-                {obj.rawFPMClass},...
-                {obj.rawFPMPixelSize},...
-                {obj.level},...
-                {Logical2String(obj.ThresholdAdjusted)},...
-                {obj.nObjects},...
-                {obj.MaskName},...
-                {obj.OFAvg},...
-                {obj.FilteredOFAvg},...
-                {Logical2String(obj.FilesLoaded)},...
-                {Logical2String(obj.FFCDone)},...
-                {Logical2String(obj.MaskDone)},...
-                {Logical2String(obj.OFDone)},...
-                {Logical2String(obj.ObjectDetectionDone)},...
-                {Logical2String(obj.LocalSBDone)},...
-                'VariableNames',varNames,...
-                'RowNames',"Image");
+            % get list of unselected objects
+            Unselected = AllObjects(~[obj.Object.Selected]);
+            % get list of selected objects
+            Selected = AllObjects([obj.Object.Selected]);
 
-            ImageSummaryDisplayTable = rows2vars(ImageSummaryDisplayTable,"VariableNamingRule","preserve");
+            totalnObjects = numel(Unselected)+numel(Selected);
 
-            ImageSummaryDisplayTable.Properties.RowNames = varNames;
+            % highest number of boundary vertices among all objects
+            AllVerticesMax = 0;
 
-        end
+            % total number of boundary vertices among all objects
+            AllVerticesSum = 0;
 
-%% RGB output images
-
-        function OFImageRGB = get.OFImageRGB(obj)
-            OFImageRGB = ind2rgb(im2uint8(obj.OF_image),obj.Settings.OrderFactorColormap);
-        end
-
-        function MaskedOFImage = get.MaskedOFImage(obj)
-            % get the full OF image
-            MaskedOFImage = obj.OF_image;
-            % set any pixels outside the mask to 0
-            MaskedOFImage(~obj.bw) = 0;
-        end
-
-        function MaskedOFImageRGB = get.MaskedOFImageRGB(obj)
-            MaskedOFImageRGB = MaskRGB(obj.OFImageRGB,obj.bw);
-        end
-
-        function AzimuthRGB = get.AzimuthRGB(obj)
-            AzimuthData = obj.AzimuthImage;
-            % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
-            AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
-            % scale values to [0 1]
-            AzimuthData = AzimuthData./pi;
-            % convert to uint8 then to RGB
-            AzimuthRGB = ind2rgb(im2uint8(AzimuthData),obj.Settings.AzimuthColormap);
-        end
-
-        function MaskedAzimuthRGB = get.MaskedAzimuthRGB(obj)
-            MaskedAzimuthRGB = MaskRGB(obj.AzimuthRGB,obj.bw);
-        end
-
-        function AzimuthOFIntensityHSV = get.AzimuthOFIntensityHSV(obj)
-            % get 'V' data (intensity image)
-            OverlayIntensity = obj.I;
-
-            % get 'H' data (azimuth image)
-            AzimuthData = obj.AzimuthImage;
-            % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
-            AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
-            % scale values to [0 1]
-            AzimuthData = AzimuthData./pi;
-
-            % get 'S' data (scaled order factor image)
-            OF = obj.OF_image;
-            OF = OF./max(max(OF));
-
-            % combine to make HSV image (in RGB format)
-            AzimuthOFIntensityHSV = makeHSVSpecial(AzimuthData,OF,OverlayIntensity);
-        end
-
-        function ScaledOFIntensityOverlayRGB = get.ScaledOFIntensityOverlayRGB(obj)
-            % get the average intensity image to use as an opacity mask
-            OverlayIntensity = obj.I;
-            % get the raw OF image
-            OF = obj.OF_image;
-            % get the maximum OF in the image
-            maxOF = max(max(OF));
-            % now get the scaled OF-intensity RGB overlay
-            ScaledOFIntensityOverlayRGB = ...
-                MaskRGB(ind2rgb(im2uint8(OF./maxOF),obj.Settings.OrderFactorColormap),OverlayIntensity);
-        end
-
-        function OFIntensityOverlayRGB = get.OFIntensityOverlayRGB(obj)
-            % get the average intensity image to use as an opacity mask
-            OverlayIntensity = obj.I;
-            % get the raw OF image
-            OF = obj.OF_image;
-            % now get the scaled OF-intensity RGB overlay
-            OFIntensityOverlayRGB = ...
-                MaskRGB(ind2rgb(im2uint8(OF),obj.Settings.OrderFactorColormap),OverlayIntensity);
-        end
-
-        function MaskRGBImage = get.MaskRGBImage(obj)
-            MaskRGBImage = ind2rgb(im2uint8(full(obj.bw)),gray);
-        end
-
-        function ObjectLabelImageRGB = get.ObjectLabelImageRGB(obj)
-            % preallocate 2D label idx image
-            ObjectLabelImage = zeros(size(obj.bw));
-
-            % for each object in the image, set its pixels = the idx of its label
-            for objIdx = 1:obj.nObjects
-                ObjectLabelImage(obj.Object(objIdx).PixelIdxList) = obj.Object(objIdx).LabelIdx;
+            % for each object
+            for cObject = obj.Object'
+                % % get the number of vertices in the simplified boundary
+                % nVertices = size(cObject.SimplifiedBoundary,1);
+                
+                % get the number of vertices in the boundary
+                nVertices = 4;       
+                % determine the total and max number of vertices
+                AllVerticesSum = AllVerticesSum + nVertices;
+                AllVerticesMax = max(AllVerticesMax,nVertices);
             end
-            % the BG color
-            zeroColor = [0 0 0];
-            % convert the label matrix to an RGB image using the existing label colors
-            ObjectLabelImageRGB = label2rgb(ObjectLabelImage,obj.Settings.LabelColors,zeroColor);
-        end
 
+            % initialize unselected faces matrix (each row is a vector of vertex idxs)
+            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
+            % initialize selected faces matrix (each row is a vector of vertex idxs)
+            SelectedFaces = nan(totalnObjects,AllVerticesMax);
+            % list of boundary coordinates for all objects
+            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
+            % object/face counter
+            Counter = 0;
+            % list of FaceVertexCData for the patch objects we are going to draw
+            AllCData = zeros(AllVerticesSum+totalnObjects,3);
+            % total number of vertices we have created faces for
+            TotalVertices = 0;
 
-%% other dependent 'get' methods
-
-        % get current Object (OOPSObject)
-        function CurrentObject = get.CurrentObject(obj)
-            try
-                CurrentObject = obj.Object(obj.CurrentObjectIdx);
-            catch
-                CurrentObject = OOPSObject.empty();
+            for cObject = obj.Object'
+                % increment the object/face counter
+                Counter = Counter + 1;
+                % % get the simplified boundary
+                % thisObjectBoundary = cObject.SimplifiedBoundary;
+                % get the boundary
+                thisObjectBoundary = cObject.expandedBoundingBoxCoordinates;
+                % determine number of vertices
+                nvertices = size(thisObjectBoundary,1);
+                % obtain vertices idx
+                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
+                % add boundary coordinates to list of vertices
+                AllVertices(AllVerticesIdx,:) = thisObjectBoundary;
+                % add CData for each vertex
+                switch obj.Settings.ObjectSelectionColorMode
+                    case 'Label'
+                        AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
+                    case 'Custom'
+                        AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+obj.Settings.ObjectSelectionColor;
+                end
+                % set object faces depending on their selection status
+                switch cObject.Selected
+                    case true
+                        % add vertex idxs to selected faces list
+                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                    case false
+                        % add vertex idxs to unselected faces list
+                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
+                end
+                % increment the total number of vertices
+                TotalVertices = TotalVertices + nvertices;
             end
         end
 
@@ -1288,6 +1475,16 @@ classdef OOPSImage < handle
 
         end
 
+        function labelCounts = get.labelCounts(obj)
+            % preallocate our array of label counts, one column per unique label
+            labelCounts = zeros(1,obj.Settings.nLabels);
+            % for each unique label
+            for labelIdx = 1:obj.Settings.nLabels
+                % find the number of objects with that label
+                labelCounts(1,labelIdx) = numel(find([obj.Object.Label]==obj.Settings.ObjectLabels(labelIdx,1)));
+            end
+        end
+
         % get 4-connected object boundaries
         function ObjectBoundaries4 = get.ObjectBoundaries4(obj)
             ObjectBoundaries4 = bwboundaries(full(obj.bw),4,'noholes');
@@ -1306,231 +1503,306 @@ classdef OOPSImage < handle
             catch
                 [ObjectNames{1:1}] = 'No Objects Found...';
             end
-            
         end
-        
-        function [...
-                AllVertices,...
-                AllCData,...
-                SelectedFaces,...
-                UnselectedFaces...
-                ] = getObjectPatchData(obj)
 
-            % get handles to all objects in this image
-            AllObjects = obj.Object;
+%% dependent Get methods for various display/processing options specific to this image
 
-            % get list of unselected objects
-            Unselected = AllObjects(~[obj.Object.Selected]);
-            % get list of selected objects
-            Selected = AllObjects([obj.Object.Selected]);
-
-            totalnObjects = numel(Unselected)+numel(Selected);
-
-            % highest number of boundary vertices among all objects
-            AllVerticesMax = 0;
-
-            % total number of boundary vertices among all objects
-            AllVerticesSum = 0;
-
-            % for each object
-            for cObject = obj.Object
-                % % get the number of vertices in the simplified boundary
-                % nVertices = size(cObject.SimplifiedBoundary,1);
-                
-                % get the number of vertices in the boundary
-                nVertices = size(cObject.Boundary,1);       
-                % determine the total and max number of vertices
-                AllVerticesSum = AllVerticesSum + nVertices;
-                AllVerticesMax = max(AllVerticesMax,nVertices);
-            end
-
-            % initialize unselected faces matrix (each row is a vector of vertex idxs)
-            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
-            % initialize selected faces matrix (each row is a vector of vertex idxs)
-            SelectedFaces = nan(totalnObjects,AllVerticesMax);
-            % list of boundary coordinates for all objects
-            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
-            % object/face counter
-            Counter = 0;
-            % list of FaceVertexCData for the patch objects we are going to draw
-            AllCData = zeros(AllVerticesSum+totalnObjects,3);
-            % total number of vertices we have created faces for
-            TotalVertices = 0;
-
-            for cObject = obj.Object
-                % increment the object/face counter
-                Counter = Counter + 1;
-                % % get the simplified boundary
-                % thisObjectBoundary = cObject.SimplifiedBoundary;
-                % get the boundary
-                thisObjectBoundary = cObject.Boundary;
-                % determine number of vertices
-                nvertices = size(thisObjectBoundary,1);
-                % obtain vertices idx
-                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
-                % add boundary coordinates to list of vertices
-                AllVertices(AllVerticesIdx,:) = [thisObjectBoundary(:,2) thisObjectBoundary(:,1)];
-                % add CData for each vertex
-                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
-                % set object faces depending on their selection status
-                switch cObject.Selected
-                    case true
-                        % add vertex idxs to selected faces list
-                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
-                    case false
-                        % add vertex idxs to unselected faces list
-                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
-                end
-                % increment the total number of vertices
-                TotalVertices = TotalVertices + nvertices;
+        function ThreshPanelTitle = get.ThreshPanelTitle(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ThreshPanelTitle = 'Adjust threshold';
+                        case 'Adaptive'
+                            ThreshPanelTitle = 'Adjust adaptive threshold sensitivity';
+                        otherwise
+                            ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
+                    end
+                case 'CustomScheme'
+                    customScheme = obj.CustomScheme;
+                    switch customScheme.ThreshType
+                        case 'Otsu'
+                            ThreshPanelTitle = 'Adjust threshold';
+                        case 'Adaptive'
+                            ThreshPanelTitle = 'Adjust adaptive threshold sensitivity';
+                        otherwise
+                            ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
+                    end
             end
         end
 
-        function [...
-                AllVertices,...
-                AllCData,...
-                SelectedFaces,...
-                UnselectedFaces...
-                ] = getObjectRectanglePatchData(obj)
-
-            % get handles to all objects in this image
-            AllObjects = obj.Object;
-
-            % get list of unselected objects
-            Unselected = AllObjects(~[obj.Object.Selected]);
-            % get list of selected objects
-            Selected = AllObjects([obj.Object.Selected]);
-
-            totalnObjects = numel(Unselected)+numel(Selected);
-
-            % highest number of boundary vertices among all objects
-            AllVerticesMax = 0;
-
-            % total number of boundary vertices among all objects
-            AllVerticesSum = 0;
-
-            % for each object
-            for cObject = obj.Object
-                % % get the number of vertices in the simplified boundary
-                % nVertices = size(cObject.SimplifiedBoundary,1);
-                
-                % get the number of vertices in the boundary
-                nVertices = 4;       
-                % determine the total and max number of vertices
-                AllVerticesSum = AllVerticesSum + nVertices;
-                AllVerticesMax = max(AllVerticesMax,nVertices);
+        function ThreshStatisticName = get.ThreshStatisticName(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ThreshStatisticName = 'Threshold';
+                        case 'Adaptive'
+                            ThreshStatisticName = 'Adaptive threshold sensitivity';
+                        otherwise
+                            ThreshStatisticName = false;
+                    end
+                case 'CustomScheme'
+                    customScheme = obj.CustomScheme;
+                    switch customScheme.ThreshType
+                        case 'Otsu'
+                            ThreshStatisticName = 'Threshold';
+                        case 'Adaptive'
+                            ThreshStatisticName = 'Adaptive threshold sensitivity';
+                        otherwise
+                            ThreshStatisticName = false;
+                    end
             end
+            % when set to false, will throw an error that we will catch when updating display
+        end
 
-            % initialize unselected faces matrix (each row is a vector of vertex idxs)
-            UnselectedFaces = nan(totalnObjects,AllVerticesMax);
-            % initialize selected faces matrix (each row is a vector of vertex idxs)
-            SelectedFaces = nan(totalnObjects,AllVerticesMax);
-            % list of boundary coordinates for all objects
-            AllVertices = zeros(AllVerticesSum+totalnObjects,2);
-            % object/face counter
-            Counter = 0;
-            % list of FaceVertexCData for the patch objects we are going to draw
-            AllCData = zeros(AllVerticesSum+totalnObjects,3);
-            % total number of vertices we have created faces for
-            TotalVertices = 0;
-
-            for cObject = obj.Object
-                % increment the object/face counter
-                Counter = Counter + 1;
-                % % get the simplified boundary
-                % thisObjectBoundary = cObject.SimplifiedBoundary;
-                % get the boundary
-                thisObjectBoundary = cObject.expandedBoundingBoxCoordinates;
-                % determine number of vertices
-                nvertices = size(thisObjectBoundary,1);
-                % obtain vertices idx
-                AllVerticesIdx = (TotalVertices+1):(TotalVertices+nvertices);
-                % add boundary coordinates to list of vertices
-                AllVertices(AllVerticesIdx,:) = thisObjectBoundary;
-                % add CData for each vertex
-                AllCData(AllVerticesIdx,:) = zeros(numel(AllVerticesIdx),3)+cObject.LabelColor;
-                % set object faces depending on their selection status
-                switch cObject.Selected
-                    case true
-                        % add vertex idxs to selected faces list
-                        SelectedFaces(Counter,1:nvertices) = AllVerticesIdx;
-                    case false
-                        % add vertex idxs to unselected faces list
-                        UnselectedFaces(Counter,1:nvertices) = AllVerticesIdx;
-                end
-                % increment the total number of vertices
-                TotalVertices = TotalVertices + nvertices;
+        function ManualThreshEnabled = get.ManualThreshEnabled(obj)
+            switch obj.MaskType
+                case 'Default'
+                    switch obj.MaskName
+                        case 'Legacy'
+                            ManualThreshEnabled = true;
+                        case 'Adaptive'
+                            ManualThreshEnabled = true;
+                        otherwise
+                            ManualThreshEnabled = false;
+                    end
+                case 'CustomScheme'
+                    customScheme = obj.CustomScheme;
+                    switch customScheme.ThreshType
+                        case 'Otsu'
+                            ManualThreshEnabled = true;
+                        case 'Adaptive'
+                            ManualThreshEnabled = true;
+                        otherwise
+                            ManualThreshEnabled = false;
+                    end
             end
         end
 
-        % return the number of objects in this OOPSImage
-        function nObjects = get.nObjects(obj)
-            if isvalid(obj.Object)
-                nObjects = length(obj.Object);
-            else
-                nObjects = 0;
-            end
+        function ImageSummaryDisplayTable = get.ImageSummaryDisplayTable(obj)
+
+            varNames = [...
+                "Name",...
+                "Dimensions",...
+                "Input image class",...
+                "Pixel size",...
+                "Mask threshold",...
+                "Threshold adjusted",...
+                "Number of objects",...
+                "Mask name",...
+                "Mean pixel Order",...
+                "Files loaded",...
+                "FFC performed",...
+                "Mask generated",...
+                "Order/azimuth calculated",...
+                "Objects detected",...
+                "Local S/B calculated"];
+
+            ImageSummaryDisplayTable = table(...
+                {obj.rawFPMShortName},...
+                {obj.Dimensions},...
+                {obj.rawFPMClass},...
+                {obj.rawFPMPixelSize},...
+                {obj.level},...
+                {Logical2String(obj.ThresholdAdjusted)},...
+                {obj.nObjects},...
+                {obj.MaskName},...
+                {obj.OrderAvg},...
+                {Logical2String(obj.FilesLoaded)},...
+                {Logical2String(obj.FFCDone)},...
+                {Logical2String(obj.MaskDone)},...
+                {Logical2String(obj.FPMStatsDone)},...
+                {Logical2String(obj.ObjectDetectionDone)},...
+                {Logical2String(obj.LocalSBDone)},...
+                'VariableNames',varNames,...
+                'RowNames',"Image");
+
+            ImageSummaryDisplayTable = rows2vars(ImageSummaryDisplayTable,"VariableNamingRule","preserve");
+
+            ImageSummaryDisplayTable.Properties.RowNames = varNames;
+
         end
 
-        function labelCounts = get.labelCounts(obj)
-            % preallocate our array of label counts, one column per unique label
-            labelCounts = zeros(1,obj.Settings.nLabels);
-            % for each unique label
-            for labelIdx = 1:obj.Settings.nLabels
-                % find the number of objects with that label
-                labelCounts(1,labelIdx) = numel(find([obj.Object.Label]==obj.Settings.ObjectLabels(labelIdx,1)));
-            end
-        end
-        
-%% Normalize Image Stacks
+%% RGB output images
 
-        % get normalized FFC stack
-        function ffcFPMStack_normalizedbystack = get.ffcFPMStack_normalizedbystack(obj)
-            ffcFPMStack_normalizedbystack = obj.ffcFPMStack./(max(max(max(obj.ffcFPMStack))));
-        end
-         
-        % get normalized raw emission images stack
-        function rawFPMStack_normalizedbystack = get.rawFPMStack_normalizedbystack(obj)
-            rawDataDouble = im2double(obj.rawFPMStack);
-            rawFPMStack_normalizedbystack = rawDataDouble./(max(max(max(rawDataDouble))));
+        function OrderImageRGB = get.OrderImageRGB(obj)
+            %OrderImageRGB = ind2rgb(im2uint8(obj.OrderImage),obj.Settings.OrderColormap);
+            % testing below
+            OrderImageRGB = vecind2rgb(im2uint8(obj.OrderImage),obj.Settings.OrderColormap);
         end
 
-%% dependent 'get' methods for object output values
+        function MaxScaledOrderImage = get.MaxScaledOrderImage(obj)
+            % scale the Order image to the image maximum
+            MaxScaledOrderImage = obj.OrderImage./max(max(obj.OrderImage));
+        end
 
-        function OFAvg = get.OFAvg(obj)
-            % average OF of all pixels identified by the mask
-            try
-                OFAvg = mean(obj.OF_image(obj.bw));
-            catch
-                OFAvg = NaN;
-            end
+        function MaxScaledOrderImageRGB = get.MaxScaledOrderImageRGB(obj)
+            % get scaled Order image, convert to RGB
+            MaxScaledOrderImageRGB = ind2rgb(im2uint8(obj.MaxScaledOrderImage),obj.Settings.OrderColormap);
         end
-        
-        function OFMax = get.OFMax(obj)
-            % max OF of all pixels identified by the mask
-            try
-                OFMax = max(obj.OF_image(obj.bw));
-            catch
-                OFMax = NaN;
-            end
+
+        function MaskedOrderImage = get.MaskedOrderImage(obj)
+            % get the full Order image
+            MaskedOrderImage = obj.OrderImage;
+            % set any pixels outside the mask to 0
+            MaskedOrderImage(~obj.bw) = 0;
         end
-        
-        function OFMin = get.OFMin(obj)
-            % min OF of all pixels identified by the mask
-            try
-                OFMin = min(obj.OF_image(obj.bw));
-            catch
-                OFMin = NaN;
-            end
+
+        function MaskedOrderImageRGB = get.MaskedOrderImageRGB(obj)
+            MaskedOrderImageRGB = MaskRGB(obj.OrderImageRGB,obj.bw);
         end
-        
-        function OFList = get.OFList(obj)
-            % list of OF in all pixels identified by mask
-            try
-                OFList = obj.OF_image(obj.bw);
-            catch
-                OFList = NaN;
+
+        function AzimuthRGB = get.AzimuthRGB(obj)
+            AzimuthData = obj.AzimuthImage;
+            % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
+            AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
+            % scale values to [0 1]
+            AzimuthData = AzimuthData./pi;
+            % convert to uint8 then to RGB
+            AzimuthRGB = ind2rgb(im2uint8(AzimuthData),obj.Settings.AzimuthColormap);
+        end
+
+        function MaskedAzimuthRGB = get.MaskedAzimuthRGB(obj)
+            MaskedAzimuthRGB = MaskRGB(obj.AzimuthRGB,obj.bw);
+        end
+
+        function AzimuthOrderIntensityHSV = get.AzimuthOrderIntensityHSV(obj)
+            % get 'V' data (intensity image)
+            OverlayIntensity = obj.I;
+
+            % get 'H' data (azimuth image)
+            AzimuthData = obj.AzimuthImage;
+            % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
+            AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
+            % scale values to [0 1]
+            AzimuthData = AzimuthData./pi;
+
+            % get 'S' data (scaled order factor image)
+            Order = obj.OrderImage;
+            % Order = Order./max(max(Order));
+
+            % combine to make HSV image (in RGB format)
+            AzimuthOrderIntensityHSV = makeHSVSpecial(AzimuthData,Order,OverlayIntensity);
+        end
+
+        function UserScaledAzimuthOrderIntensityHSV = get.UserScaledAzimuthOrderIntensityHSV(obj)
+            % get 'V' data (intensity image)
+            OverlayIntensity = obj.UserScaledAverageIntensityImage;
+
+            % get 'H' data (azimuth image)
+            AzimuthData = obj.AzimuthImage;
+            % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
+            AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
+            % scale values to [0 1]
+            AzimuthData = AzimuthData./pi;
+
+            % get 'S' data (scaled order factor image)
+            Order = obj.UserScaledOrderImage;
+
+            % combine to make HSV image (in RGB format)
+            UserScaledAzimuthOrderIntensityHSV = makeHSVSpecial(AzimuthData,Order,OverlayIntensity);
+        end
+
+        function AzimuthIntensityOverlayRGB = get.AzimuthIntensityOverlayRGB(obj)
+            AzimuthIntensityOverlayRGB = MaskRGB(obj.AzimuthRGB,obj.I);
+        end
+
+        function UserScaledAzimuthIntensityOverlayRGB = get.UserScaledAzimuthIntensityOverlayRGB(obj)
+            UserScaledAzimuthIntensityOverlayRGB = MaskRGB(obj.AzimuthRGB,obj.UserScaledAverageIntensityImage);
+        end
+
+        function MaxScaledOrderIntensityOverlayRGB = get.MaxScaledOrderIntensityOverlayRGB(obj)
+            % get the average intensity image to use as an opacity mask
+            OverlayIntensity = obj.I;
+            % get the raw Order image
+            Order = obj.OrderImage;
+            % get the maximum Order in the image
+            maxOrder = max(max(Order));
+            % now get the scaled Order-intensity RGB overlay
+            MaxScaledOrderIntensityOverlayRGB = ...
+                MaskRGB(ind2rgb(im2uint8(Order./maxOrder),obj.Settings.OrderColormap),OverlayIntensity);
+        end
+
+        function UserScaledOrderImage = get.UserScaledOrderImage(obj)
+            UserScaledOrderImage = imadjust(obj.OrderImage,obj.OrderDisplayLimits,[0 1]);
+        end
+
+        function UserScaledOrderImageRGB = get.UserScaledOrderImageRGB(obj)
+            %UserScaledOrderImageRGB = ind2rgb(im2uint8(obj.UserScaledOrderImage),obj.Settings.OrderColormap);
+
+            % testing below - in early testing this is ~twice as fast as built-in ind2rgb()
+            UserScaledOrderImageRGB = vecind2rgb(im2uint8(obj.UserScaledOrderImage),obj.Settings.OrderColormap);
+        end
+
+        function UserScaledOrderIntensityOverlayRGB = get.UserScaledOrderIntensityOverlayRGB(obj)
+            % get the user-scaled average intensity image to use as an opacity mask
+            OverlayIntensity = obj.UserScaledAverageIntensityImage;
+            % get the user-scaled Order image in RGB format
+            Order = obj.UserScaledOrderImageRGB;
+            % now get the user-scaled Order-intensity overlay in RGB format
+            UserScaledOrderIntensityOverlayRGB = MaskRGB(Order,OverlayIntensity);
+        end
+
+        function OrderIntensityOverlayRGB = get.OrderIntensityOverlayRGB(obj)
+            % get the average intensity image to use as an opacity mask
+            OverlayIntensity = obj.I;
+            % get the raw Order image
+            Order = obj.OrderImage;
+            % now get the Order-intensity RGB overlay
+            OrderIntensityOverlayRGB = ...
+                MaskRGB(ind2rgb(im2uint8(Order),obj.Settings.OrderColormap),OverlayIntensity);
+        end
+
+        function MaskRGBImage = get.MaskRGBImage(obj)
+            MaskRGBImage = ind2rgb(im2uint8(full(obj.bw)),gray);
+        end
+
+        function ObjectLabelImageRGB = get.ObjectLabelImageRGB(obj)
+            % preallocate 2D label idx image
+            ObjectLabelImage = zeros(size(obj.bw));
+
+            % for each object in the image, set its pixels = the idx of its label
+            for objIdx = 1:obj.nObjects
+                ObjectLabelImage(obj.Object(objIdx).PixelIdxList) = obj.Object(objIdx).LabelIdx;
             end
+            % the BG color
+            zeroColor = [0 0 0];
+            % convert the label matrix to an RGB image using the existing label colors
+            ObjectLabelImageRGB = label2rgb(ObjectLabelImage,obj.Settings.LabelColors,zeroColor);
+        end
+
+        function MaxScaledAverageIntensityImageRGB = get.MaxScaledAverageIntensityImageRGB(obj)
+            MaxScaledAverageIntensityImageRGB = ...
+                vecind2rgb(im2uint8(obj.I),obj.Settings.IntensityColormap);
+        end
+
+        function UserScaledAverageIntensityImage = get.UserScaledAverageIntensityImage(obj)
+            UserScaledAverageIntensityImage = imadjust(obj.I,obj.PrimaryIntensityDisplayLimits,[0 1]);
+        end
+
+        function UserScaledAverageIntensityImageRGB = get.UserScaledAverageIntensityImageRGB(obj)
+            UserScaledAverageIntensityImageRGB = ...
+                vecind2rgb(im2uint8(obj.UserScaledAverageIntensityImage),obj.Settings.IntensityColormap);
+        end
+
+        function UserScaledReferenceImage = get.UserScaledReferenceImage(obj)
+            UserScaledReferenceImage = ...
+                imadjust(obj.ReferenceImage,obj.ReferenceIntensityDisplayLimits,[0 1]);
+        end
+
+        function UserScaledReferenceImageRGB = get.UserScaledReferenceImageRGB(obj)
+            UserScaledReferenceImageRGB = vecind2rgb(im2uint8(obj.UserScaledReferenceImage),obj.Settings.ReferenceColormap);
+        end
+
+        function ReferenceImageRGB = get.ReferenceImageRGB(obj)
+            ReferenceImageRGB = vecind2rgb(im2uint8(obj.ReferenceImage),obj.Settings.ReferenceColormap);
+        end
+
+        function UserScaledAverageIntensityReferenceCompositeRGB = get.UserScaledAverageIntensityReferenceCompositeRGB(obj)
+            % combine user-scaled average intensity RGB and user-scaled reference intensity RGB
+            UserScaledAverageIntensityReferenceCompositeRGB = ...
+                obj.UserScaledAverageIntensityImageRGB + obj.UserScaledReferenceImageRGB;
         end
 
 %% dependent 'get' methods for filtered object output values
@@ -1553,28 +1825,22 @@ classdef OOPSImage < handle
 
         end
 
-        function FilteredOFAvg = get.FilteredOFAvg(obj)
-            % average OF of all pixels identified by the mask
+        function FilteredOrderAvg = get.FilteredOrderAvg(obj)
+            % average Order of all pixels identified by the mask
             try
-                FilteredOFAvg = mean(obj.OF_image(obj.bw_filt));
+                FilteredOrderAvg = mean(obj.OrderImage(obj.bw_filt));
             catch
-                FilteredOFAvg = NaN;
+                FilteredOrderAvg = NaN;
             end
         end
-
-%% dependent 'get' methods for intermediates that do not need to constantly be in memory
-
-        function ffcFPMPixelNorm = get.ffcFPMPixelNorm(obj)
-            ffcFPMPixelNorm = obj.ffcFPMStack./max(obj.ffcFPMStack,[],3);
-        end
-
 
     end
 
     methods (Static)
         function obj = loadobj(replicate)
 
-            obj = OOPSImage(OOPSGroup.empty());
+            % obj = OOPSImage(OOPSGroup.empty());
+            obj = OOPSImage(replicate.Parent);
 
             % info about the image path and rawFPMFileName
             obj.rawFPMFileName = replicate.rawFPMFileName;
@@ -1624,7 +1890,17 @@ classdef OOPSImage < handle
             obj.FilesLoaded = replicate.FilesLoaded;
             obj.FFCDone = replicate.FFCDone;
             obj.MaskDone = replicate.MaskDone;
-            obj.OFDone = replicate.OFDone;
+
+            % testing below
+            try
+                obj.FPMStatsDone = replicate.FPMStatsDone;
+            catch
+                obj.FPMStatsDone = replicate.OFDone;
+            end
+            % end testing
+
+
+
             obj.ObjectDetectionDone = replicate.ObjectDetectionDone;
             obj.LocalSBDone = replicate.LocalSBDone;
             obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;
@@ -1662,10 +1938,14 @@ classdef OOPSImage < handle
 
             obj.CurrentObjectIdx = replicate.CurrentObjectIdx;
 
-            for i = 1:length(replicate.Object) % for each detected object
+            for i = 1:length(replicate.Object)
+                % testing below - add image handle to the object struct
+                replicate.Object(i).Parent = obj;
                 % create an instance of OOPSObject
                 obj.Object(i) = OOPSObject.loadobj(replicate.Object(i));
-                obj.Object(i).Parent = obj;
+
+
+                %obj.Object(i).Parent = obj;
             end
         end
     end

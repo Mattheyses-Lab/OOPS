@@ -107,10 +107,11 @@ classdef OOPSProject < handle
 
         % returns an array of all objects in this project
         function allObjects = get.allObjects(obj)
-            allObjects = [];
-            for i = 1:obj.nGroups
-                allObjects = [allObjects,obj.Group(i).allObjects];
-            end
+            % allObjects = [];
+            % for i = 1:obj.nGroups
+            %     allObjects = [allObjects,obj.Group(i).allObjects];
+            % end
+            allObjects = cat(2,obj.Group(:).allObjects);
         end
 
         % select object by property using one or more property filters
@@ -172,15 +173,13 @@ classdef OOPSProject < handle
 
         % total number of objects across all groups
         function nObjects = get.nObjects(obj)
-            %nObjects = sum(obj.Group(:).TotalObjects,"all");
-
             nObjects = 0;
             for i = 1:obj.nGroups
                 nObjects = nObjects + obj.Group(i).TotalObjects;
             end
         end
 
-        % return Var2Get data for each object, grouped by object label
+        % return Var2Get data for each object, grouped by object group and label
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
             nLabels = length(obj.Settings.ObjectLabels);
 
@@ -195,8 +194,19 @@ classdef OOPSProject < handle
             end
         end
 
+        % return Var2Get data for each object, grouped by object group
+        function ObjectDataByGroup = GetObjectDataByGroup(obj,Var2Get)
+            % cell array to hold all object data for the project, split by group
+            %   each row is one group
+            ObjectDataByGroup = cell(obj.nGroups,1);
+
+            for i = 1:obj.nGroups
+                ObjectDataByGroup{i,:} = obj.Group(i).GetAllObjectData(Var2Get);
+            end
+        end
+
         % get array of object data with one column for each specified variable in the list, vars
-        function objectData = getAllObjectData(obj,vars)
+        function objectData = getConcatenatedObjectData(obj,vars)
             % vars is a cell array of char vectors, each specifying an object data variable
             % note, we could also retrieve all the objects first then access the data at the object level
             % will test that in the future
@@ -340,11 +350,11 @@ classdef OOPSProject < handle
                 CurrentImage = cGroup.CurrentImage; 
             else
                 % otherwise, return empty
-                CurrentImage = OOPSImage.empty(); 
+                CurrentImage = OOPSImage.empty();
             end
         end
 
-%% retrieve project summary
+%% summary tables
 
         function ProjectSummaryDisplayTable = get.ProjectSummaryDisplayTable(obj)
 
@@ -379,6 +389,19 @@ classdef OOPSProject < handle
             ProjectSummaryDisplayTable.Properties.RowNames = varNames;
         end
 
+        % return a struct containing the name and object data table of each group
+        function stackedData = stackedObjectDataTable(obj)
+            % preallocate the stacked data structure
+            stackedData = repmat(struct('Group','','Data',[]), 1, obj.nGroups);
+            % for each group in the project
+            for i = 1:obj.nGroups
+                % add the group name
+                stackedData(i).Group = obj.Group(i).GroupName;
+                % add the table data
+                stackedData(i).Data = obj.Group(i).objectDataTableForExport();
+            end
+        end
+
     end
 
     methods (Static)
@@ -392,11 +415,14 @@ classdef OOPSProject < handle
             obj.Handles = proj.Handles;
             % for each group in the saved data structure
             for i = 1:length(proj.Group)
+                % testing below - attach handle to project
+                proj.Group(i,1).Parent = obj;
+                % end testing
+
                 % load the group
                 obj.Group(i,1) = OOPSGroup.loadobj(proj.Group(i,1));
                 % and set its parent project (this project)
-                obj.Group(i,1).Parent = obj;
-
+                %obj.Group(i,1).Parent = obj;
                 % % testing below
                 obj.Group(i,1).updateMaskSchemes();
                 % % end testing

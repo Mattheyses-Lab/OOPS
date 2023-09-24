@@ -105,7 +105,7 @@ hsv_stack = vertcat(hsv(256),hsv(256));
 %% Starting settings: 
 
 %currentAx = gca;
-cm = colormap;
+%cm = colormap;
 pos = currentAx.Position; 
 xcol = get(currentAx,'XColor'); 
 
@@ -151,9 +151,9 @@ colormap(ax,hsv_stack);
 colormap(currentAx,hsv_stack);
 
 if usedegrees
-   caxis([-180 180]) 
+   currentAx.CLim = [-180 180];
 else
-   caxis([-pi pi]) 
+   currentAx.CLim = [-pi pi];
 end
 
 %% Label: 

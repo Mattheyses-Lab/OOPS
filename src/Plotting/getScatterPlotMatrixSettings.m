@@ -1,4 +1,4 @@
-function ScatterPlotMatrixSettings = getScatterPlotMatrixSettings(variableList)
+function ScatterPlotMatrixSettings = getScatterPlotMatrixSettings(variableList,variableListLong)
 
 ScatterPlotMatrixSettings = struct();
 ScatterPlotMatrixSettings.variableList = {};
@@ -37,7 +37,7 @@ variableTreeGrid = uigridlayout(variablePanel,...
 variableTree = uitree(variableTreeGrid,'checkbox');
 for i = 1:numel(variableList)
     VarCheckNodes(i) = uitreenode(variableTree,...
-        'Text',ExpandVariableName(variableList{i}),...
+        'Text',variableListLong{i},...
         'NodeData',variableList{i});
 end
 

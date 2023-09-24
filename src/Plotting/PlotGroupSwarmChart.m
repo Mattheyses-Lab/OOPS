@@ -15,7 +15,7 @@ end
 axH.Visible = 'off';
 
 % get settings for the swarm plot
-ErrorBarColor = OOPSData.Settings.SwarmPlotErrorBarColor;
+ErrorBarColor = OOPSData.Settings.SwarmPlotErrorBarsColor;
 ErrorBarsVisible = OOPSData.Settings.SwarmPlotErrorBarsVisible;
 MarkerSize = OOPSData.Settings.SwarmPlotMarkerSize;
 MarkerFaceAlpha = OOPSData.Settings.SwarmPlotMarkerFaceAlpha;
@@ -35,6 +35,9 @@ axH.XLim = [0 OOPSData.nGroups+1];
 
 % the variable for which we will be retrieving object data to plot
 Var2Plot = OOPSData.Settings.SwarmPlotYVariable;
+
+% display name of the variable used for axes and data tip labels
+varDisplayName = OOPSData.Settings.expandVariableName(Var2Plot);
 
 % cell array to hold vectors of Var2Plot for each group
 GroupObjectData = cell(1,nPlots);
@@ -58,7 +61,7 @@ for i = 1:nPlots
     % get object GroupNames for data tips
     GroupObjectGroupNames{i} = GetAllObjectData(OOPSData.Group(i),'GroupName');
     % get object ImageNames for data tips
-    GroupObjectImageNames{i} = GetAllObjectData(OOPSData.Group(i),'InterpreterFriendlyImageName');
+    GroupObjectImageNames{i} = GetAllObjectData(OOPSData.Group(i),'texFriendlyImageName');
     % get object LabelNames for data tips
     GroupObjectLabelNames{i} = GetAllObjectData(OOPSData.Group(i),'LabelName');
     % get object LabelIdxs for plot marker colors
@@ -97,7 +100,7 @@ for i = 1:nPlots
         elseif nRemoved > 0
             % if data were missing some (but not all) objects, warn the user by sending an update to the log window
             UpdateLog3(source,['Warning: ',...
-                ExpandVariableName(Var2Plot),...
+                varDisplayName,...
                 ' data missing for ',...
                 num2str(nRemoved),...
                 ' objects in [Group:',...
@@ -151,7 +154,7 @@ for i = 1:nPlots
         hSwarmPlot(i).DataTipTemplate.DataTipRows(2) = dataTipTextRow("Image",categorical(GroupObjectImageNames{i}));
         hSwarmPlot(i).DataTipTemplate.DataTipRows(3) = dataTipTextRow("Object",GroupObjectSelfIdxs{i});
         hSwarmPlot(i).DataTipTemplate.DataTipRows(4) = dataTipTextRow("Label",categorical(GroupObjectLabelNames{i}));
-        hSwarmPlot(i).DataTipTemplate.DataTipRows(5) = dataTipTextRow(ExpandVariableName(Var2Plot),Y{i});
+        hSwarmPlot(i).DataTipTemplate.DataTipRows(5) = dataTipTextRow(varDisplayName,Y{i});
         hSwarmPlot(i).HitTest = 'On';
         % get the mean, std, n, max, and min of this group
         GroupMean = mean(Y{i});
@@ -224,7 +227,7 @@ for i = 1:nPlots
             case "Object data missing"
                 UpdateLog3(source,...
                     ['Warning: [',...
-                    ExpandVariableName(Var2Plot),...
+                    varDisplayName,...
                     '] data missing for [Group:',...
                     OOPSData.Group(i).GroupName,']'],...
                     'append');
@@ -247,7 +250,7 @@ set(findobj(axH,'type','line'),'Visible','on');
 switch OOPSData.Settings.SwarmPlotColorMode
     case 'Magnitude'
         % color the points according to magnitude using the currently selected Order factor colormap
-        axH.Colormap = OOPSData.Settings.OrderFactorColormap;
+        axH.Colormap = OOPSData.Settings.OrderColormap;
         % set the color limits
         axH.CLim = axH.YLim;
     case 'Label'

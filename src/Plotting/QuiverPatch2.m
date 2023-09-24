@@ -10,10 +10,6 @@ function hPatch = QuiverPatch2(hAx,...
     LineScale,...
     theta2)
 
-% need to generalize and add documentation
-
-
-
 
 %% NEW METHOD
 

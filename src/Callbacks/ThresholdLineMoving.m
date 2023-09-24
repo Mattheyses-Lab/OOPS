@@ -33,7 +33,10 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
                     MainReplicate.level = ThresholdLevel;
                     MainReplicate.ObjectDetectionDone = false;
                 
-                    OOPSData.Handles.MaskImgH.CData = bw;
+                    %OOPSData.Handles.MaskImgH.CData = bw;
+
+                    updateTempAlphaData(bw);
+
                 case 'Adaptive'
                     IM = MainReplicate.I;
         
@@ -53,7 +56,10 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
         
                     MainReplicate.ObjectDetectionDone = false;
                     % update mask display
-                    OOPSData.Handles.MaskImgH.CData = bw;
+                    %OOPSData.Handles.MaskImgH.CData = bw;
+
+                    updateTempAlphaData(bw);
+
                 otherwise
                     return
             end
@@ -75,7 +81,9 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
                     MainReplicate.level = ThresholdLevel;
                     MainReplicate.ObjectDetectionDone = false;
                 
-                    OOPSData.Handles.MaskImgH.CData = bw;
+                    %OOPSData.Handles.MaskImgH.CData = bw;
+
+                    updateTempAlphaData(bw);
 
                 case 'Adaptive'
                     IM = MainReplicate.EnhancedImg;
@@ -96,15 +104,34 @@ function [] = ThresholdLineMoving(source,ThresholdLevel)
         
                     MainReplicate.ObjectDetectionDone = false;
                     % update mask display
-                    OOPSData.Handles.MaskImgH.CData = bw;
+                    %OOPSData.Handles.MaskImgH.CData = bw;
+
+                    updateTempAlphaData(bw);
             end
 
     end
 
-
-
-
-
     UpdateSummaryDisplay(source,{'Group','Image','DataOnly'});
+
+    function updateTempAlphaData(alphaData)
+        switch OOPSData.Settings.CurrentTab
+            case {'Files','FFC','Objects','Plots','Polar Plots'}
+                return
+            case 'Mask'
+                OOPSData.Handles.MaskImgH.CData = alphaData;
+            case 'Order'
+                if OOPSData.Handles.ApplyMaskOrder.Value
+                    OOPSData.Handles.OrderImgH.AlphaData = alphaData;
+                end
+            case 'Azimuth'
+                if OOPSData.Handles.ApplyMaskAzimuth.Value
+                    OOPSData.Handles.AzimuthImgH.AlphaData = alphaData;
+                end
+            otherwise
+                if OOPSData.Handles.ApplyMaskCustomStat.Value
+                    OOPSData.Handles.CustomStatImgH.AlphaData = alphaData;
+                end
+        end
+    end
 
 end

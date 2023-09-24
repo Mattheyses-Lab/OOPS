@@ -34,7 +34,17 @@ function axH = PlotObjectIntensityProfile(...
 
 %% Anonymous fitting functions        
         % Function to fit
-        fit = @(b,x)  b(1).*cos(2.*(x - b(2))) + b(3);
+        %fit = @(b,x)  b(1).*cos(2.*(x - b(2))) + b(3);
+
+        % testing below
+        %fit = @(b,x)  (b(1).*(1 + cos(2.*(x - b(2)))) + b(3))./2;
+
+        % THIS IS THE MOST CORRECT FORM OF THE FIT FUNCTION
+        %   Y = A * ((1+cos(2(X-B))/2) + C
+        % above functions give identical results (in terms of y values), 
+        % but the fit parameters do not match those from a generic cos^2 
+        fit = @(b,x)  b(1) .* ((1 + cos(2.*(x-b(2))))./2) + b(3);
+
         % Least-Squares cost function
         fcn = @(b) sum((fit(b,x) - y).^2);
         % Minimise Least-Squares
@@ -46,22 +56,9 @@ function axH = PlotObjectIntensityProfile(...
 
     end
 
-%% Add or subtract an offset from each curve so glabal max = 1    
+
     CurveFitsNormalized = CurveFit;
-    MaxY = max(cell2mat(CurveFitsNormalized));
-    if MaxY>1
-        Offset = MaxY-1;
-        %disp(['Max y fit value > 1, subtracting ',num2str(Offset),' offset from each pixel fit...']);
-        for i = 1:nPixels
-            CurveFitsNormalized{i} = CurveFitsNormalized{i}-Offset;
-        end
-    else
-        Offset = 1-MaxY;
-        %disp(['Max y fit value < 1, adding ',num2str(Offset),' offset to each pixel fit...']);
-        for i = 1:nPixels
-            CurveFitsNormalized{i} = CurveFitsNormalized{i}+Offset;
-        end
-    end
+
     
     % initialize vector to sum up fits
     CurveFitSum = zeros(size(CurveFit{1}));
@@ -125,8 +122,8 @@ function axH = PlotObjectIntensityProfile(...
     
     % vert line and text object showing OF fit
     line(axH,[xp(MinIdx),xp(MinIdx)],[MaxVal,MinVal],'LineStyle','-','LineWidth',1,'HitTest','Off','Color',AnnotationsColor);
-    txtOF = [' OF Fit: ',num2str(round(OrderFactorFit,2)),' '];
-    txtAzimuth = [' Azimuth Fit: ',num2str(round(rad2deg(AzimuthRadians))),'° '];
+    txtOF = [' Order (fit): ',num2str(round(OrderFactorFit,2)),' '];
+    txtAzimuth = [' Azimuth (fit): ',num2str(round(rad2deg(AzimuthRadians))),'° '];
     
     if xp(MaxIdx) > pi/2
         text(axH,...

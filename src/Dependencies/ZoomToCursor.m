@@ -251,14 +251,14 @@ function [] = CursorMoving(~,OOPSData)
 
         % set the inspection label based on the type of axes we are in and the location of the cursor
         switch DynamicAxes.Tag
-            case 'OrderFactor'
+            case 'Order'
 
                 try
                     DynamicAxes.CursorPositionLabel.Text = ...
                         [' (X,Y) = (',num2str(realx),...
                         ',',num2str(realy),') | Zoom: ',...
                         num2str(ZoomPct),'%',...
-                        ' | OF: ',num2str(OOPSData.CurrentImage(1).OF_image(realy,realx))];
+                        ' | Order: ',num2str(OOPSData.CurrentImage(1).OrderImage(realy,realx))];
                 catch
                     disp('Warning: Error updating cursor position label')
                 end
@@ -332,6 +332,21 @@ function [] = CursorMoving(~,OOPSData)
                     Zoom.ActiveObjectIdx = NaN;
                 end
 
+            case 'CustomStat'
+
+                % get the custom stat associated with the axes
+                thisStat = DynamicAxes.UserData;
+
+                try
+                    DynamicAxes.CursorPositionLabel.Text = ...
+                        [' (X,Y) = (',num2str(realx),...
+                        ',',num2str(realy),') | Zoom: ',...
+                        num2str(ZoomPct),'%',...
+                        ' | ',thisStat.StatisticDisplayName,': ',num2str(OOPSData.CurrentImage(1).(thisStat.StatisticName)(realy,realx))];
+                catch
+                    disp('Warning: Error updating cursor position label')
+                end
+
             otherwise
 
                 try
@@ -351,7 +366,8 @@ function [] = CursorMoving(~,OOPSData)
 
         OOPSData.Handles.fH.Pointer = 'arrow';
 
-        DynamicAxes.CursorPositionLabel.Text = sprintf('x = %3.0f;  y = %3.0f',0,0);
+        %DynamicAxes.CursorPositionLabel.Text = sprintf('x = %3.0f;  y = %3.0f',0,0);
+        DynamicAxes.CursorPositionLabel.Text = ' (X,Y) = (0,0)';
         
         if ~Zoom.Freeze
             DynamicAxes.XLim = Zoom.OldXLim;
