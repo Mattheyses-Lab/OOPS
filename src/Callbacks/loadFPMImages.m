@@ -39,8 +39,7 @@ function loadFPMImages(source,~)
             'MultiSelect','on');
     end
 
-    % save accessed directory
-    OOPSData.Settings.LastDirectory = FPMPath;
+
     % show main window
     OOPSData.Handles.fH.Visible = 'On';
     % make OOPSGUI active figure
@@ -53,6 +52,9 @@ function loadFPMImages(source,~)
             FPMFiles = {FPMFiles};
         end
     end
+
+    % save accessed directory
+    OOPSData.Settings.LastDirectory = FPMPath;    
 
     % check how many image stacks were selected
     nFiles = numel(FPMFiles);

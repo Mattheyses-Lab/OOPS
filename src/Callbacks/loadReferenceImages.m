@@ -43,8 +43,7 @@ catch
         'MultiSelect','on');
 end
 
-% save recent directory
-OOPSData.Settings.LastDirectory = referencePath;
+
 % show main window
 OOPSData.Handles.fH.Visible = 'On';
 % make it active
@@ -57,6 +56,9 @@ if ~iscell(referenceFiles)
         referenceFiles = {referenceFiles};
     end
 end
+
+% save recent directory
+OOPSData.Settings.LastDirectory = referencePath;
 
 % number of files selected
 nFiles = numel(referenceFiles);

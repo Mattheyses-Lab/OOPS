@@ -39,8 +39,7 @@ function loadFFCImages(source,~)
             'MultiSelect','on');
     end
     
-    % save accessed directory
-    OOPSData.Settings.LastDirectory = FFCPath;
+
     % show main window
     OOPSData.Handles.fH.Visible = 'On';
     % make OOPSGUI active figure
@@ -53,7 +52,10 @@ function loadFFCImages(source,~)
             FFCFiles = {FFCFiles};
         end
     end
-    
+
+    % save accessed directory
+    OOPSData.Settings.LastDirectory = FFCPath;
+
     % check how many image stacks were selected
     nFFCFiles = numel(FFCFiles);
 
