@@ -87,244 +87,22 @@ function [] = UpdateImages(source,varargin)
             catch
                 OOPSData.Handles.MaskImgH.CData = EmptyImage;
             end
-
-            if any(isvalid(OOPSData.Handles.ObjectBoxes))
-                delete(OOPSData.Handles.ObjectBoxes);
-                clear OOPSData.Handles.ObjectBoxes
-                %OOPSData.Handles.ObjectBoxes = gobjects(1,1);
-            end
-
-            if any(isvalid(OOPSData.Handles.SelectedObjectBoxes))
-                delete(OOPSData.Handles.SelectedObjectBoxes);
-                clear OOPSData.Handles.SelectedObjectBoxes
-                %OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-            end
-
-            % if ShowSelection toolbar state button is pressed,
-            % show object selection boxes
-            if OOPSData.Handles.ShowSelectionAverageIntensity.Value == 1 && ~isempty(cImage)
-                switch OOPSData.Settings.ObjectBoxType
-                    % simple rectangles
-                    case 'Box'
-                        [AllVertices,...
-                            AllCData,...
-                            SelectedFaces,...
-                            UnselectedFaces...
-                            ] = getObjectRectanglePatchData(cImage);
-
-                        OOPSData.Handles.ObjectBoxes = gobjects(1,1);
-                        OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-                        % change the current axes of the main window
-                        OOPSData.Handles.fH.CurrentAxes = OOPSData.Handles.AverageIntensityAxH;
-                        % hold on so we can preserve our images/other objects
-                        hold on
-                        % plot a patch object containing the unselected objects
-                        OOPSData.Handles.ObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
-                            'Faces',UnselectedFaces,...
-                            'Vertices',AllVertices,...
-                            'Tag','ObjectBox',...
-                            'FaceVertexCData',AllCData,...
-                            'EdgeColor','Flat',...
-                            'FaceColor','none',...
-                            'HitTest','On',...
-                            'ButtonDownFcn',@SelectObjectRectanglePatches,...
-                            'PickableParts','all',...
-                            'Interruptible','off');
-                        OOPSData.Handles.ObjectBoxes.LineWidth = 1;
-                        % plot a patch object containing the selected objects
-                        OOPSData.Handles.SelectedObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
-                            'Faces',SelectedFaces,...
-                            'Vertices',AllVertices,...
-                            'Tag','ObjectBox',...
-                            'FaceVertexCData',AllCData,...
-                            'EdgeColor','Flat',...
-                            'FaceAlpha',0.5,...
-                            'FaceColor','Flat',...
-                            'HitTest','On',...
-                            'ButtonDownFcn',@SelectObjectRectanglePatches,...
-                            'PickableParts','all',...
-                            'Interruptible','off');
-                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 2;
-                        % remove the hold
-                        hold off
-                    case 'Boundary'
-                        %% using patch objects
-                        % plotting obj patches with faces/vertices
-                        % (we could also pass in the object boundary coordinates as XData and YData)
-                        [AllVertices,...
-                            AllCData,...
-                            SelectedFaces,...
-                            UnselectedFaces...
-                            ] = getObjectPatchData(cImage);
-
-                        OOPSData.Handles.ObjectBoxes = gobjects(1,1);
-                        OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-                        % change the current axes of the main window
-                        OOPSData.Handles.fH.CurrentAxes = OOPSData.Handles.AverageIntensityAxH;
-                        % hold on so we can preserve our images/other objects
-                        hold on
-                        % plot a patch object containing the unselected objects
-                        OOPSData.Handles.ObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
-                            'Faces',UnselectedFaces,...
-                            'Vertices',AllVertices,...
-                            'Tag','ObjectBox',...
-                            'FaceVertexCData',AllCData,...
-                            'EdgeColor','Flat',...
-                            'FaceColor','none',...
-                            'HitTest','On',...
-                            'ButtonDownFcn',@SelectObjectPatches,...
-                            'PickableParts','all',...
-                            'Interruptible','off');
-                        OOPSData.Handles.ObjectBoxes.LineWidth = 1;
-                        % plot a patch object containing the selected objects
-                        OOPSData.Handles.SelectedObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
-                            'Faces',SelectedFaces,...
-                            'Vertices',AllVertices,...
-                            'Tag','ObjectBox',...
-                            'FaceVertexCData',AllCData,...
-                            'EdgeColor','Flat',...
-                            'FaceAlpha',0.5,...
-                            'FaceColor','Flat',...
-                            'HitTest','On',...
-                            'ButtonDownFcn',@SelectObjectPatches,...
-                            'PickableParts','all',...
-                            'Interruptible','off');
-                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 2;
-                        % remove the hold
-                        hold off
-                end
-            end
             
-            UpdateAverageIntensityImage(source);            
+            UpdateAverageIntensityImage(source);      
 
+            UpdateObjectBoxes(source);
 
         case 'Order'
 
-            % update the Order image CData, colorbar, and AlphaData
+            % update the Order image and axes
             UpdateOrderImage(source);
 
-            if any(isvalid(OOPSData.Handles.ObjectBoxes))
-                delete(OOPSData.Handles.ObjectBoxes);
-                clear OOPSData.Handles.ObjectBoxes
-                OOPSData.Handles.ObjectBoxes = gobjects(1,1);
-            end
 
-            if any(isvalid(OOPSData.Handles.SelectedObjectBoxes))
-                delete(OOPSData.Handles.SelectedObjectBoxes);
-                clear OOPSData.Handles.SelectedObjectBoxes
-                OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-            end
-
-            % if ShowSelection toolbar state button is pressed
-            if OOPSData.Handles.ShowSelectionAverageIntensity.Value == 1
-
-                switch OOPSData.Settings.ObjectBoxType
-                    case 'Box'
-                        %% using patch objects
-                        % plotting obj patches with faces/vertices
-                        % (we could also pass in the object boundary coordinates as XData and YData)
-                        [AllVertices,...
-                            AllCData,...
-                            SelectedFaces,...
-                            UnselectedFaces...
-                            ] = getObjectRectanglePatchData(cImage);
-
-                        OOPSData.Handles.ObjectBoxes = gobjects(1,1);
-                        OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-
-                        % change the current axes of the main window
-                        OOPSData.Handles.fH.CurrentAxes = OOPSData.Handles.AverageIntensityAxH;
-
-                        % hold on so we can preserve our images/other objects
-                        hold on
-
-                        % plot a patch object containing the unselected objects
-                        OOPSData.Handles.ObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
-                            'Faces',UnselectedFaces,...
-                            'Vertices',AllVertices,...
-                            'Tag','ObjectBox',...
-                            'FaceVertexCData',AllCData,...
-                            'EdgeColor','Flat',...
-                            'FaceColor','none',...
-                            'HitTest','On',...
-                            'ButtonDownFcn',@SelectObjectRectanglePatches,...
-                            'PickableParts','all',...
-                            'Interruptible','off');
-                        OOPSData.Handles.ObjectBoxes.LineWidth = 1;
-
-                        % plot a patch object containing the selected objects
-                        OOPSData.Handles.SelectedObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
-                            'Faces',SelectedFaces,...
-                            'Vertices',AllVertices,...
-                            'Tag','ObjectBox',...
-                            'FaceVertexCData',AllCData,...
-                            'EdgeColor','Flat',...
-                            'FaceAlpha',0.5,...
-                            'FaceColor','Flat',...
-                            'HitTest','On',...
-                            'ButtonDownFcn',@SelectObjectRectanglePatches,...
-                            'PickableParts','all',...
-                            'Interruptible','off');
-                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 2;
-
-                        % remove the hold
-                        hold off
-                    % in development - object boundaries
-                    case 'Boundary'
-
-                        %% using patch objects
-                        % plotting obj patches with faces/vertices
-                        % (we could also pass in the object boundary coordinates as XData and YData)
-                        [AllVertices,...
-                            AllCData,...
-                            SelectedFaces,...
-                            UnselectedFaces...
-                            ] = getObjectPatchData(cImage);
-
-                        OOPSData.Handles.ObjectBoxes = gobjects(1,1);
-                        OOPSData.Handles.SelectedObjectBoxes = gobjects(1,1);
-
-                        % change the current axes of the main window
-                        OOPSData.Handles.fH.CurrentAxes = OOPSData.Handles.AverageIntensityAxH;
-
-                        % hold on so we can preserve our images/other objects
-                        hold on
-
-                        % plot a patch object containing the unselected objects
-                        OOPSData.Handles.ObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
-                            'Faces',UnselectedFaces,...
-                            'Vertices',AllVertices,...
-                            'Tag','ObjectBox',...
-                            'FaceVertexCData',AllCData,...
-                            'EdgeColor','Flat',...
-                            'FaceColor','none',...
-                            'HitTest','On',...
-                            'ButtonDownFcn',@SelectObjectPatches,...
-                            'PickableParts','all',...
-                            'Interruptible','off');
-                        OOPSData.Handles.ObjectBoxes.LineWidth = 1;
-
-                        % plot a patch object containing the selected objects
-                        OOPSData.Handles.SelectedObjectBoxes = patch(OOPSData.Handles.AverageIntensityAxH,...
-                            'Faces',SelectedFaces,...
-                            'Vertices',AllVertices,...
-                            'Tag','ObjectBox',...
-                            'FaceVertexCData',AllCData,...
-                            'EdgeColor','Flat',...
-                            'FaceAlpha',0.5,...
-                            'FaceColor','Flat',...
-                            'HitTest','On',...
-                            'ButtonDownFcn',@SelectObjectPatches,...
-                            'PickableParts','all',...
-                            'Interruptible','off');
-                        OOPSData.Handles.SelectedObjectBoxes.LineWidth = 2;
-
-                        % remove the hold
-                        hold off
-                end
-            end
-
+            % update the average intensity image and axes
             UpdateAverageIntensityImage(source);
+
+            % update the object selection boxes
+            UpdateObjectBoxes(source);
 
             % this drawnow line might be causing issues
             %drawnow
@@ -348,32 +126,37 @@ function [] = UpdateImages(source,varargin)
                 % do nothing
             end
             
-            try
-                delete(OOPSData.Handles.SwarmPlotAxH.Children)
-            catch
-                % do nothing
-            end
+
 
             OOPSData.Handles.hScatterPlot = PlotGroupScatterPlot(source,...
                 OOPSData.Handles.ScatterPlotAxH);
 
-
-            switch OOPSData.Settings.SwarmPlotGroupingType
-                case 'Group'
-                    % plot the swarm chart and save the plot handle
-                    OOPSData.Handles.hSwarmChart = PlotGroupSwarmChart(source,OOPSData.Handles.SwarmPlotAxH);
-                    OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
-                case 'Label'
-                    % plot the swarm chart and save the plot handle
-                    OOPSData.Handles.hSwarmChart = PlotSwarmChartByLabels(source,OOPSData.Handles.SwarmPlotAxH);
-                    OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Label";
-                case 'Both'
-                    OOPSData.Handles.hSwarmChart = PlotSwarmChartByGroupAndLabels(source,OOPSData.Handles.SwarmPlotAxH);
-                    OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group (Label)";
-            end
             
-            OOPSData.Handles.SwarmPlotAxH.Title.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);
-            OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);            
+
+            xPlotGroupSwarmChart(source);
+
+
+            % try
+            %     delete(OOPSData.Handles.SwarmPlotAxH.Children)
+            % catch
+            %     % do nothing
+            % end            
+            % 
+            % 
+            % switch OOPSData.Settings.SwarmPlotGroupingType
+            %     case 'Group'
+            %         OOPSData.Handles.hSwarmChart = PlotGroupSwarmChart(source,OOPSData.Handles.SwarmPlotAxH);
+            %         OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
+            %     case 'Label'
+            %         OOPSData.Handles.hSwarmChart = PlotSwarmChartByLabels(source,OOPSData.Handles.SwarmPlotAxH);
+            %         OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Label";
+            %     case 'Both'
+            %         OOPSData.Handles.hSwarmChart = PlotSwarmChartByGroupAndLabels(source,OOPSData.Handles.SwarmPlotAxH);
+            %         OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group (Label)";
+            % end
+            % 
+            % OOPSData.Handles.SwarmPlotAxH.Title.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);
+            % OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = OOPSData.Settings.expandVariableName(OOPSData.Settings.SwarmPlotYVariable);            
             
         case 'Polar Plots'
 
@@ -577,6 +360,8 @@ function [] = UpdateImages(source,varargin)
                         'Color',[0 0 0]);
                 end
 
+                objectPaddedSize = size(cObject.paddedSubImage);
+
                 OOPSData.Handles.ObjectMaskAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
                 OOPSData.Handles.ObjectMaskAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
 
@@ -628,99 +413,8 @@ function [] = UpdateImages(source,varargin)
         otherwise
             %% CustomFPMStatistic view
 
-            % get the idx of the custom stat to display based on the selected menu option
-            statIdx = ismember(OOPSData.Settings.CurrentTab,OOPSData.Settings.CustomStatisticDisplayNames);
-            % get the stat
-            thisStat = OOPSData.Settings.CustomStatistics(statIdx);
-            % get the name of the variable holding the stat
-            statName = thisStat.StatisticName;
-            % get the display name of the stat
-            statDisplayName = thisStat.StatisticDisplayName;
-            % get the output range of the stat
-            statRange = thisStat.StatisticRange;
-
-            % set the title of the axes/image
-            OOPSData.Handles.CustomStatAxH.Title.String = statDisplayName;
-
-            OOPSData.Handles.CustomStatAxH.UserData = thisStat;
-
-            if OOPSData.Handles.ShowAsOverlayCustomStat.Value
-                % show the Order-intensity composite image
-                try
-                    % get the average intensity image to use as an opacity mask
-                    OverlayIntensity = cImage.I;
-                    % get the raw Order image
-                    statImage = cImage.(statName);
-                    % depending on the selection state of the ScaleToMaxOrder toolbar btn, get the value to scale to
-                    if OOPSData.Handles.ScaleToMaxCustomStat.Value == 1
-                        statMax = max(max(statImage));
-                    else
-                        statMax = statRange(2);
-                    end
-                    % now get the scaled or unscaled Order-intensity RGB overlay
-                    statImageRGB = MaskRGB(ind2rgb(im2uint8(statImage./statMax),OOPSData.Settings.OrderColormap),OverlayIntensity);
-                    % set the image CData
-                    OOPSData.Handles.CustomStatImgH.CData = statImageRGB;
-                    % set the colorbar tick locations
-                    OOPSData.Handles.CustomStatCbar.Ticks = 0:0.1:1;
-                    % set the colorbar tick labels
-                    OOPSData.Handles.CustomStatCbar.TickLabels = round(linspace(statRange(1),statMax,11),2);
-
-                    % reset the default axes limits if zoom is not active
-                    if ~OOPSData.Settings.Zoom.Active
-                        OOPSData.Handles.CustomStatAxH.XLim = [0.5 cImage.Width+0.5];
-                        OOPSData.Handles.CustomStatAxH.YLim = [0.5 cImage.Height+0.5];
-                    end
-                catch
-                    OOPSData.Handles.CustomStatImgH.CData = EmptyImage;
-                    OOPSData.Handles.CustomStatCbar.Ticks = 0:0.1:1;
-                    OOPSData.Handles.CustomStatCbar.TickLabels = 0:0.1:1;
-                    disp(['Warning: Error displaying ',statName,'-intensity composite image'])
-                end
-            else
-                % show the unmasked image, scaled or unscaled
-                try
-                    % get the raw image
-                    statImage = cImage.(statName);
-                    % if ScaleToMaxCustomStat toolbar btn is on
-                    if OOPSData.Handles.ScaleToMaxCustomStat.Value == 1
-                        statMax = max(max(statImage));
-                    else
-                        statMax = statRange(2);
-                    end
-                    % set the image CData
-                    OOPSData.Handles.CustomStatImgH.CData = statImage./statMax;
-                    % set the colorbar tick locations
-                    OOPSData.Handles.CustomStatCbar.Ticks = 0:0.1:1;
-                    % set the colorbar tick labels
-                    OOPSData.Handles.CustomStatCbar.TickLabels = round(linspace(statRange(1),statMax,11),2);
-                    % reset the default axes limits if zoom is not active
-                    if ~OOPSData.Settings.Zoom.Active
-                        OOPSData.Handles.CustomStatAxH.XLim = [0.5 cImage.Width+0.5];
-                        OOPSData.Handles.CustomStatAxH.YLim = [0.5 cImage.Height+0.5];
-                    end
-                catch
-                    OOPSData.Handles.CustomStatImgH.CData = EmptyImage;
-                    OOPSData.Handles.CustomStatCbar.Ticks = 0:0.1:1;
-                    OOPSData.Handles.CustomStatCbar.TickLabels = 0:0.1:1;
-                end
-            end
-
-            % show or hide the colorbar
-            if OOPSData.Handles.ShowColorbarCustomStat.Value == 1
-                OOPSData.Handles.CustomStatCbar.Visible = 'on';
-            else
-                OOPSData.Handles.CustomStatCbar.Visible = 'off';
-            end
-
-            % change colormap to currently selected Order colormap
-            OOPSData.Handles.CustomStatAxH.Colormap = OOPSData.Settings.OrderColormap;
-
-            % if ApplyMask toolbar state button set to true...
-            if OOPSData.Handles.ApplyMaskCustomStat.Value == 1
-                % ...then apply current mask by setting image AlphaData
-                OOPSData.Handles.CustomStatImgH.AlphaData = cImage.bw;
-            end
+            % update the display of the custom statistic image
+            UpdateCustomStatImage(source);
 
             % update the display of the average intensity image
             UpdateAverageIntensityImage(source);
