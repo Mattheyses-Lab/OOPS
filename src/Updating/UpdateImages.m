@@ -97,15 +97,11 @@ function [] = UpdateImages(source,varargin)
             % update the Order image and axes
             UpdateOrderImage(source);
 
-
             % update the average intensity image and axes
             UpdateAverageIntensityImage(source);
 
             % update the object selection boxes
             UpdateObjectBoxes(source);
-
-            % this drawnow line might be causing issues
-            %drawnow
 
         case 'Azimuth'
 
