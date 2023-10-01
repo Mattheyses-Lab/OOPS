@@ -28,12 +28,6 @@ function hPatch = QuiverPatch2(hAx,...
     X = [x+HalfLineScale*u;x-HalfLineScale*u];
     Y = [y-HalfLineScale*v;y+HalfLineScale*v];
 
-    % 'bin' the x and y coords if desired,
-    %   sometimes useful if plotting many lines
-    % X = X(:,1:1:end);
-    % Y = Y(:,1:1:end);
-    % rho = rho(1:1:end);
-    % theta = theta(1:1:end);
     % preallocate line colors array
     PatchColors = zeros(nLines,3);
     
