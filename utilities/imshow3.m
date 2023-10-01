@@ -2,7 +2,7 @@ function [hImg,hAx] = imshow3(I)
 % Author: Will Dean
 
     % create the uifigure to hold our image axes
-    fH = uifigure('Visible','off','HandleVisibility','on','AutoResizeChildren','Off');
+    fH = uifigure('Visible','off','HandleVisibility','on','AutoResizeChildren','Off','WindowStyle','alwaysontop');
     fH.Position = [50 50 800 800];
 
     % create an axes to hold our image object
