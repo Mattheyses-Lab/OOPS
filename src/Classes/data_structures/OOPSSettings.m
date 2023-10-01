@@ -63,7 +63,7 @@ classdef OOPSSettings < handle
         
         % colormaps settings
         Colormaps struct
-        xColormaps struct
+        % xColormaps struct
         ColormapsSettings struct
 
         % palettes settings
@@ -101,9 +101,9 @@ classdef OOPSSettings < handle
         ObjectLabels OOPSLabel
         
         % default font used in most graphics objects (excluding plots)
-        DefaultFont char
+        DefaultFont (1,:) char
         % default font used in plots
-        DefaultPlotFont = 'Arial';
+        DefaultPlotFont (1,:) char = 'Arial';
         
         % real world size of each input pixel (micron/px)
         PixelSize = 0.1083;
