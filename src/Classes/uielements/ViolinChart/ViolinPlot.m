@@ -215,7 +215,6 @@ classdef ViolinPlot < handle
         %% MarkerFaceColorMode
 
         function set.MarkerFaceColorMode(obj,val)
-            disp('ViolinPlot: set.MarkerFaceColorMode')
             obj.violinPoints.MarkerFaceColor = val;
         end
 
@@ -402,7 +401,6 @@ classdef ViolinPlot < handle
             % get the density data with ksdensity, xDensity = horizontal spread, yDensity = y locations to evaluate xDensity
             [xDensity,yDensity] = ksdensity(obj.YData);
 
-
             densityIdxsInDataRange = yDensity >= min(obj.YData) & yDensity <= max(obj.YData);
 
             xDensity = xDensity(densityIdxsInDataRange);
@@ -428,20 +426,16 @@ classdef ViolinPlot < handle
             yDensity = [yDensity,fliplr(yDensity)];
 
 
-            try
-                % concatenate along first dimension to form the final output
-                DensityData = [xDensity;yDensity];
-            catch
-                YData = obj.YData
-                xDensity = xDensity
-                yDensity = yDensity
-            end
-
-
-
-
-
-
+            % concatenate along first dimension to form the final output
+            DensityData = [xDensity;yDensity];
+            % 
+            % try
+            % 
+            % catch
+            %     YData = obj.YData
+            %     xDensity = xDensity
+            %     yDensity = yDensity
+            % end
         end
 
     end
