@@ -44,11 +44,14 @@ for i = 1:numel(amplitude)
     fit = @(b,XFit)  b(1) .*  (1 + cos(2.* (XFit - b(2)) ) )./2 + b(3);
 
 
-
     % anonymous least squares cost function
     leastSquares = @(b) sum((fit(b,X) - pixelY).^2);
     % minimize least squares
-    s = fminsearch(leastSquares, [Yrange; 1;  Ymean]);
+    % s = fminsearch(leastSquares, [Yrange; 1;  Ymean]);
+
+    % testing below
+    s = fminsearch(leastSquares, [Yrange; 1;  Ymin]);
+    % end testing
 
     % store retrieved parameters
     A = s(1);
@@ -79,9 +82,7 @@ for i = 1:numel(amplitude)
     % calculate amplitude and phase directly from the curve
     %amplitude(i) = (maxVal-minVal)/(maxVal+minVal);
 
-    amplitude(i) = (maxVal-minVal)/(maxVal+minVal);
-
-
+    amplitude(i) = maxVal-minVal;
     phase(i) = XFit(maxIdx);
 
 
