@@ -73,7 +73,6 @@ methods
             Options.TitleBackgroundColor (1,3) double = [0.95 0.95 0.95]
             Options.FontColor (1,3) double = [0 0 0]
             Options.PaneBackgroundColor (1,3) double = [1 1 1]
-            %Options.BorderType (1,:) char {mustBeMember(Options.BorderType,{'line','none'})} = 'line'
             Options.BorderColor (1,3) double = [0.7 0.7 0.7]
             Options.BorderWidth (1,1) = 1
             Options.ExpandedBorderWidth (1,1) = 1
