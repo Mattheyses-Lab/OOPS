@@ -22,9 +22,6 @@ function TabSelection(source,~)
         OOPSData.Settings.Zoom.Restore = true;
     end
     
-    % indicate tab selection in log (commented for now, until log window updating is faster)
-    %UpdateLog3(source,[OOPSData.Settings.CurrentTab,' Tab Selected'],'append');
-    
     switch OOPSData.Settings.PreviousTab % the tab we are switching from
     
         case 'Files'
@@ -115,8 +112,8 @@ function TabSelection(source,~)
             delete(OOPSData.Handles.AzimuthLines);
             delete(OOPSData.Handles.ObjectMidlinePlot);
     
-            set(OOPSData.Handles.PhaseBarComponents,'Visible','Off');
-    
+            OOPSData.Handles.AzimuthColorbar.Visible = 'Off';
+
             OOPSData.Handles.AzimuthImgH.Visible = 'Off';
             OOPSData.Handles.AzimuthAxH.Title.Visible = 'Off';
             OOPSData.Handles.AzimuthAxH.Toolbar.Visible = 'Off';
@@ -148,22 +145,8 @@ function TabSelection(source,~)
             OOPSData.Handles.ScatterPlotAxH.HitTest = 'Off';
 
             % hide the swarm plot
-
-            % OOPSData.Handles.SwarmPlotGrid.Visible = 'Off';
-            % delete(OOPSData.Handles.SwarmPlotAxH.Children)
-            % 
-            % OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'Off';
-            % OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
-            % OOPSData.Handles.SwarmPlotAxH.Visible = 'Off';
-            % OOPSData.Handles.SwarmPlotAxH.XAxis.Label.Visible = 'Off';
-            % OOPSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'Off';
-            % OOPSData.Handles.SwarmPlotAxH.HitTest = 'Off';
-
-
             OOPSData.Handles.SwarmPlot.Visible = 'Off';
 
-
-    
         case 'Polar Plots'
 
             OOPSData.Handles.ImagePolarHistogram.Visible = 'Off';
@@ -341,7 +324,12 @@ function TabSelection(source,~)
             OOPSData.Handles.AzimuthAxH.HitTest = 'On';
             OOPSData.Handles.AzimuthAxH.Visible = 'On';
     
-            set(OOPSData.Handles.PhaseBarComponents,'Visible','On');
+
+            % %set(OOPSData.Handles.PhaseBarComponents,'Visible','On');
+            % % testing below
+            % OOPSData.Handles.AzimuthColorbar.Visible = 'On';
+            % % end testing
+
     
             OOPSData.Handles.AverageIntensityImgH.Visible = 'On';
             OOPSData.Handles.AverageIntensityAxH.Title.Visible = 'On';
@@ -379,18 +367,7 @@ function TabSelection(source,~)
             OOPSData.Handles.ScatterPlotAxH.YAxis.Label.Visible = 'On';
             OOPSData.Handles.ScatterPlotAxH.HitTest = 'On';
 
-            % OOPSData.Handles.SwarmPlotGrid.Visible = 'On';
-            % OOPSData.Handles.SwarmPlotAxH.Visible = 'On';
-            % OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'On';
-            % OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'On';
-            % OOPSData.Handles.SwarmPlotAxH.XAxis.Label.Visible = 'On';
-            % OOPSData.Handles.SwarmPlotAxH.YAxis.Label.Visible = 'On';
-            % OOPSData.Handles.SwarmPlotAxH.HitTest = 'On';
-
             OOPSData.Handles.SwarmPlot.Visible = 'On';
-
-
-            
 
             OOPSData.Handles.ImgPanel1.Visible = 'On';
             OOPSData.Handles.ImgPanel2.Visible = 'On';
@@ -492,6 +469,10 @@ function TabSelection(source,~)
     OOPSData.Settings.Zoom.RestoreProps = [];
     OOPSData.Settings.Zoom.Restore = false;
 
+    % % testing below
+    UpdateIntensitySliders(source);
+
+    % end testing
     UpdateImages(source);
     UpdateSummaryDisplay(source,{'Project'});
 end
