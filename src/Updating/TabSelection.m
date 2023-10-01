@@ -409,9 +409,7 @@ function TabSelection(source,~)
             OOPSData.Handles.ObjectNormIntStackImgH.Visible = 'On';
             OOPSData.Handles.ObjectNormIntStackAxH.Title.Visible = 'On';
     
-            %OOPSData.Handles.ObjectIntensityProfileGrid.Visible = 'On';
             OOPSData.Handles.ObjectIntensityPlotAxH.Visible = 'On';
-            %OOPSData.Handles.ObjectIntensityPlotAxH.Title.Visible = 'On';
             OOPSData.Handles.ObjectIntensityPlotAxH.HitTest = 'On';
     
             OOPSData.Handles.ImgPanel2.Visible = 'On';
