@@ -8,49 +8,40 @@ function axH = PlotObjectIntensityProfile(...
     AnnotationsColor,...
     AzimuthLinesColor)
 
-    % get unmasked row,col indices
+    % locations in the stack that we are considering
     [RowIndices,ColIndices] = find(Mask==1);
-    
+    % number of pixels in the image stack (nRows*nCols)
     nPixels = length(RowIndices);
-    
+    % vector of x values to pass into the function obtained by fitting
     xFit = linspace(0,pi,181);
-
     % prealocate cell array of sinusoidal fits for each pixel
     CurveFit = cell(nPixels,1);
 
     parfor i = 1:nPixels
-        
+        %% each vector in the third dimension is a set of y values for one round of fitting (one pixel)
+
         yFit = zeros(1,4);
         yFit(1:4) = yReal(RowIndices(i),ColIndices(i),:);
         
-%% Estimate initial values
+        %% Estimate initial values
+
+        % maximum y value
         yMax = max(yFit);
+        % minimum y value
         yMin = min(yFit);
-        yRange = (yMax-yMin);
+        % peak-to-peak amplitude
+        yRange = yMax-yMin;
 
-        % Estimate offset
-        yMean = mean(yFit);
+        %% Fit experimental values to a generic squared cosine: Y = A * ((1+cos(2(X-B))/2) + C
 
-%% Anonymous fitting functions        
-        % Function to fit
-        %fit = @(b,x)  b(1).*cos(2.*(x - b(2))) + b(3);
-
-        % testing below
-        %fit = @(b,x)  (b(1).*(1 + cos(2.*(x - b(2)))) + b(3))./2;
-
-        % THIS IS THE MOST CORRECT FORM OF THE FIT FUNCTION
-        %   Y = A * ((1+cos(2(X-B))/2) + C
-        % above functions give identical results (in terms of y values), 
-        % but the fit parameters do not match those from a generic cos^2 
+        % anonymous fit function
         fit = @(b,x)  b(1) .* ((1 + cos(2.*(x-b(2))))./2) + b(3);
-
-        % Least-Squares cost function to minimize
+        % least-squares cost function to minimize
         fcn = @(b) sum((fit(b,xReal) - yFit).^2);
-
-        % Minimise Least-Squares
+        % minimize least-squares
         s = fminsearch(fcn, [yRange; 1;  yMin]);
 
-%% Get y values of curve fit for current pixel       
+        %% Generate full curves using the parameters obtained above
 
         % y values to plot - found with the fitting function
         CurveFit{i} = fit(s,xFit);
@@ -83,6 +74,8 @@ function axH = PlotObjectIntensityProfile(...
     line(axH,xMaxCombined,yMaxCombined,'Color',AzimuthLinesColor,'LineStyle',':','LineWidth',1,'HitTest','Off');
     line(axH,xFitCombined,yFitCombined,'Color',PixelLinesColor,'LineWidth',1,'HitTest','Off','LineStyle',':');
     
+%% plot average fit line and amplitude/phase annotiations, set axes properties
+
     % amount of buffer on either side of the fit lines (in y)
     PctBuffer = 0.1;
     
@@ -93,14 +86,13 @@ function axH = PlotObjectIntensityProfile(...
     % plot the average fit line
     line(axH,xFit,CurveFitAvg,'LineWidth',4,'Color',FitLineColor);
     
-    MaxVal = max(CurveFitAvg);
-    MaxIdx = find(CurveFitAvg==MaxVal,1);
-    
-    MinVal = min(CurveFitAvg);
-    MinIdx = find(CurveFitAvg==MinVal,1);
-    
+    % get max and min values (and idxs) for the average of all fits
+    [MaxVal,MaxIdx] = max(CurveFitAvg);
+    [MinVal,MinIdx] = min(CurveFitAvg);
+
+    % measure amplitude (Order) and phase (azimuth) from the average fit
     OrderFit = MaxVal-MinVal;
-    AzimuthRadians = xFit(MaxIdx);
+    AzimuthFit = xFit(MaxIdx);
     
     % dotted vertical line showing azimuth
     line(axH,[xFit(MaxIdx),xFit(MaxIdx)],[0,MaxVal],'LineStyle','--','LineWidth',1,'HitTest','Off','Color',AnnotationsColor);
@@ -111,7 +103,7 @@ function axH = PlotObjectIntensityProfile(...
 
     % text for amplitude and phase labels
     txtOrder = [' Order (fit): ',num2str(round(OrderFit,2)),' '];
-    txtAzimuth = [' Azimuth (fit): ',num2str(round(rad2deg(AzimuthRadians))),'° '];
+    txtAzimuth = [' Azimuth (fit): ',num2str(round(rad2deg(AzimuthFit))),'° '];
     
     % determine whether to align text left or right
     if xFit(MaxIdx) > pi/2
@@ -122,6 +114,7 @@ function axH = PlotObjectIntensityProfile(...
         azimuthTextAlignment = 'Left'; 
     end
 
+    % create primitive text object to label amplitude and phase lines
     text(axH,...
         xFit(MinIdx),MaxVal-OrderFit/2,...
         txtOrder,...
