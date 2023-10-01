@@ -56,7 +56,8 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
     end
 
 
-    %% dependent properties with associated private properties for more extensive input validation
+    %% dependent properties with associated private properties for more extensive input validation, 
+    % along with their Set/Get methods
 
     properties(Access = private, AbortSet = true)
         % x-axis tick labels for each violin plot
@@ -449,6 +450,16 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
 
     end
 
+    %% public methods to facilitate copy/export
+
+    methods(Access=public)
+
+        function copyplot(obj)
+            copygraphics(obj.MainAxes,"ContentType","vector","BackgroundColor",obj.BackgroundColor);
+        end
+
+    end
+
     %% private, dependent properties used internally
     
     properties(Access = private, Dependent = true)
@@ -534,7 +545,8 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             % set ticks at locations specified by number of plots and plot spacing
             obj.MainAxes.XTick = obj.XTick;
             % set XLim to have user-specified spacing on either side of the plots
-            obj.MainAxes.XLim = [0+obj.PlotSpacing/2 obj.MainAxes.XTick(end)+obj.PlotSpacing/2];      
+            obj.MainAxes.XLim = [0 obj.MainAxes.XTick(end)+obj.PlotSpacing];  
+
             % set labels of each tick
             obj.MainAxes.XTickLabel = obj.GroupNames;
 
@@ -542,13 +554,6 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             obj.MainAxes.XLabel.String = obj.XLabel;
             obj.MainAxes.XLabel.FontSize = obj.FontSize;
             obj.MainAxes.XLabel.Color = obj.FontColor;
-            
-            
-            
-            
-            
-            
-            
             
             %% update the plots
 
@@ -630,6 +635,7 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             obj.MainAxes.YLabel.String = obj.YLabel;
             obj.MainAxes.YLabel.FontSize = obj.FontSize;
             obj.MainAxes.YLabel.Color = obj.FontColor;
+            obj.MainAxes.FontSize = obj.FontSize;
 
             %% update axes colormap and color limits
 
