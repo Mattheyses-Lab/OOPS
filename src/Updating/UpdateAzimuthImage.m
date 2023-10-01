@@ -33,37 +33,17 @@ function UpdateAzimuthImage(source)
             OOPSData.Handles.AzimuthImgH.AlphaData = cImage.bw;
         end
     catch
-        % set placeholders
+        % set placeholders in case display fails
         OOPSData.Handles.AzimuthImgH.CData = EmptyImage;
         OOPSData.Handles.AzimuthAxH.XLim = [0.5 size(EmptyImage,2)+0.5];
         OOPSData.Handles.AzimuthAxH.YLim = [0.5 size(EmptyImage,1)+0.5];
         OOPSData.Handles.AzimuthImgH.AlphaData = 1;
     end
 
+    % set(OOPSData.Handles.PhaseBarComponents,'Visible',OOPSData.Handles.ShowColorbarAzimuth.Value);
+    OOPSData.Handles.AzimuthColorbar.Visible = OOPSData.Handles.ShowColorbarAzimuth.Value;
 
-    set(OOPSData.Handles.PhaseBarComponents,'Visible',OOPSData.Handles.ShowColorbarAzimuth.Value);
-
-
-
-
-    % % show or hide the azimuth colorbar
-    % if OOPSData.Handles.ShowColorbarAzimuth.Value == 1
-    %     set(OOPSData.Handles.PhaseBarComponents,'Visible','on');
-    % else
-    %     set(OOPSData.Handles.PhaseBarComponents,'Visible','off');
-    % end
-
-    
+    % set the azimuth image colormap
     OOPSData.Handles.AzimuthAxH.Colormap = repmat(OOPSData.Settings.AzimuthColormap,2,1);
-    
-    % % if ApplyMask state button set to true, apply current mask by setting AlphaData
-    % if OOPSData.Handles.ApplyMaskAzimuth.Value
-    %     try
-    %         OOPSData.Handles.AzimuthImgH.AlphaData = cImage.bw;
-    %     catch
-    %         OOPSData.Handles.AzimuthImgH.AlphaData = 1;
-    %         disp('Warning: Error applying mask to azimuth image')
-    %     end
-    % end
 
 end
