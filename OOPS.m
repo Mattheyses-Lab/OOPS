@@ -2615,50 +2615,6 @@ disp('Setting up large image axes...')
     
     %% Axis for swarm plots
 
-    % OOPSData.Handles.SwarmPlotGrid = uigridlayout(OOPSData.Handles.ImgPanel2,[1,1],...
-    %     'Padding',[0 0 0 0],...
-    %     'BackgroundColor',OOPSData.Settings.SwarmPlotBackgroundColor,...
-    %     'Tag','SwarmPlotGrid',...
-    %     'Visible','Off',...
-    %     'ColumnWidth',{'1x'},...
-    %     'RowHeight',{'1x'});
-    % 
-    % OOPSData.Handles.SwarmPlotAxH = uiaxes(OOPSData.Handles.SwarmPlotGrid,...
-    %     'Tag','SwarmPlotAxes',...
-    %     'XTick',[],...
-    %     'YTick',[0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0],...
-    %     'NextPlot','Add',...
-    %     'Visible','Off',...
-    %     'Color',OOPSData.Settings.SwarmPlotBackgroundColor,...
-    %     'XColor','White',...
-    %     'YColor','White',...
-    %     'HitTest','Off',...
-    %     'FontName',OOPSData.Settings.DefaultPlotFont);
-    % 
-    % OOPSData.Handles.SwarmPlotAxH.Interactions = dataTipInteraction;
-    % axtoolbar(OOPSData.Handles.SwarmPlotAxH,{});
-    % 
-    % % set axis title
-    % OOPSData.Handles.SwarmPlotAxH = SetAxisTitle(OOPSData.Handles.SwarmPlotAxH,'Object Order (per group)');
-    % OOPSData.Handles.SwarmPlotAxH.XAxis.Label.String = "Group";
-    % OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-    % OOPSData.Handles.SwarmPlotAxH.XAxis.FontName = OOPSData.Settings.DefaultPlotFont;
-    % OOPSData.Handles.SwarmPlotAxH.YAxis.Label.String = "Object Order";
-    % OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-    % OOPSData.Handles.SwarmPlotAxH.YAxis.FontName = OOPSData.Settings.DefaultPlotFont;
-    % OOPSData.Handles.SwarmPlotAxH.Toolbar.Visible = 'Off';
-    % OOPSData.Handles.SwarmPlotAxH.Title.Visible = 'Off';
-    % 
-    % 
-    % % set up context menu for swarm plot
-    % OOPSData.Handles.SwarmPlotContextMenu = uicontextmenu(OOPSData.Handles.fH);
-    % % set up context menu options
-    % OOPSData.Handles.SwarmPlotContextMenu_CopyVector = uimenu(OOPSData.Handles.SwarmPlotContextMenu,...
-    %     'Text','Copy as vector graphic',...
-    %     'MenuSelectedFcn',@CopySwarmPlotVector);
-    % % add the context menu to the axes
-    % OOPSData.Handles.SwarmPlotAxH.ContextMenu = OOPSData.Handles.SwarmPlotContextMenu;
-
     OOPSData.Handles.SwarmPlot = ViolinChart(...
         "Parent",OOPSData.Handles.ImgPanel2,...
         "Data",{NaN},...
@@ -2832,18 +2788,46 @@ disp('Setting up large image axes...')
     clear pbarOriginal tagOriginal
     % set axis title
     OOPSData.Handles.AzimuthAxH = SetAxisTitle(OOPSData.Handles.AzimuthAxH,'Azimuth');
-    % get the default azimuth colormap (one half)
-    tempmap = hsv;
-    % vertically concatenate to make the full map
-    OOPSData.Handles.AzimuthAxH.Colormap = vertcat(tempmap,tempmap);
-    % custom colormap/colorbar for azimuth axes
-    OOPSData.Handles.PhaseBarAxH = phasebarmod('rad','Location','se','axes',OOPSData.Handles.AzimuthAxH);
-    OOPSData.Handles.PhaseBarAxH.Toolbar.Visible = 'Off';
-    OOPSData.Handles.PhaseBarAxH.HitTest = 'Off';
-    OOPSData.Handles.PhaseBarAxH.PickableParts = 'None';
-    OOPSData.Handles.PhaseBarComponents = OOPSData.Handles.PhaseBarAxH.Children;
-    set(OOPSData.Handles.PhaseBarComponents,'Visible','Off');
-    OOPSData.Handles.PhaseBarAxH.Colormap = vertcat(tempmap,tempmap);
+
+
+    % % get the default azimuth colormap (one half)
+    % tempmap = hsv;
+    % % vertically concatenate to make the full map
+    % OOPSData.Handles.AzimuthAxH.Colormap = vertcat(tempmap,tempmap);
+    % % custom colormap/colorbar for azimuth axes
+    % OOPSData.Handles.PhaseBarAxH = phasebarmod('rad','Location','se','axes',OOPSData.Handles.AzimuthAxH);
+    % OOPSData.Handles.PhaseBarAxH.Toolbar.Visible = 'Off';
+    % OOPSData.Handles.PhaseBarAxH.HitTest = 'Off';
+    % OOPSData.Handles.PhaseBarAxH.PickableParts = 'None';
+    % OOPSData.Handles.PhaseBarComponents = OOPSData.Handles.PhaseBarAxH.Children;
+    % set(OOPSData.Handles.PhaseBarComponents,'Visible','Off');
+    % OOPSData.Handles.PhaseBarAxH.Colormap = vertcat(tempmap,tempmap);
+
+
+    imageHeight = size(emptyimage,1);
+
+    % set up azimuth colorbar
+    % calculate center and radius for lower right position
+    padding = 0.025*imageHeight;
+    % inner and outer radii
+    outerRadius = 0.1*imageHeight;
+    innerRadius = outerRadius/(pi/2);
+    % center coordinates
+    centerX = imageHeight-outerRadius-padding;
+    centerY = centerX;
+
+    OOPSData.Handles.AzimuthColorbar = circularColorbar(OOPSData.Handles.AzimuthAxH, ...
+        'centerX',centerX, ...
+        'centerY',centerY, ...
+        'Colormap',vertcat(hsv,hsv), ...
+        'innerRadius',innerRadius, ...
+        'outerRadius',outerRadius, ...
+        'nRepeats',1, ...
+        'Visible','off',...
+        'FontSize',OOPSData.Settings.FontSize,...
+        'FontName',OOPSData.Settings.DefaultPlotFont);
+
+
 
     
     OOPSData.Handles.AzimuthAxH.Title.Visible = 'Off';   
@@ -3212,7 +3196,10 @@ pause(0.5)
 
     function CopySwarmPlotVector(source,~)
         UpdateLog3(source,'Copying...','append');
-        copygraphics(OOPSData.Handles.SwarmPlotAxH,'ContentType','vector','BackgroundColor',OOPSData.Settings.SwarmPlotBackgroundColor);
+        %copygraphics(OOPSData.Handles.SwarmPlot,'ContentType','vector','BackgroundColor',OOPSData.Settings.SwarmPlotBackgroundColor);
+
+        OOPSData.Handles.SwarmPlot.copyplot();
+
         UpdateLog3(source,'Swarm plot vector graphic copied to clipboard','append');
     end
 
@@ -3237,7 +3224,9 @@ pause(0.5)
             OOPSData.Settings.SwarmPlotSettings.ForegroundColor = source.Value;
         end
         
+        % font color and foreground color both set to foreground color
         OOPSData.Handles.SwarmPlot.ForegroundColor = OOPSData.Settings.SwarmPlotForegroundColor;
+        OOPSData.Handles.SwarmPlot.FontColor = OOPSData.Settings.SwarmPlotForegroundColor;
     end
 
     function SwarmPlotErrorBarsColorChanged(source,~)
@@ -3843,7 +3832,11 @@ pause(0.5)
 %                  AzimuthMap = MakeCircularColormap(AzimuthMap);
 %                 % end test
                 OOPSData.Handles.AzimuthAxH.Colormap = vertcat(AzimuthMap,AzimuthMap);
-                OOPSData.Handles.PhaseBarAxH.Colormap = vertcat(AzimuthMap,AzimuthMap);
+
+
+                % OOPSData.Handles.PhaseBarAxH.Colormap = vertcat(AzimuthMap,AzimuthMap);
+                OOPSData.Handles.AzimuthColorbar.Colormap = vertcat(AzimuthMap,AzimuthMap);
+
                 if strcmp(OOPSData.Settings.CurrentTab,'Azimuth') && ...
                         strcmp(OOPSData.Settings.AzimuthColorMode,'Direction')
                     UpdateImages(OOPSData.Handles.fH);
@@ -4803,6 +4796,7 @@ pause(0.5)
         end
         % adjust the font size across the board for all non-custom objects
         fontsize(OOPSData.Handles.fH,OOPSData.Settings.FontSize,'pixels');
+
         % now adjust the font size for the settings accordion
         OOPSData.Handles.SettingAccordion.FontSize = OOPSData.Settings.FontSize;
         % update the GUI summary display panel
@@ -5670,6 +5664,7 @@ pause(0.5)
                 OOPSData.Handles.LineScanListeners(1) = addlistener(OOPSData.Handles.LineScanROI,'MovingROI',@LineScanROIMoving);
                 OOPSData.Handles.LineScanListeners(2) = addlistener(OOPSData.Handles.LineScanROI,'ROIMoved',@LineScanROIMoved);
             case 'LineScanOrder'
+
                 OOPSData.Handles.LineScanROI = images.roi.Line(OOPSData.Handles.OrderAxH,...
                     'Color','Yellow',...
                     'Alpha',0.5,...
@@ -5697,6 +5692,10 @@ pause(0.5)
                 
                 OOPSData.Handles.LineScanListeners(1) = addlistener(OOPSData.Handles.LineScanROI,'MovingROI',@LineScanROIMoving);
                 OOPSData.Handles.LineScanListeners(2) = addlistener(OOPSData.Handles.LineScanROI,'ROIMoved',@LineScanROIMoved);
+
+
+
+
         end
 
     end
