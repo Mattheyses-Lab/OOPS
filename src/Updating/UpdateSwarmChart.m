@@ -12,7 +12,6 @@ nGroups = OOPSData.nGroups;
 % number of distinct object labels
 nLabels = OOPSData.Settings.nLabels;
 
-
 switch OOPSData.Settings.SwarmPlotGroupingType
     case 'Group'
     %% determine number of plots and get group names
@@ -42,6 +41,10 @@ switch OOPSData.Settings.SwarmPlotGroupingType
         ObjectLabelIdxs = OOPSData.GetObjectDataByGroup('LabelIdx');
         % get object GroupIdxs for plot marker colors
         ObjectGroupIdxs = OOPSData.GetObjectDataByGroup('GroupIdx');
+
+    %% get some other properties
+
+    XAxisLabel = "Group";
 
     case 'Label'
     %% determine number of plots and get group names
@@ -73,6 +76,10 @@ switch OOPSData.Settings.SwarmPlotGroupingType
         ObjectLabelIdxs = cGroup.GetObjectDataByLabel('LabelIdx');
         % get object GroupIdxs for plot marker colors
         ObjectGroupIdxs = cGroup.GetObjectDataByLabel('GroupIdx');
+
+    %% get some other properties
+
+    XAxisLabel = "Label";
 
     case 'Both'
     %% determine number of plots and get group names
@@ -107,9 +114,11 @@ switch OOPSData.Settings.SwarmPlotGroupingType
         % get object GroupIdxs for plot marker colors
         ObjectGroupIdxs = OOPSData.GetObjectDataByLabel('GroupIdx')';
 
+    %% get some other properties
+
+    XAxisLabel = "Group (Label)";
+
 end
-
-
 
 % cell arrays to hold YData, CData, and datatip info
 Y = cell(nPlots,1);
@@ -119,8 +128,6 @@ CData = cell(nPlots,1);
 dtNames = cell(nPlots,1);
 dtData = cell(nPlots,1);
 dataTipNames = {'Group','Image','Object','Label',varDisplayName};
-
-
 
 % get the object data for each group
 for i = 1:nPlots
@@ -176,7 +183,6 @@ for i = 1:nPlots
                 end
         end
 
-
         % cell array of data tip labels
         dtNames{i} = dataTipNames;
         % cell array of datatip values for each label (we will have one of these cells per violin)
@@ -217,7 +223,7 @@ switch OOPSData.Settings.SwarmPlotColorMode
         cmap = OOPSData.Settings.OrderColormap;
         % get the color limits
         CLim = [0 1];
-        % mode in which CLim is set
+        % mode by which CLim is set
         CLimMode = 'auto';
     case 'Group'
         % color the points according to the color of the group
@@ -228,11 +234,7 @@ switch OOPSData.Settings.SwarmPlotColorMode
         else
             CLim = [0 1];
         end
-        % 
-        % 
-        % % get the color limits
-        % CLim = [1 OOPSData.nGroups];
-        % mode in which CLim is set
+        % mode by which CLim is set
         CLimMode = 'manual';
     case 'Label'
         % color the points according to the color of the label of each object
@@ -243,54 +245,31 @@ switch OOPSData.Settings.SwarmPlotColorMode
         else
             CLim = [0 1];
         end
-        % mode in which CLim is set
+        % mode by which CLim is set
         CLimMode = 'manual';
 end
-
-
 
 %% get 'auto' violin face/edge, error bar, and plot marker edge colors
 
 switch OOPSData.Settings.SwarmPlotGroupingType
     case 'Group'
-        % autoColors = OOPSData.GroupColors;
-
         switch OOPSData.Settings.SwarmPlotColorMode
             case 'Magnitude'
                 autoColors = zeros(nPlots,3); % black violin outlines if points colored by magnitude
             case 'Group'
                 autoColors = OOPSData.GroupColors;
-                % % convert group colors matrix into cell array, duplicate for each label
-                % groupColorsCell = repmat(mat2cell(OOPSData.GroupColors,ones(nGroups,1),3)',nLabels,1);
-                % % convert back to matrix of RGB triplets
-                % autoColors = cell2mat(groupColorsCell(:));
             case 'Label'
                 autoColors = OOPSData.GroupColors;
-                % % duplicate label colors for each group
-                % autoColors = repmat(OOPSData.Settings.LabelColors,nGroups,1);
         end
-
-
-
     case 'Label'
-        %autoColors = OOPSData.Settings.LabelColors;
-
         switch OOPSData.Settings.SwarmPlotColorMode
             case 'Magnitude'
                 autoColors = zeros(nPlots,3); % black violin outlines if points colored by magnitude
             case 'Group'
                 autoColors = OOPSData.Settings.LabelColors;
-                % % convert group colors matrix into cell array, duplicate for each label
-                % groupColorsCell = repmat(mat2cell(OOPSData.GroupColors,ones(nGroups,1),3)',nLabels,1);
-                % % convert back to matrix of RGB triplets
-                % autoColors = cell2mat(groupColorsCell(:));
             case 'Label'
                 autoColors = OOPSData.Settings.LabelColors;
-                % % duplicate label colors for each group
-                % autoColors = repmat(OOPSData.Settings.LabelColors,nGroups,1);
         end
-
-
     case 'Both'
         switch OOPSData.Settings.SwarmPlotColorMode
             case 'Magnitude'
@@ -339,20 +318,22 @@ MarkerSize = OOPSData.Settings.SwarmPlotMarkerSize;
 XJitterWidth = OOPSData.Settings.SwarmPlotXJitterWidth;
 ViolinsVisible = OOPSData.Settings.SwarmPlotViolinsVisible;
 MarkerFaceAlpha = OOPSData.Settings.SwarmPlotMarkerFaceAlpha;
+BGColor = OOPSData.Settings.SwarmPlotBackgroundColor;
+FGColor = OOPSData.Settings.SwarmPlotForegroundColor;
 
 
-
+% set all the properties
 set(OOPSData.Handles.SwarmPlot,...
     "Title",varDisplayName,...
     "Data",Y,...
-    "BackgroundColor",[1 1 1],...
-    "ForegroundColor",[0 0 0],...
-    "FontColor",[0 0 0],...
+    "BackgroundColor",BGColor,...
+    "ForegroundColor",FGColor,...
+    "FontColor",FGColor,...
     "Position",[0 0 1 1],...
     "PlotSpacing",1,...
     "XJitterWidth",XJitterWidth,...
     "DataTipCell",dtCell,...
-    "XLabel",'Group',...
+    "XLabel",XAxisLabel,...
     "YLabel",varDisplayName,...
     "MarkerEdgeColor",MarkerEdgeColor,...
     "MarkerSize",MarkerSize,...
@@ -368,51 +349,5 @@ set(OOPSData.Handles.SwarmPlot,...
     "Colormap",cmap,...
     "CLim",CLim,...
     "CLimMode",CLimMode);
-
-
-
-
-
-
-
-
-
-
-
-% % create a figure to hold the component
-% fig = uifigure("HandleVisibility","on",...
-%     "Name","Violin Chart Demo",...
-%     "WindowStyle","alwaysontop",...
-%     "Visible","off");
-% 
-% violinChart = ViolinChart(...
-%     "Parent",fig,...
-%     "Title",varDisplayName,...
-%     "Data",Y,...
-%     "BackgroundColor",[1 1 1],...
-%     "ForegroundColor",[0 0 0],...
-%     "FontColor",[0 0 0],...
-%     "Position",[0 0 1 1],...
-%     "PlotSpacing",1,...
-%     "XJitterWidth",XJitterWidth,...
-%     "DataTipCell",dtCell,...
-%     "XLabel",'Group',...
-%     "YLabel",varDisplayName,...
-%     "MarkerEdgeColor",MarkerEdgeColor,...
-%     "MarkerSize",MarkerSize,...
-%     "MarkerFaceAlpha",MarkerFaceAlpha,...
-%     "CData",CData,...
-%     "ViolinOutlinesVisible",ViolinsVisible,...
-%     "ViolinLineWidth",2,...
-%     "ViolinFaceColor",ViolinFaceColor,...
-%     "ViolinEdgeColor",ViolinEdgeColor,...
-%     "ErrorBarsColor",ErrorBarsColor,...
-%     "ErrorBarsLineWidth",2,...
-%     "GroupNames",groupNames,...
-%     "Colormap",cmap,...
-%     "CLim",CLim,...
-%     "CLimMode",CLimMode);
-% 
-% fig.Visible = 'on';
 
 end
