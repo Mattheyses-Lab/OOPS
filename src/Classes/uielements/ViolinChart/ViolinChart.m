@@ -540,20 +540,19 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
         
         function update(obj)
             
-            %% update x-axis
+            %% update x-axis limits, tick locations, tick labels, and font sizes
 
             % set ticks at locations specified by number of plots and plot spacing
             obj.MainAxes.XTick = obj.XTick;
             % set XLim to have user-specified spacing on either side of the plots
             obj.MainAxes.XLim = [0 obj.MainAxes.XTick(end)+obj.PlotSpacing];  
 
-            % set labels of each tick
+            % set label text for each tick
             obj.MainAxes.XTickLabel = obj.GroupNames;
 
-            % set up x-axis label
+            % set x-axis label string and font size
             obj.MainAxes.XLabel.String = obj.XLabel;
             obj.MainAxes.XLabel.FontSize = obj.FontSize;
-            obj.MainAxes.XLabel.Color = obj.FontColor;
             
             %% update the plots
 
@@ -609,6 +608,7 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             end
 
             %% update axis title
+
             obj.MainAxes.Title.String = obj.Title;
             obj.MainAxes.Title.Color = obj.FontColor;
             obj.MainAxes.Title.FontSize = obj.FontSize;
@@ -624,17 +624,18 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             obj.MainAxes.XColor = obj.ForegroundColor;
             obj.MainAxes.YColor = obj.ForegroundColor;
 
+            %% update x-axis and y-axis label font colors
 
+            obj.MainAxes.XLabel.Color = obj.FontColor;
+            obj.MainAxes.YLabel.Color = obj.FontColor;
 
             %% update y-axis
 
             obj.MainAxes.YTickMode = 'Auto';
             obj.MainAxes.YTickLabelMode = 'Auto';
             obj.MainAxes.YLimMode = 'Auto';
-
             obj.MainAxes.YLabel.String = obj.YLabel;
             obj.MainAxes.YLabel.FontSize = obj.FontSize;
-            obj.MainAxes.YLabel.Color = obj.FontColor;
             obj.MainAxes.FontSize = obj.FontSize;
 
             %% update axes colormap and color limits
