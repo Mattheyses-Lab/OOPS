@@ -344,8 +344,6 @@ OOPSData.Handles.SettingsAccordion = uiaccordion(OOPSData.Handles.SettingsPanelG
 colorNames = colorNames';
 colorCodesCell = mat2cell(colorCodes,ones(size(colorCodes,1),1),3)';
 
-
-
 %% CHECKPOINT
 
 disp('Setting up colormaps settings...')
@@ -1199,12 +1197,6 @@ OOPSData.Handles.SwarmPlotMarkerFaceAlphaDropdown = uidropdown(...
 OOPSData.Handles.SwarmPlotMarkerFaceAlphaDropdown.Layout.Row = 7;
 OOPSData.Handles.SwarmPlotMarkerFaceAlphaDropdown.Layout.Column = 2;
 
-
-
-
-
-
-
 % error bars color mode
 OOPSData.Handles.SwarmPlotErrorBarsColorModeDropdownLabel = uilabel(...
     'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
@@ -1244,37 +1236,6 @@ OOPSData.Handles.SwarmPlotErrorBarsColorDropdown = uidropdown(...
 OOPSData.Handles.SwarmPlotErrorBarsColorDropdown.Layout.Row = 9;
 OOPSData.Handles.SwarmPlotErrorBarsColorDropdown.Layout.Column = 2;
 updateColorDropdownStyles(OOPSData.Handles.SwarmPlotErrorBarsColorDropdown);
-
-
-
-
-
-
-
-
-
-
-
-
-
-% % error bars color
-% OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel = uilabel('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
-%     'Text','Error bars color',...
-%     'FontName',OOPSData.Settings.DefaultFont,...
-%     'FontColor','White');
-% OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel.Layout.Row = 8;
-% OOPSData.Handles.SwarmPlotErrorBarsColorDropdownLabel.Layout.Column = 1;
-% 
-% OOPSData.Handles.SwarmPlotErrorBarsColorDropdown = uidropdown('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
-%     'Items',{'Black','White','Custom'},...
-%     'ItemsData',{[0 0 0],[1 1 1],OOPSData.Settings.SwarmPlotErrorBarsColor},...
-%     'Value',OOPSData.Settings.SwarmPlotErrorBarsColor,...
-%     'FontName',OOPSData.Settings.DefaultFont,...
-%     'ClickedFcn',@colorDropdownClicked,...
-%     'UserData',{@SwarmPlotErrorBarColorChanged});
-% OOPSData.Handles.SwarmPlotErrorBarsColorDropdown.Layout.Row = 8;
-% OOPSData.Handles.SwarmPlotErrorBarsColorDropdown.Layout.Column = 2;
-% updateColorDropdownStyles(OOPSData.Handles.SwarmPlotErrorBarsColorDropdown);
 
 % error bars visible
 OOPSData.Handles.SwarmPlotErrorBarsVisibleDropdownLabel = uilabel('Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
@@ -1476,7 +1437,7 @@ disp('Setting up label settings...')
 %% Label settings
 
 OOPSData.Handles.SettingsAccordion.addItem(...
-    "Title","Label",...
+    "Title","Labels",...
     "PaneBackgroundColor",[0 0 0],...
     "FontName",OOPSData.Settings.DefaultFont,...
     "FontColor",OOPSData.Settings.GUIForegroundColor,...
@@ -2164,44 +2125,198 @@ OOPSData.Handles.ObjectSelectionSelectedLineWidthEditfield.Layout.Column = 2;
 drawnow
 pause(0.5)
 
+
+%% CHECKPOINT
+
+disp('Setting up cluster settings...')
+
+%% k-means clustering settings
+
+OOPSData.Handles.SettingsAccordion.addItem(...
+    "Title","k-means clustering",...
+    "PaneBackgroundColor",[0 0 0],...
+    "FontName",OOPSData.Settings.DefaultFont,...
+    "FontColor",OOPSData.Settings.GUIForegroundColor,...
+    "TitleBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
+    "PaneBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
+    "BorderColor" ,OOPSData.Settings.GUIForegroundColor);
+
+OOPSData.Handles.ClusterSettingsGrid = OOPSData.Handles.SettingsAccordion.Items(12).Pane;
+
+set(OOPSData.Handles.ClusterSettingsGrid,...
+    'BackgroundColor','Black',...
+    'Scrollable','on',...
+    'Padding',[5 5 5 5],...
+    'RowSpacing',5,...
+    'ColumnSpacing',5,...
+    'RowHeight',{'1x',20,20,20,20,20,20},...
+    'ColumnWidth',{'fit','1x'});
+
+% setting up cluster variable(s) selection
+OOPSData.Handles.ClusterVariablesTreePanel = uipanel(OOPSData.Handles.ClusterSettingsGrid,...
+    'Title','Variables');
+OOPSData.Handles.ClusterVariablesTreePanel.Layout.Row = 1;
+OOPSData.Handles.ClusterVariablesTreePanel.Layout.Column = [1 2];
+% grid to hold the selection uitree
+OOPSData.Handles.ClusterVariablesTreeGrid = uigridlayout(OOPSData.Handles.ClusterVariablesTreePanel, ...
+    [1,1], ...
+    'Padding',[0 0 0 0]);
+% uitree checkbox to select variables
+OOPSData.Handles.ClusterVariablesTree = uitree(...
+    OOPSData.Handles.ClusterVariablesTreeGrid,...
+    'checkbox',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontWeight','bold',...
+    'Interruptible','off',...
+    'CheckedNodesChangedFcn',@ClusterVariablesChanged,...
+    'BackgroundColor',OOPSData.Settings.GUIBackgroundColor,...
+    'FontColor',OOPSData.Settings.GUIForegroundColor);
+% add nodes for each variable
+varListShort = OOPSData.Settings.ObjectPlotVariables;
+varListLong = OOPSData.Settings.ObjectPlotVariablesLong;
+for varIdx = 1:numel(varListShort)
+    uitreenode(OOPSData.Handles.ClusterVariablesTree,...
+        'Text',varListLong{varIdx},...
+        'NodeData',varListShort{varIdx});
+end
+% determine which variables to select by default based on existing settings
+varSelectionIdx = find(ismember(varListShort,OOPSData.Settings.ClusterVariableList));
+if isempty(varSelectionIdx)
+    OOPSData.Handles.ClusterVariablesTree.CheckedNodes = [];
+else
+    % select the corresponding nodes
+    OOPSData.Handles.ClusterVariablesTree.CheckedNodes = ...
+        OOPSData.Handles.ClusterVariablesTree.Children(varSelectionIdx);
+end
+
+% k selection mode
+OOPSData.Handles.ClusternClustersModeDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.ClusterSettingsGrid,...
+    'Text','k selection mode',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor',[1 1 1]);
+OOPSData.Handles.ClusternClustersModeDropdownLabel.Layout.Row = 2;
+OOPSData.Handles.ClusternClustersModeDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.ClusternClustersModeDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.ClusterSettingsGrid,...
+    'Items',{'Auto','Manual'},...
+    'Value',OOPSData.Settings.ClusternClustersMode,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','nClustersMode',...
+    'ValueChangedFcn',@ClusterSettingsChanged);
+OOPSData.Handles.ClusternClustersModeDropdown.Layout.Row = 2;
+OOPSData.Handles.ClusternClustersModeDropdown.Layout.Column = 2;
+
+% k
+OOPSData.Handles.ClusternClustersLabel = uilabel(...
+    'Parent',OOPSData.Handles.ClusterSettingsGrid,...
+    'Text','k',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor',[1 1 1]);
+OOPSData.Handles.ClusternClustersLabel.Layout.Row = 3;
+OOPSData.Handles.ClusternClustersLabel.Layout.Column = 1;
+
+OOPSData.Handles.ClusternClustersEditfield = uieditfield(...
+    OOPSData.Handles.ClusterSettingsGrid,...
+    'numeric',...
+    'Value',OOPSData.Settings.ClusternClusters,...
+    'Limits',[2 15],...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Enable',strcmp(OOPSData.Settings.ClusternClustersMode,'Manual'),...
+    'Tag','nClusters',...
+    'ValueChangedFcn',@ClusterSettingsChanged);
+OOPSData.Handles.ClusternClustersEditfield.Layout.Row = 3;
+OOPSData.Handles.ClusternClustersEditfield.Layout.Column = 2;
+
+% auto k selection criterion
+OOPSData.Handles.ClusterCriterionDropdownLabel = uilabel(...
+    "Parent",OOPSData.Handles.ClusterSettingsGrid,...
+    "Text","Criterion",...
+    "FontColor",[1 1 1]);
+OOPSData.Handles.ClusterCriterionDropdownLabel.Layout.Row = 4;
+OOPSData.Handles.ClusterCriterionDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.ClusterCriterionDropdown = uidropdown(...
+    "Parent",OOPSData.Handles.ClusterSettingsGrid,...
+    "Items",{'CalinskiHarabasz','DaviesBouldin','silhouette'},...
+    "Value",OOPSData.Settings.ClusterCriterion,...
+    "Enable",strcmp(OOPSData.Settings.ClusternClustersMode,'Auto'),...
+    "Tag",'Criterion',...
+    "ValueChangedFcn",@ClusterSettingsChanged);
+OOPSData.Handles.ClusterCriterionDropdown.Layout.Row = 4;
+OOPSData.Handles.ClusterCriterionDropdown.Layout.Column = 2;
+
+% distance metric
+OOPSData.Handles.ClusterDistanceMetricDropdownLabel = uilabel(...
+    "Parent",OOPSData.Handles.ClusterSettingsGrid,...
+    "Text","Distance metric",...
+    "FontColor",[1 1 1]);
+OOPSData.Handles.ClusterDistanceMetricDropdownLabel.Layout.Row = 5;
+OOPSData.Handles.ClusterDistanceMetricDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.ClusterDistanceMetricDropdown = uidropdown(...
+    "Parent",OOPSData.Handles.ClusterSettingsGrid,...
+    "Items",{'sqeuclidean','cosine','cityblock'},...
+    "Value",OOPSData.Settings.ClusterDistanceMetric,...
+    "Tag",'DistanceMetric',...
+    "ValueChangedFcn",@ClusterSettingsChanged);
+OOPSData.Handles.ClusterDistanceMetricDropdown.Layout.Row = 5;
+OOPSData.Handles.ClusterDistanceMetricDropdown.Layout.Column = 2;
+
+% normalization
+OOPSData.Handles.ClusterNormalizationMethodDropdownLabel = uilabel(...
+    "Parent",OOPSData.Handles.ClusterSettingsGrid,...
+    "Text","Normalization",...
+    "FontColor",[1 1 1]);
+OOPSData.Handles.ClusterNormalizationMethodDropdownLabel.Layout.Row = 6;
+OOPSData.Handles.ClusterNormalizationMethodDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.ClusterNormalizationMethodDropdown = uidropdown(...
+    "Parent",OOPSData.Handles.ClusterSettingsGrid,...
+    "Items",{'zscore','none'},...
+    "Value",OOPSData.Settings.ClusterNormalizationMethod,...
+    "Tag",'Normalization',...
+    "ValueChangedFcn",@ClusterSettingsChanged);
+OOPSData.Handles.ClusterNormalizationMethodDropdown.Layout.Row = 6;
+OOPSData.Handles.ClusterNormalizationMethodDropdown.Layout.Column = 2;
+
+% display evaluation
+OOPSData.Handles.ClusterDisplayEvaluationDropdownLabel = uilabel(...
+    "Parent",OOPSData.Handles.ClusterSettingsGrid,...
+    "Text","Display evaluation",...
+    "FontColor",[1 1 1]);
+OOPSData.Handles.ClusterDisplayEvaluationDropdownLabel.Layout.Row = 7;
+OOPSData.Handles.ClusterDisplayEvaluationDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.ClusterDisplayEvaluationDropdown = uidropdown(...
+    "Parent",OOPSData.Handles.ClusterSettingsGrid,...
+    "Items",{'yes','no'},...
+    "ItemsData",{true,false},...
+    "Value",OOPSData.Settings.ClusterDisplayEvaluation,...
+    "Tag",'Normalization',...
+    "ValueChangedFcn",@ClusterSettingsChanged);
+OOPSData.Handles.ClusterDisplayEvaluationDropdown.Layout.Row = 7;
+OOPSData.Handles.ClusterDisplayEvaluationDropdown.Layout.Column = 2;
+
 %% CHECKPOINT
 
 disp('Setting up threshold slider panel...')
 
 %% Mask threshold adjustment panel
 
-% OOPSData.Handles.ImageOperationsGrid = uigridlayout(OOPSData.Handles.MainGrid,...
-%     [1,1],...
-%     'BackgroundColor',[0 0 0],...
-%     'Padding',[0 0 0 0],...
-%     'ColumnWidth',{'1x'},...
-%     'ColumnSpacing',0);
-% OOPSData.Handles.ImageOperationsGrid.Layout.Row = 1;
-% OOPSData.Handles.ImageOperationsGrid.Layout.Column = [4 5];
-
-% OOPSData.Handles.ImageOperationsPanel = uipanel(OOPSData.Handles.ImageOperationsGrid,...
-%     'Visible','Off',...
-%     'Title','Adjust threshhold');
-
-
-% testing below - uncomment above if issue
+% panel to hold the thresh slider grid
 OOPSData.Handles.ImageOperationsPanel = uipanel(OOPSData.Handles.MainGrid,...
     'Visible','Off',...
     'Title','Adjust threshhold');
 OOPSData.Handles.ImageOperationsPanel.Layout.Row = 1;
 OOPSData.Handles.ImageOperationsPanel.Layout.Column = [4 5];
-
-
-% end testing
-
-
-
-
+% grid to hold thresh slider axes
 OOPSData.Handles.ThreshSliderGrid = uigridlayout(OOPSData.Handles.ImageOperationsPanel,[1,1],...
     'Padding',[0 0 0 0],...
     'BackgroundColor','Black',...
     'Visible','Off');
-% axes to show intensity histogram
+% axes to show intensity histogram and thresh slider
 OOPSData.Handles.ThreshAxH = uiaxes(OOPSData.Handles.ThreshSliderGrid,...
     'Color','Black',...
     'Visible','Off',...
@@ -3769,8 +3884,6 @@ pause(0.5)
         UpdateObjectBoxes(source);
     end
 
-
-
 %% Colormaps settings
 
     function ImageTypeSelectionChanged(source,~)
@@ -4107,6 +4220,29 @@ pause(0.5)
 %         if strcmp(OOPSData.Settings.CurrentTab,'Plots')
 %             UpdateImages(source);
 %         end
+    end
+
+%% Cluster settings
+
+    function ClusterVariablesChanged(source,~)
+        if isempty(source.CheckedNodes)
+            OOPSData.Settings.ClusterSettings.VariableList = {};
+        else
+            [OOPSData.Settings.ClusterSettings.VariableList{1,1:numel(source.CheckedNodes)}] = deal(source.CheckedNodes.NodeData);
+        end
+    end
+
+
+    function ClusterSettingsChanged(source,~)
+        % get the variable from the Tag property of the calling object
+        varName = source.Tag;
+        % set the specified property
+        OOPSData.Settings.ClusterSettings.(varName) = source.Value;
+        % enable or disable components depending on nClustersMode
+        if strcmp(varName,'nClustersMode')
+            OOPSData.Handles.ClusterCriterionDropdown.Enable = strcmp(OOPSData.Settings.ClusternClustersMode,'Auto');
+            OOPSData.Handles.ClusternClustersEditfield.Enable = strcmp(OOPSData.Settings.ClusternClustersMode,'Manual');
+        end
     end
 
 %% Callbacks controlling dynamic resizing of GUI containers
@@ -4542,18 +4678,29 @@ pause(0.5)
     end
 
     function mbObjectkmeansClustering(source,~)
-        % the variables we can use to cluster
-        VarShortList = OOPSData.Settings.ObjectPlotVariables;
-        % get user settings for the clustering
-        ClusterSettings = GetClusterSettings(VarShortList);
-        % make sure the output is valid
-        if isempty(ClusterSettings)
-            UpdateLog3(source,'No variables selected.','append');
+        % % the variables we can use to cluster
+        % VarShortList = OOPSData.Settings.ObjectPlotVariables;
+        % % get user settings for the clustering
+        % ClusterSettings = GetClusterSettings(VarShortList);
+        % % make sure the output is valid
+        % if isempty(ClusterSettings)
+        %     UpdateLog3(source,'No variables selected.','append');
+        %     return
+        % end
+
+        
+
+
+        ClusterSettings = OOPSData.Settings.ClusterSettings;
+
+        if isempty(ClusterSettings.VariableList)
+            uialert(OOPSData.Handles.fH,'No variables selected','Error');
             return
         end
 
+
         % gather data for all objects using user-specified variables from above
-        objectData = OOPSData.getConcatenatedObjectData(ClusterSettings.variableList);
+        objectData = OOPSData.getConcatenatedObjectData(ClusterSettings.VariableList);
         % minimum repeats per iteration to find the best solution (smallest combined sum)
         nRepeats = 10;
 
@@ -4643,14 +4790,7 @@ pause(0.5)
         % show the window
         fH_ClusterProportions.Visible = 'on';
 
-        % PieGrid = uigridlayout(fH_ClusterProportions);
-        % PieAxes = gobjects(OOPSData.nGroups,1);
-        % for g_idx = 1:OOPSData.nGroups
-        %     PieAxes(g_idx) = uiaxes(PieGrid);
-        %     pie(PieAxes(g_idx),categorical(PieChartData{g_idx,1}));
-        %     PieAxes(g_idx).Title.String = [OOPSData.Group(g_idx).GroupName];
-        % end
-
+        % update label selection tree and image/plot display
         UpdateLabelTree(source);
         UpdateImages(source);
     end
@@ -4732,20 +4872,6 @@ pause(0.5)
             return
         end
     end
-
-%% Changing object boxes type
-
-    % function ChangeObjectBoxType(source,~)
-    %     OOPSData.Settings.ObjectBoxType = source.Text;
-    %     UpdateLog3(source,['Object Box Type Changed to ',source.Text],'append');
-    % 
-    %     set(OOPSData.Handles.hObjectBoxType.Children(),'Checked','Off');
-    %     set(OOPSData.Handles.(['hObjectBoxType_',source.Text]),'Checked','On');
-    % 
-    %     % only update summary overview if 'Project' is selected
-    %     UpdateSummaryDisplay(source,{'Project'});
-    %     UpdateImages(source);
-    % end
 
 %% changing GUI theme (dark or light)
 

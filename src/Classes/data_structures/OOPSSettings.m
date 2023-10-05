@@ -91,6 +91,9 @@ classdef OOPSSettings < handle
         % object selection settings
         ObjectSelectionSettings struct
 
+        % k-means clustering settings
+        ClusterSettings struct
+
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
 
@@ -118,9 +121,6 @@ classdef OOPSSettings < handle
         CustomSchemes CustomMask
         SchemeNames cell
         SchemePaths cell
-        
-        % % object box type ('Box' or 'Boundary')
-        % ObjectBoxType = 'Box';
 
         % user-defined custom output statistics
         CustomStatistics CustomFPMStatistic
@@ -172,8 +172,6 @@ classdef OOPSSettings < handle
         SwarmPlotViolinFaceColor
         SwarmPlotErrorBarsColorMode
         
-
-
         % polar histogram settings
         PolarHistogramnBins
         PolarHistogramWedgeFaceAlpha
@@ -211,9 +209,17 @@ classdef OOPSSettings < handle
         ObjectSelectionLineWidth
         ObjectSelectionSelectedLineWidth
 
+        % ClusterSettings
+        ClusterVariableList
+        ClusternClustersMode
+        ClusternClusters
+        ClusterCriterion
+        ClusterDistanceMetric
+        ClusterNormalizationMethod
+        ClusterDisplayEvaluation
+
         % Object variables "long" names
         ObjectPlotVariablesLong
-
         ObjectPolarPlotVariablesLong
 
         % for adding/deleting/adjusting labels
@@ -283,7 +289,8 @@ classdef OOPSSettings < handle
                 'ObjectPolarPlotVariables.mat',...
                 'ObjectIntensityProfileSettings.mat',...
                 'ObjectAzimuthDisplaySettings.mat',...
-                'ObjectSelectionSettings.mat'};
+                'ObjectSelectionSettings.mat',...
+                'ClusterSettings.mat'};
 
             obj.updateSettingsFromFiles(settingsFiles);
 
@@ -458,8 +465,7 @@ classdef OOPSSettings < handle
             % add the OOPSLabel object to ObjectLabels
             obj.ObjectLabels(end+1,1) = OOPSLabel(LabelName,LabelColor,obj);
         end
-
-        
+   
         function NewColor = getUniqueLabelColor(obj)
             % find unique label color based on existing label colors
 
@@ -792,7 +798,6 @@ classdef OOPSSettings < handle
             ObjectAzimuthColorMode = obj.ObjectAzimuthDisplaySettings.ColorMode;
         end
 
-
 %% object selection settings
 
         function ObjectSelectionBoxType = get.ObjectSelectionBoxType(obj)
@@ -829,6 +834,36 @@ classdef OOPSSettings < handle
             for i = 1:obj.nLabels
                 LabelColors(i,:) = obj.ObjectLabels(i).Color;
             end
+        end
+
+%% k-means clustering settings
+
+        function ClusterVariableList = get.ClusterVariableList(obj)
+            ClusterVariableList = obj.ClusterSettings.VariableList;
+        end
+
+        function ClusternClustersMode = get.ClusternClustersMode(obj)
+            ClusternClustersMode = obj.ClusterSettings.nClustersMode;
+        end
+
+        function ClusternClusters = get.ClusternClusters(obj)
+            ClusternClusters = obj.ClusterSettings.nClusters;
+        end
+
+        function ClusterCriterion = get.ClusterCriterion(obj)
+            ClusterCriterion = obj.ClusterSettings.Criterion;
+        end
+
+        function ClusterDistanceMetric = get.ClusterDistanceMetric(obj)
+            ClusterDistanceMetric = obj.ClusterSettings.DistanceMetric;
+        end
+
+        function ClusterNormalizationMethod = get.ClusterNormalizationMethod(obj)
+            ClusterNormalizationMethod = obj.ClusterSettings.NormalizationMethod;
+        end
+
+        function ClusterDisplayEvaluation = get.ClusterDisplayEvaluation(obj)
+            ClusterDisplayEvaluation = obj.ClusterSettings.DisplayEvaluation;
         end
 
 %% variable names settings
