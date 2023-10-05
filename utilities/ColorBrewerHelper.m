@@ -1,9 +1,9 @@
 function [colormapsStruct,colorPalettesStruct] = ColorBrewerHelper()
-% returns a struct containing MATLAB format colormaps from 
-% Cynthia Brewer's sequential and divergent ColorBrewer color schemes
-
-% also returns a struct containing a list of colors from the qualitative
-% ColorBrewer color schemes
+%%  ColorBrewerHelper  returns a struct containing MATLAB format colormaps from 
+%       Cynthia Brewer's sequential and divergent ColorBrewer color schemes
+%
+%       also returns a struct containing a list of colors from the qualitative
+%       ColorBrewer color schemes
 
 colormapsStruct = struct();
 

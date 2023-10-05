@@ -59,9 +59,7 @@ classdef OOPSObject < handle & dynamicprops
         paddedSubarrayIdx (1,2) cell
         % 2 element vector of the padding applied to the object SubarrayIdx
         paddedSubarrayIdxAdjustment = []
-        % the padded object mask image 
-        % (padded at least 5 pixels in both direction, plus additional to make square, 
-        % but not beyond the parent image boundary)
+        % the object mask image padded at least 5 px in both directions, plus additional to make square
         paddedSubImage = []
         % 2-element vector to add to image-frame coordinate to retrieve padded object-frame coordinates
         imageToPaddedObjectShift = []
@@ -90,18 +88,18 @@ classdef OOPSObject < handle & dynamicprops
         MaskedOrderSubImage
         PaddedFFCIntensitySubImage
         PaddedMaskSubImage
-        RestrictedPaddedMaskSubImage
         PaddedAzimuthSubImage
         MidlineTangentImage
         MidlineRelativeAzimuthImage
         PaddedAverageIntensityImageNorm
 
-        % we store the centroid as a 2-element vector, no need to store these too
+        % x coordinate of the centroid
         CentroidX
+        % y coordinate of the centroid
         CentroidY
 
-        % depends on selection status
-        SelectionBoxLineWidth
+        % % line width of the object selection box when selected
+        % SelectionBoxLineWidth
         
         % Order properties of this object, dependent on Order image of Parent
         OrderAvg
@@ -398,15 +396,15 @@ classdef OOPSObject < handle & dynamicprops
             [obj(:).Selected] = deal(NewSelectionStatus{:});
         end
 
-        function SelectionBoxLineWidth = get.SelectionBoxLineWidth(obj)
-            % set value of selection box linewidth depedning on object selection status
-            switch obj.Selected
-                case false
-                    SelectionBoxLineWidth = 1;
-                case true
-                    SelectionBoxLineWidth = 2;
-            end
-        end
+        % function SelectionBoxLineWidth = get.SelectionBoxLineWidth(obj)
+        %     % set value of selection box linewidth depedning on object selection status
+        %     switch obj.Selected
+        %         case false
+        %             SelectionBoxLineWidth = 1;
+        %         case true
+        %             SelectionBoxLineWidth = 2;
+        %     end
+        % end
 
 %% position coordinates, bounding boxes, subarray idxs
 
@@ -686,10 +684,6 @@ classdef OOPSObject < handle & dynamicprops
         
         function PaddedMaskSubImage = get.PaddedMaskSubImage(obj)
             PaddedMaskSubImage = obj.Parent.bw(obj.paddedSubarrayIdx);
-        end
-        
-        function RestrictedPaddedMaskSubImage = get.RestrictedPaddedMaskSubImage(obj)
-            RestrictedPaddedMaskSubImage = obj.paddedSubImage;
         end
 
         function MidlineTangentImage = get.MidlineTangentImage(obj)
