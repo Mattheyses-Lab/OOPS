@@ -1,5 +1,6 @@
 function boundaries = perfectBinaryBoundaries(I,Options)
-% returns exact coordinates of the edges of a binary object
+% perfectBinaryBoundaries returns exact coordinates of the edges of a binary object
+
 %% input validation
 arguments
     I {mustBeA(I,'logical')}

@@ -10,11 +10,6 @@ function generalZoomToCursor(source,~)
 %           double-click will return to default zoom value
 %           shift-click will freeze axis limits at current zoom
 %-------------------------------------------------------------------------%
-% Author: Will Dean
-% Organization: University of Alabama at Birmingham
-% Group: Mattheyses Lab
-% Date: 20210701
-%
 %
 %
 % This function is a heavily modified version of zoom2cursor
@@ -31,7 +26,7 @@ function generalZoomToCursor(source,~)
     % get list of axes properties
     axProperties = fieldnames(DynamicAxes);
 
-    % check is Zoom data is not already a property
+    % check if Zoom data is not already a property
     if ~ismember('Zoom',axProperties)
         Zoom = struct('XRange',0,...
             'YRange',0,...
@@ -63,43 +58,6 @@ function generalZoomToCursor(source,~)
 
     % default freeze status
     freezeState = false;
-    % % default axes limits
-    % XLimState = Zoom.OldXLim;
-    % YLimState = Zoom.OldYLim;
-
-    % % if the callback was invoked manually with the Zoom.Restore flag
-    % if Zoom.Restore
-    %     % then restore the prior freeze ststus and axes limits
-    %     freezeState = Zoom.RestoreProps.freezeState;
-    %     XLimState = Zoom.RestoreProps.XLimState;
-    %     YLimState = Zoom.RestoreProps.YLimState;
-    % else
-    %     % If ZoomToCursor is already active, check that the axes that called the callback
-    %     %   is the current zoom axes. If so, continue as normal. If not, disable 
-    %     %   zoom on current axes before continuing
-    %     if Zoom.Active
-    %         % get the tag to axes where ZoomToCursor is currently enabled
-    %         CurrentButtonTag = Zoom.CurrentButton.Tag;
-    %         % get the tag of the button that called the callback
-    %         CallingButtonTag = source.Tag;
-    %         % the tag of the ZoomToCursor axes toolbar button is a char array formatted like:
-    %         %   ['ZoomToCursor',ax.Tag]
-    %         %   where ax is the axes containing the button
-    %         % If the axes calling the callback is not the current zoom axes
-    %         if ~strcmp(CurrentButtonTag,CallingButtonTag)
-    %             % before disabling, store whether the axes zoom was frozen
-    %             freezeState = Zoom.Freeze;
-    %             XLimState = Zoom.DynamicAxes.XLim;
-    %             YLimState = Zoom.DynamicAxes.YLim;
-    %             % then disable zoom before continuing
-    %             % use tag to index the Handles structure and change state of button
-    %             Handles.(CurrentButtonTag).Value = 0;
-    %             % call ZoomToCursor with current button to deactivate the zoom
-    %             ZoomToCursor(Handles.(CurrentButtonTag));
-    %             % get the freeze state of the previous zoom axes we just deactivated
-    %         end
-    %     end
-    % end
 
     Zoom.Freeze = freezeState;
 
@@ -120,8 +78,6 @@ function generalZoomToCursor(source,~)
             Zoom.Active = true;
             % set current zoom button, obj that called the callback
             Zoom.CurrentButton = source;
-            % % Get axes where limits will be changing, ancestor axes of button
-            % Zoom.DynamicAxes = DynamicAxes;
             % Get the parent container to place static reference Axes
             Zoom.DynamicAxesParent = DynamicAxes.Parent;
             % get the ancestor figure

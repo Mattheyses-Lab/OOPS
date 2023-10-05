@@ -1,6 +1,6 @@
 function Midline = getObjectMidline(I,Options)
 %%
-%  getObjectMidline  Detects the centerline of a binary object
+%  getObjectMidline  Estimates the position of the centerline of a binary object
 
 
 
@@ -235,26 +235,7 @@ d = distances(G);
 try
     % get the ordered list of nodes representing the midline
     midlinePathNodes = shortestpath(G,end1,end2);
-
-    % if our midline does not include all nodes, remove the bad ones and try again
-    % if numel(midlinePathNodes)~=G.numnodes
-
-
-    % if numel(midlinePathNodes)~=size(G.Nodes,1)
-    % 
-    %     G = subgraph(G,midlinePathNodes);
-    %     % get the shortest distance between all nodes
-    %     d = distances(G);
-    %     % the largest distance represents the path between endpoint nodes
-    %     [~,maxIdx] = max(d,[],'all');
-    %     % get node idxs from the linear idx found above (maxIdx)
-    %     [end1,end2] = ind2sub(size(d),maxIdx);
-    %     % get the ordered list of nodes representing the midline
-    %     midlinePathNodes = shortestpath(G,end1,end2);
-    % end
-
-
-    % testing below, the code above apparenly runs faster if we skip the if statement all together
+    % create a subgraph from the nodes along the shortest path
     G = subgraph(G,midlinePathNodes);
     % get the shortest distance between all nodes
     d = distances(G);
@@ -264,10 +245,6 @@ try
     [end1,end2] = ind2sub(size(d),maxIdx);
     % get the ordered list of nodes representing the midline
     midlinePathNodes = shortestpath(G,end1,end2);
-
-
-
-
     % reorder the graph
     G = reordernodes(G,midlinePathNodes);
 catch
@@ -281,7 +258,7 @@ catch
 end
 
 
-% get the midline coordinates - this is slow
+% get the midline coordinates, reordered based on the new node order (this is slow)
 Midline = [G.Nodes.Xcoord G.Nodes.Ycoord];
 
 % get the endpoint coordinates
@@ -343,10 +320,8 @@ if Options.DisplayResults
     hImg.AlphaData = alphaData;
     % plot the voronoi tesselation, store the returned handles (2x1: [points, edges])
     hVoronoi = voronoi(x,y);
-
-
+    % set some properties
     hVoronoi(1).Marker = 'none';
-
     hVoronoi(2).LineWidth = 2;
     hVoronoi(2).Color = [0.0745 0.6235 1];
 

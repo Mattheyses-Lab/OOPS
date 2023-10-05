@@ -1,4 +1,4 @@
-function [] = ZoomToCursor(source,~)
+function ZoomToCursor(source,~)
 %% ZoomToCursor
 %   allows for dynamic zooming/panning in GUI axes
 %   all OOPSGUI axes using ZoomToCursor will have a custom toolbar state
@@ -8,17 +8,11 @@ function [] = ZoomToCursor(source,~)
 %           zoom levels until max zoom is reached
 %           double-click will return to default zoom value
 %           shift-click will freeze axis limits at current zoom
-%-------------------------------------------------------------------------%
-% Author: Will Dean
-% Organization: University of Alabama at Birmingham
-% Group: Mattheyses Lab
-% Date: 20210701
-%
-%
 %
 % This function is a heavily modified version of zoom2cursor
 % (Written by Brett Shoelson, Ph.D. (shoelson@helix.nih.gov,
 % shoelson@hotmail.com))
+%----------------------------------------------------------------------------------------------------------------------------
 
     % get the GUI data
     OOPSData = guidata(source);

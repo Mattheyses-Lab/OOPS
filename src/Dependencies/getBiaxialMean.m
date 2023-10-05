@@ -8,7 +8,7 @@ function biaxialMean = getBiaxialMean(angles)
 %% step-by-step version shown commented for understanding
 
 
-    % % convert to complex vector (multiply by two because we have biaxial data) and take the mean
+    % % convert to complex vector (multiply by two because we have axial data) and take the mean
     % z = mean(exp(1i*angles*2));
     % 
     % % get real and imaginary components
@@ -22,7 +22,5 @@ function biaxialMean = getBiaxialMean(angles)
     % 
     % % divide by two to return to original scale
     % biaxialMean = rayAngle/2;
-
-
 
 end
