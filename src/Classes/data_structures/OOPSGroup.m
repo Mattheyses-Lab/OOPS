@@ -183,7 +183,7 @@
             %     allObjects = [allObjects, obj.Replicate(i).Object];
             % end
 
-            allObjects = cat(2,obj.Replicate(:).Object);
+            allObjects = cat(1,obj.Replicate(:).Object);
         end
 
         % apply OOPSLabel:Label to all selected objects in this OOPSGroup

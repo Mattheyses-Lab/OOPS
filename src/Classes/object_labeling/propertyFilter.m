@@ -27,15 +27,15 @@ classdef propertyFilter < handle
         function TF = checkMatch(obj,objectToCheck)
             switch obj.propRelationship
                 case '>'
-                    TF = [objectToCheck.(obj.propRealName)] > obj.propValue;
+                    TF = [objectToCheck.(obj.propRealName)]' > obj.propValue;
                 case '>='
-                    TF = [objectToCheck.(obj.propRealName)] >= obj.propValue;
+                    TF = [objectToCheck.(obj.propRealName)]' >= obj.propValue;
                 case '=='
-                    TF = [objectToCheck.(obj.propRealName)] == obj.propValue;
+                    TF = [objectToCheck.(obj.propRealName)]' == obj.propValue;
                 case '<'
-                    TF = [objectToCheck.(obj.propRealName)] < obj.propValue;
+                    TF = [objectToCheck.(obj.propRealName)]' < obj.propValue;
                 case '<='
-                    TF = [objectToCheck.(obj.propRealName)] <= obj.propValue;
+                    TF = [objectToCheck.(obj.propRealName)]' <= obj.propValue;
             end
         end
 

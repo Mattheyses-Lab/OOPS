@@ -854,7 +854,7 @@ classdef OOPSImage < handle & dynamicprops
             if obj.ObjectDetectionDone
 
                 % get nObjects x 1 cell array of padded object subimages
-                paddedObjectImages = {obj.Object(:).RestrictedPaddedMaskSubImage}';
+                paddedObjectImages = {obj.Object(:).paddedSubImage}';
 
                 % get nObjects x 1 cell of object bounding boxes
                 objectBBoxes = {obj.Object(:).BoundingBox}';

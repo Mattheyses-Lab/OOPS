@@ -375,29 +375,6 @@ classdef ViolinPlot < handle
                 return
             end
 
-
-            %% uncomment below if issue and comment out the 'development' section
-
-            % % get the density data with ksdensity, xDensity = horizontal spread, yDensity = y locations to evaluate xDensity
-            % [xDensity,yDensity] = ksdensity(obj.YData);
-            % 
-            % 
-            % xGood = round(xDensity,3)>0;
-            % 
-            % xDensity = xDensity(xGood);
-            % yDensity = yDensity(xGood);
-            % 
-            % % rescale the density data to match the x jitter width of the scatter points
-            % xDensity = rescale(xDensity,min(xDensity),obj.XJitterWidth/2);
-            % % get the x position of the violin on its axes
-            % xPosition = obj.XData(1);
-            % % concatenate with flipped copy to form both sides of the violin
-            % xDensity = [xPosition+xDensity,xPosition-fliplr(xDensity)];
-            % yDensity = [yDensity,fliplr(yDensity)];
-            % % concatenate along first dimension to form the final output
-            % DensityData = [xDensity;yDensity];
-
-            %% development
             % get the density data with ksdensity, xDensity = horizontal spread, yDensity = y locations to evaluate xDensity
             [xDensity,yDensity] = ksdensity(obj.YData);
 
@@ -406,16 +383,19 @@ classdef ViolinPlot < handle
             xDensity = xDensity(densityIdxsInDataRange);
             yDensity = yDensity(densityIdxsInDataRange);
 
-            
-            % testing below
+            % check if empty (happens when all data points have the same value)
+            if isempty(xDensity) || isempty(yDensity)
+                DensityData = [NaN;NaN];
+                return
+            end
+
+            % make sure first and last values are min and max, respectively
             yDensity(1) = min(obj.YData);
             yDensity(end) = max(obj.YData);
             
-
+            % add flanking points in case we only have one data point
             yDensity = [yDensity(1)*(1-1E-5), yDensity, yDensity(end)*(1+1E-5)];
             xDensity = [0, xDensity, 0];
-
-            % end testing
 
             % rescale the density data to match the x jitter width of the scatter points
             xDensity = rescale(xDensity,min(xDensity),obj.XJitterWidth/2);
@@ -425,17 +405,9 @@ classdef ViolinPlot < handle
             xDensity = [xPosition+xDensity,xPosition-fliplr(xDensity)];
             yDensity = [yDensity,fliplr(yDensity)];
 
-
-            % concatenate along first dimension to form the final output
+            % % concatenate along first dimension to form the final output
             DensityData = [xDensity;yDensity];
-            % 
-            % try
-            % 
-            % catch
-            %     YData = obj.YData
-            %     xDensity = xDensity
-            %     yDensity = yDensity
-            % end
+
         end
 
     end

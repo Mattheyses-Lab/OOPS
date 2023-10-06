@@ -111,7 +111,7 @@ classdef OOPSProject < handle
             % for i = 1:obj.nGroups
             %     allObjects = [allObjects,obj.Group(i).allObjects];
             % end
-            allObjects = cat(2,obj.Group(:).allObjects);
+            allObjects = cat(1,obj.Group(:).allObjects);
         end
 
         % select object by property using one or more property filters

@@ -1,18 +1,25 @@
 function AzimuthAverage = getAzimuthAverage(azimuths)
-% expects input and return output in radians
+%%  getAzimuthAverage  returns axial mean (in radians) of a vector of angles (in radians)
 
-%% new method
+% AzimuthAverage = getBiaxialMean(azimuths);
 
-AzimuthAverage = getBiaxialMean(azimuths);
+AzimuthAverage = angle(mean(exp(1i*azimuths*2)))/2;
 
-%% the old method
-    % % we use 4 reference angles to estimate the average azimuth
-    % refAngles = repmat([0 pi/4 pi/2 (3*pi)/4],numel(azimuths),1);
+%% step-by-step version shown for clarity
+
+    % % convert to complex vector (multiply by two because we have axial data) and take the mean
+    % z = mean(exp(1i*angles*2));
     % 
-    % % taking the average of the squared cosine of the differences between each measurement and ref angle
-    % Itotal = cos(refAngles-azimuths).^2;
-    % Iavg = mean(Itotal,1);
+    % % get real and imaginary components
+    % y = imag(z);
+    % x = real(z);
     % 
-    % % finally, use the 2-argument atan to find the average
-    % AzimuthAverage = atan2((Iavg(2)-Iavg(4)),(Iavg(1)-Iavg(3)))*0.5;
+    % % use 4-quadrant inverse tangent function to get the angle 
+    % % between the +x axis and a ray from the origin to point (x,y)
+    % % (this is accomplished above with the angle() function)
+    % rayAngle = atan2(y,x);
+    % 
+    % % divide by two to return to original scale
+    % biaxialMean = rayAngle/2;
+
 end

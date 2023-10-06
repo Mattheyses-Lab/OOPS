@@ -425,7 +425,6 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function set.DataTipCell(obj,val)
-            disp('ViolinChart: set.DataTipCell()')
             obj.user_DataTipCell = val;
         end
 

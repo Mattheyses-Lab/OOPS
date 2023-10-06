@@ -33,7 +33,7 @@ classdef OOPSObject < handle & dynamicprops
         % pixel indices [r,c]
         PixelList (:,2) double = []
         
-        % index to the subimage such that L(idx{:}) extracts the elements
+        % index to the subimage such that I(SubarrayIdx{:}) extracts the elements
         % (2x1 cell | each cell is a 1xm or 1xn double for y and x subarray idxs, respectively)
         SubarrayIdx (1,2) cell
 
@@ -55,7 +55,7 @@ classdef OOPSObject < handle & dynamicprops
         % the selection status of the object
         Selected (1,1) logical = false
 
-        % stats in development
+        % SubarrayIdx with padding applied
         paddedSubarrayIdx (1,2) cell
         % 2 element vector of the padding applied to the object SubarrayIdx
         paddedSubarrayIdxAdjustment = []
@@ -98,9 +98,6 @@ classdef OOPSObject < handle & dynamicprops
         % y coordinate of the centroid
         CentroidY
 
-        % % line width of the object selection box when selected
-        % SelectionBoxLineWidth
-        
         % Order properties of this object, dependent on Order image of Parent
         OrderAvg
         OrderMin

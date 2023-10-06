@@ -1,30 +1,33 @@
 function Iout = nlfilter2(I,filterSize,fun)
+%%  nlfilter2  parallelized version of nlfilter that does not display a progress bar
+%
+%   See also nlfilter
 
-
-
-
-% still testing, not for use!
-
-    % size of the input
-    Isz = size(I);
     % how much do we need to buffer around the edges of the image
     filterBuffer = (filterSize-1)/2;
     % the loop mask (the indices across which we will slide the window)
-    loopMask = true(Isz);
-    loopMask = ClearImageBorder(loopMask,filterBuffer);
-    % initialize output
+    loopMask = true(size(I));
+    % add symmetric padding to I
+    I = padarray(I,[filterBuffer,filterBuffer],"symmetric");
+    % add zeros to loopMask
+    loopMask = padarray(loopMask,[filterBuffer,filterBuffer],false,"both");
+    % size of the output with padding
+    Isz = size(I);
+    % initialize output (with padding)
     Iout = zeros(Isz);
-    
-    parfor Idx = 1:numel(I)
+    % slide window across image and apply fun to each frame
+    parfor Idx = 1:numel(Iout)
         if loopMask(Idx)
-            % [row,col] = ...
+            % get row (i) and col (j) indices to the frame
             [i,j] = ind2sub(Isz,Idx);
-            % the frame we will be working with
+            % get the frame on which we will evaluate fun
             frame = I(i-filterBuffer:i+filterBuffer,j-filterBuffer:j+filterBuffer);
-            % get the average
-            %Iout(Idx) = getLocalAverage(frame);
+            % evaluate fun on the frame
             Iout(Idx) = feval(fun,frame);
         end
     end
+
+    % remove the padding
+    Iout = Iout(1+filterBuffer:end-filterBuffer,1+filterBuffer:end-filterBuffer);
 
 end
