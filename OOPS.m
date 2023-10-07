@@ -11,35 +11,6 @@ end
 % this object will hold ALL project data and GUI settings
 OOPSData = OOPSProject();
 
-%% set up splash screen
-
-% % get the splash screen image
-% if ismac || isunix
-%     SplashIconPath = fullfile([OOPSData.Settings.MainPath,'/SplashScreenIcon/AppSplashScreen.png']);
-% elseif ispc
-%     SplashIconPath = fullfile([OOPSData.Settings.MainPath,'\SplashScreenIcon\AppSplashScreen.png']);
-% end
-% SplashScreenIcon = java.awt.Toolkit.getDefaultToolkit.createImage(SplashIconPath);
-% 
-% % Create splash screen window
-% SplashImage = SplashScreenIcon;
-% Splash = javax.swing.JWindow;
-% icon = javax.swing.ImageIcon(SplashImage);
-% label = javax.swing.JLabel(icon);
-% Splash.getContentPane.add(label);
-% Splash.setAlwaysOnTop(true);
-% Splash.pack;
-% 
-% % set the splash image to the center of the screen
-% screenSize = Splash.getToolkit.getScreenSize;
-% screenHeight = screenSize.height;
-% screenWidth = screenSize.width;
-% % get the actual splashImage size
-% imgHeight = icon.getIconHeight;
-% imgWidth = icon.getIconWidth;
-% Splash.setLocation((screenWidth-imgWidth)/2,(screenHeight-imgHeight)/2);
-% Splash.show % show the splash screen
-
 %% set up the main window
 
 % struct to hold graphics objects
@@ -79,18 +50,21 @@ disp('Setting up menubar...')
 
 OOPSData.Handles.hFileMenu = uimenu(OOPSData.Handles.fH,'Text','File');
 % Options for File Menu Button
-OOPSData.Handles.hNewProject = uimenu(OOPSData.Handles.hFileMenu,'Text','&New Project','Callback',@newProject);
+OOPSData.Handles.hNewProject = uimenu(OOPSData.Handles.hFileMenu,'Text','&New project','Callback',@newProject);
 OOPSData.Handles.hNewProject.Accelerator = 'N';
 % menu for loading existing project
-OOPSData.Handles.hLoadProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Load Project','Callback',@loadProject);
-OOPSData.Handles.hSaveProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Project','Callback',@saveProject);
+OOPSData.Handles.hLoadProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Load project','Callback',@loadProject);
+OOPSData.Handles.hSaveProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Save project','Callback',@saveProject);
 % load files
-OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FFC Files','Separator','On','Callback',@loadFFCImages);
-OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM Files','Callback',@loadFPMImages);
-OOPSData.Handles.hLoadReferenceImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load Reference Images','Callback',@loadReferenceImages);
+OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FFC files','Separator','On','Callback',@loadFFCImages);
+OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM files','Callback',@loadFPMImages);
+OOPSData.Handles.hLoadReferenceImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load reference images','Callback',@loadReferenceImages);
 % save data
 OOPSData.Handles.hSaveImageData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export images','Separator','On','Callback',@exportImages);
-OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Object Data','Callback',@SaveObjectData);
+OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Save object data','Callback',@SaveObjectData);
+% segmentation schemes
+OOPSData.Handles.hNewSegmentationScheme = uimenu(OOPSData.Handles.hFileMenu,'Text','New segmentation scheme','Separator','On','Callback',@BuildNewScheme);
+
 % save settings
 OOPSData.Handles.hSaveColormapsSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Colormaps Settings','Separator','On','Callback',@SaveColormapsSettings);
 OOPSData.Handles.hSaveAzimuthDisplaySettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Azimuth Display Settings','Callback',@SaveAzimuthDisplaySettings);
@@ -121,38 +95,30 @@ OOPSData.Handles.hGUIFontSize = uimenu(OOPSData.Handles.hGUI,'Text','Font Size',
 OOPSData.Handles.hGUIFontSize_Larger = uimenu(OOPSData.Handles.hGUIFontSize,'Text','Larger','Callback',@ChangeGUIFontSize);
 OOPSData.Handles.hGUIFontSize_Smaller = uimenu(OOPSData.Handles.hGUIFontSize,'Text','Smaller','Callback',@ChangeGUIFontSize);
 
-% Options for mask type ('Default' or 'Custom', 'Upload mask' in development
-OOPSData.Handles.hMaskType = uimenu(OOPSData.Handles.hOptionsMenu,'Text','Mask Type','Separator','on');
-% Option to select 'Default' mask type
-OOPSData.Handles.hMaskType_Default = uimenu(OOPSData.Handles.hMaskType,'Text','Default');
-% Names of 'Default' masks
-OOPSData.Handles.hMaskType_Default_Legacy = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Legacy','Checked','On','Tag','Default','Callback', @ChangeMaskType);
-OOPSData.Handles.hMaskType_Default_Filament = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Filament','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
-OOPSData.Handles.hMaskType_Default_Adaptive = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Adaptive','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
-% Option to select 'Custom' mask type
-OOPSData.Handles.hMaskType_CustomScheme = uimenu(OOPSData.Handles.hMaskType,'Text','CustomScheme');
-% Load the custom schemes and make a menu option for each one
-for i = 1:numel(OOPSData.Settings.SchemeNames)
-    OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.SchemeNames{i}]) = ...
-        uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
-        'Text',OOPSData.Settings.SchemeNames{i},...
-        'Tag','CustomScheme',...
-        'Checked','Off',...
-        'Callback',@ChangeMaskType);
-end
-% Option to create new 'Custom' mask scheme
-OOPSData.Handles.hMaskType_NewScheme = uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
-    'Text','Create new scheme',...
-    'Separator','on',...
-    'Callback',@BuildNewScheme);
-
-% % Options for display of object boxes
-% OOPSData.Handles.hObjectBoxMenu = uimenu(OOPSData.Handles.hOptionsMenu,'Text','Object boxes','Separator','on');
-% % Box type option
-% OOPSData.Handles.hObjectBoxType = uimenu(OOPSData.Handles.hObjectBoxMenu,'Text','Box type');
-% % options for box type
-% OOPSData.Handles.hObjectBoxType_Box = uimenu(OOPSData.Handles.hObjectBoxType,'Text','Box','Checked','On','Callback',@ChangeObjectBoxType);
-% OOPSData.Handles.hObjectBoxType_Boundary = uimenu(OOPSData.Handles.hObjectBoxType,'Text','Boundary','Checked','Off','Callback',@ChangeObjectBoxType);
+% % Options for mask type ('Default' or 'Custom', 'Upload mask' in development
+% OOPSData.Handles.hMaskType = uimenu(OOPSData.Handles.hOptionsMenu,'Text','Mask Type','Separator','on');
+% % Option to select 'Default' mask type
+% OOPSData.Handles.hMaskType_Default = uimenu(OOPSData.Handles.hMaskType,'Text','Default');
+% % Names of 'Default' masks
+% OOPSData.Handles.hMaskType_Default_Legacy = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Legacy','Checked','On','Tag','Default','Callback', @ChangeMaskType);
+% OOPSData.Handles.hMaskType_Default_Filament = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Filament','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
+% OOPSData.Handles.hMaskType_Default_Adaptive = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Adaptive','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
+% % Option to select 'Custom' mask type
+% OOPSData.Handles.hMaskType_CustomScheme = uimenu(OOPSData.Handles.hMaskType,'Text','CustomScheme');
+% % Load the custom schemes and make a menu option for each one
+% for i = 1:numel(OOPSData.Settings.SchemeNames)
+%     OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.SchemeNames{i}]) = ...
+%         uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
+%         'Text',OOPSData.Settings.SchemeNames{i},...
+%         'Tag','CustomScheme',...
+%         'Checked','Off',...
+%         'Callback',@ChangeMaskType);
+% end
+% % Option to create new 'Custom' mask scheme
+% OOPSData.Handles.hMaskType_NewScheme = uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
+%     'Text','Create new scheme',...
+%     'Separator','on',...
+%     'Callback',@BuildNewScheme);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
 
@@ -202,6 +168,7 @@ OOPSData.Handles.hSelectObjectsByProperty = uimenu(OOPSData.Handles.hObjectsMenu
 % delete selected objects
 OOPSData.Handles.hDeleteSelectedObjects = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Delete selected objects');
 OOPSData.Handles.hDeleteSelectedObjects_InProject = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In project','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Project');
+OOPSData.Handles.hDeleteSelectedObjects_InProject.Accelerator = 'D';
 OOPSData.Handles.hDeleteSelectedObjects_InGroup = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In group','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Group');
 OOPSData.Handles.hDeleteSelectedObjects_InImage = uimenu(OOPSData.Handles.hDeleteSelectedObjects,'Text','In image','MenuSelectedFcn',@mbDeleteSelectedObjects,'Tag','Image');
 % clear selection status
@@ -2049,11 +2016,6 @@ OOPSData.Handles.ObjectSelectionColorModeDropdown = uidropdown(...
 OOPSData.Handles.ObjectSelectionColorModeDropdown.Layout.Row = 2;
 OOPSData.Handles.ObjectSelectionColorModeDropdown.Layout.Column = 2;
 
-% color
-%[colorNames,colorCodes] = colornames('MATLAB');
-%colorNames = [colorNames', 'Custom'];
-%colorCodesCell = [mat2cell(colorCodes,ones(size(colorCodes,1),1),3)', OOPSData.Settings.ObjectSelectionColor];
-
 OOPSData.Handles.ObjectSelectionColorDropdownLabel = uilabel(...
     'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
     'Text','Color',...
@@ -2139,7 +2101,7 @@ OOPSData.Handles.SettingsAccordion.addItem(...
     "FontColor",OOPSData.Settings.GUIForegroundColor,...
     "TitleBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
     "PaneBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
-    "BorderColor" ,OOPSData.Settings.GUIForegroundColor);
+    "BorderColor",OOPSData.Settings.GUIForegroundColor);
 
 OOPSData.Handles.ClusterSettingsGrid = OOPSData.Handles.SettingsAccordion.Items(12).Pane;
 
@@ -2302,6 +2264,77 @@ OOPSData.Handles.ClusterDisplayEvaluationDropdown.Layout.Column = 2;
 %% CHECKPOINT
 
 disp('Setting up threshold slider panel...')
+
+%% Mask settings
+
+OOPSData.Handles.SettingsAccordion.addItem(...
+    "Title","Mask",...
+    "PaneBackgroundColor",[0 0 0],...
+    "FontName",OOPSData.Settings.DefaultFont,...
+    "FontColor",OOPSData.Settings.GUIForegroundColor,...
+    "TitleBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
+    "PaneBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
+    "BorderColor",OOPSData.Settings.GUIForegroundColor);
+
+OOPSData.Handles.MaskSettingsGrid = OOPSData.Handles.SettingsAccordion.Items(13).Pane;
+
+set(OOPSData.Handles.MaskSettingsGrid,...
+    'BackgroundColor','Black',...
+    'Scrollable','on',...
+    'Padding',[5 5 5 5],...
+    'RowSpacing',5,...
+    'ColumnSpacing',5,...
+    'RowHeight',{20,20},...
+    'ColumnWidth',{'fit','1x'});
+
+% mask type
+OOPSData.Handles.MaskTypeDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.MaskSettingsGrid,...
+    'Text','Mask type',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor',[1 1 1]);
+OOPSData.Handles.MaskTypeDropdownLabel.Layout.Row = 1;
+OOPSData.Handles.MaskTypeDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.MaskTypeDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.MaskSettingsGrid,...
+    'Items',{'Default','Custom'},...
+    'ItemsData',{'Default','CustomScheme'},...
+    'Value',OOPSData.Settings.MaskType,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','MaskType',...
+    'ValueChangedFcn',@MaskTypeChanged);
+OOPSData.Handles.MaskTypeDropdown.Layout.Row = 1;
+OOPSData.Handles.MaskTypeDropdown.Layout.Column = 2;
+
+% mask name
+OOPSData.Handles.MaskNameDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.MaskSettingsGrid,...
+    'Text','Mask type',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor',[1 1 1]);
+OOPSData.Handles.MaskNameDropdownLabel.Layout.Row = 2;
+OOPSData.Handles.MaskNameDropdownLabel.Layout.Column = 1;
+
+% get cell array of mask names based on mask type
+switch OOPSData.Settings.MaskType
+    case 'Default'
+        maskNames = {'Legacy','Filament','Adaptive'};
+    case 'CustomScheme'
+        maskNames = {OOPSData.Settings.SchemeNames};
+end
+
+OOPSData.Handles.MaskNameDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.MaskSettingsGrid,...
+    'Items',maskNames,...
+    'Value',OOPSData.Settings.MaskName,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'Tag','MaskName',...
+    'ValueChangedFcn',@MaskNameChanged);
+OOPSData.Handles.MaskNameDropdown.Layout.Row = 2;
+OOPSData.Handles.MaskNameDropdown.Layout.Column = 2;
+
+
 
 %% Mask threshold adjustment panel
 
@@ -4642,6 +4675,8 @@ pause(0.5)
     end
 
     function mbDeleteSelectedObjects(source,~)
+        % number of total objects in the project
+        nObjectsExisting = OOPSData.nObjects;
         % delete selected objects in project, group, or image
         switch source.Tag
             case 'Project'
@@ -4653,10 +4688,14 @@ pause(0.5)
                 cImage = OOPSData.CurrentImage(1);
                 cImage.DeleteSelectedObjects();
         end
-
+        % number of objects deleted
+        nObjectsDeleted = nObjectsExisting - OOPSData.nObjects;
+        % update display
         UpdateImages(source);
         UpdateObjectListBox(source);
         UpdateSummaryDisplay(source,{'Group','Image','Object'});
+        % update log with number deleted
+        UpdateLog3(source,['Deleted ',num2str(nObjectsDeleted),' objects'],'append');
     end
 
     function mbClearSelection(source,~)
@@ -4678,26 +4717,15 @@ pause(0.5)
     end
 
     function mbObjectkmeansClustering(source,~)
-        % % the variables we can use to cluster
-        % VarShortList = OOPSData.Settings.ObjectPlotVariables;
-        % % get user settings for the clustering
-        % ClusterSettings = GetClusterSettings(VarShortList);
-        % % make sure the output is valid
-        % if isempty(ClusterSettings)
-        %     UpdateLog3(source,'No variables selected.','append');
-        %     return
-        % end
 
-        
-
-
+        % get the cluster settings
         ClusterSettings = OOPSData.Settings.ClusterSettings;
 
+        % if no variables selected, throw uialert error window
         if isempty(ClusterSettings.VariableList)
             uialert(OOPSData.Handles.fH,'No variables selected','Error');
             return
         end
-
 
         % gather data for all objects using user-specified variables from above
         objectData = OOPSData.getConcatenatedObjectData(ClusterSettings.VariableList);
@@ -4737,12 +4765,6 @@ pause(0.5)
             OOPSData.Settings.AddNewObjectLabel('Clustering failed',[]);
         end
 
-        % Testing below
-        PieChartData = cell(OOPSData.nGroups,1);
-        for g_idx = 1:OOPSData.nGroups
-            PieChartData{g_idx,1} = {};
-        end
-        % end testing
 
         % use the k-means clustering output to label each object with its cluster
         ObjCounter = 1;
@@ -4751,11 +4773,9 @@ pause(0.5)
                 for o_idx = 1:OOPSData.Group(g_idx).Replicate(i_idx).nObjects
                     try
                         OOPSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label = OOPSData.Settings.ObjectLabels(ClusterIdxs(ObjCounter));
-                        PieChartData{g_idx,1}{end+1} = OOPSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label.Name;
                         ObjCounter = ObjCounter+1;
                     catch
                         OOPSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label = OOPSData.Settings.ObjectLabels(end);
-                        PieChartData{g_idx,1}{end+1} = OOPSData.Group(g_idx).Replicate(i_idx).Object(o_idx).Label.Name;
                         ObjCounter = ObjCounter+1;
                     end
                 end
@@ -4929,7 +4949,7 @@ pause(0.5)
         UpdateSummaryDisplay(source,{'Project'});
     end
 
-%% MaskType Selection
+%% MaskType Selection and custom segmentation schemes
 
     function ChangeMaskType(source,~)
         OOPSData.Settings.MaskType = source.Tag;
@@ -5009,29 +5029,46 @@ pause(0.5)
         % update OOPSSettings with new scheme
         OOPSData.Settings.LoadCustomMaskSchemes;
 
-        % update uimenu to show newly saved scheme
-        delete(OOPSData.Handles.hMaskType_CustomScheme);
-
-        % rebuild the menu bar options for custom mask schemes
-        OOPSData.Handles.hMaskType_CustomScheme = uimenu(OOPSData.Handles.hMaskType,'Text','CustomScheme');
-
-        for SchemeIdx = 1:numel(OOPSData.Settings.SchemeNames)
-            OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.SchemeNames{SchemeIdx}]) = ...
-                uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
-                'Text',OOPSData.Settings.SchemeNames{SchemeIdx},...
-                'Tag','CustomScheme',...
-                'Checked','Off',...
-                'Callback',@ChangeMaskType);
+        % update the mask name selection dropdown
+        switch OOPSData.Settings.MaskType
+            case 'Default'
+                OOPSData.Handles.MaskNameDropdown.Items = {'Legacy','Filament','Adaptive'};
+            case 'CustomScheme'
+                OOPSData.Handles.MaskNameDropdown.Items = OOPSData.Settings.SchemeNames;
         end
-
-        OOPSData.Handles.hMaskType_NewScheme = uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
-            'Text','Create new scheme',...
-            'Separator','on',...
-            'Callback',@BuildNewScheme);
 
         % update the log window
         UpdateLog3(OOPSData.Handles.fH,['Saved new scheme:',SchemeFilesPath,NewSchemeName,'.mat'],'append');
     end
+
+    function MaskTypeChanged(source,~)
+        % update the mask name selection dropdown
+        switch source.Value
+            case 'Default'
+                OOPSData.Handles.MaskNameDropdown.Items = {'Legacy','Filament','Adaptive'};
+            case 'CustomScheme'
+                OOPSData.Handles.MaskNameDropdown.Items = OOPSData.Settings.SchemeNames;
+        end
+
+        OOPSData.Settings.MaskSettings.MaskType = source.Value;
+        OOPSData.Settings.MaskSettings.MaskName = OOPSData.Handles.MaskNameDropdown.Value;
+
+        % only update summary overview if 'Project' is selected
+        UpdateSummaryDisplay(source,{'Project'});
+        % update image operations display
+        UpdateThresholdSlider(source);
+    end
+
+    function MaskNameChanged(source,~)
+        % update the mask name
+        OOPSData.Settings.MaskSettings.MaskName = source.Value;
+
+        % only update summary overview if 'Project' is selected
+        UpdateSummaryDisplay(source,{'Project'});
+        % update image operations display
+        UpdateThresholdSlider(source);
+    end
+
 
 %% Change summary display type
 
@@ -5144,20 +5181,19 @@ pause(0.5)
         % update menu bar items
         % update mask type/name options context menu
         % uncheck all mask names for each mask type
-        set(OOPSData.Handles.hMaskType_CustomScheme.Children,'Checked','Off');
-        set(OOPSData.Handles.hMaskType_Default.Children,'Checked','Off');
-        % check the currently selected mask name
-        switch OOPSData.Settings.MaskType
-            case 'Default'
-                OOPSData.Handles.(['hMaskType_Default_',OOPSData.Settings.MaskName]).Checked = 'On';
-            case 'CustomScheme'
-                OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.MaskName]).Checked = 'On';
-        end
+        % set(OOPSData.Handles.hMaskType_CustomScheme.Children,'Checked','Off');
+        % set(OOPSData.Handles.hMaskType_Default.Children,'Checked','Off');
+        % % check the currently selected mask name
+        % switch OOPSData.Settings.MaskType
+        %     case 'Default'
+        %         OOPSData.Handles.(['hMaskType_Default_',OOPSData.Settings.MaskName]).Checked = 'On';
+        %     case 'CustomScheme'
+        %         OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.MaskName]).Checked = 'On';
+        % end
 
-        
-        % update object box type options context menu
-        % set(OOPSData.Handles.hObjectBoxType.Children,'Checked','off');
-        % OOPSData.Handles.(['hObjectBoxType_',OOPSData.Settings.ObjectBoxType]).Checked = 'On';
+
+
+
 
         % update the GUI theme
         UpdateGUITheme(source)

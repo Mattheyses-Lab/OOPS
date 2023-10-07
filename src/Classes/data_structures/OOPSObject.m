@@ -393,16 +393,6 @@ classdef OOPSObject < handle & dynamicprops
             [obj(:).Selected] = deal(NewSelectionStatus{:});
         end
 
-        % function SelectionBoxLineWidth = get.SelectionBoxLineWidth(obj)
-        %     % set value of selection box linewidth depedning on object selection status
-        %     switch obj.Selected
-        %         case false
-        %             SelectionBoxLineWidth = 1;
-        %         case true
-        %             SelectionBoxLineWidth = 2;
-        %     end
-        % end
-
 %% position coordinates, bounding boxes, subarray idxs
 
         function SimplifiedBoundary = get.SimplifiedBoundary(obj)

@@ -56,10 +56,10 @@ classdef OOPSSettings < handle
         GUIForegroundColor = [1 1 1];
         GUIHighlightColor = [1 1 1];
 
-        % sturcturing element for masking
-        SEShape = 'disk';
-        SESize = 3;
-        SELines = 0;
+        % % sturcturing element for masking
+        % SEShape = 'disk';
+        % SESize = 3;
+        % SELines = 0;
         
         % colormaps settings
         Colormaps struct
@@ -94,6 +94,9 @@ classdef OOPSSettings < handle
         % k-means clustering settings
         ClusterSettings struct
 
+        % mask settings
+        MaskSettings struct
+
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
 
@@ -111,11 +114,11 @@ classdef OOPSSettings < handle
         % real world size of each input pixel (micron/px)
         PixelSize = 0.1083;
 
-        % type of mask to generate and use for object detection ('Default', 'CustomScheme', or 'CustomUpload')
-        MaskType = 'Default';
-
-        % name of current masking scheme (i.e. the scheme that will be applied upon Process>Mask)
-        MaskName = 'Legacy';
+        % % type of mask to generate and use for object detection ('Default', 'CustomScheme', or 'CustomUpload')
+        % MaskType = 'Default';
+        % 
+        % % name of current masking scheme (i.e. the scheme that will be applied upon Process>Mask)
+        % MaskName = 'Legacy';
         
         % custom mask schemes
         CustomSchemes CustomMask
@@ -218,6 +221,11 @@ classdef OOPSSettings < handle
         ClusterNormalizationMethod
         ClusterDisplayEvaluation
 
+        % MaskSettings
+        MaskType
+        MaskName
+
+
         % Object variables "long" names
         ObjectPlotVariablesLong
         ObjectPolarPlotVariablesLong
@@ -290,7 +298,8 @@ classdef OOPSSettings < handle
                 'ObjectIntensityProfileSettings.mat',...
                 'ObjectAzimuthDisplaySettings.mat',...
                 'ObjectSelectionSettings.mat',...
-                'ClusterSettings.mat'};
+                'ClusterSettings.mat',...
+                'MaskSettings.mat'};
 
             obj.updateSettingsFromFiles(settingsFiles);
 
@@ -328,20 +337,21 @@ classdef OOPSSettings < handle
             settings.GUIForegroundColor = obj.GUIForegroundColor;
             settings.GUIHighlightColor = obj.GUIHighlightColor;
 
-            % structuring element for masking
-            settings.SEShape = obj.SEShape;
-            settings.SESize = obj.SESize;
-            settings.SELines = obj.SELines;
-
             % object labeling
             settings.ObjectLabels = obj.ObjectLabels;
 
-            % type of mask to generate and use for object detection
-            % Default, CustomScheme, or CustomUpload
-            settings.MaskType = obj.MaskType;
 
-            % various names
-            settings.MaskName = obj.MaskName;
+            % % structuring element for masking
+            % settings.SEShape = obj.SEShape;
+            % settings.SESize = obj.SESize;
+            % settings.SELines = obj.SELines;
+
+            % % type of mask to generate and use for object detection
+            % % Default, CustomScheme, or CustomUpload
+            % settings.MaskType = obj.MaskType;
+            % 
+            % % various names
+            % settings.MaskName = obj.MaskName;
 
             % % object box type ('Box' or 'Boundary')
             % settings.ObjectBoxType = obj.ObjectBoxType;
@@ -866,6 +876,16 @@ classdef OOPSSettings < handle
             ClusterDisplayEvaluation = obj.ClusterSettings.DisplayEvaluation;
         end
 
+%% Mask settings
+
+        function MaskType = get.MaskType(obj)
+            MaskType = obj.MaskSettings.MaskType;
+        end
+
+        function MaskName = get.MaskName(obj)
+            MaskName = obj.MaskSettings.MaskName;
+        end
+
 %% variable names settings
 
         function NameOut = expandVariableName(obj,NameIn)
@@ -948,11 +968,6 @@ classdef OOPSSettings < handle
             obj.GUIForegroundColor = settings.GUIForegroundColor;
             obj.GUIHighlightColor = settings.GUIHighlightColor;
 
-            % sturcturing element for masking
-            obj.SEShape = settings.SEShape;
-            obj.SESize = settings.SESize;
-            obj.SELines = settings.SELines;
-
             % object labeling
             obj.ObjectLabels = settings.ObjectLabels;
 
@@ -961,12 +976,18 @@ classdef OOPSSettings < handle
                 obj.ObjectLabels(LabelIdx).Settings = obj;
             end
 
-            % type of mask to generate and use for object detection
-            % Default, CustomScheme, or CustomUpload
-            obj.MaskType = settings.MaskType;
 
-            % various names
-            obj.MaskName = settings.MaskName;
+            % % sturcturing element for masking
+            % obj.SEShape = settings.SEShape;
+            % obj.SESize = settings.SESize;
+            % obj.SELines = settings.SELines;
+
+            % % type of mask to generate and use for object detection
+            % % Default, CustomScheme, or CustomUpload
+            % obj.MaskType = settings.MaskType;
+            % 
+            % % various names
+            % obj.MaskName = settings.MaskName;
 
             % % object box type ('Box' or 'Boundary')
             % obj.ObjectBoxType = settings.ObjectBoxType;

@@ -511,7 +511,7 @@ classdef OOPSImage < handle & dynamicprops
                             minimumArea = 10;
 
                             % use disk-shaped structuring element to calculate BG
-                            BGImg = imopen(obj.I,strel('disk',obj.Settings.SESize,obj.Settings.SELines));
+                            BGImg = imopen(obj.I,strel('disk',3,0));
                             % subtract BG
                             BGSubtractedImg = obj.I - BGImg;
                             % median filter BG-subtracted image
@@ -645,7 +645,7 @@ classdef OOPSImage < handle & dynamicprops
                             obj.MaskType = obj.Settings.MaskType;
                         case 'Adaptive'
                             % use disk-shaped structuring element to calculate BG
-                            BGImg = imopen(obj.I,strel('disk',obj.Settings.SESize,obj.Settings.SELines));
+                            BGImg = imopen(obj.I,strel('disk',3,0));
                             % subtract BG
                             BGSubtractedImg = obj.I - BGImg;
                             % median filter BG-subtracted image
@@ -1939,13 +1939,10 @@ classdef OOPSImage < handle & dynamicprops
             obj.CurrentObjectIdx = replicate.CurrentObjectIdx;
 
             for i = 1:length(replicate.Object)
-                % testing below - add image handle to the object struct
+                % add image handle to the object struct
                 replicate.Object(i).Parent = obj;
                 % create an instance of OOPSObject
                 obj.Object(i) = OOPSObject.loadobj(replicate.Object(i));
-
-
-                %obj.Object(i).Parent = obj;
             end
         end
     end
