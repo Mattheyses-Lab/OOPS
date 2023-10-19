@@ -147,5 +147,6 @@ function UpdateGUITheme(source)
     OOPSData.Handles.AverageIntensityAxH.Color = 'Black';
     OOPSData.Handles.AzimuthAxH.Color = 'Black';
     OOPSData.Handles.MaskAxH.Color = 'Black';
+    OOPSData.Handles.CustomStatAxH.Color = 'Black';
     
 end
