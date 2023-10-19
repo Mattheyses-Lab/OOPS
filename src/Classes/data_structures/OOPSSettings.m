@@ -1,7 +1,7 @@
 classdef OOPSSettings < handle
 %% OOPSSettings  Settings class for Object-Oriented Polarization Software (OOPS)
 %
-%   An instance of this class loads, stores, and determines various
+%   An instance of this class loads, stores, and/or determines various
 %   settings for a single run of the OOPS GUI
 
     properties
@@ -55,11 +55,6 @@ classdef OOPSSettings < handle
         GUIBackgroundColor = [0 0 0];
         GUIForegroundColor = [1 1 1];
         GUIHighlightColor = [1 1 1];
-
-        % % sturcturing element for masking
-        % SEShape = 'disk';
-        % SESize = 3;
-        % SELines = 0;
         
         % colormaps settings
         Colormaps struct
@@ -148,6 +143,7 @@ classdef OOPSSettings < handle
         ScatterPlotYVariable
         ScatterPlotMarkerSize
         ScatterPlotColorMode
+        ScatterPlotMarkerFaceAlpha
         ScatterPlotBackgroundColor
         ScatterPlotForegroundColor
         ScatterPlotLegendVisible
@@ -339,22 +335,6 @@ classdef OOPSSettings < handle
 
             % object labeling
             settings.ObjectLabels = obj.ObjectLabels;
-
-
-            % % structuring element for masking
-            % settings.SEShape = obj.SEShape;
-            % settings.SESize = obj.SESize;
-            % settings.SELines = obj.SELines;
-
-            % % type of mask to generate and use for object detection
-            % % Default, CustomScheme, or CustomUpload
-            % settings.MaskType = obj.MaskType;
-            % 
-            % % various names
-            % settings.MaskName = obj.MaskName;
-
-            % % object box type ('Box' or 'Boundary')
-            % settings.ObjectBoxType = obj.ObjectBoxType;
 
         end
 
@@ -614,6 +594,10 @@ classdef OOPSSettings < handle
 
         function ScatterPlotColorMode = get.ScatterPlotColorMode(obj)
             ScatterPlotColorMode = obj.ScatterPlotSettings.ColorMode;
+        end
+
+        function ScatterPlotMarkerFaceAlpha = get.ScatterPlotMarkerFaceAlpha(obj)
+            ScatterPlotMarkerFaceAlpha = obj.ScatterPlotSettings.MarkerFaceAlpha;
         end
 
         function ScatterPlotBackgroundColor = get.ScatterPlotBackgroundColor(obj)
