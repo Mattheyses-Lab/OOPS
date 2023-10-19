@@ -137,9 +137,9 @@ function exportImages(source,~)
         
         % control for mac vs pc
         if ismac || isunix
-            loc = [pathname '/' cImage.rawFPMShortName];
+            loc = [pathname '/' cImage(i).rawFPMShortName];
         elseif ispc
-            loc = [pathname '\' cImage.rawFPMShortName];
+            loc = [pathname '\' cImage(i).rawFPMShortName];
         end
         
         %% Intensity
