@@ -65,7 +65,7 @@ nFiles = numel(referenceFiles);
 
 % ensure the proper number of reference images was selected
 if numel(cImage) ~= nFiles
-    uialert(OOPSData.Handles.fH,'Number of reference images must match the number of polarization stacks','Error'); 
+    uialert(OOPSData.Handles.fH,'Number of reference images must match the number of FPM stacks','Error'); 
     return
 end
 
