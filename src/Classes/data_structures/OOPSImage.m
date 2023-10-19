@@ -48,6 +48,7 @@ classdef OOPSImage < handle & dynamicprops
         ObjectDetectionDone (1,1) logical = false
         LocalSBDone (1,1) logical = false
         ReferenceImageLoaded (1,1) logical = false
+        MaskImageLoaded (1,1) logical = false
         
 %% Masking      
 
@@ -87,16 +88,19 @@ classdef OOPSImage < handle & dynamicprops
         rawReferenceFullName (1,:) char
         rawReferenceShortName (1,:) char
         rawReferenceFileType (1,:) char
+
+%% Uploaded mask image
+
+        rawMaskClass (1,:) char
+        rawMaskFileName (1,:) char
+        rawMaskFullName (1,:) char
+        rawMaskShortName (1,:) char
+        rawMaskFileType (1,:) char
         
 %% Pixelwise FPM output statistics
 
         AzimuthImage (:,:) double
         OrderImage (:,:) double
-
-%% Output values        
-        
-        % output values
-        SBAvg double
         
 %% Intensity display limits
 
@@ -216,10 +220,6 @@ classdef OOPSImage < handle & dynamicprops
         % list of pixel Orders for all of the pixels in the image mask
         OrderList (:,1) double
 
-        % various filtered output
-        bw_filt
-        FilteredOrderAvg
-
         % index of this image in [obj.Parent.Replicate()]
         SelfIdx (1,1)
 
@@ -274,14 +274,8 @@ classdef OOPSImage < handle & dynamicprops
             delete(obj);
         end
 
-        % saveobj() method
+        % saveobj method
         function replicate = saveobj(obj)
-
-            replicate.rawFPMFileName = obj.rawFPMFileName;
-            replicate.rawFPMShortName = obj.rawFPMShortName;
-            replicate.rawFPMFullName = obj.rawFPMFullName;
-            replicate.Width = obj.Width;
-            replicate.Height = obj.Height;
 
             % status tracking
             replicate.FilesLoaded = obj.FilesLoaded;
@@ -290,15 +284,30 @@ classdef OOPSImage < handle & dynamicprops
             replicate.FPMStatsDone = obj.FPMStatsDone;
             replicate.ObjectDetectionDone = obj.ObjectDetectionDone;
             replicate.LocalSBDone = obj.LocalSBDone;
-            replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;
+            replicate.ReferenceImageLoaded = obj.ReferenceImageLoaded;            
+
+            % FPM stack info
+            replicate.rawFPMFileName = obj.rawFPMFileName;
+            replicate.rawFPMShortName = obj.rawFPMShortName;
+            replicate.rawFPMFullName = obj.rawFPMFullName;
+            replicate.Width = obj.Width;
+            replicate.Height = obj.Height;
+
+            % reference image info
+            replicate.rawReferenceFileName = obj.rawReferenceFileName;
+            replicate.rawReferenceShortName = obj.rawReferenceShortName;
+            replicate.rawReferenceFullName = obj.rawReferenceFullName;
 
             % image mask
             replicate.bw = sparse(obj.bw);
 
-            % testing below
+            % label matrix
             replicate.L = sparse(obj.L);
 
-            replicate.ThresholdAdjusted = obj.ThresholdAdjusted; 
+            % threshold adjusted flag
+            replicate.ThresholdAdjusted = obj.ThresholdAdjusted;
+
+            % threshold level
             replicate.level = obj.level;
 
             replicate.EnhancedImg = obj.EnhancedImg;
@@ -311,8 +320,6 @@ classdef OOPSImage < handle & dynamicprops
 
             replicate.IntensityBinCenters = obj.IntensityBinCenters;
             replicate.IntensityHistPlot = obj.IntensityHistPlot;
-
-            replicate.SBAvg = obj.SBAvg;
 
             replicate.PrimaryIntensityDisplayLimits = obj.PrimaryIntensityDisplayLimits;
             replicate.ReferenceIntensityDisplayLimits = obj.ReferenceIntensityDisplayLimits;
@@ -390,7 +397,6 @@ classdef OOPSImage < handle & dynamicprops
                 userScaledIntensityOverlayRGBProp.GetMethod = @(o) getCustomUserScaledIntensityOverlayRGB(o,statName);
             end
         end
-
 
         function value = getCustomUserScaledImage(obj,statName)
             % normalize the image data so that values [obj.xDisplayRange(1) obj.xDisplayRange(2)] maps to [0 1]
@@ -528,7 +534,6 @@ classdef OOPSImage < handle & dynamicprops
                                 % on loop iterations 2:n, double the threshold until nObjects < 500
                                 if notfirst
                                     obj.level = obj.level*2;
-                                    %UpdateLog3(source,[chartab,chartab,'Too many objects, adjusting thresh and trying again...'],'append');
                                 end
                                 notfirst = true;
                                 % binarize median-filtered image at level determined above
@@ -697,8 +702,6 @@ classdef OOPSImage < handle & dynamicprops
                     % get the final output image (should be a logical mask image)
                     obj.bw = sparse(customScheme.Images(end).ImageData);
 
-
-
                     if ismember(customScheme.ThreshType,{'Otsu','Adaptive'})
                         % store the enhanced grayscale image (from which the mask is built)
                         obj.EnhancedImg = customScheme.EnhancedImg;
@@ -751,78 +754,42 @@ classdef OOPSImage < handle & dynamicprops
 
         end
 
-        function FindOrder(obj)
-            % remember to remove comment below!
-            % get the pixel-normalized, flat-field corrected intensity stack
-            pixelNorm = obj.ffcFPMPixelNorm;
-
-            %% anisotropy (DeMay)
-            % a = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
-            % b = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
-            % c = sum(obj.ffcFPMStack,3);
-            % obj.OrderImage = hypot(a,b)./c;
-
-            %% polarization factor / degree of linear polarization (Mehta, Lee)
-            % S1 = obj.ffcFPMStack(:,:,1) - obj.ffcFPMStack(:,:,3);
-            % S2 = obj.ffcFPMStack(:,:,2) - obj.ffcFPMStack(:,:,4);
-            % S0 = sum(obj.ffcFPMStack,3)./2;
-            % obj.OrderImage = hypot(S1,S2)./S0;
-
-
-
-            % orthogonal polarization difference components
-            a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
-            b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
-            % find Order Factor
-            obj.OrderImage = zeros(size(pixelNorm(:,:,1)));
-            obj.OrderImage(:) = sqrt(a(:).^2+b(:).^2);
-            % find azimuth image
-            obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
-            % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
-            obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
-            % % update completion status
-            % obj.OrderDone = true;
-        end
-
         function FindFPMStatistics(obj)
 
             % default order parameter and azimuth
-
             % get the pixel-normalized, flat-field corrected intensity stack
             pixelNorm = obj.ffcFPMPixelNorm;
-
             % orthogonal polarization difference components
             a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
             b = pixelNorm(:,:,2) - pixelNorm(:,:,4);
-            % find Order Factor
+            % preallocate order and azimuth images
             obj.OrderImage = zeros(size(pixelNorm(:,:,1)));
-            obj.OrderImage(:) = sqrt(a(:).^2+b(:).^2);
-            % find azimuth image
-            obj.AzimuthImage = zeros(size(pixelNorm(:,:,1)));
-            % WARNING: Output is in radians! Counterclockwise with respect to the horizontal direction in the image
-            obj.AzimuthImage(:) = (1/2).*atan2(b(:),a(:));
-
-
-
+            obj.AzimuthImage = obj.OrderImage;
+            % calculate order | clip output to the range [0,1]
+            % obj.OrderImage(:) = min(max(sqrt(a(:).^2+b(:).^2),0),1);
+            obj.OrderImage(:) = min(max(hypot(a(:),b(:)),0),1);
+            % calculate azimuth | output in radians! CCW w.r.t. the horizontal direction in the image
+            obj.AzimuthImage(:) = (0.5).*atan2(b(:),a(:));
 
             % custom order statistics
-
             % get the vector of custom statistic objects
             customStatistics = obj.Settings.CustomStatistics;
-
+            % one or more custom statistics exist
             if ~(isempty(customStatistics))
-
                 % for each custom statistic
                 for i = 1:numel(customStatistics)
                     % get the next statistic
                     thisStatistic = customStatistics(i);
-                    % call the function handle specified by the custom statistic object, store the value in dynamic property
-                    %obj.(thisStatistic.StatisticName) = feval(thisStatistic.StatisticFun,obj.ffcFPMStack);
-                    obj.([thisStatistic.StatisticName,'Image']) = thisStatistic.StatisticFun(obj.ffcFPMStack);
+                    % get the allowed range of the statistic
+                    statRange = thisStatistic.StatisticRange;
+                    % call the function handle specified by the custom statistic object,
+                    % store the value in dynamic property,
+                    % and clip the output to the user-defined range
+                    obj.([thisStatistic.StatisticName,'Image']) = ...
+                        min(max(thisStatistic.StatisticFun(obj.ffcFPMStack),statRange(1)),statRange(2));
                 end
             end
-
-            % update the status flag to indicate custom FPM stats were calculated
+            % update the status flag to indicate built-in and custom FPM stats were calculated
             obj.FPMStatsDone = true;
         end
 
@@ -1357,7 +1324,6 @@ classdef OOPSImage < handle & dynamicprops
                 'Image',...
                 'MajorAxisLength',...
                 'MinorAxisLength',...
-                'Orientation',...
                 'Perimeter',...
                 'PixelIdxList',...
                 'PixelList',...
@@ -1528,6 +1494,8 @@ classdef OOPSImage < handle & dynamicprops
                         otherwise
                             ThreshPanelTitle = 'Manual thresholding unavailable for this masking scheme';
                     end
+                case 'CustomUpload'
+                    ThreshPanelTitle = 'Manual thresholding unavailable for uploaded masks';
             end
         end
 
@@ -1552,6 +1520,8 @@ classdef OOPSImage < handle & dynamicprops
                         otherwise
                             ThreshStatisticName = false;
                     end
+                case 'CustomUpload'
+                    ThreshStatisticName = false;
             end
             % when set to false, will throw an error that we will catch when updating display
         end
@@ -1577,6 +1547,8 @@ classdef OOPSImage < handle & dynamicprops
                         otherwise
                             ManualThreshEnabled = false;
                     end
+                case 'CustomUpload'
+                    ManualThreshEnabled = false;
             end
         end
 
@@ -1592,10 +1564,10 @@ classdef OOPSImage < handle & dynamicprops
                 "Number of objects",...
                 "Mask name",...
                 "Mean pixel Order",...
-                "Files loaded",...
+                "FPM stack loaded",...
                 "FFC performed",...
                 "Mask generated",...
-                "Order/azimuth calculated",...
+                "FPM stats calculated",...
                 "Objects detected",...
                 "Local S/B calculated"];
 
@@ -1805,56 +1777,45 @@ classdef OOPSImage < handle & dynamicprops
                 obj.UserScaledAverageIntensityImageRGB + obj.UserScaledReferenceImageRGB;
         end
 
-%% dependent 'get' methods for filtered object output values
-
-
-        function bw_filt = get.bw_filt(obj)
-        % returns a mask only containing objects with S/B >= 3
-        % this will be expanded to include more customization 
-        % of the filters and their values
-
-        % this could be done with a class, 'CutsomFilter', for example
-        %   myFilt = CustomFilt('Name','SBRatio','Relationship','>=','Value','3')
-        %   filtExpression = ['[obj.Object.',myFilt.Name,']',myFilt.Relationship,myFilt.Value,')'];
-        %   FilteredObjects = obj.Object(eval(filtExpression));
-
-            FilteredObjects = obj.Object([obj.Object.SBRatio]>=3);
-            PixelIdxList = vertcat(FilteredObjects(:).PixelIdxList);
-            bw_filt = false(size(obj.bw));
-            bw_filt(PixelIdxList) = true;
-
-        end
-
-        function FilteredOrderAvg = get.FilteredOrderAvg(obj)
-            % average Order of all pixels identified by the mask
-            try
-                FilteredOrderAvg = mean(obj.OrderImage(obj.bw_filt));
-            catch
-                FilteredOrderAvg = NaN;
-            end
-        end
-
     end
 
     methods (Static)
         function obj = loadobj(replicate)
 
-            % obj = OOPSImage(OOPSGroup.empty());
+            % create an instance of OOPSImage by passing the Parent property of replicate
             obj = OOPSImage(replicate.Parent);
+
+    %% load status flags
+
+            % status tracking variables
+            obj.FilesLoaded = replicate.FilesLoaded;
+            obj.FFCDone = replicate.FFCDone;
+            obj.MaskDone = replicate.MaskDone;
+
+            % testing below
+            try
+                obj.FPMStatsDone = replicate.FPMStatsDone;
+            catch
+                obj.FPMStatsDone = replicate.OFDone;
+            end
+            % end testing
+
+            obj.ObjectDetectionDone = replicate.ObjectDetectionDone;
+            obj.LocalSBDone = replicate.LocalSBDone;
+            obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;
+
+    %% load FPM stacks
 
             % info about the image path and rawFPMFileName
             obj.rawFPMFileName = replicate.rawFPMFileName;
             obj.rawFPMShortName = replicate.rawFPMShortName;
             obj.rawFPMFullName = replicate.rawFPMFullName;
-
             % split on the '.'
             filenameSplit = strsplit(obj.rawFPMFileName,'.');
             % get the file extension
             obj.rawFPMFileType = filenameSplit{2};
-
-            %% attempt to load the raw data using the saved rawFPMFileName
-
-            disp(['Loading ',obj.rawFPMFullName,'...']);
+            % update command window with status
+            disp(['Loading FPM stack:',obj.rawFPMFullName,'...']);
             % get file data structure
             bfData = bfopen(char(replicate.rawFPMFullName));
             % get the image info (pixel values and filename) from the first element of the bf cell array
@@ -1880,30 +1841,33 @@ classdef OOPSImage < handle & dynamicprops
             obj.rawFPMStack = zeros(obj.Height,obj.Width,4);
             % add the raw image data to this OOPSImage
             obj.rawFPMStack = imageData;
-
-            %% end raw data loading
-
             % average the raw data (polarization stack)
             obj.rawFPMAverage = mean(im2double(obj.rawFPMStack),3);
 
-            % status tracking variables
-            obj.FilesLoaded = replicate.FilesLoaded;
-            obj.FFCDone = replicate.FFCDone;
-            obj.MaskDone = replicate.MaskDone;
+    %% load reference images
 
-            % testing below
-            try
-                obj.FPMStatsDone = replicate.FPMStatsDone;
-            catch
-                obj.FPMStatsDone = replicate.OFDone;
+            if obj.ReferenceImageLoaded
+                % reference image info
+                obj.rawReferenceFileName = replicate.rawReferenceFileName;
+                obj.rawReferenceShortName = replicate.rawReferenceShortName;
+                obj.rawReferenceFullName = replicate.rawReferenceFullName;
+                % split on the '.'
+                filenameSplit = strsplit(obj.rawReferenceFileName,'.');
+                % get the file extension
+                obj.rawReferenceFileType = filenameSplit{2};
+                % open the image with bioformats
+                bfData = bfopen(char(obj.rawReferenceFullName));
+                % get the image info (pixel values and filename) from the first element of the bf cell array
+                imageInfo = bfData{1,1};
+                % get the image data
+                obj.rawReferenceImage = imageInfo{1,1};
+                % get the class of the input
+                obj.rawReferenceClass = class(obj.rawReferenceImage);
+                % rescaled, double Reference image
+                obj.ReferenceImage = Scale0To1(im2double(obj.rawReferenceImage));
             end
-            % end testing
 
-
-
-            obj.ObjectDetectionDone = replicate.ObjectDetectionDone;
-            obj.LocalSBDone = replicate.LocalSBDone;
-            obj.ReferenceImageLoaded = replicate.ReferenceImageLoaded;
+    %% load mask and label matrix
 
             obj.bw = replicate.bw;
 
@@ -1930,8 +1894,6 @@ classdef OOPSImage < handle & dynamicprops
 
             obj.IntensityBinCenters = replicate.IntensityBinCenters;
             obj.IntensityHistPlot = replicate.IntensityHistPlot;
-
-            obj.SBAvg = replicate.SBAvg;
 
             obj.PrimaryIntensityDisplayLimits = replicate.PrimaryIntensityDisplayLimits;
             obj.ReferenceIntensityDisplayLimits = replicate.ReferenceIntensityDisplayLimits;
