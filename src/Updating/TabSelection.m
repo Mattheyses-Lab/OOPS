@@ -324,13 +324,6 @@ function TabSelection(source,~)
             OOPSData.Handles.AzimuthAxH.HitTest = 'On';
             OOPSData.Handles.AzimuthAxH.Visible = 'On';
     
-
-            % %set(OOPSData.Handles.PhaseBarComponents,'Visible','On');
-            % % testing below
-            % OOPSData.Handles.AzimuthColorbar.Visible = 'On';
-            % % end testing
-
-    
             OOPSData.Handles.AverageIntensityImgH.Visible = 'On';
             OOPSData.Handles.AverageIntensityAxH.Title.Visible = 'On';
             OOPSData.Handles.AverageIntensityAxH.Toolbar.Visible = 'On';
