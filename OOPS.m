@@ -59,6 +59,9 @@ OOPSData.Handles.hSaveProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Save p
 OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FFC files','Separator','On','Callback',@loadFFCImages);
 OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM files','Callback',@loadFPMImages);
 OOPSData.Handles.hLoadReferenceImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load reference images','Callback',@loadReferenceImages);
+OOPSData.Handles.hLoadMaskImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load mask images');
+OOPSData.Handles.hLoadMaskImages_4conn = uimenu(OOPSData.Handles.hLoadMaskImages,'Text','Label 4-connected objects','Callback',@loadMaskImages,'Tag','4conn');
+OOPSData.Handles.hLoadMaskImages_branches = uimenu(OOPSData.Handles.hLoadMaskImages,'Text','Label branches','Callback',@loadMaskImages,'Tag','branches');
 % save data
 OOPSData.Handles.hSaveImageData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export images','Separator','On','Callback',@exportImages);
 OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Save object data','Callback',@SaveObjectData);
@@ -94,31 +97,6 @@ OOPSData.Handles.hGUIFontSize = uimenu(OOPSData.Handles.hGUI,'Text','Font Size',
 % options for GUI font size
 OOPSData.Handles.hGUIFontSize_Larger = uimenu(OOPSData.Handles.hGUIFontSize,'Text','Larger','Callback',@ChangeGUIFontSize);
 OOPSData.Handles.hGUIFontSize_Smaller = uimenu(OOPSData.Handles.hGUIFontSize,'Text','Smaller','Callback',@ChangeGUIFontSize);
-
-% % Options for mask type ('Default' or 'Custom', 'Upload mask' in development
-% OOPSData.Handles.hMaskType = uimenu(OOPSData.Handles.hOptionsMenu,'Text','Mask Type','Separator','on');
-% % Option to select 'Default' mask type
-% OOPSData.Handles.hMaskType_Default = uimenu(OOPSData.Handles.hMaskType,'Text','Default');
-% % Names of 'Default' masks
-% OOPSData.Handles.hMaskType_Default_Legacy = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Legacy','Checked','On','Tag','Default','Callback', @ChangeMaskType);
-% OOPSData.Handles.hMaskType_Default_Filament = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Filament','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
-% OOPSData.Handles.hMaskType_Default_Adaptive = uimenu(OOPSData.Handles.hMaskType_Default,'Text','Adaptive','Checked','Off','Tag','Default','Callback', @ChangeMaskType);
-% % Option to select 'Custom' mask type
-% OOPSData.Handles.hMaskType_CustomScheme = uimenu(OOPSData.Handles.hMaskType,'Text','CustomScheme');
-% % Load the custom schemes and make a menu option for each one
-% for i = 1:numel(OOPSData.Settings.SchemeNames)
-%     OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.SchemeNames{i}]) = ...
-%         uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
-%         'Text',OOPSData.Settings.SchemeNames{i},...
-%         'Tag','CustomScheme',...
-%         'Checked','Off',...
-%         'Callback',@ChangeMaskType);
-% end
-% % Option to create new 'Custom' mask scheme
-% OOPSData.Handles.hMaskType_NewScheme = uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
-%     'Text','Create new scheme',...
-%     'Separator','on',...
-%     'Callback',@BuildNewScheme);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
 
@@ -867,7 +845,7 @@ set(OOPSData.Handles.ScatterPlotSettingsGrid,...
     'Padding',[5 5 5 5],...
     'RowSpacing',5,...
     'ColumnSpacing',5,...
-    'RowHeight',{20,20,20,20,20,20,20},...
+    'RowHeight',{20,20,20,20,20,20,20,20},...
     'ColumnWidth',{'fit','1x'});
 
 % X-axis variable
@@ -950,12 +928,31 @@ OOPSData.Handles.ScatterPlotColorModeDropdown = uidropdown(...
 OOPSData.Handles.ScatterPlotColorModeDropdown.Layout.Row = 4;
 OOPSData.Handles.ScatterPlotColorModeDropdown.Layout.Column = 2;
 
+% marker face alpha
+OOPSData.Handles.ScatterPlotMarkerFaceAlphaLabel = uilabel(...
+    'Parent',OOPSData.Handles.ScatterPlotSettingsGrid,...
+    'Text','Marker face alpha',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.ScatterPlotMarkerFaceAlphaLabel.Layout.Row = 5;
+OOPSData.Handles.ScatterPlotMarkerFaceAlphaLabel.Layout.Column = 1;
+
+OOPSData.Handles.ScatterPlotMarkerFaceAlphaDropdown = uidropdown(...
+    'Parent',OOPSData.Handles.ScatterPlotSettingsGrid,...
+    'Items',{'0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1'},...
+    'ItemsData',{0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1},...
+    'Value',OOPSData.Settings.ScatterPlotMarkerFaceAlpha,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@ScatterPlotMarkerFaceAlphaChanged);
+OOPSData.Handles.ScatterPlotMarkerFaceAlphaDropdown.Layout.Row = 5;
+OOPSData.Handles.ScatterPlotMarkerFaceAlphaDropdown.Layout.Column = 2;
+
 % background color
 OOPSData.Handles.ScatterPlotBackgroundColorDropdownLabel = uilabel('Parent',OOPSData.Handles.ScatterPlotSettingsGrid,...
     'Text','Background color',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
-OOPSData.Handles.ScatterPlotBackgroundColorDropdownLabel.Layout.Row = 5;
+OOPSData.Handles.ScatterPlotBackgroundColorDropdownLabel.Layout.Row = 6;
 OOPSData.Handles.ScatterPlotBackgroundColorDropdownLabel.Layout.Column = 1;
 
 OOPSData.Handles.ScatterPlotBackgroundColorDropdown = uidropdown('Parent',OOPSData.Handles.ScatterPlotSettingsGrid,...
@@ -965,7 +962,7 @@ OOPSData.Handles.ScatterPlotBackgroundColorDropdown = uidropdown('Parent',OOPSDa
     'FontName',OOPSData.Settings.DefaultFont,...
     'ClickedFcn',@colorDropdownClicked,...
     'UserData',{@ScatterPlotBackgroundColorChanged});
-OOPSData.Handles.ScatterPlotBackgroundColorDropdown.Layout.Row = 5;
+OOPSData.Handles.ScatterPlotBackgroundColorDropdown.Layout.Row = 6;
 OOPSData.Handles.ScatterPlotBackgroundColorDropdown.Layout.Column = 2;
 updateColorDropdownStyles(OOPSData.Handles.ScatterPlotBackgroundColorDropdown);
 
@@ -974,7 +971,7 @@ OOPSData.Handles.ScatterPlotForegroundColorDropdownLabel = uilabel('Parent',OOPS
     'Text','Foreground color',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
-OOPSData.Handles.ScatterPlotForegroundColorDropdownLabel.Layout.Row = 6;
+OOPSData.Handles.ScatterPlotForegroundColorDropdownLabel.Layout.Row = 7;
 OOPSData.Handles.ScatterPlotForegroundColorDropdownLabel.Layout.Column = 1;
 
 OOPSData.Handles.ScatterPlotForegroundColorDropdown = uidropdown('Parent',OOPSData.Handles.ScatterPlotSettingsGrid,...
@@ -984,7 +981,7 @@ OOPSData.Handles.ScatterPlotForegroundColorDropdown = uidropdown('Parent',OOPSDa
     'FontName',OOPSData.Settings.DefaultFont,...
     'ClickedFcn',@colorDropdownClicked,...
     'UserData',{@ScatterPlotForegroundColorChanged});
-OOPSData.Handles.ScatterPlotForegroundColorDropdown.Layout.Row = 6;
+OOPSData.Handles.ScatterPlotForegroundColorDropdown.Layout.Row = 7;
 OOPSData.Handles.ScatterPlotForegroundColorDropdown.Layout.Column = 2;
 updateColorDropdownStyles(OOPSData.Handles.ScatterPlotForegroundColorDropdown);
 
@@ -993,7 +990,7 @@ OOPSData.Handles.ScatterPlotLegendVisibleDropdownLabel = uilabel('Parent',OOPSDa
     'Text','Legend',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
-OOPSData.Handles.ScatterPlotLegendVisibleDropdownLabel.Layout.Row = 7;
+OOPSData.Handles.ScatterPlotLegendVisibleDropdownLabel.Layout.Row = 8;
 OOPSData.Handles.ScatterPlotLegendVisibleDropdownLabel.Layout.Column = 1;
 
 OOPSData.Handles.ScatterPlotLegendVisibleDropdown = uidropdown('Parent',OOPSData.Handles.ScatterPlotSettingsGrid,...
@@ -1002,7 +999,7 @@ OOPSData.Handles.ScatterPlotLegendVisibleDropdown = uidropdown('Parent',OOPSData
     'Value',OOPSData.Settings.ScatterPlotLegendVisible,...
     'FontName',OOPSData.Settings.DefaultFont,...
     'ValueChangedFcn',@ScatterPlotLegendVisibleChanged);
-OOPSData.Handles.ScatterPlotLegendVisibleDropdown.Layout.Row = 7;
+OOPSData.Handles.ScatterPlotLegendVisibleDropdown.Layout.Row = 8;
 OOPSData.Handles.ScatterPlotLegendVisibleDropdown.Layout.Column = 2;
 
 %% CHECKPOINT
@@ -2263,7 +2260,7 @@ OOPSData.Handles.ClusterDisplayEvaluationDropdown.Layout.Column = 2;
 
 %% CHECKPOINT
 
-disp('Setting up threshold slider panel...')
+disp('Setting up mask settings...')
 
 %% Mask settings
 
@@ -2334,7 +2331,9 @@ OOPSData.Handles.MaskNameDropdown = uidropdown(...
 OOPSData.Handles.MaskNameDropdown.Layout.Row = 2;
 OOPSData.Handles.MaskNameDropdown.Layout.Column = 2;
 
+%% CHECKPOINT
 
+disp('Setting up threshold slider panel...')
 
 %% Mask threshold adjustment panel
 
@@ -3255,6 +3254,10 @@ OOPSData.Handles.ObjectAzimuthLines = gobjects(1,1);
 OOPSData.Handles.ObjectMidlinePlot = gobjects(1,1);
 OOPSData.Handles.ObjectBoundaryPlot = gobjects(1,1);
 
+% testing below
+OOPSData.Handles.LineScanRectangle = gobjects(1,1);
+% end testing
+
 % set default on/off state of toolbar buttons
 OOPSData.Handles.ScaleToMaxAzimuth.Visible = 'off';
 
@@ -3394,7 +3397,6 @@ pause(0.5)
         UpdateImages(source);
     end
 
-
     function SwarmPlotYVariableChanged(source,~)
         OOPSData.Settings.SwarmPlotSettings.YVariable = source.Value;
         UpdateImages(source);
@@ -3491,7 +3493,6 @@ pause(0.5)
         OOPSData.Handles.SwarmPlot.MarkerEdgeColor = OOPSData.Settings.SwarmPlotMarkerEdgeColor;
     end
 
-
     function SaveSwarmPlotSettings(source,~)
         % saves the currently selected SwarmPlot settings to a .mat file
         % which will be loaded in future sessions by OOPSSettings
@@ -3508,6 +3509,7 @@ pause(0.5)
         end
         UpdateLog3(source,'Done.','append');
     end
+ 
 %% Scatter plot callbacks/settings
 
     function CopyScatterPlotVector(source,~)
@@ -3521,6 +3523,11 @@ pause(0.5)
     function ScatterPlotColorModeChanged(source,~)
         OOPSData.Settings.ScatterPlotSettings.ColorMode = source.Value;
         UpdateImages(source);
+    end
+
+    function ScatterPlotMarkerFaceAlphaChanged(source,~)
+        OOPSData.Settings.ScatterPlotSettings.MarkerFaceAlpha = source.Value;
+        set(OOPSData.Handles.hScatterPlot,'MarkerFaceAlpha',OOPSData.Settings.ScatterPlotSettings.MarkerFaceAlpha);
     end
 
     function ScatterPlotMarkerSizeChanged(source,~)
@@ -3830,7 +3837,6 @@ pause(0.5)
         end
         UpdateLog3(source,'Done.','append');
     end
-
 
 %% Azimuth stick plot callbacks/settings
 
@@ -4265,7 +4271,6 @@ pause(0.5)
         end
     end
 
-
     function ClusterSettingsChanged(source,~)
         % get the variable from the Tag property of the calling object
         varName = source.Tag;
@@ -4351,11 +4356,13 @@ pause(0.5)
         OOPSData.CurrentImage(1).PrimaryIntensityDisplayLimits = source.Value;
 
         if ismember(OOPSData.Settings.CurrentTab,[{'Mask','Order','Azimuth'},OOPSData.Settings.CustomStatisticDisplayNames.'])
-            if OOPSData.CurrentImage(1).ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value
-                UpdateCompositeRGB();
-            else
-                UpdateAverageIntensityImage(source);
-            end
+            UpdateAverageIntensityImage(source);
+            % if OOPSData.CurrentImage(1).ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value
+            %     % UpdateCompositeRGB();
+            %     UpdateAverageIntensityImage(source);
+            % else
+            %     UpdateAverageIntensityImage(source);
+            % end
         end
 
         switch OOPSData.Settings.CurrentTab
@@ -4393,7 +4400,7 @@ pause(0.5)
 
         OOPSData.CurrentImage(1).ReferenceIntensityDisplayLimits = source.Value;
         if OOPSData.CurrentImage(1).ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value
-            UpdateCompositeRGB();
+            UpdateAverageIntensityImage(source);
         end
 
         drawnow limitrate
@@ -4401,14 +4408,6 @@ pause(0.5)
     end
 
     function UpdateCompositeRGB()
-        % OOPSData.Handles.AverageIntensityImgH.CData = ...
-        %     CompositeRGB(Scale0To1(OOPSData.CurrentImage(1).I),...
-        %     OOPSData.Settings.IntensityColormap,...
-        %     OOPSData.CurrentImage(1).PrimaryIntensityDisplayLimits,...
-        %     Scale0To1(OOPSData.CurrentImage(1).ReferenceImage),...
-        %     OOPSData.Settings.ReferenceColormap,...
-        %     OOPSData.CurrentImage(1).ReferenceIntensityDisplayLimits);
-
         OOPSData.Handles.AverageIntensityImgH.CData = OOPSData.CurrentImage(1).UserScaledAverageIntensityReferenceCompositeRGB;
         OOPSData.Handles.AverageIntensityAxH.CLim = [0 1];
     end
@@ -4483,8 +4482,6 @@ pause(0.5)
         drawnow limitrate
 
     end
-
-
 
 %% Setting axes properties during startup (to be eventually replaced with custom container classes)
 
@@ -4951,19 +4948,6 @@ pause(0.5)
 
 %% MaskType Selection and custom segmentation schemes
 
-    function ChangeMaskType(source,~)
-        OOPSData.Settings.MaskType = source.Tag;
-        OOPSData.Settings.MaskName = source.Text;
-        set(OOPSData.Handles.hMaskType_CustomScheme.Children,'Checked','Off');
-        set(OOPSData.Handles.hMaskType_Default.Children,'Checked','Off');
-        % set chosen mask type to checked
-        source.Checked = 'On';
-        % only update summary overview if 'Project' is selected
-        UpdateSummaryDisplay(source,{'Project'});
-        % update image operations display
-        UpdateThresholdSlider(source);
-    end
-
     function BuildNewScheme(~,~)
         
         SchemeNameCell = SimpleFormFig('Enter a name for the masking scheme',{'Scheme name'},'White','Black');
@@ -5069,7 +5053,6 @@ pause(0.5)
         UpdateThresholdSlider(source);
     end
 
-
 %% Change summary display type
 
     function ChangeSummaryDisplay(source,~)
@@ -5132,28 +5115,8 @@ pause(0.5)
         % add the project with handles to the gui
         guidata(OOPSData.Handles.fH,OOPSData);
 
-        % update some settings for the current window
-
-        % update custom schemes menu options
-        % delete all the existing options
-        delete(OOPSData.Handles.hMaskType_CustomScheme.Children)
-        % Load the custom schemes and make a menu option for each one
-        for SchemeIdx = 1:numel(OOPSData.Settings.SchemeNames)
-            OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.SchemeNames{SchemeIdx}]) = ...
-                uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
-                'Text',OOPSData.Settings.SchemeNames{SchemeIdx},...
-                'Tag','CustomScheme',...
-                'Checked','Off',...
-                'Callback',@ChangeMaskType);
-        end
-        % Option to create new 'Custom' mask scheme
-        OOPSData.Handles.hMaskType_NewScheme = uimenu(OOPSData.Handles.hMaskType_CustomScheme,...
-            'Text','Create new scheme',...
-            'Separator','on',...
-            'Callback',@BuildNewScheme);
-
-        % update swarm plot grouping type drop down
-        OOPSData.Handles.SwarmPlotGroupingTypeDropdown.Value = OOPSData.Settings.SwarmPlotGroupingType;
+        % % update swarm plot grouping type drop down
+        % OOPSData.Handles.SwarmPlotGroupingTypeDropdown.Value = OOPSData.Settings.SwarmPlotGroupingType;
 
         % update the display with selected tab
         Tab2Switch2 = OOPSData.Settings.CurrentTab;
@@ -5178,26 +5141,8 @@ pause(0.5)
         % update current tab using uimenu object as the source
         TabSelection(Menu2Pass);
         UpdateImages(source);
-        % update menu bar items
-        % update mask type/name options context menu
-        % uncheck all mask names for each mask type
-        % set(OOPSData.Handles.hMaskType_CustomScheme.Children,'Checked','Off');
-        % set(OOPSData.Handles.hMaskType_Default.Children,'Checked','Off');
-        % % check the currently selected mask name
-        % switch OOPSData.Settings.MaskType
-        %     case 'Default'
-        %         OOPSData.Handles.(['hMaskType_Default_',OOPSData.Settings.MaskName]).Checked = 'On';
-        %     case 'CustomScheme'
-        %         OOPSData.Handles.(['hMaskType_CustomScheme_',OOPSData.Settings.MaskName]).Checked = 'On';
-        % end
-
-
-
-
-
         % update the GUI theme
         UpdateGUITheme(source)
-
         % restore old pointer
         OOPSData.Handles.fH.Pointer = OldPointer;
         % update log to indicate completion
@@ -5795,6 +5740,7 @@ pause(0.5)
             delete(OOPSData.Handles.LineScanFig);
             delete(OOPSData.Handles.LineScanListeners(1));
             delete(OOPSData.Handles.LineScanListeners(2));
+            delete(OOPSData.Handles.LineScanRectangle);
         catch
             % do nothing for now
         end
@@ -5819,8 +5765,12 @@ pause(0.5)
                     'Position',[0.65 0.8 0.35 0.2],...
                     'CloseRequestFcn',@CloseLineScanFig);
                 
-                OOPSData.Handles.LineScanAxes = uiaxes(OOPSData.Handles.LineScanFig,'Units','Normalized','OuterPosition',[0 0 1 1]);
-                
+                OOPSData.Handles.LineScanAxes = uiaxes(OOPSData.Handles.LineScanFig,...
+                    'Units','Normalized',...
+                    'OuterPosition',[0 0 1 1]);
+                OOPSData.Handles.LineScanAxes.XLabel.String = 'Distance (um)';
+                OOPSData.Handles.LineScanAxes.YLabel.String = 'Integrated Intensity';
+
                 OOPSData.Handles.LineScanROI.Position = [x1 y1; x2 y2];
                 
                 OOPSData.Handles.LineScanListeners(1) = addlistener(OOPSData.Handles.LineScanROI,'MovingROI',@LineScanROIMoving);
@@ -5846,7 +5796,9 @@ pause(0.5)
                     'CloseRequestFcn',@CloseLineScanFig,...
                     'Color','White');
                 
-                OOPSData.Handles.LineScanAxes = uiaxes(OOPSData.Handles.LineScanFig,'Units','Normalized','OuterPosition',[0 0 1 1]);
+                OOPSData.Handles.LineScanAxes = uiaxes(OOPSData.Handles.LineScanFig,...
+                    'Units','Normalized',...
+                    'OuterPosition',[0 0 1 1]);
                 OOPSData.Handles.LineScanAxes.XLabel.String = 'Distance (um)';
                 OOPSData.Handles.LineScanAxes.YLabel.String = 'Average Order';
                 
@@ -5855,10 +5807,12 @@ pause(0.5)
                 OOPSData.Handles.LineScanListeners(1) = addlistener(OOPSData.Handles.LineScanROI,'MovingROI',@LineScanROIMoving);
                 OOPSData.Handles.LineScanListeners(2) = addlistener(OOPSData.Handles.LineScanROI,'ROIMoved',@LineScanROIMoved);
 
-
-
-
         end
+
+        % invoke the 'ROIMoved' callback to update the line scan
+        LineScanROIMoved(OOPSData.Handles.LineScanROI,[]);
+        % move roi line on top of rectangle
+        bringToFront(OOPSData.Handles.LineScanROI);
 
     end
 
@@ -5867,6 +5821,7 @@ pause(0.5)
         delete(OOPSData.Handles.LineScanListeners(1));
         delete(OOPSData.Handles.LineScanListeners(2));        
         delete(OOPSData.Handles.LineScanFig);
+        delete(OOPSData.Handles.LineScanRectangle);
     end
 
     function LineScanROIMoving(source,~)
@@ -5876,32 +5831,17 @@ pause(0.5)
         switch source.Tag
             case 'LineScanAverageIntensity'
                 if cImage.ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value==1
-                    OOPSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(OOPSData.Handles.LineScanAxes,...
-                        OOPSData.Handles.LineScanROI.Position,...
-                        cImage.ffcFPMAverage,...
-                        cImage.ReferenceImageEnhanced,...
-                        cImage.RealWorldLimits);
+                    % OOPSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(OOPSData.Handles.LineScanAxes,...
+                    %     OOPSData.Handles.LineScanROI.Position,...
+                    %     cImage.ffcFPMAverage,...
+                    %     cImage.ReferenceImageEnhanced,...
+                    %     cImage.RealWorldLimits);
+                    UpdateIntensityDoubleLineScan(source);
                 else
-                    OOPSData.Handles.LineScanAxes = PlotIntegratedLineScan(OOPSData.Handles.LineScanAxes,...
-                        OOPSData.Handles.LineScanROI.Position,...
-                        cImage.ffcFPMAverage,...
-                        cImage.RealWorldLimits);
+                    UpdateIntensityLineScan(source);
                 end
             case 'LineScanOrder'
-                switch OOPSData.Handles.ApplyMaskOrder.Value
-                    case true
-                        OOPSData.Handles.LineScanAxes = PlotOrderLineScan(OOPSData.Handles.LineScanAxes,...
-                            OOPSData.Handles.LineScanROI.Position,...
-                            cImage.OrderImage,...
-                            cImage.RealWorldLimits,...
-                            cImage.bw);
-                    case false
-                        OOPSData.Handles.LineScanAxes = PlotOrderLineScan(OOPSData.Handles.LineScanAxes,...
-                            OOPSData.Handles.LineScanROI.Position,...
-                            cImage.OrderImage,...
-                            cImage.RealWorldLimits,...
-                            []);
-                end
+                UpdateOrderLineScan(source);
         end
 
     end
@@ -5913,35 +5853,23 @@ pause(0.5)
         switch source.Tag
             case 'LineScanAverageIntensity'
                 if cImage.ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value==1
-                    OOPSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(OOPSData.Handles.LineScanAxes,...
-                        OOPSData.Handles.LineScanROI.Position,...
-                        cImage.ffcFPMAverage,...
-                        cImage.ReferenceImageEnhanced,...
-                        cImage.RealWorldLimits);
+                    % OOPSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(OOPSData.Handles.LineScanAxes,...
+                    %     OOPSData.Handles.LineScanROI.Position,...
+                    %     cImage.ffcFPMAverage,...
+                    %     cImage.ReferenceImageEnhanced,...
+                    %     cImage.RealWorldLimits);
+                    UpdateIntensityDoubleLineScan(source);
                 else
-                    OOPSData.Handles.LineScanAxes = PlotIntegratedLineScan(OOPSData.Handles.LineScanAxes,...
-                        OOPSData.Handles.LineScanROI.Position,...
-                        cImage.ffcFPMAverage,...
-                        cImage.RealWorldLimits);
+                    % OOPSData.Handles.LineScanAxes = PlotIntegratedLineScan(OOPSData.Handles.LineScanAxes,...
+                    %     OOPSData.Handles.LineScanROI.Position,...
+                    %     cImage.ffcFPMAverage,...
+                    %     cImage.RealWorldLimits);
+                    UpdateIntensityLineScan(source);
                 end
             case 'LineScanOrder'
-                switch OOPSData.Handles.ApplyMaskOrder.Value
-                    case true
-                        OOPSData.Handles.LineScanAxes = PlotOrderLineScan(OOPSData.Handles.LineScanAxes,...
-                            OOPSData.Handles.LineScanROI.Position,...
-                            cImage.OrderImage,...
-                            cImage.RealWorldLimits,...
-                            cImage.bw);
-                    case false
-                        OOPSData.Handles.LineScanAxes = PlotOrderLineScan(OOPSData.Handles.LineScanAxes,...
-                            OOPSData.Handles.LineScanROI.Position,...
-                            cImage.OrderImage,...
-                            cImage.RealWorldLimits,...
-                            []);
-                end
+                UpdateOrderLineScan(source);
         end
         
     end
-
 
 end
