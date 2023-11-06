@@ -29,7 +29,7 @@ function processFPMStats(source,~)
     % end the timer and save the time
     timeElapsed = toc;
 
-    % change to the Order Factor 'tab' if not there already
+    % change to the Order 'tab' if not there already
     if ~strcmp(OOPSData.Settings.CurrentTab,'Order')
         feval(OOPSData.Handles.hTabOrder.Callback,OOPSData.Handles.hTabOrder,[]);
     else
