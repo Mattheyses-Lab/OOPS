@@ -89,13 +89,10 @@ function UpdateGUITheme(source)
     OOPSData.Handles.ScatterPlotAxH.Color = OOPSData.Settings.ScatterPlotBackgroundColor;
     OOPSData.Handles.ScatterPlotAxH.XAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
     OOPSData.Handles.ScatterPlotAxH.YAxis.Color = OOPSData.Settings.ScatterPlotForegroundColor;
-    
-    % % set swarm plot colors
-    % OOPSData.Handles.SwarmPlotGrid.BackgroundColor = OOPSData.Settings.SwarmPlotBackgroundColor;
-    % OOPSData.Handles.SwarmPlotAxH.Color = OOPSData.Settings.SwarmPlotBackgroundColor;
-    % OOPSData.Handles.SwarmPlotAxH.XAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
-    % OOPSData.Handles.SwarmPlotAxH.YAxis.Color = OOPSData.Settings.SwarmPlotForegroundColor;
+    OOPSData.Handles.ScatterPlotAxH.Title.Color = OOPSData.Settings.ScatterPlotForegroundColor;
+    OOPSData.Handles.ScatterPlotAxH.Title.BackgroundColor = 'none';
 
+    % set swarm plot colors
     set(OOPSData.Handles.SwarmPlot,...
         'BackgroundColor',OOPSData.Settings.SwarmPlotBackgroundColor,...
         'ForegroundColor',OOPSData.Settings.SwarmPlotForegroundColor);
