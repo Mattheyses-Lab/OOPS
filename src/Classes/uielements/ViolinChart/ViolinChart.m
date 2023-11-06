@@ -385,7 +385,14 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             % if CLimMode is 'auto', set user_CLim to data range
             if strcmp(obj.user_CLimMode,'auto')
                 CLim = [min(cellfun(@(x) min(x),obj.Data,'UniformOutput',true)) max(cellfun(@(x) max(x),obj.Data,'UniformOutput',true))];
-                if any(isnan(CLim)); CLim = [0 1]; end
+                if any(isnan(CLim))
+                    CLim = [0 1];
+                end
+
+                if isempty(CLim)
+                    CLim = [0 1];
+                end
+
                 obj.user_CLim = CLim;
             else
                 CLim = obj.user_CLim;
@@ -408,7 +415,9 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
 
             nNeeded = obj.nViolins;
 
-            if nGiven==nNeeded
+            if nNeeded==0
+                DataTipCell = {{},{}};
+            elseif nGiven==nNeeded
                 DataTipCell = obj.user_DataTipCell;
             elseif nGiven < nNeeded
                 n2Add = nNeeded - nGiven;
@@ -482,6 +491,10 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function XTick = get.XTick(obj)
+            if obj.nViolins==0
+                XTick = cumsum(repmat(obj.PlotSpacing,1,1));
+                return
+            end
             XTick = cumsum(repmat(obj.PlotSpacing,1,obj.nViolins));
         end
 
@@ -603,6 +616,7 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
                     obj.Violins(i).ErrorBarsColor = obj.ErrorBarsColor(i,:);
                 catch ME
                     disp(ME.getReport)
+                    disp(ME.message)
                 end
             end
 
