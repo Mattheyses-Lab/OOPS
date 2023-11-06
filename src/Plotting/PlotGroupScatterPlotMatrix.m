@@ -56,8 +56,19 @@ function PlotGroupScatterPlotMatrix(source,~)
         ax(nVariables,i).XLabel.String = strsplit(ax(nVariables,i).XLabel.String);
     end
 
+    % set up context menu for copying the plot
+    cm = uicontextmenu(fH_GroupScatterPlotMatrix);
+    % individual context menu choices
+    uimenu(cm,"Text","Copy image to clipboard","MenuSelectedFcn",@copyPlotAsImage);
+
+    % add context menu to figure
+    fH_GroupScatterPlotMatrix.ContextMenu = cm;
 
     % make main figure visible
     fH_GroupScatterPlotMatrix.Visible = "on";
+
+    function copyPlotAsImage(o,~)
+        copygraphics(ancestor(o,'figure'),"ContentType","image","Resolution",600);
+    end
 
 end
