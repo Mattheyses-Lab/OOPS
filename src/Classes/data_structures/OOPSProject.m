@@ -5,32 +5,39 @@ classdef OOPSProject < handle
         ProjectName = 'Untitled';
         % array of OOPSGroup objects
         Group OOPSGroup
-        % indicates which OOPSGroup is selected in the GUI
+        % indicates to the currently selected group in the GUI
         CurrentGroupIndex double
-        % handles to all gui objects
+        % handles to all gui components
         Handles struct
         % handle to the main OOPSSettings object (shared across multiple objects)
         Settings OOPSSettings
+        % whether a valid project has been started/loaded
+        GUIProjectStarted (1,1) logical = false
     end
 
     properties (Dependent = true)
-        nGroups double % depends on the size of dim 1 of Group
+        % number of groups in the project
+        nGroups double
+        % currently selected group in the GUI
         CurrentGroup OOPSGroup
+        % currently selected image(s) in the GUI
         CurrentImage OOPSImage
+        % currently selected object in the GUI
         CurrentObject OOPSObject
-
-        GroupNames
-
+        % names of each group
+        GroupNames (:,1) cell
+        % colors of each group
         GroupColors (:,3) double
-
+        % project summary display table for summary panel
         ProjectSummaryDisplayTable
-
+        % total number of images across all groups
+        nImages
         % total number of objects across all groups
         nObjects (1,1) uint16
-
         % array of all objects in the project
         allObjects
-
+        % number of objects currently selected
+        nSelected
         % nGroups x nLabels array of the number of objects with each label in this project
         labelCounts
     end
@@ -121,14 +128,14 @@ classdef OOPSProject < handle
             [Objects(TF).Selected] = deal(true);
         end
 
-         % apply OOPSLabel:Label to all selected objects in project
+         % apply the specified OOPSLabel to all selected objects in project
         function LabelSelectedObjects(obj,Label)
             for i = 1:obj.nGroups
                 obj.Group(i).LabelSelectedObjects(Label);
             end
-        end    
+        end
 
-        % return the currently selected OOPSObject in GUI
+        % return the active OOPSObject in GUI
         function CurrentObject = get.CurrentObject(obj)
             % get the current image
             cImage = obj.CurrentImage;
@@ -140,7 +147,7 @@ classdef OOPSProject < handle
             end
         end
 
-        % return all objects with Label:Label
+        % return all objects with the specified OOPSLabel
         function Objects = getObjectsByLabel(obj,Label)
             Objects = OOPSObject.empty();
             if obj.nGroups >= 1
@@ -177,6 +184,12 @@ classdef OOPSProject < handle
             for i = 1:obj.nGroups
                 nObjects = nObjects + obj.Group(i).TotalObjects;
             end
+        end
+
+        % number of objects selected across all groups
+        function nSelected = get.nSelected(obj)
+            objList = obj.allObjects;
+            nSelected = numel(objList([objList.Selected]));
         end
 
         % return Var2Get data for each object, grouped by object group and label
@@ -354,6 +367,11 @@ classdef OOPSProject < handle
             end
         end
 
+        % total number of images in the project
+        function nImages = get.nImages(obj)
+            nImages = sum([obj.Group(:).nReplicates]);
+        end
+
 %% summary tables
 
         function ProjectSummaryDisplayTable = get.ProjectSummaryDisplayTable(obj)
@@ -377,7 +395,7 @@ classdef OOPSProject < handle
                 {obj.Settings.PreviousTab},...
                 {obj.Settings.MaskType},...
                 {obj.Settings.MaskName},...
-                {num2str(obj.Settings.FontSize)},...
+                {num2str(obj.Settings.GUIFontSize)},...
                 {num2str(obj.Settings.GUIBackgroundColor)},...
                 {num2str(obj.Settings.GUIForegroundColor)},...
                 {num2str(obj.Settings.GUIHighlightColor)},...
