@@ -322,6 +322,8 @@ BGColor = OOPSData.Settings.SwarmPlotBackgroundColor;
 FGColor = OOPSData.Settings.SwarmPlotForegroundColor;
 
 
+
+
 % set all the properties
 set(OOPSData.Handles.SwarmPlot,...
     "Title",varDisplayName,...
