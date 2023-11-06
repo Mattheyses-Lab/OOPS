@@ -1,5 +1,5 @@
 classdef OOPSSettings < handle
-%% OOPSSettings  Settings class for Object-Oriented Polarization Software (OOPS)
+% OOPSSettings  Settings class for Object-Oriented Polarization Software (OOPS)
 %
 %   An instance of this class loads, stores, and/or determines various
 %   settings for a single run of the OOPS GUI
@@ -47,14 +47,14 @@ classdef OOPSSettings < handle
         % drawable size of the main display (to set main window Position property)
         ScreenSize
 
-        % size of the font across graphics objects in the GUI
-        FontSize
+        % % size of the font across graphics objects in the GUI
+        % FontSize
 
         % themes and colors for GUI display
         GUITheme = 'Dark';
-        GUIBackgroundColor = [0 0 0];
-        GUIForegroundColor = [1 1 1];
-        GUIHighlightColor = [1 1 1];
+        % GUIBackgroundColor = [0 0 0];
+        % GUIForegroundColor = [1 1 1];
+        % GUIHighlightColor = [1 1 1];
         
         % colormaps settings
         Colormaps struct
@@ -92,6 +92,9 @@ classdef OOPSSettings < handle
         % mask settings
         MaskSettings struct
 
+        % GUI settings
+        GUISettings struct
+
         % variables for object plots (swarm and scatter plots for now)
         ObjectPlotVariables cell
 
@@ -108,12 +111,6 @@ classdef OOPSSettings < handle
         
         % real world size of each input pixel (micron/px)
         PixelSize = 0.1083;
-
-        % % type of mask to generate and use for object detection ('Default', 'CustomScheme', or 'CustomUpload')
-        % MaskType = 'Default';
-        % 
-        % % name of current masking scheme (i.e. the scheme that will be applied upon Process>Mask)
-        % MaskName = 'Legacy';
         
         % custom mask schemes
         CustomSchemes CustomMask
@@ -217,6 +214,12 @@ classdef OOPSSettings < handle
         ClusterNormalizationMethod
         ClusterDisplayEvaluation
 
+        % GUISettings
+        GUIBackgroundColor
+        GUIForegroundColor
+        GUIHighlightColor
+        GUIFontSize
+
         % MaskSettings
         MaskType
         MaskName
@@ -229,6 +232,8 @@ classdef OOPSSettings < handle
         % for adding/deleting/adjusting labels
         nLabels
         LabelColors
+        LabelNames
+        DefaultLabel
 
         % selected colormaps for different image types
         % must be 256x3 double with values in the range [0 1]
@@ -257,8 +262,8 @@ classdef OOPSSettings < handle
             % constructor
             % size of main monitor
             obj.ScreenSize = GetMaximizedScreenSize();
-            % optimum font size
-            obj.FontSize = max(ceil(obj.ScreenSize(4)*.01),11);
+            % % optimum font size
+            % obj.FontSize = max(ceil(obj.ScreenSize(4)*.01),11);
             % set up default object label (OOPSLabel object)
             obj.ObjectLabels(1) = OOPSLabel('Default',[1 1 0],obj);
             % get list of supported fonts
@@ -270,15 +275,8 @@ classdef OOPSSettings < handle
                 obj.DefaultFont = 'Courier New';  % otherwise, use 'Courier New'
             end
 
-            if ismac || isunix
-                % get the path to this .m file (two levels below the directory we want)
-                CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-                % get the "MainPath" (path to OOPS.m)
-                obj.MainPath = strjoin(CurrentPathSplit(1:end-4),'/');
-            elseif ispc
-                CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-                obj.MainPath = strjoin(CurrentPathSplit(1:end-4),'\');
-            end
+            % get the main path (path to OOPS.m)
+            obj.MainPath = obj.getMainPath;
 
             settingsFiles = {...
                 'ObjectPlotVariables.mat',...
@@ -295,7 +293,8 @@ classdef OOPSSettings < handle
                 'ObjectAzimuthDisplaySettings.mat',...
                 'ObjectSelectionSettings.mat',...
                 'ClusterSettings.mat',...
-                'MaskSettings.mat'};
+                'MaskSettings.mat',...
+                'GUISettings.mat'};
 
             obj.updateSettingsFromFiles(settingsFiles);
 
@@ -329,9 +328,9 @@ classdef OOPSSettings < handle
 
             % themes and colors for GUI display
             settings.GUITheme = obj.GUITheme;
-            settings.GUIBackgroundColor = obj.GUIBackgroundColor;
-            settings.GUIForegroundColor = obj.GUIForegroundColor;
-            settings.GUIHighlightColor = obj.GUIHighlightColor;
+            % settings.GUIBackgroundColor = obj.GUIBackgroundColor;
+            % settings.GUIForegroundColor = obj.GUIForegroundColor;
+            % settings.GUIHighlightColor = obj.GUIHighlightColor;
 
             % object labeling
             settings.ObjectLabels = obj.ObjectLabels;
@@ -506,6 +505,14 @@ classdef OOPSSettings < handle
                 obj.ObjectLabels = [obj.ObjectLabels(1:LabelIdx-1);obj.ObjectLabels(LabelIdx+1:end)];
             end
             delete(Label2Delete);
+        end
+
+        function restoreDefaultLabel(obj)
+            if isempty(obj.DefaultLabel)
+                obj.AddNewObjectLabel('Default',[])
+            else
+                return
+            end
         end
 
 %% object plot variables
@@ -830,6 +837,21 @@ classdef OOPSSettings < handle
             end
         end
 
+        function LabelNames = get.LabelNames(obj)
+            % initialize label colors array
+            LabelNames = cell(obj.nLabels,1);
+            % add the colors from each label
+            for i = 1:obj.nLabels
+                LabelNames{i,1} = obj.ObjectLabels(i).Name;
+            end
+        end
+
+        function DefaultLabel = get.DefaultLabel(obj)
+            DefaultLabel = obj.ObjectLabels(find(ismember(obj.LabelNames,'Default')));
+        end
+
+
+
 %% k-means clustering settings
 
         function ClusterVariableList = get.ClusterVariableList(obj)
@@ -868,6 +890,24 @@ classdef OOPSSettings < handle
 
         function MaskName = get.MaskName(obj)
             MaskName = obj.MaskSettings.MaskName;
+        end
+
+%% GUI settings
+
+        function GUIBackgroundColor = get.GUIBackgroundColor(obj)
+            GUIBackgroundColor = obj.GUISettings.BackgroundColor;
+        end
+
+        function GUIForegroundColor = get.GUIForegroundColor(obj)
+            GUIForegroundColor = obj.GUISettings.ForegroundColor;
+        end
+
+        function GUIHighlightColor = get.GUIHighlightColor(obj)
+            GUIHighlightColor = obj.GUISettings.HighlightColor;
+        end
+
+        function GUIFontSize = get.GUIFontSize(obj)
+            GUIFontSize = obj.GUISettings.FontSize;
         end
 
 %% variable names settings
@@ -948,9 +988,9 @@ classdef OOPSSettings < handle
 
             % themes and colors for GUI display
             obj.GUITheme = settings.GUITheme;
-            obj.GUIBackgroundColor = settings.GUIBackgroundColor;
-            obj.GUIForegroundColor = settings.GUIForegroundColor;
-            obj.GUIHighlightColor = settings.GUIHighlightColor;
+            % obj.GUIBackgroundColor = settings.GUIBackgroundColor;
+            % obj.GUIForegroundColor = settings.GUIForegroundColor;
+            % obj.GUIHighlightColor = settings.GUIHighlightColor;
 
             % object labeling
             obj.ObjectLabels = settings.ObjectLabels;
@@ -960,21 +1000,65 @@ classdef OOPSSettings < handle
                 obj.ObjectLabels(LabelIdx).Settings = obj;
             end
 
+        end
 
-            % % sturcturing element for masking
-            % obj.SEShape = settings.SEShape;
-            % obj.SESize = settings.SESize;
-            % obj.SELines = settings.SELines;
 
-            % % type of mask to generate and use for object detection
-            % % Default, CustomScheme, or CustomUpload
-            % obj.MaskType = settings.MaskType;
-            % 
-            % % various names
-            % obj.MaskName = settings.MaskName;
+        function colormapsStruct = reloadColormaps()
 
-            % % object box type ('Box' or 'Boundary')
-            % obj.ObjectBoxType = settings.ObjectBoxType;
+            colormapsStruct = struct();
+
+            mainPath = OOPSSettings.getMainPath();
+            % get correct path separator based on OS
+            if ismac || isunix
+                pathSep = '/';
+            elseif ispc
+                pathSep = '\';
+            end
+            % build path to folder holding the different colormaps
+            colormapsPath = strjoin({mainPath,'assets','colormaps'},pathSep);
+            % get cell array of colormaps folders (categories)
+            colormapTypes = getFolderNames(colormapsPath);
+            % loop through each category
+            for typeIdx = 1:numel(colormapTypes)
+                % the current category
+                thisType = colormapTypes{typeIdx};
+                % path to the category folder
+                thisTypePath = strjoin({colormapsPath,thisType},pathSep);
+                % info for all .mat files in the folder
+                thisTypeItems = dir([thisTypePath,pathSep,'*.mat']);
+                % cell array of colormap filenames
+                colormapFileNames = {thisTypeItems.name};
+                % loop through each colormap file
+                for cmapIdx = 1:numel(colormapFileNames)
+                    % the filename without path
+                    cmapFileName = colormapFileNames{cmapIdx};
+                    % split on the delimeter, '.'
+                    cmapFileNameSplit = split(cmapFileName,'.');
+                    % get short name with no extension
+                    cmapName = cmapFileNameSplit{1};
+                    % load the map
+                    cmapFile = load([thisTypePath,pathSep,cmapName],cmapName);
+                    % construct a customColormap object and add it to the struct
+                    colormapsStruct.(cmapName) = customColormap(...
+                        "Map",cmapFile.(cmapName),...
+                        "Name",cmapName,...
+                        "Source",thisType);
+                end
+            end
+        end
+
+        function mainPath = getMainPath()
+
+            if ismac || isunix
+                % get the path to this .m file (two levels below the directory we want)
+                CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
+                % get the "MainPath" (path to OOPS.m)
+                mainPath = strjoin(CurrentPathSplit(1:end-4),'/');
+            elseif ispc
+                CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
+                mainPath = strjoin(CurrentPathSplit(1:end-4),'\');
+            end
+
         end
 
     end
