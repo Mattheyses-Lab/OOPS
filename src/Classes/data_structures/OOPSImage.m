@@ -911,8 +911,14 @@ classdef OOPSImage < handle & dynamicprops
             if isempty(props)
                 return % then stop here
             else
-                % get default label from settings object
-                DefaultLabel = obj.Settings.ObjectLabels(1);
+                % get the default label
+                DefaultLabel = obj.Settings.DefaultLabel;
+                % no default label found
+                if isempty(DefaultLabel)
+                    % restore default label
+                    obj.Settings.restoreDefaultLabel();
+                    DefaultLabel = obj.Settings.DefaultLabel;
+                end
                 % for each detected object
                 for i = 1:length(props)
                    % create an instance of OOPSObject
@@ -925,6 +931,8 @@ classdef OOPSImage < handle & dynamicprops
             obj.ObjectDetectionDone = true;
             obj.CurrentObjectIdx = 1;
             obj.LocalSBDone = false;
+            % find the local S/B for each object
+            obj.FindLocalSB();
         end
         
 %% object manipulation (gather, select, delete, etc.)
@@ -938,8 +946,6 @@ classdef OOPSImage < handle & dynamicprops
             clear Objects
             % reinitialize the obj.Object vector
             obj.Object = OOPSObject.empty();
-            % % delete again? CHECK THIS
-            % delete(obj.Object);
         end
 
         % delete seleted objects from one OOPSImage
@@ -1043,7 +1049,6 @@ classdef OOPSImage < handle & dynamicprops
 
 %% retrieve object data
 
-        % get current Object (OOPSObject)
         function CurrentObject = get.CurrentObject(obj)
             try
                 CurrentObject = obj.Object(obj.CurrentObjectIdx);
@@ -1347,7 +1352,6 @@ classdef OOPSImage < handle & dynamicprops
             % get object pixel idx list (using fieldnames to find idx to 'PixelIdxList' column in cell array)
             ObjectPixelIdxList = C(:,ismember(fnames,'PixelIdxList'));
 
-
             %% object padded subarray idxs
 
             % get cell array of padded subarray idxs (padding=5)
@@ -1391,7 +1395,6 @@ classdef OOPSImage < handle & dynamicprops
             ObjectProperties(end).paddedPixelIdxList = [];
             [ObjectProperties(:).paddedPixelIdxList] = deal(paddedPixelIdxList{:});
 
-
             %% object padded mask images
 
             paddedSubImage = cellfun(@(paddedsubidx,paddedpixelidxlist) ...
@@ -1417,7 +1420,6 @@ classdef OOPSImage < handle & dynamicprops
             ObjectProperties(end).BWBoundary = [];
             [ObjectProperties(:).BWBoundary] = deal(B{:});
 
-
             %% object midlines
 
             % get the object midline coordinates w.r.t. the padded object subimage
@@ -1441,6 +1443,7 @@ classdef OOPSImage < handle & dynamicprops
 
         end
 
+        % returns a 1xn array of the number of objects with each label in this image (n = number of labels)
         function labelCounts = get.labelCounts(obj)
             % preallocate our array of label counts, one column per unique label
             labelCounts = zeros(1,obj.Settings.nLabels);
