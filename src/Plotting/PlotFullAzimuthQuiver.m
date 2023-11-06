@@ -4,9 +4,26 @@ function PlotFullAzimuthQuiver(source,~)
 % get the data structure
 OOPSData = guidata(source);
 
-% get the current image
-cImage = OOPSData.CurrentImage(1);
+% currently selected image(s)
+cImage = OOPSData.CurrentImage;
 
+%% error checking
+
+% no image found
+if isempty(cImage)
+    uialert(OOPSData.Handles.fH,'No image found','Error')
+    return
+else
+    cImage = cImage(1);
+end
+
+% FPM stats not done
+if ~cImage.FPMStatsDone
+    uialert(OOPSData.Handles.fH,'Compute FPM statistics first','Error')
+    return
+end
+
+%% create the figure, axes, etc.
 
 fH = uifigure("WindowStyle","alwaysontop",...
     "Name","Azimuth stick plot",...
@@ -30,20 +47,7 @@ img = imshow(cImage.I,'Parent',ax);
 ax.PlotBoxAspectRatio = pbar;
 ax.DataAspectRatio = dar;
 
-
-LineMask = true(size(cImage.AzimuthImage));
-
-LineScaleDown = OOPSData.Settings.AzimuthScaleDownFactor;
-
-if LineScaleDown > 1
-    ScaleDownMask = makeSpacedCheckerboard(size(LineMask),LineScaleDown);
-    LineMask = LineMask & logical(ScaleDownMask);
-end
-
-[Y,X] = find(LineMask);
-
-theta = cImage.AzimuthImage(LineMask);
-rho = cImage.OrderImage(LineMask);
+%% gather settings
 
 ColorMode = OOPSData.Settings.AzimuthColorMode;
 LineWidth = OOPSData.Settings.AzimuthLineWidth;
@@ -59,6 +63,24 @@ switch ColorMode
         Colormap = [1 1 1];
 end
 
+%% get data for the plot
+
+LineMask = true(size(cImage.AzimuthImage));
+
+LineScaleDown = OOPSData.Settings.AzimuthScaleDownFactor;
+
+if LineScaleDown > 1
+    ScaleDownMask = makeSpacedCheckerboard(size(LineMask),LineScaleDown);
+    LineMask = LineMask & logical(ScaleDownMask);
+end
+
+[Y,X] = find(LineMask);
+
+theta = cImage.AzimuthImage(LineMask);
+rho = cImage.OrderImage(LineMask);
+
+%% plot the patch object
+
 OOPSData.Handles.AzimuthLines = QuiverPatch2(ax,...
     X,...
     Y,...
@@ -69,6 +91,8 @@ OOPSData.Handles.AzimuthLines = QuiverPatch2(ax,...
     LineWidth,...
     LineAlpha,...
     LineScale);
+
+%% center the figure and make the window visible
 
 movegui(fH,'center')
 
