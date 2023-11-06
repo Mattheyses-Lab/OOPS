@@ -19,35 +19,26 @@ function axH = PlotObjectIntensityProfile(...
 
     parfor i = 1:nPixels
         %% each vector in the third dimension is a set of y values for one round of fitting (one pixel)
-
         yFit = zeros(1,4);
         yFit(1:4) = yReal(RowIndices(i),ColIndices(i),:);
-        
         %% Estimate initial values
-
         % maximum y value
         yMax = max(yFit);
         % minimum y value
         yMin = min(yFit);
         % peak-to-peak amplitude
         yRange = yMax-yMin;
-
         %% Fit experimental values to a generic squared cosine: Y = A * ((1+cos(2(X-B))/2) + C
-
         % anonymous fit function
         fit = @(b,x)  b(1) .* ((1 + cos(2.*(x-b(2))))./2) + b(3);
         % least-squares cost function to minimize
         fcn = @(b) sum((fit(b,xReal) - yFit).^2);
         % minimize least-squares
         s = fminsearch(fcn, [yRange; 1;  yMin]);
-
         %% Generate full curves using the parameters obtained above
-
         % y values to plot - found with the fitting function
         CurveFit{i} = fit(s,xFit);
-
     end
-
 
 %% concatenate fit curves and phase lines for all pixels (new method without loop)
 
