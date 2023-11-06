@@ -56,15 +56,15 @@ OOPSData.Handles.hNewProject.Accelerator = 'N';
 OOPSData.Handles.hLoadProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Load project','Callback',@loadProject);
 OOPSData.Handles.hSaveProject = uimenu(OOPSData.Handles.hFileMenu,'Text','Save project','Callback',@saveProject);
 % load files
-OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FFC files','Separator','On','Callback',@loadFFCImages);
-OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM files','Callback',@loadFPMImages);
+OOPSData.Handles.hLoadFFCFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FFC stacks','Separator','On','Callback',@loadFFCImages);
+OOPSData.Handles.hLoadFPMFiles = uimenu(OOPSData.Handles.hFileMenu,'Text','Load FPM stacks','Callback',@loadFPMImages);
 OOPSData.Handles.hLoadReferenceImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load reference images','Callback',@loadReferenceImages);
 OOPSData.Handles.hLoadMaskImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Load mask images');
 OOPSData.Handles.hLoadMaskImages_4conn = uimenu(OOPSData.Handles.hLoadMaskImages,'Text','Label 4-connected objects','Callback',@loadMaskImages,'Tag','4conn');
 OOPSData.Handles.hLoadMaskImages_branches = uimenu(OOPSData.Handles.hLoadMaskImages,'Text','Label branches','Callback',@loadMaskImages,'Tag','branches');
 % save data
 OOPSData.Handles.hSaveImageData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export images','Separator','On','Callback',@exportImages);
-OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Save object data','Callback',@SaveObjectData);
+OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export object data','Callback',@SaveObjectData);
 % segmentation schemes
 OOPSData.Handles.hNewSegmentationScheme = uimenu(OOPSData.Handles.hFileMenu,'Text','New segmentation scheme','Separator','On','Callback',@BuildNewScheme);
 
@@ -76,27 +76,6 @@ OOPSData.Handles.hSaveSwarmPlotSettings = uimenu(OOPSData.Handles.hFileMenu,'Tex
 OOPSData.Handles.hSavePolarHistogramSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Polar Histogram Settings','Callback',@SavePolarHistogramSettings);
 OOPSData.Handles.hSavePalettesSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Palettes Settings','Callback',@SavePalettesSettings);
 OOPSData.Handles.hSaveObjectIntensityProfileSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Object Intensity Profile Settings','Callback',@SaveObjectIntensityProfileSettings);
-
-%% Options Menu Button - Change gui option and settings
-
-OOPSData.Handles.hOptionsMenu = uimenu(OOPSData.Handles.fH,'Text','Options');
-% GUI options (themes, colors, fonts, etc.)
-OOPSData.Handles.hGUI = uimenu(OOPSData.Handles.hOptionsMenu,'Text','GUI');
-% GUI theme option
-OOPSData.Handles.hGUITheme = uimenu(OOPSData.Handles.hGUI,'Text','Theme');
-% options for GUI theme
-OOPSData.Handles.hGUITheme_Dark = uimenu(OOPSData.Handles.hGUITheme,'Text','Dark','Checked','off','Callback',@ChangeGUITheme);
-OOPSData.Handles.hGUITheme_Light = uimenu(OOPSData.Handles.hGUITheme,'Text','Light','Checked','off','Callback',@ChangeGUITheme);
-% GUI colors options
-OOPSData.Handles.hGUIBackgroundColor = uimenu(OOPSData.Handles.hGUI,'Text','Background Color','Separator','on','Tag','GUIBackgroundColor','Callback',@ChangeGUIColors);
-OOPSData.Handles.hGUIForegroundColor = uimenu(OOPSData.Handles.hGUI,'Text','Foreground Color','Tag','GUIForegroundColor','Callback',@ChangeGUIColors);
-OOPSData.Handles.hGUIHighlightColor = uimenu(OOPSData.Handles.hGUI,'Text','Highlight Color','Tag','GUIHighlightColor','Callback',@ChangeGUIColors);
-
-% GUI font size option
-OOPSData.Handles.hGUIFontSize = uimenu(OOPSData.Handles.hGUI,'Text','Font Size','Separator','on');
-% options for GUI font size
-OOPSData.Handles.hGUIFontSize_Larger = uimenu(OOPSData.Handles.hGUIFontSize,'Text','Larger','Callback',@ChangeGUIFontSize);
-OOPSData.Handles.hGUIFontSize_Smaller = uimenu(OOPSData.Handles.hGUIFontSize,'Text','Smaller','Callback',@ChangeGUIFontSize);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
 
@@ -130,7 +109,8 @@ OOPSData.Handles.hProcessMenu = uimenu(OOPSData.Handles.fH,'Text','Process');
 OOPSData.Handles.hProcessFFC = uimenu(OOPSData.Handles.hProcessMenu,'Text','Flat-field correction','MenuSelectedFcn',@processFFC);
 OOPSData.Handles.hProcessMask = uimenu(OOPSData.Handles.hProcessMenu,'Text','Build mask','MenuSelectedFcn',@processMask);
 OOPSData.Handles.hProcessOrder = uimenu(OOPSData.Handles.hProcessMenu,'Text','Calculate FPM statistics','MenuSelectedFcn',@processFPMStats);
-OOPSData.Handles.hProcessLocalSB = uimenu(OOPSData.Handles.hProcessMenu,'Text','Local S/B','MenuSelectedFcn',@processLocalSB);
+OOPSData.Handles.hProcessAll = uimenu(OOPSData.Handles.hProcessMenu,'Text','All','Separator','on','MenuSelectedFcn',@processAll);
+% OOPSData.Handles.hProcessLocalSB = uimenu(OOPSData.Handles.hProcessMenu,'Text','Local S/B','MenuSelectedFcn',@processLocalSB);
 
 %% Summary Menu Button
 
@@ -305,7 +285,6 @@ for k = 1:nImageTypes
     ImageTypeColormapsNames{k,1} = OOPSData.Settings.ColormapsSettings.(ImageTypeFields{k}).Name;
     ImageTypeColormaps{k,1} = OOPSData.Settings.ColormapsSettings.(ImageTypeFields{k}).Map;
 end
-
 
 OOPSData.Handles.SettingsAccordion.addItem(...
     "Title","Colormaps",...
@@ -1316,7 +1295,6 @@ OOPSData.Handles.SwarmPlotViolinsVisibleDropdown = uidropdown('Parent',OOPSData.
 OOPSData.Handles.SwarmPlotViolinsVisibleDropdown.Layout.Row = 15;
 OOPSData.Handles.SwarmPlotViolinsVisibleDropdown.Layout.Column = 2;
 
-
 % marker edge color mode
 OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdownLabel = uilabel(...
     'Parent',OOPSData.Handles.SwarmPlotSettingsGrid,...
@@ -1335,7 +1313,6 @@ OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdown = uidropdown(...
     'Tag','MarkerEdgeColorMode');
 OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdown.Layout.Row = 16;
 OOPSData.Handles.SwarmPlotMarkerEdgeColorModeDropdown.Layout.Column = 2;
-
 
 % marker edge color
 OOPSData.Handles.SwarmPlotMarkerEdgeColorDropdownLabel = uilabel(...
@@ -1468,14 +1445,6 @@ OOPSData.Handles.SettingsAccordion.addItem(...
     "BorderColor" ,OOPSData.Settings.GUIForegroundColor);
 
 OOPSData.Handles.IntensityDisplayLimitsSettingsGrid = OOPSData.Handles.SettingsAccordion.Items(7).Pane;
-
-% set(OOPSData.Handles.IntensityDisplayLimitsSettingsGrid,...
-%     'BackgroundColor','Black',...
-%     'Padding',[5 5 5 5],...
-%     'RowSpacing',5,...
-%     'ColumnSpacing',0,...
-%     'RowHeight',{'1x','1x','1x'},...
-%     'ColumnWidth',{'1x'});
 
 set(OOPSData.Handles.IntensityDisplayLimitsSettingsGrid,...
     'BackgroundColor','Black',...
@@ -2235,7 +2204,7 @@ OOPSData.Handles.ClusterNormalizationMethodDropdown = uidropdown(...
     "Parent",OOPSData.Handles.ClusterSettingsGrid,...
     "Items",{'zscore','none'},...
     "Value",OOPSData.Settings.ClusterNormalizationMethod,...
-    "Tag",'Normalization',...
+    "Tag",'NormalizationMethod',...
     "ValueChangedFcn",@ClusterSettingsChanged);
 OOPSData.Handles.ClusterNormalizationMethodDropdown.Layout.Row = 6;
 OOPSData.Handles.ClusterNormalizationMethodDropdown.Layout.Column = 2;
@@ -2253,7 +2222,7 @@ OOPSData.Handles.ClusterDisplayEvaluationDropdown = uidropdown(...
     "Items",{'yes','no'},...
     "ItemsData",{true,false},...
     "Value",OOPSData.Settings.ClusterDisplayEvaluation,...
-    "Tag",'Normalization',...
+    "Tag",'DisplayEvaluation',...
     "ValueChangedFcn",@ClusterSettingsChanged);
 OOPSData.Handles.ClusterDisplayEvaluationDropdown.Layout.Row = 7;
 OOPSData.Handles.ClusterDisplayEvaluationDropdown.Layout.Column = 2;
@@ -2333,6 +2302,116 @@ OOPSData.Handles.MaskNameDropdown.Layout.Column = 2;
 
 %% CHECKPOINT
 
+disp('Setting up GUI display settings...')
+
+%% GUI settings
+
+OOPSData.Handles.SettingsAccordion.addItem(...
+    "Title","GUI",...
+    "PaneBackgroundColor",[0 0 0],...
+    "FontName",OOPSData.Settings.DefaultFont,...
+    "FontColor",OOPSData.Settings.GUIForegroundColor,...
+    "TitleBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
+    "PaneBackgroundColor",OOPSData.Settings.GUIBackgroundColor,...
+    "BorderColor",OOPSData.Settings.GUIForegroundColor);
+
+OOPSData.Handles.GUISettingsGrid = OOPSData.Handles.SettingsAccordion.Items(14).Pane;
+
+set(OOPSData.Handles.GUISettingsGrid,...
+    'BackgroundColor','Black',...
+    'Scrollable','on',...
+    'Padding',[5 5 5 5],...
+    'RowSpacing',5,...
+    'ColumnSpacing',5,...
+    'RowHeight',{20,20,20,20},...
+    'ColumnWidth',{'fit','1x'});
+
+% background color
+OOPSData.Handles.GUIBackgroundColorDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.GUISettingsGrid,...
+    'Text','Background color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor',[1 1 1]);
+OOPSData.Handles.GUIBackgroundColorDropdownLabel.Layout.Row = 1;
+OOPSData.Handles.GUIBackgroundColorDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.GUIBackgroundColorDropdown = uidropdown('Parent',OOPSData.Handles.GUISettingsGrid,...
+    'Items',[colorNames,'Custom'],...
+    'ItemsData',[colorCodesCell,OOPSData.Settings.GUIBackgroundColor],...
+    'Value',OOPSData.Settings.GUIBackgroundColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ClickedFcn',@colorDropdownClicked,...
+    'UserData',{@GUIColorsChanged},...
+    'Tag','BackgroundColor');
+OOPSData.Handles.GUIBackgroundColorDropdown.Layout.Row = 1;
+OOPSData.Handles.GUIBackgroundColorDropdown.Layout.Column = 2;
+updateColorDropdownStyles(OOPSData.Handles.GUIBackgroundColorDropdown);
+
+% foreground color
+OOPSData.Handles.GUIForegroundColorDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.GUISettingsGrid,...
+    'Text','Foreground color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor',[1 1 1]);
+OOPSData.Handles.GUIForegroundColorDropdownLabel.Layout.Row = 2;
+OOPSData.Handles.GUIForegroundColorDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.GUIForegroundColorDropdown = uidropdown('Parent',OOPSData.Handles.GUISettingsGrid,...
+    'Items',[colorNames,'Custom'],...
+    'ItemsData',[colorCodesCell,OOPSData.Settings.GUIForegroundColor],...
+    'Value',OOPSData.Settings.GUIForegroundColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ClickedFcn',@colorDropdownClicked,...
+    'UserData',{@GUIColorsChanged},...
+    'Tag','ForegroundColor');
+OOPSData.Handles.GUIForegroundColorDropdown.Layout.Row = 2;
+OOPSData.Handles.GUIForegroundColorDropdown.Layout.Column = 2;
+updateColorDropdownStyles(OOPSData.Handles.GUIForegroundColorDropdown);
+
+% highlight color
+OOPSData.Handles.GUIHighlightColorDropdownLabel = uilabel(...
+    'Parent',OOPSData.Handles.GUISettingsGrid,...
+    'Text','Highlight color',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor',[1 1 1]);
+OOPSData.Handles.GUIHighlightColorDropdownLabel.Layout.Row = 3;
+OOPSData.Handles.GUIHighlightColorDropdownLabel.Layout.Column = 1;
+
+OOPSData.Handles.GUIHighlightColorDropdown = uidropdown('Parent',OOPSData.Handles.GUISettingsGrid,...
+    'Items',[colorNames,'Custom'],...
+    'ItemsData',[colorCodesCell,OOPSData.Settings.GUIHighlightColor],...
+    'Value',OOPSData.Settings.GUIHighlightColor,...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ClickedFcn',@colorDropdownClicked,...
+    'UserData',{@GUIColorsChanged},...
+    'Tag','HighlightColor');
+OOPSData.Handles.GUIHighlightColorDropdown.Layout.Row = 3;
+OOPSData.Handles.GUIHighlightColorDropdown.Layout.Column = 2;
+updateColorDropdownStyles(OOPSData.Handles.GUIHighlightColorDropdown);
+
+% font size
+OOPSData.Handles.GUIFontSizeLabel = uilabel(...
+    'Parent',OOPSData.Handles.GUISettingsGrid,...
+    'Text','Font size',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'FontColor','White');
+OOPSData.Handles.GUIFontSizeLabel.Layout.Row = 4;
+OOPSData.Handles.GUIFontSizeLabel.Layout.Column = 1;
+
+OOPSData.Handles.GUIFontSizeEditfield = uieditfield(...
+    OOPSData.Handles.GUISettingsGrid,...
+    'numeric',...
+    'Value',OOPSData.Settings.GUIFontSize,...
+    'Limits',[5 20],...
+    'RoundFractionalValues','on',...
+    'FontName',OOPSData.Settings.DefaultFont,...
+    'ValueChangedFcn',@GUIFontSizeChanged,...
+    'Tag','FontSize');
+OOPSData.Handles.GUIFontSizeEditfield.Layout.Row = 4;
+OOPSData.Handles.GUIFontSizeEditfield.Layout.Column = 2;
+
+%% CHECKPOINT
+
 disp('Setting up threshold slider panel...')
 
 %% Mask threshold adjustment panel
@@ -2353,7 +2432,7 @@ OOPSData.Handles.ThreshAxH = uiaxes(OOPSData.Handles.ThreshSliderGrid,...
     'Color','Black',...
     'Visible','Off',...
     'FontName',OOPSData.Settings.DefaultPlotFont,...
-    'FontSize',OOPSData.Settings.FontSize,...
+    'FontSize',OOPSData.Settings.GUIFontSize,...
     'FontWeight','Bold',...
     'XTick',0:0.1:1,...
     'XTickMode','Manual',...
@@ -2405,7 +2484,7 @@ OOPSData.Handles.CurrentThresholdLine = xline(OOPSData.Handles.ThreshAxH,0,'-',{
 clear RandomData
 
 
-% testing without this drawnow command
+% % testing without this drawnow command
 drawnow
 pause(0.5)
 
@@ -2819,6 +2898,7 @@ disp('Setting up large image axes...')
     OOPSData.Handles.ScatterPlotAxH.YAxis.Label.FontName = OOPSData.Settings.DefaultPlotFont;
     OOPSData.Handles.ScatterPlotAxH.Toolbar.Visible = 'Off';
     OOPSData.Handles.ScatterPlotAxH.Title.Visible = 'Off';
+    OOPSData.Handles.ScatterPlotAxH.Title.BackgroundColor = 'none';
 
     % set up legend
     OOPSData.Handles.ScatterPlotLegend = legend(OOPSData.Handles.ScatterPlotAxH);
@@ -2936,21 +3016,6 @@ disp('Setting up large image axes...')
     % set axis title
     OOPSData.Handles.AzimuthAxH = SetAxisTitle(OOPSData.Handles.AzimuthAxH,'Azimuth');
 
-
-    % % get the default azimuth colormap (one half)
-    % tempmap = hsv;
-    % % vertically concatenate to make the full map
-    % OOPSData.Handles.AzimuthAxH.Colormap = vertcat(tempmap,tempmap);
-    % % custom colormap/colorbar for azimuth axes
-    % OOPSData.Handles.PhaseBarAxH = phasebarmod('rad','Location','se','axes',OOPSData.Handles.AzimuthAxH);
-    % OOPSData.Handles.PhaseBarAxH.Toolbar.Visible = 'Off';
-    % OOPSData.Handles.PhaseBarAxH.HitTest = 'Off';
-    % OOPSData.Handles.PhaseBarAxH.PickableParts = 'None';
-    % OOPSData.Handles.PhaseBarComponents = OOPSData.Handles.PhaseBarAxH.Children;
-    % set(OOPSData.Handles.PhaseBarComponents,'Visible','Off');
-    % OOPSData.Handles.PhaseBarAxH.Colormap = vertcat(tempmap,tempmap);
-
-
     imageHeight = size(emptyimage,1);
 
     % set up azimuth colorbar
@@ -2971,12 +3036,9 @@ disp('Setting up large image axes...')
         'outerRadius',outerRadius, ...
         'nRepeats',1, ...
         'Visible','off',...
-        'FontSize',OOPSData.Settings.FontSize,...
+        'FontSize',OOPSData.Settings.GUIFontSize,...
         'FontName',OOPSData.Settings.DefaultPlotFont);
 
-
-
-    
     OOPSData.Handles.AzimuthAxH.Title.Visible = 'Off';   
     OOPSData.Handles.AzimuthAxH.Toolbar.Visible = 'Off';
     OOPSData.Handles.AzimuthAxH.HitTest = 'Off';
@@ -3233,7 +3295,6 @@ set(OOPSData.Handles.LogPanel,'Visible','On');
 set(OOPSData.Handles.LogWindowGrid,'Visible','On');
 set(OOPSData.Handles.LogWindow,'Visible','On');
 
-
 set(OOPSData.Handles.ImageOperationsPanel,'Visible','On');
 set(OOPSData.Handles.ThreshSliderGrid,'Visible','On');
 set(OOPSData.Handles.ThreshAxH,'Visible','On');
@@ -3266,17 +3327,17 @@ OOPSData.Handles.ScaleToMaxAzimuth.Visible = 'off';
 % (this is how we will retain access to the data across different functions)
 guidata(OOPSData.Handles.fH,OOPSData)
 % set optimum font size for display
-fontsize(OOPSData.Handles.fH,OOPSData.Settings.FontSize,'pixels');
+fontsize(OOPSData.Handles.fH,OOPSData.Settings.GUIFontSize,'pixels');
 % update GUI display colors
 UpdateGUITheme(OOPSData.Handles.fH);
 % update summary display
 UpdateSummaryDisplay(OOPSData.Handles.fH);
+% update menu bar
+UpdateMenubar(OOPSData.Handles.fH);
 
 
 
-% % delete the splash screen and clear out java components so we don't run into issues when saving
-% Splash.dispose();
-% clear Splash label icon SplashImage SplashScreenIcon
+
 
 disp('Opening...')
 
@@ -3808,17 +3869,21 @@ pause(0.5)
 
     function PolarHistogramVariableChanged(source,~)
         OOPSData.Settings.PolarHistogramSettings.Variable = source.Value;
-        imagePolarData = deg2rad([OOPSData.CurrentImage(1).Object(:).(source.Value)]);
-        imagePolarData(isnan(imagePolarData)) = [];
-        imagePolarData(imagePolarData<0) = imagePolarData(imagePolarData<0)+pi;
-        OOPSData.Handles.ImagePolarHistogram.polarData = [imagePolarData,imagePolarData+pi];
-        OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',OOPSData.Settings.expandVariableName(source.Value)];
 
-        groupPolarData = deg2rad([OOPSData.CurrentGroup.GetAllObjectData(source.Value)]);
-        groupPolarData(isnan(groupPolarData)) = [];
-        groupPolarData(groupPolarData<0) = groupPolarData(groupPolarData<0)+pi;
-        OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
-        OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',OOPSData.Settings.expandVariableName(source.Value)];
+        UpdateImages(source,{'Polar Plots'});
+        return
+
+        % imagePolarData = deg2rad([OOPSData.CurrentImage(1).Object(:).(source.Value)]);
+        % imagePolarData(isnan(imagePolarData)) = [];
+        % imagePolarData(imagePolarData<0) = imagePolarData(imagePolarData<0)+pi;
+        % OOPSData.Handles.ImagePolarHistogram.polarData = [imagePolarData,imagePolarData+pi];
+        % OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',OOPSData.Settings.expandVariableName(source.Value)];
+        % 
+        % groupPolarData = deg2rad([OOPSData.CurrentGroup.GetAllObjectData(source.Value)]);
+        % groupPolarData(isnan(groupPolarData)) = [];
+        % groupPolarData(groupPolarData<0) = groupPolarData(groupPolarData<0)+pi;
+        % OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
+        % OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',OOPSData.Settings.expandVariableName(source.Value)];
     end
 
     function SavePolarHistogramSettings(source,~)
@@ -4100,7 +4165,12 @@ pause(0.5)
             if ~isempty(ObjectsWithOldLabel)
                 UpdateLog3(fH,[num2str(numel(ObjectsWithOldLabel)),' objects affected. Reassigning default label...'],'append');
                 % empty label object
-                DefaultLabel = OOPSLabel.empty();
+                % DefaultLabel = OOPSLabel.empty();
+
+
+                DefaultLabel = OOPSData.Settings.DefaultLabel;
+
+
                 % chack if the default label exists
                 for LabelIdx = 1:numel(OOPSData.Settings.ObjectLabels)
                     Label = OOPSData.Settings.ObjectLabels(LabelIdx);
@@ -4111,11 +4181,16 @@ pause(0.5)
                 end
                 % if default label not found...
                 if isempty(DefaultLabel)
-                    % create a new default label
-                    OOPSData.Settings.AddNewObjectLabel(...
-                        'Default',...
-                        distinguishable_colors(1,OOPSData.Settings.LabelColors));
-                    DefaultLabel = OOPSData.Settings.ObjectLabels(end);
+
+                    OOPSData.Settings.restoreDefaultLabel();
+                    DefaultLabel = OOPSData.Settings.DefaultLabel;
+
+
+                    % % create a new default label
+                    % OOPSData.Settings.AddNewObjectLabel(...
+                    %     'Default',...
+                    %     distinguishable_colors(1,OOPSData.Settings.LabelColors));
+                    % DefaultLabel = OOPSData.Settings.ObjectLabels(end);
                 end
                 % add the new label to each of the unlabeled objects
                 [ObjectsWithOldLabel(:).Label] = deal(DefaultLabel);
@@ -4174,12 +4249,18 @@ pause(0.5)
         SelectedNode = fH.CurrentObject;
         % get the label we are going to apply to the objects
         cLabel = SelectedNode.NodeData;
+        % number of selected objects
+        nSelected = OOPSData.nSelected;
         % apply the label to any selected objects
         OOPSData.LabelSelectedObjects(cLabel);
-        % update display
+        % update display area
         UpdateImages(source);
+        % update label tree
+        UpdateLabelTree(source);
+        % update summary panel
         UpdateSummaryDisplay(source,{'Object'});
-        UpdateLog3(fH,'Done.','append');
+        % update log
+        UpdateLog3(fH,[num2str(nSelected),' objects added to ',cLabel.Name],'append');
     end
 
     function SelectLabeledObjects(source,~,fH)
@@ -4189,17 +4270,25 @@ pause(0.5)
         if numel(SelectedNodes)==0
             SelectedNodes = fH.CurrentObject;
         end
-
+        % number selected before selection
+        nSelectedBefore = OOPSData.nSelected;
+        % select the objects for each label
         for NodeIdx = 1:numel(SelectedNodes)
             % get the label associated with the node
             cLabel = SelectedNodes(NodeIdx).NodeData;
             % select all objects with the label
             OOPSData.SelectObjectsByLabel(cLabel);
         end
-        % update display
+        % number selected after selection
+        nSelectedAfter = OOPSData.nSelected;
+        % new objects added to the selection
+        newNSelected = nSelectedAfter-nSelectedBefore;
+        % update display area
         UpdateImages(source);
+        % update summary panel
         UpdateSummaryDisplay(source,{'Object'});
-        UpdateLog3(fH,'Done.','append');
+        % update log
+        UpdateLog3(source,[num2str(newNSelected),' objects added to selection. Total selected: ',num2str(nSelectedAfter)],'append');
     end
 
     function MergeLabels(source,~,fH)
@@ -4281,6 +4370,31 @@ pause(0.5)
             OOPSData.Handles.ClusterCriterionDropdown.Enable = strcmp(OOPSData.Settings.ClusternClustersMode,'Auto');
             OOPSData.Handles.ClusternClustersEditfield.Enable = strcmp(OOPSData.Settings.ClusternClustersMode,'Manual');
         end
+    end
+
+%% GUI settings
+
+    function GUIColorsChanged(source,~)
+        if isempty(source.Value)
+            % then open the colorpicker to choose a color
+            OOPSData.Settings.GUISettings.(source.Tag) = uisetcolor();
+            figure(OOPSData.Handles.fH);
+        else
+            OOPSData.Settings.GUISettings.(source.Tag) = source.Value;
+        end
+        % update the GUI theme
+        UpdateGUITheme(source);
+    end
+
+    function GUIFontSizeChanged(source,~)
+        % store the FontSize in GUISettings structure
+        OOPSData.Settings.GUISettings.FontSize = source.Value;
+        % adjust the font size across the board for all non-custom objects
+        fontsize(OOPSData.Handles.fH,OOPSData.Settings.GUIFontSize,'pixels');
+        % now adjust the font size for the settings accordion
+        OOPSData.Handles.SettingAccordion.FontSize = OOPSData.Settings.GUIFontSize;
+        % update the GUI summary display panel
+        UpdateSummaryDisplay(source,{'Project'});
     end
 
 %% Callbacks controlling dynamic resizing of GUI containers
@@ -4664,11 +4778,13 @@ pause(0.5)
         if isempty(filterSet)
             return
         else
+            nSelectedBefore = OOPSData.nSelected;
             OOPSData.selectObjectsByProperty(filterSet);
+            nSelectedAfter = OOPSData.nSelected;
+            newNSelected = nSelectedAfter-nSelectedBefore;
         end
-
         UpdateImages(source);
-
+        UpdateLog3(source,[num2str(newNSelected),' objects added to selection. Total selected: ',num2str(nSelectedAfter)],'append');
     end
 
     function mbDeleteSelectedObjects(source,~)
@@ -4881,69 +4997,23 @@ pause(0.5)
             else
                 cImage = cImage(1);
             end
+            % get the image data
+            try
+                imageData = cImage.(source.Tag);
+                if isempty(imageData)
+                    error('No image data found')
+                end
+            catch ME
+                uialert(OOPSData.Handles.fH,ME.message,'Error')
+                return
+            end
             % show the image type specified by the Tag property of the clicked menu button
-            imshow2(cImage.(source.Tag));
+            imshow2(imageData);
         catch ME
             msg = ME.message;
             uialert(OOPSData.Handles.fH,msg,'Error');
             return
         end
-    end
-
-%% changing GUI theme (dark or light)
-
-    function ChangeGUITheme(source,~)
-
-        OOPSData.Settings.GUITheme = source.Text;
-        UpdateLog3(source,['Switched theme to ',source.Text],'append');
-
-        set(OOPSData.Handles.hGUITheme.Children,'Checked','Off');
-        source.Checked = 'On';
-
-        switch OOPSData.Settings.GUITheme
-            case 'Dark'
-                OOPSData.Settings.GUIBackgroundColor = [0 0 0];
-                OOPSData.Settings.GUIForegroundColor = [1 1 1];
-                OOPSData.Settings.GUIHighlightColor = [1 1 1];
-            case 'Light'
-                OOPSData.Settings.GUIBackgroundColor = [1 1 1];
-                OOPSData.Settings.GUIForegroundColor = [0 0 0];
-                OOPSData.Settings.GUIHighlightColor = [0 0 0];
-        end
-        
-        UpdateGUITheme(source);
-        UpdateSummaryDisplay(source);
-    end
-
-    function ChangeGUIColors(source,~)
-        % get the color of the GUI element for which we want to change color
-        OOPSData.Settings.(source.Tag) = uisetcolor();
-        % bring the main figure into focus
-        figure(OOPSData.Handles.fH);
-        % uncheck all menubar options for built-in themes
-        set(OOPSData.Handles.hGUITheme.Children,'Checked','Off');
-        % update the GUI colors
-        UpdateGUITheme(source);
-        % update summary display
-        UpdateSummaryDisplay(source);
-    end
-
-%% GUI font size
-
-    function ChangeGUIFontSize(source,~)
-        switch source.Text
-            case 'Larger'
-                OOPSData.Settings.FontSize = OOPSData.Settings.FontSize+1;
-            case 'Smaller'
-                OOPSData.Settings.FontSize = OOPSData.Settings.FontSize-1;
-        end
-        % adjust the font size across the board for all non-custom objects
-        fontsize(OOPSData.Handles.fH,OOPSData.Settings.FontSize,'pixels');
-
-        % now adjust the font size for the settings accordion
-        OOPSData.Handles.SettingAccordion.FontSize = OOPSData.Settings.FontSize;
-        % update the GUI summary display panel
-        UpdateSummaryDisplay(source,{'Project'});
     end
 
 %% MaskType Selection and custom segmentation schemes
@@ -5115,8 +5185,8 @@ pause(0.5)
         % add the project with handles to the gui
         guidata(OOPSData.Handles.fH,OOPSData);
 
-        % % update swarm plot grouping type drop down
-        % OOPSData.Handles.SwarmPlotGroupingTypeDropdown.Value = OOPSData.Settings.SwarmPlotGroupingType;
+        % indicate that a project exists
+        OOPSData.GUIProjectStarted = true;
 
         % update the display with selected tab
         Tab2Switch2 = OOPSData.Settings.CurrentTab;
@@ -5142,7 +5212,9 @@ pause(0.5)
         TabSelection(Menu2Pass);
         UpdateImages(source);
         % update the GUI theme
-        UpdateGUITheme(source)
+        UpdateGUITheme(source);
+        % update the menubar
+        UpdateMenubar(source);
         % restore old pointer
         OOPSData.Handles.fH.Pointer = OldPointer;
         % update log to indicate completion
