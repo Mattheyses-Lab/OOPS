@@ -181,14 +181,16 @@ function UpdateSummaryDisplay(source,varargin)
                 % create styles for cells with missing (NaN) values
                 sMissing = uistyle("BackgroundColor",[1 0.6 0.6],"FontColor",[1 1 1]);
                 % find indices to the missing values
-                [rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), objectTable.Object));
+                %[rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), objectTable.Object));
+                [rMissing,cMissing] = find(cellfun(@(x) contains(x,'NaN'), objectTable.Object));
+                objectTable.Object(rMissing) = {'NaN'};
                 cMissing = cMissing + 1;
 
-                % get row and col coordinates to the cell corresponding to 'GUI background color'
-                %[rLabel,cLabel] = find(ismember(objectTable.Variables,'Label'));
-                [rLabel,cLabel] = find(cellfun(@(x) strcmp(x,'Label'), objectTable.Variables));
                 % create an icon color style for the cell
-                sLabel = uistyle('Icon',cObject.LabelColorSquare);
+                sLabel = uistyle('Icon',cObject.LabelColorSquare);                
+                % get row and col coordinates to the cell corresponding to 'Label'
+                [rLabel,cLabel] = find(cellfun(@(x) strcmp(x,'Label'), objectTable.Variables));
+                cLabel = cLabel + 1;
 
                 % add the table data to the uitable
                 OOPSData.Handles.ProjectSummaryTable.Data = objectTable;
@@ -203,9 +205,7 @@ function UpdateSummaryDisplay(source,varargin)
                 % add the style to missing cells
                 addStyle(OOPSData.Handles.ProjectSummaryTable,sMissing,'cell',[rMissing,cMissing]);
                 % add label color square icon to object label cell
-                addStyle(OOPSData.Handles.ProjectSummaryTable,sLabel,'cell',[rLabel,cLabel+1]);
-                % end testing
-
+                addStyle(OOPSData.Handles.ProjectSummaryTable,sLabel,'cell',[rLabel,cLabel]);
             else
                 OOPSData.Handles.AppInfoPanel.Title = 'No object found';
                 OOPSData.Handles.ProjectSummaryTable.Data = [];
