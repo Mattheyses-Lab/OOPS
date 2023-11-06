@@ -155,6 +155,11 @@ function loadFFCImages(source,~)
     % indicate that at least one FFC file has been loaded
     cGroup.FFCLoaded = true;
 
+    % reset the FFCDone status flag for any existing images
+    for imageIdx = 1:cGroup.nReplicates
+        cGroup.Replicate(imageIdx).FFCDone = false;
+    end
+
     % if files tab is not current, invoke the callback we need to get there
     if ~strcmp(OOPSData.Settings.CurrentTab,'Files')
         feval(OOPSData.Handles.hTabFiles.Callback,OOPSData.Handles.hTabFiles,[]);
