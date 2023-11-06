@@ -602,8 +602,18 @@
         
             end % end images
         
+            % convert struct to table
             tableOut = struct2table(dataStruct);
-        
+
+            % get current table variable names
+            oldVarNames = tableOut.Properties.VariableNames;
+
+            % get expanded names
+            newVarNames = cellfun(@(x) obj.Settings.expandVariableName(x),oldVarNames,'UniformOutput',false);
+
+            % rename variables in the table
+            tableOut = renamevars(tableOut,oldVarNames,newVarNames);
+
         end
 
     end
