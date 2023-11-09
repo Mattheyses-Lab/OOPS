@@ -31,13 +31,15 @@ For a more detailed description of our imaging setup and calculations, please se
 
 This software has only been fully tested in MATLAB version `R2023a`. It is not guaranteed to work with any previous versions.
 
-OOPS makes use of several libraries sourced from the [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/) or elsewhere, each of which are subject to their own licenses. These libraries are included with the source in the `lib` directory, so you do not have to download them yourself. However, if you intend to use this software, read the documentation for each library to ensure that your desired use is permitted. The versions included with OOPS may or may not be the latest versions. If you update these libraries yourself, the software is not guaranteed to work. Links to each library can be found in the [Sources](#sources) section.
+OOPS makes use of several libraries sourced from the [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/) or elsewhere, each of which are subject to their own licenses. These libraries are included with the source in the `lib` directory, so you do not have to download them yourself. However, if you intend to use this software, read the documentation for each library to ensure that your desired use is permitted. The versions included with OOPS may or may not be the latest versions. If you update these libraries yourself, the software is not guaranteed to work. Links to each library and their licenses can be found in the [Sources](#sources) section.
 
 OOPS also relies on several MATLAB toolboxes which you will need to manually add to MATLAB. Links to each toolbox can also be found in the [Sources](#sources) section.
 
 To install this software, dowload the lasest [release](https://github.com/Mattheyses-Lab/OOPS/releases), unzip it, and make sure all associated files/folders are on the MATLAB `PATH`. For help, see [here](https://www.mathworks.com/help/matlab/matlab_env/add-remove-or-reorder-folders-on-the-search-path.html).
 
 Once you have downloaded the software and required toolboxes, you can start up the GUI by simply typing `OOPS` in the command window.
+
+Notice: This product includes color specifications and designs developed by Cynthia Brewer (http://colorbrewer.org/). For further information about each color scheme, visit the ColorBrewer website.
 
 ## Sources
 
@@ -52,6 +54,7 @@ Once you have downloaded the software and required toolboxes, you can start up t
 - [interparc](https://www.mathworks.com/matlabcentral/fileexchange/34874-interparc) (interparc, [BSD-2-Clause](https://opensource.org/license/bsd-2-clause/))
 - [Cyclic color map](https://www.mathworks.com/matlabcentral/fileexchange/57020-cyclic-color-map) (PhaseBar, [BSD-3-Clause](https://opensource.org/license/bsd-2-clause/))
 - [wesMap](https://github.com/tristangstanford/wesMap) (wesMap- 1.0.0, [MIT License](https://opensource.org/license/mit/))
+- [ColorBrewer: Attractive and Distinctive Colormaps](https://www.mathworks.com/matlabcentral/fileexchange/45208-colorbrewer-attractive-and-distinctive-colormaps) (ColorBrewer, [Apache](https://www.apache.org/licenses/LICENSE-2.0))
 
 #### MATLAB Toolboxes
 
