@@ -6,7 +6,7 @@
 A GUI-based MATLAB software package for object-oriented analysis of excitation-resolved, widefield fluorescence polarization microscopy (FPM) data.
 
 The ultimate goal of the software is to retrieve pixel-by-pixel order and orientation statistics. We refer to these throughout as:
-- Order Factor (OF) - in-plane orientational order of all the dipoles in a single pixel
+- Order - in-plane orientational order of all the dipoles in a single pixel
 - Azimuth - ensemble average direction of the dipoles in each pixel, as projected into the sample plane
 
 To calculate pixel-by-pixel OF and azimuth, you will need:
