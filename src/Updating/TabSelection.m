@@ -272,7 +272,7 @@ function TabSelection(source,~)
             OOPSData.Handles.MaskAxH.HitTest = 'On';
             OOPSData.Handles.MaskAxH.Visible = 'On';
 
-            OOPSData.Handles.AverageIntensityCbar.Visible = 'On';
+            % OOPSData.Handles.AverageIntensityCbar.Visible = 'On';
     
             for i = 1:4
                 OOPSData.Handles.SmallPanels(1,i).Visible = 'Off';
@@ -302,9 +302,6 @@ function TabSelection(source,~)
             OOPSData.Handles.ImgPanel2.Visible = 'On';
             OOPSData.Handles.ImgPanel1.Visible = 'On';
     
-            OOPSData.Handles.OrderCbar.Visible = 'On';
-            OOPSData.Handles.AverageIntensityCbar.Visible = 'On';
-    
             for i = 1:4
                 OOPSData.Handles.SmallPanels(1,i).Visible = 'Off';
                 OOPSData.Handles.SmallPanels(2,i).Visible = 'Off';
@@ -333,7 +330,7 @@ function TabSelection(source,~)
             OOPSData.Handles.ImgPanel1.Visible = 'On';
             OOPSData.Handles.ImgPanel2.Visible = 'On';
 
-            OOPSData.Handles.AverageIntensityCbar.Visible = 'On';
+            % OOPSData.Handles.AverageIntensityCbar.Visible = 'On';
     
             for i = 1:4
                 OOPSData.Handles.SmallPanels(1,i).Visible = 'Off';

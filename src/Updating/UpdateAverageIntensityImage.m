@@ -46,6 +46,8 @@ function UpdateAverageIntensityImage(source)
         OOPSData.Handles.AverageIntensityAxH.XLim = [0.5 size(EmptyImage,2)+0.5];
         OOPSData.Handles.AverageIntensityAxH.YLim = [0.5 size(EmptyImage,1)+0.5];
         OOPSData.Handles.AverageIntensityImgH.AlphaData = 1;
+        % hide colorbar
+        OOPSData.Handles.AverageIntensityCbar.Visible = 'off';
     end
 
 end

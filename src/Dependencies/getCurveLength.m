@@ -13,7 +13,8 @@ function curveLength = getCurveLength(Curve)
 %   
 %       Curve(:,1) = x coordinates, Curve(:,2) = y coordinates
 %
-%   If the curve is meant to be closed, then the first and last points should be identical
+%       If the curve is meant to be closed, then the first and last points should be identical
+%
 %----------------------------------------------------------------------------------------------------------------------------
 
 % return NaN if Curve contains any NaNs

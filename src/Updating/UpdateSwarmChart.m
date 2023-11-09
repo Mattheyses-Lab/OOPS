@@ -266,7 +266,8 @@ switch OOPSData.Settings.SwarmPlotGroupingType
             case 'Magnitude'
                 autoColors = zeros(nPlots,3); % black violin outlines if points colored by magnitude
             case 'Group'
-                autoColors = OOPSData.Settings.LabelColors;
+                % autoColors = OOPSData.Settings.LabelColors;
+                autoColors = repmat(OOPSData.CurrentGroup.Color,nPlots,1);
             case 'Label'
                 autoColors = OOPSData.Settings.LabelColors;
         end
@@ -321,10 +322,7 @@ MarkerFaceAlpha = OOPSData.Settings.SwarmPlotMarkerFaceAlpha;
 BGColor = OOPSData.Settings.SwarmPlotBackgroundColor;
 FGColor = OOPSData.Settings.SwarmPlotForegroundColor;
 
-
-
-
-% set all the properties
+%% set all the properties
 set(OOPSData.Handles.SwarmPlot,...
     "Title",varDisplayName,...
     "Data",Y,...

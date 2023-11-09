@@ -1,9 +1,5 @@
 function Midline = getObjectMidline(I,Options)
-%%
-%  getObjectMidline  Estimates the position of the centerline of a binary object
-
-
-
+%%  getObjectMidline Estimates the position of the centerline of a binary object
 
 %% input validation
 arguments

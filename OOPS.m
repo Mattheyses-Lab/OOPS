@@ -1,4 +1,19 @@
 function OOPS()
+%%  OOPS Primary driver for the Object-Oriented Polarization Software (OOPS) GUI
+%
+%   NOTES:
+%
+%       Before starting, make sure all relevant files are reachable on the MATLAB PATH.
+%       (all files in the directory containing "OOPS.m", including all subdirectories
+%
+%   USAGE:
+%
+%       Run the function to open the GUI by typing the following into the command window:
+%           >> OOPS
+%
+%----------------------------------------------------------------------------------------------------------------------------
+
+%% start the parallel pool
 
 % try to start the parallel pool 
 try
@@ -7,8 +22,9 @@ catch
     warning("Unable to create parallel pool...")
 end
 
-% create an instance of OOPSProject
-% this object will hold ALL project data and GUI settings
+%% set up the data structure
+
+% create an instance of OOPSProject - this object will hold ALL project data and GUI settings
 OOPSData = OOPSProject();
 
 %% set up the main window
@@ -67,15 +83,8 @@ OOPSData.Handles.hSaveImageData = uimenu(OOPSData.Handles.hFileMenu,'Text','Expo
 OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export object data','Callback',@SaveObjectData);
 % segmentation schemes
 OOPSData.Handles.hNewSegmentationScheme = uimenu(OOPSData.Handles.hFileMenu,'Text','New segmentation scheme','Separator','On','Callback',@BuildNewScheme);
-
 % save settings
-OOPSData.Handles.hSaveColormapsSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Colormaps Settings','Separator','On','Callback',@SaveColormapsSettings);
-OOPSData.Handles.hSaveAzimuthDisplaySettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Azimuth Display Settings','Callback',@SaveAzimuthDisplaySettings);
-OOPSData.Handles.hScatterPlotSettingsMenu = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Scatter Plot Settings','Callback',@SaveScatterPlotSettings);
-OOPSData.Handles.hSaveSwarmPlotSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Swarm Plot Settings','Callback',@SaveSwarmPlotSettings);
-OOPSData.Handles.hSavePolarHistogramSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Polar Histogram Settings','Callback',@SavePolarHistogramSettings);
-OOPSData.Handles.hSavePalettesSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Palettes Settings','Callback',@SavePalettesSettings);
-OOPSData.Handles.hSaveObjectIntensityProfileSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save Object Intensity Profile Settings','Callback',@SaveObjectIntensityProfileSettings);
+OOPSData.Handles.hSaveSettings = uimenu(OOPSData.Handles.hFileMenu,'Text','Save settings','Separator','on','Callback',@saveSettings);
 
 %% View Menu Button - changes view of GUI to different 'tabs'
 
@@ -110,7 +119,6 @@ OOPSData.Handles.hProcessFFC = uimenu(OOPSData.Handles.hProcessMenu,'Text','Flat
 OOPSData.Handles.hProcessMask = uimenu(OOPSData.Handles.hProcessMenu,'Text','Build mask','MenuSelectedFcn',@processMask);
 OOPSData.Handles.hProcessOrder = uimenu(OOPSData.Handles.hProcessMenu,'Text','Calculate FPM statistics','MenuSelectedFcn',@processFPMStats);
 OOPSData.Handles.hProcessAll = uimenu(OOPSData.Handles.hProcessMenu,'Text','All','Separator','on','MenuSelectedFcn',@processAll);
-% OOPSData.Handles.hProcessLocalSB = uimenu(OOPSData.Handles.hProcessMenu,'Text','Local S/B','MenuSelectedFcn',@processLocalSB);
 
 %% Summary Menu Button
 
@@ -119,9 +127,9 @@ OOPSData.Handles.hSummaryMenu = uimenu(OOPSData.Handles.fH,'Text','Summary');
 OOPSData.Handles.hSumaryAll = uimenu(OOPSData.Handles.hSummaryMenu,'Text','Project','MenuSelectedFcn',@ShowSummaryTable);
 
 %% Objects Menu Button
+
 OOPSData.Handles.hObjectsMenu = uimenu(OOPSData.Handles.fH,'Text','Objects');
-% Object Actions
-% select
+% select objects by property
 OOPSData.Handles.hSelectObjectsByProperty = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Select by property','MenuSelectedFcn',@mbSelectObjectsByProperty);
 % delete selected objects
 OOPSData.Handles.hDeleteSelectedObjects = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Delete selected objects');
@@ -137,7 +145,9 @@ OOPSData.Handles.hClearSelection_InImage = uimenu(OOPSData.Handles.hClearSelecti
 
 OOPSData.Handles.hkMeansClustering = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Label with k-means clustering','MenuSelectedFcn',@mbObjectkmeansClustering);
 OOPSData.Handles.hShowObjectImagesByLabel = uimenu(OOPSData.Handles.hObjectsMenu,'Text','Show object images by label','MenuSelectedFcn',@mbShowObjectImagesByLabel);
+
 %% Plot Menu Button
+
 OOPSData.Handles.hPlotMenu = uimenu(OOPSData.Handles.fH,'Text','Plot');
 % Plot options
 OOPSData.Handles.hPlotGroupScatterPlotMatrix = uimenu(OOPSData.Handles.hPlotMenu,'Text','Group scatter plot matrix','MenuSelectedFcn',@PlotGroupScatterPlotMatrix);
@@ -169,23 +179,21 @@ disp('Setting up grid layout manager...')
 
 pos = OOPSData.Handles.fH.Position;
 
-% width and height of the large plots
-width = round(pos(3)*0.38);
+% width of the large plots
+largeWidth = round(pos(3)*0.38);
 
 % and the small plots
-swidth = round(width/2);
-sheight = swidth;
+smallWidth = round(largeWidth/2);
+% sheight = smallWidth;
 
 % main grid for managing layout
-OOPSData.Handles.MainGrid = uigridlayout(OOPSData.Handles.fH,[4,5]);
-OOPSData.Handles.MainGrid.BackgroundColor = [0 0 0];
-
-OOPSData.Handles.MainGrid.RowHeight = {'1x',swidth,swidth,'1x'};
-OOPSData.Handles.MainGrid.RowSpacing = 0;
-OOPSData.Handles.MainGrid.ColumnSpacing = 0;
-OOPSData.Handles.MainGrid.Padding = [0 0 0 0];
-
-OOPSData.Handles.MainGrid.ColumnWidth = {'1x',sheight,sheight,sheight,sheight};
+OOPSData.Handles.MainGrid = uigridlayout(OOPSData.Handles.fH,[4,5],...
+    "BackgroundColor",[0 0 0],...
+    "RowHeight",{'1x',smallWidth,smallWidth,'1x'},...
+    "ColumnWidth",{'1x',smallWidth,smallWidth,smallWidth,smallWidth},...
+    "RowSpacing",0,...
+    "ColumnSpacing",0,...
+    "Padding",[0 0 0 0]);
 
 %% CHECKPOINT
 
@@ -224,6 +232,7 @@ OOPSData.Handles.AppInfoSelector = uilistbox(...
 OOPSData.Handles.AppInfoSelector.Layout.Row = 1;
 
 %% Summary table for current project/group/image/object
+
 % summary table for the project
 OOPSData.Handles.ProjectSummaryTableGrid = uigridlayout(OOPSData.Handles.ProjectSummaryPanelGrid,[1,1],...
     'BackgroundColor',[0 0 0],...
@@ -350,7 +359,6 @@ OOPSData.Handles.ExampleColormapAx.YLim = [0.5 50.5];
 OOPSData.Handles.ExampleColormapAx.XLim = [0.5 256.5];
 % set the colormap of the axes holding our example image
 OOPSData.Handles.ExampleColormapAx.Colormap = OOPSData.Settings.ColormapsSettings.(ImageTypeFields{1}).Map;  
-
 
 % colormap selector
 OOPSData.Handles.ColormapsPanel = uipanel(OOPSData.Handles.ColormapsSettingsGrid,...
@@ -1692,7 +1700,7 @@ OOPSData.Handles.ObjectIntensityProfileBackgroundColorDropdown = uidropdown(...
     'UserData',{@ObjectIntensityProfileBackgroundColorChanged});
 OOPSData.Handles.ObjectIntensityProfileBackgroundColorDropdown.Layout.Row = 1;
 OOPSData.Handles.ObjectIntensityProfileBackgroundColorDropdown.Layout.Column = 2;
-updateColorDropdownStyles(OOPSData.Handles.SwarmPlotBackgroundColorDropdown);
+updateColorDropdownStyles(OOPSData.Handles.ObjectIntensityProfileBackgroundColorDropdown);
 
 % foreground color
 OOPSData.Handles.ObjectIntensityProfileForegroundColorDropdownLabel = uilabel(...
@@ -1713,7 +1721,7 @@ OOPSData.Handles.ObjectIntensityProfileForegroundColorDropdown = uidropdown(...
     'UserData',{@ObjectIntensityProfileForegroundColorChanged});
 OOPSData.Handles.ObjectIntensityProfileForegroundColorDropdown.Layout.Row = 2;
 OOPSData.Handles.ObjectIntensityProfileForegroundColorDropdown.Layout.Column = 2;
-updateColorDropdownStyles(OOPSData.Handles.SwarmPlotForegroundColorDropdown);
+updateColorDropdownStyles(OOPSData.Handles.ObjectIntensityProfileForegroundColorDropdown);
 
 % fit line color
 OOPSData.Handles.ObjectIntensityProfileFitLineColorDropdownLabel = uilabel(...
@@ -2483,7 +2491,6 @@ OOPSData.Handles.CurrentThresholdLine = xline(OOPSData.Handles.ThreshAxH,0,'-',{
 
 clear RandomData
 
-
 % % testing without this drawnow command
 drawnow
 pause(0.5)
@@ -2553,7 +2560,6 @@ OOPSData.Handles.ImgPanel2.Layout.Column = [4 5];
 OOPSData.Handles.LargePanels = [OOPSData.Handles.ImgPanel1,OOPSData.Handles.ImgPanel2];
 
 %% draw all the panels and pause briefly for more predictable performance
-
 
 % testing without this drawnow command
 drawnow
@@ -3276,30 +3282,25 @@ disp('Setting up object image axes...')
 % clean up some properties that may not display correctly
 set(OOPSData.Handles.PolFFCAxH(k),'PlotBoxAspectRatio',[1 1 1]);
 
-set(OOPSData.Handles.SmallPanels,'Visible','On');
-
-set(OOPSData.Handles.AppInfoPanel,'Visible','On');
-set(OOPSData.Handles.ProjectSummaryPanelGrid,'Visible','On');
-set(OOPSData.Handles.AppInfoSelector,'Visible','On');
-set(OOPSData.Handles.ProjectSummaryTableGrid,'Visible','On');
-set(OOPSData.Handles.ProjectSummaryTable,'Visible','On');
-
-set(OOPSData.Handles.SettingsPanel,'Visible','On');
-
-set(OOPSData.Handles.GroupSelectorPanel,'Visible','On');
-set(OOPSData.Handles.ImageSelectorPanel,'Visible','On');
-set(OOPSData.Handles.ObjectSelectorPanel,'Visible','On');
-set(OOPSData.Handles.ObjectSelector,'Visible','On');
-
-set(OOPSData.Handles.LogPanel,'Visible','On');
-set(OOPSData.Handles.LogWindowGrid,'Visible','On');
-set(OOPSData.Handles.LogWindow,'Visible','On');
-
-set(OOPSData.Handles.ImageOperationsPanel,'Visible','On');
-set(OOPSData.Handles.ThreshSliderGrid,'Visible','On');
-set(OOPSData.Handles.ThreshAxH,'Visible','On');
-set(OOPSData.Handles.CurrentThresholdLine,'Visible','On');
-set(OOPSData.Handles.ThreshBar,'Visible','On');
+% set visibility to 'On' for components shown at startup
+set([...
+    OOPSData.Handles.SmallPanels(:);...
+    OOPSData.Handles.AppInfoPanel;...
+    OOPSData.Handles.ProjectSummaryPanelGrid;...
+    OOPSData.Handles.AppInfoSelector;...
+    OOPSData.Handles.ProjectSummaryTableGrid;...
+    OOPSData.Handles.ProjectSummaryTable;...
+    OOPSData.Handles.SettingsPanel;...
+    OOPSData.Handles.GroupSelectorPanel;...
+    OOPSData.Handles.ImageSelectorPanel;...
+    OOPSData.Handles.ObjectSelectorPanel;...
+    OOPSData.Handles.ObjectSelector;...
+    OOPSData.Handles.LogPanel;...
+    OOPSData.Handles.LogWindowGrid;...
+    OOPSData.Handles.LogWindow;...
+    OOPSData.Handles.ThreshSliderGrid;...
+    OOPSData.Handles.ImageOperationsPanel],...
+    'Visible','On');
 
 % set uipanel linewidth
 set(findobj(OOPSData.Handles.fH,'type','uipanel'),'BorderWidth',1);
@@ -3314,19 +3315,14 @@ OOPSData.Handles.AzimuthLines = gobjects(1,1);
 OOPSData.Handles.ObjectAzimuthLines = gobjects(1,1);
 OOPSData.Handles.ObjectMidlinePlot = gobjects(1,1);
 OOPSData.Handles.ObjectBoundaryPlot = gobjects(1,1);
-
-% testing below
 OOPSData.Handles.LineScanRectangle = gobjects(1,1);
-% end testing
 
 % set default on/off state of toolbar buttons
 OOPSData.Handles.ScaleToMaxAzimuth.Visible = 'off';
 
-
-% add OOPSData to the gui using guidata
-% (this is how we will retain access to the data across different functions)
+% add OOPSData to the gui using guidata (this is how we will retain access to the data across different functions)
 guidata(OOPSData.Handles.fH,OOPSData)
-% set optimum font size for display
+% set global font size
 fontsize(OOPSData.Handles.fH,OOPSData.Settings.GUIFontSize,'pixels');
 % update GUI display colors
 UpdateGUITheme(OOPSData.Handles.fH);
@@ -3554,23 +3550,6 @@ pause(0.5)
         OOPSData.Handles.SwarmPlot.MarkerEdgeColor = OOPSData.Settings.SwarmPlotMarkerEdgeColor;
     end
 
-    function SaveSwarmPlotSettings(source,~)
-        % saves the currently selected SwarmPlot settings to a .mat file
-        % which will be loaded in future sessions by OOPSSettings
-        UpdateLog3(source,'Saving swarmplot settings...','append');
-        SwarmPlotSettings = OOPSData.Settings.SwarmPlotSettings;
-        if ismac || isunix
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-            save([SavePath,'/user_settings/SwarmPlotSettings.mat'],'SwarmPlotSettings');        
-        elseif ispc
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
-            save([SavePath,'\user_settings\SwarmPlotSettings.mat'],'SwarmPlotSettings');        
-        end
-        UpdateLog3(source,'Done.','append');
-    end
- 
 %% Scatter plot callbacks/settings
 
     function CopyScatterPlotVector(source,~)
@@ -3632,21 +3611,6 @@ pause(0.5)
         if strcmp(OOPSData.Settings.CurrentTab,'Plots')
             UpdateImages(source);
         end
-    end
-
-    function SaveScatterPlotSettings(source,~)
-        UpdateLog3(source,'Saving scatterplot settings...','append');
-        ScatterPlotSettings = OOPSData.Settings.ScatterPlotSettings;
-        if ismac || isunix
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-            save([SavePath,'/user_settings/ScatterPlotSettings.mat'],'ScatterPlotSettings');        
-        elseif ispc
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
-            save([SavePath,'\user_settings\ScatterPlotSettings.mat'],'ScatterPlotSettings');        
-        end
-        UpdateLog3(source,'Done.','append');
     end
 
 %% Object intensity profile callbacks/settings
@@ -3869,38 +3833,8 @@ pause(0.5)
 
     function PolarHistogramVariableChanged(source,~)
         OOPSData.Settings.PolarHistogramSettings.Variable = source.Value;
-
         UpdateImages(source,{'Polar Plots'});
         return
-
-        % imagePolarData = deg2rad([OOPSData.CurrentImage(1).Object(:).(source.Value)]);
-        % imagePolarData(isnan(imagePolarData)) = [];
-        % imagePolarData(imagePolarData<0) = imagePolarData(imagePolarData<0)+pi;
-        % OOPSData.Handles.ImagePolarHistogram.polarData = [imagePolarData,imagePolarData+pi];
-        % OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',OOPSData.Settings.expandVariableName(source.Value)];
-        % 
-        % groupPolarData = deg2rad([OOPSData.CurrentGroup.GetAllObjectData(source.Value)]);
-        % groupPolarData(isnan(groupPolarData)) = [];
-        % groupPolarData(groupPolarData<0) = groupPolarData(groupPolarData<0)+pi;
-        % OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
-        % OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',OOPSData.Settings.expandVariableName(source.Value)];
-    end
-
-    function SavePolarHistogramSettings(source,~)
-        % saves the currently selected colormaps settings to a .mat file
-        % which will be loaded in future sessions by OOPSSettings
-        UpdateLog3(source,'Saving polar histogram settings...','append');
-        PolarHistogramSettings = OOPSData.Settings.PolarHistogramSettings;
-        if ismac || isunix
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-            save([SavePath,'/user_settings/PolarHistogramSettings.mat'],'PolarHistogramSettings');        
-        elseif ispc
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
-            save([SavePath,'\user_settings\PolarHistogramSettings.mat'],'PolarHistogramSettings');        
-        end
-        UpdateLog3(source,'Done.','append');
     end
 
 %% Azimuth stick plot callbacks/settings
@@ -3944,23 +3878,6 @@ pause(0.5)
         end
     end
     
-    function SaveAzimuthDisplaySettings(source,~)
-        % saves the currently selected colormaps settings to a .mat file
-        % which will be loaded in future sessions by OOPSSettings
-        UpdateLog3(source,'Saving azimuth display settings...','append');
-        AzimuthDisplaySettings = OOPSData.Settings.AzimuthDisplaySettings;
-        if ismac || isunix
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-            save([SavePath,'/user_settings/AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');        
-        elseif ispc
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
-            save([SavePath,'\user_settings\AzimuthDisplaySettings.mat'],'AzimuthDisplaySettings');        
-        end
-        UpdateLog3(source,'Done.','append');
-    end
-
 %% Object azimuth stick plot callbacks/settings
 
     function ObjectAzimuthDisplaySettingsChanged(source,~)
@@ -4062,23 +3979,6 @@ pause(0.5)
 
     end
 
-    function SaveColormapsSettings(source,~)
-        % saves the currently selected colormaps settings to a .mat file
-        % which will be loaded in future sessions by OOPSSettings
-        UpdateLog3(source,'Saving colormaps settings...','append');
-        ColormapsSettings = OOPSData.Settings.ColormapsSettings;
-        if ismac || isunix
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-            save([SavePath,'/user_settings/ColormapsSettings.mat'],'ColormapsSettings');        
-        elseif ispc
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
-            save([SavePath,'\user_settings\ColormapsSettings.mat'],'ColormapsSettings');        
-        end
-        UpdateLog3(source,'Done.','append');
-    end
-
 %% Palettes settings
 
     function PaletteTypeSelectionChanged(source,~)
@@ -4113,23 +4013,6 @@ pause(0.5)
                 UpdateSummaryDisplay(source,{'Label','Object'});
                 UpdateImages(source,{'Plots','Mask','Order','Objects'});
         end
-    end
-
-    function SavePalettesSettings(source,~)
-        % saves the currently selected colormaps settings to a .mat file
-        % which will be loaded in future sessions by OOPSSettings
-        UpdateLog3(source,'Saving palettes settings...','append');
-        PalettesSettings = OOPSData.Settings.PalettesSettings;
-        if ismac || isunix
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'/');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'/');
-            save([SavePath,'/user_settings/PalettesSettings.mat'],'PalettesSettings');        
-        elseif ispc
-            CurrentPathSplit = strsplit(mfilename("fullpath"),'\');
-            SavePath = strjoin(CurrentPathSplit(1:end-1),'\');
-            save([SavePath,'\user_settings\PalettesSettings.mat'],'PalettesSettings');        
-        end
-        UpdateLog3(source,'Done.','append');
     end
 
 %% Labels settings
@@ -4353,8 +4236,10 @@ pause(0.5)
 %% Cluster settings
 
     function ClusterVariablesChanged(source,~)
+        OOPSData.Settings.ClusterSettings.VariableList = {};
         if isempty(source.CheckedNodes)
-            OOPSData.Settings.ClusterSettings.VariableList = {};
+            return
+            %OOPSData.Settings.ClusterSettings.VariableList = {};
         else
             [OOPSData.Settings.ClusterSettings.VariableList{1,1:numel(source.CheckedNodes)}] = deal(source.CheckedNodes.NodeData);
         end
@@ -4400,15 +4285,13 @@ pause(0.5)
 %% Callbacks controlling dynamic resizing of GUI containers
 
     function ResetContainerSizes(source,~)
-        disp('Figure Window Size Changed...');
+        %disp('Figure Window Size Changed...');
         SmallWidth = round((source.InnerPosition(3)*0.38)/2);
 
         % update grid size to match new image sizes
-        OOPSData.Handles.MainGrid.RowHeight = {'1x',SmallWidth,SmallWidth,'1x'};
-        OOPSData.Handles.MainGrid.ColumnWidth = {'1x',SmallWidth,SmallWidth,SmallWidth,SmallWidth};
-
-        % testing dynamic font size update
-        %fontsize(OOPSData.Handles.fH,round(OOPSData.Handles.fH.OuterPosition(4)*.0125),'pixels');
+        set(OOPSData.Handles.MainGrid,...
+            'RowHeight',{'1x',SmallWidth,SmallWidth,'1x'},...
+            'ColumnWidth',{'1x',SmallWidth,SmallWidth,SmallWidth,SmallWidth});
 
         %drawnow limitrate
         drawnow

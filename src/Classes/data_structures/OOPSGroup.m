@@ -1,84 +1,74 @@
  classdef OOPSGroup < handle
+
     % experimental groups class
     properties
 
         % handle to the OOPSProject containing this group
         Parent OOPSProject
-
         % the user-defined name of this group
         GroupName char
-
         % array of handles to the OOPSImages in this group
         Replicate (:,1) OOPSImage
-
-        % indexing group members (Replicate/OOPSImage objects)
+        % index to the currently selected image(s) in this group
         CurrentImageIndex double
+        % index to the previously selected image(s) in this group
         PreviousImageIndex double
-        
-        % FFC info for group
+        % status flag indicating whether FFC stacks have been loaded for this group
         FFCLoaded = false
-
+        % filenames without path and extension
         FFC_cal_shortname
+        % filenames with patch and extension
         FFC_cal_fullname
+        % averaged and normalized FFC stack
         FFC_cal_norm
+        % height of the stack (rows) in pixels
         FFC_Height
+        % width of the stack (columns) in pixels
         FFC_Width
-
+        % status flag indicating whether FPM stacks have been loaded for this group
         FPMFilesLoaded = false
-        
         % group color for plots, etc.
         Color double
-        
+
     end
     
     properties (Dependent = true)
         
-        % number of 'images' in this group, depends on the size of obj.Replicate
+        % number of images/replicates in this group
         nReplicates uint8
-        
-        % total number of objects in this group, changes depending on user-defined mask
+        % total number of objects in this group
         TotalObjects uint16
-        
-        % Only the OOPSImage objects will store their name in memory, combining them is quick
+        % cell array of names of each image in this group
         ImageNames cell
-        
-        % currently selected image in GUI
+        % actively selected image(s) in this group
         CurrentImage OOPSImage
-        
-        % currently selected object - updates based on user selection
+        % actively selected object(s) in this group
         CurrentObject OOPSObject
-        
         % don't want to store in memory for every group
         AllObjectData table
-
-        FilteredObjectData table
-        
-        % status tracking for the group
+        % status flag indicating whether the all images have been segmented
         MaskAllDone logical
-        %FPMStatsAllDone logical
+        % status flag indicating whether FPM stats have been computed for all images
         FPMStatsAllDone logical
+        % status flag indicating whether flat-field correction has been performed for all images
         FFCAllDone logical
+        % status flag indicating whether objects have been detected for all images
         ObjectDetectionAllDone logical
+        % status flag indicating whether local S/B has been detected for all images
         LocalSBAllDone logical
-        
-        % pixel-average Order for all images in this OOPSGroup for which Order has been calculated
+        % pixel-average Order for all images in this group for which FPM stats have been calculated
         OrderAvg double
-        
         % name of the color of this OOPSGroup
         ColorString char
-
-        % index of this OOPSGroup in [obj.Parent.Group(:)]
+        % index of this group in its parent project
         SelfIdx
-
-        % quick access to project settings
+        % project-wide settings
         Settings OOPSSettings
-
+        % table used to display 
         GroupSummaryDisplayTable table
-
-        % nImages x nLabels array of the number of objects with each label in this group
+        % summary of the objects found with each unique label
         labelCounts double
-
-        % array of all objects in this group
+        % array of handles to all objects in this group
         allObjects
     
     end
@@ -233,34 +223,30 @@
         % get array of [XVar,YVar] data for all objects in group
         function ObjectData = CombineObjectData(obj,XVar,YVar)
             
+            % total objects found so far
             count = 0;
+            % the next starting idx as we add data from each image
             last = 1;
-
-            % test below
+            % start with an empty array
             ObjectData = [];
-            % end test
             
             for i = 1:obj.nReplicates
-                
+                % add to the total count
                 count = count + obj.Replicate(i).nObjects;
-
-                % get XData and YData
+                % get XData
                 XData = obj.Replicate(i).GetAllObjectData(XVar);
+                % get YData
                 YData = obj.Replicate(i).GetAllObjectData(YVar);
-
                 % column 1 holds x data
                 ObjectData(last:count,1) = XData;
                 % column 2 holds y data
                 ObjectData(last:count,2) = YData;
-
-
+                % get the next starting idx
+                last = count+1;
                 % % column 1 holds x data
                 % ObjectData(last:count,1) = [obj.Replicate(i).Object.(XVar)];
                 % % column 2 holds y data
                 % ObjectData(last:count,2) = [obj.Replicate(i).Object.(YVar)];
-                
-                last = count+1;
-                
             end
         end
         
@@ -279,11 +265,8 @@
             %VariableObjectData = [];
             for i = 1:obj.nReplicates
                 count = count + obj.Replicate(i).nObjects;
-                
                 objectData = obj.Replicate(i).GetAllObjectData(Var2Get);
                 VariableObjectData(last:count,1) = objectData;
-
-                % VariableObjectData(last:count,1) = [obj.Replicate(i).Object.(Var2Get)];
                 last = count+1;
             end        
         end
@@ -330,9 +313,9 @@
             Selected = false(obj.nReplicates,1);
             % set any elements to true if the corresponding images are selected
             Selected(obj.CurrentImageIndex) = true;
-            % get list of 'good' objects (not selected)
+            % get list of 'good' images (not selected)
             Good = AllReplicates(~Selected);
-            % get list of objects to delete (selected)
+            % get list of images to delete (selected)
             Bad = AllReplicates(Selected);
             % replace image array of group with only the ones we wish to keep (not selected)
             obj.Replicate = Good;
@@ -342,7 +325,6 @@
                 obj.CurrentImageIndex = obj.nReplicates;
             end
             % delete the bad OOPSImage objects
-            % set their pixel idxs to 0 in the mask
             for i = 1:length(Bad)
                 delete(Bad(i));
             end
@@ -459,6 +441,7 @@
         end
 
         function GroupSummaryDisplayTable = get.GroupSummaryDisplayTable(obj)
+            % table row titles
             varNames = [...
                 "FFC files loaded",...
                 "FPM files loaded",...
@@ -470,7 +453,7 @@
                 "Order/azimuth calculated",...
                 "Objects detected",...
                 "Local S/B calculated"];
-
+            % table data
             GroupSummaryDisplayTable = table(...
                 {obj.FFCLoaded},...
                 {obj.FPMFilesLoaded},...
@@ -484,9 +467,9 @@
                 {obj.LocalSBAllDone},...
                 'VariableNames',varNames,...
                 'RowNames',"Group");
-
+            % convert rows to variables
             GroupSummaryDisplayTable = rows2vars(GroupSummaryDisplayTable,"VariableNamingRule","preserve");
-
+            % reset row names
             GroupSummaryDisplayTable.Properties.RowNames = varNames;
         end
 

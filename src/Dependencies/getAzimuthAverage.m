@@ -1,8 +1,6 @@
 function AzimuthAverage = getAzimuthAverage(azimuths)
 %%  getAzimuthAverage  returns axial mean (in radians) of a vector of angles (in radians)
 
-% AzimuthAverage = getBiaxialMean(azimuths);
-
 AzimuthAverage = angle(mean(exp(1i*azimuths*2)))/2;
 
 %% step-by-step version shown for clarity
