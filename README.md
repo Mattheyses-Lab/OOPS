@@ -51,7 +51,7 @@ Once you have downloaded the software and required toolboxes, you can start up t
 - [export_fig](https://www.mathworks.com/matlabcentral/fileexchange/23629-export_fig) (export_fig, [BSD-3-Clause](https://opensource.org/license/bsd-3-clause/))
 - [interparc](https://www.mathworks.com/matlabcentral/fileexchange/34874-interparc) (interparc, [BSD-2-Clause](https://opensource.org/license/bsd-2-clause/))
 - [Cyclic color map](https://www.mathworks.com/matlabcentral/fileexchange/57020-cyclic-color-map) (PhaseBar, [BSD-3-Clause](https://opensource.org/license/bsd-2-clause/))
-- [WesMap](https://github.com/tristangstanford/wesMap) (WesMap, [MIT License](https://opensource.org/license/mit/))
+- [wesMap](https://github.com/tristangstanford/wesMap) (wesMap- 1.0.0, [MIT License](https://opensource.org/license/mit/))
 
 #### MATLAB Toolboxes
 
