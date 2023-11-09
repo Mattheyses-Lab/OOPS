@@ -9,7 +9,7 @@ The ultimate goal of the software is to retrieve pixel-by-pixel order and orient
 - Order - in-plane orientational order of all the dipoles in a single pixel
 - Azimuth - ensemble average direction of the dipoles in each pixel, as projected into the sample plane
 
-To calculate pixel-by-pixel OF and azimuth, you will need:
+To calculate pixel-by-pixel order and azimuth, you will need:
 - (**required**) 4-image FPM stack(s), where individual images were captured using excitation polarizations of 
 0°, 45°, 90°, and 135° (counter-clockwise with respect to the horizontal direction in the image)
 - (optional) 4-image flat-field stack(s) captured at the same excitation polarizations
@@ -29,7 +29,7 @@ For a more detailed description of our imaging setup and calculations, please se
 
 ## Installation and usage
 
-This software has only been fully tested in MATLAB version `R2023a`. It is not guaranteed to work with any previous versions.
+This software has only been fully tested in MATLAB version `R2023b`. It is not guaranteed to work with any previous versions.
 
 OOPS makes use of several libraries sourced from the [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/) or elsewhere, each of which are subject to their own licenses. These libraries are included with the source in the `lib` directory, so you do not have to download them yourself. However, if you intend to use this software, read the documentation for each library to ensure that your desired use is permitted. The versions included with OOPS may or may not be the latest versions. If you update these libraries yourself, the software is not guaranteed to work. Links to each library and their licenses can be found in the [Sources](#sources) section.
 
