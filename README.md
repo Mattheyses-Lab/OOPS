@@ -39,12 +39,6 @@ To install this software, dowload the lasest [release](https://github.com/Matthe
 
 Once you have downloaded the software and required toolboxes, you can start up the GUI by simply typing `OOPS` in the command window.
 
-## Example output
-
-### Azimuth
-
-![OOPS flowchart and data structure](/assets/images/examples/AzimuthImageTypes.png)
-
 ## Sources
 
 #### External Sources
