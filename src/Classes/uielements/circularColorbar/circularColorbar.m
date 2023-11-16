@@ -1,5 +1,25 @@
 classdef circularColorbar < handle
-% plots a circular colorbar in the uiaxes specified by 'Parent'
+%%  CIRCULARCOLORBAR plots a circular colorbar in the uiaxes specified by 'Parent'
+%
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
 
     properties(Access=public, Dependent=true)
         % x coordinate of the center of the circular colorbar
@@ -110,14 +130,6 @@ classdef circularColorbar < handle
                     'Interpreter','tex',...
                     'Visible','off');
             end
-
-            % obj.centerX = NameValuePairs.centerX;
-            % obj.centerY = NameValuePairs.centerY;
-            % obj.outerRadius = NameValuePairs.outerRadius;
-            % obj.innerRadius = NameValuePairs.innerRadius;
-            % obj.Colormap = NameValuePairs.Colormap;
-            % obj.nRepeats = NameValuePairs.nRepeats;
-            % obj.colorMode = NameValuePairs.colorMode;
 
             obj.user_centerX = NameValuePairs.centerX;
             obj.user_centerY = NameValuePairs.centerY;

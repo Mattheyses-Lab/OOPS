@@ -2,6 +2,26 @@ function pixelValues = getPixelValuesFromCurveValues(Curve,curveValues,I)
 % given a curve (x,y), a list of values for each point on the curve, and a binary image...
 % return a list of pixel values (ordered by their linear idxs) where the value of each pixel
 % is based on the value of the closest curve point
+%
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
 
     % check for invalid input
     if any(isnan(Curve(:))) || isempty(curveValues)

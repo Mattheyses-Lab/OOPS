@@ -16,6 +16,24 @@ function curveLength = getCurveLength(Curve)
 %       If the curve is meant to be closed, then the first and last points should be identical
 %
 %----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
 
 % return NaN if Curve contains any NaNs
 if any(isnan(Curve(:)))
@@ -31,4 +49,5 @@ dy = curveY(2:end) - curveY(1:end-1);
 d = sqrt(dx.*dx+dy.*dy);
 % now sum the distances
 curveLength = sum(d);
+
 end

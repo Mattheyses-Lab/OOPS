@@ -1,28 +1,40 @@
 function Iout = quasihbreak(I)
-%% -------------------------------------------------------------------------------------%
-% FUNCTION NAME:
-%   quasihbreak
+%%  QUASIHBREAK remove h-connected and "nearly" h-connected pixels from a binary image
 %
-% DESCRIPTION:
-%   Given a binary image, remove h-connected pixels and "nearly" h-connected pixels, return
-%   the adjusted image
+%   DESCRIPTION:
+%       Given a binary image, remove h-connected pixels and "nearly" h-connected pixels, 
+%       return the adjusted image
 %
-% INPUT:
-%   I - (mxn logical) binary image
+%   INPUT:
+%       I | (mxn) logical | binary image
 %
-% OUTPUT:
-%   Iout - (double) adjusted binary image, same size as I
+%   OUTPUT:
+%       Iout | (double) | adjusted binary image, same size as I
 %
-% ASSUMPTIONS AND LIMITATIONS:
-%   I think I have accounted for all possible "near h's" here but, as I manually defined them,
-%   I may have missed some. This could be updated to automatically generate the set of 
-%   reference matrices more elegantly
+%   ASSUMPTIONS AND LIMITATIONS:
+%       I think I have accounted for all possible "near h's" here but, as I manually defined them,
+%       I may have missed some. This could be updated to automatically generate the set of 
+%       reference matrices more elegantly
 %
-% REVISION HISTORY:
-%   03/02/2023 - Will Dean
-%       * Initial implementation
+%----------------------------------------------------------------------------------------------------------------------------
 %
-%% --------------------------------------------------------------------------------------%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
 
 %% define the types of neighborhoods we are searching for
 % upper left corner missing

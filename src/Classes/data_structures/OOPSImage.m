@@ -1,4 +1,23 @@
 classdef OOPSImage < handle & dynamicprops
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
     
     properties
 
@@ -443,10 +462,7 @@ classdef OOPSImage < handle & dynamicprops
         end
 
         function ffcFPMPixelNorm = get.ffcFPMPixelNorm(obj)
-            % OLD NORMALIZATION METHOD BELOW
-            % ffcFPMPixelNorm = obj.ffcFPMStack./max(obj.ffcFPMStack,[],3);
-
-            % NEW NORMALIZATION METHOD
+            % normalize to total intensity
             ffcFPMPixelNorm = obj.ffcFPMStack./(sum(obj.ffcFPMStack,3)./2);
         end
 
@@ -757,7 +773,28 @@ classdef OOPSImage < handle & dynamicprops
         function FindFPMStatistics(obj)
 
             % default order parameter and azimuth
-            % get the pixel-normalized, flat-field corrected intensity stack
+
+            % edit the lines below if you want to change how the built-in
+            % order (obj.OrderImage) and orientation (obj.AzimuthImage) 
+            % statistics are calculated. 
+            % 
+            % Note that the stack "obj.ffcFPMPixelNorm" has already been
+            % flat-field corrected and normalized to the total intensity.
+            %
+            % To perform calculations with the raw FPM stack,
+            % use "obj.rawFPMStack" instead. Use im2double to convert
+            % pixel values to double before doing any calculations.
+            %
+            % To perform calculations with the unnormalized,
+            % flat-field corrected stack, use "obj.ffcFPMStack".
+            %
+            % OOPS will always assume the values in obj.AzimuthImage 
+            % are measured counterclockwise with respect to the 
+            % positive x-axis. Therefore, if your excitation 
+            % polarizations are defined in a counterclockwise order, 
+            % make sure to adjust how b is calculated accordingly. 
+
+            % pixel-normalized, flat-field corrected intensity stack
             pixelNorm = obj.ffcFPMPixelNorm;
             % orthogonal polarization difference components
             a = pixelNorm(:,:,1) - pixelNorm(:,:,3);
@@ -766,10 +803,10 @@ classdef OOPSImage < handle & dynamicprops
             obj.OrderImage = zeros(size(pixelNorm(:,:,1)));
             obj.AzimuthImage = obj.OrderImage;
             % calculate order | clip output to the range [0,1]
-            % obj.OrderImage(:) = min(max(sqrt(a(:).^2+b(:).^2),0),1);
             obj.OrderImage(:) = min(max(hypot(a(:),b(:)),0),1);
             % calculate azimuth | output in radians! CCW w.r.t. the horizontal direction in the image
             obj.AzimuthImage(:) = (0.5).*atan2(b(:),a(:));
+            % end built-in statistics
 
             % custom order statistics
             % get the vector of custom statistic objects
@@ -783,7 +820,7 @@ classdef OOPSImage < handle & dynamicprops
                     % get the allowed range of the statistic
                     statRange = thisStatistic.StatisticRange;
                     % call the function handle specified by the custom statistic object,
-                    % store the value in dynamic property,
+                    % store the value in the associated dynamic property,
                     % and clip the output to the user-defined range
                     obj.([thisStatistic.StatisticName,'Image']) = ...
                         min(max(thisStatistic.StatisticFun(obj.ffcFPMStack),statRange(1)),statRange(2));
@@ -1645,38 +1682,31 @@ classdef OOPSImage < handle & dynamicprops
         function AzimuthOrderIntensityHSV = get.AzimuthOrderIntensityHSV(obj)
             % get 'V' data (intensity image)
             OverlayIntensity = obj.I;
-
             % get 'H' data (azimuth image)
             AzimuthData = obj.AzimuthImage;
             % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
             AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
             % scale values to [0 1]
             AzimuthData = AzimuthData./pi;
-
-            % get 'S' data (scaled order factor image)
+            % get 'S' data (unscaled order factor image)
             Order = obj.OrderImage;
-            % Order = Order./max(max(Order));
-
             % combine to make HSV image (in RGB format)
-            AzimuthOrderIntensityHSV = makeHSVSpecial(AzimuthData,Order,OverlayIntensity);
+            AzimuthOrderIntensityHSV = hsv2rgb(cat(3,AzimuthData,Order,OverlayIntensity));
         end
 
         function UserScaledAzimuthOrderIntensityHSV = get.UserScaledAzimuthOrderIntensityHSV(obj)
             % get 'V' data (intensity image)
             OverlayIntensity = obj.UserScaledAverageIntensityImage;
-
             % get 'H' data (azimuth image)
             AzimuthData = obj.AzimuthImage;
             % values originally in [-pi/2 pi/2], adjust to fall in [0 pi]
             AzimuthData(AzimuthData<0) = AzimuthData(AzimuthData<0)+pi;
             % scale values to [0 1]
             AzimuthData = AzimuthData./pi;
-
             % get 'S' data (scaled order factor image)
             Order = obj.UserScaledOrderImage;
-
             % combine to make HSV image (in RGB format)
-            UserScaledAzimuthOrderIntensityHSV = makeHSVSpecial(AzimuthData,Order,OverlayIntensity);
+            UserScaledAzimuthOrderIntensityHSV = hsv2rgb(cat(3,AzimuthData,Order,OverlayIntensity));
         end
 
         function AzimuthIntensityOverlayRGB = get.AzimuthIntensityOverlayRGB(obj)

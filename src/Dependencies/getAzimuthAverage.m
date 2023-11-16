@@ -1,5 +1,25 @@
 function AzimuthAverage = getAzimuthAverage(azimuths)
-%%  getAzimuthAverage  returns axial mean (in radians) of a vector of angles (in radians)
+%%  GETAZIMUTHAVERAGE returns axial mean of a vector of angles with pi phase ambiguity
+%
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
 
 AzimuthAverage = angle(mean(exp(1i*azimuths*2)))/2;
 

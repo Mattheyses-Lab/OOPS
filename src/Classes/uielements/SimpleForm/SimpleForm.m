@@ -1,6 +1,33 @@
 classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
-    % SimpleForm: list of custom editfields to be placed in a figure, will resize the 
-    % figure according to number of user-specific params
+%%  SIMPLEFORM creates a simple form (list of editfields) to be placed in a figure
+%
+%   NOTES:
+%       The easiest way to use this class is by calling the function SimpleFormFig(), which
+%       will create the parent figure for you.
+%
+%   See also SimpleFormFig
+%
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
+
+
     properties
         Params = {'Param 1'}
         BGColor = "Black"
@@ -8,18 +35,13 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
         SaveStatus = "Cancel"
     end
 
-    properties (Dependent = true)
+    properties(Dependent=true)
         nParams
         FigInnerHeight
         Outputs
     end
     
-    events (HasCallbackProperty, NotifyAccess = protected)
-        %WindowClosing % WindowClosing callback property will be generated
-        %nParamsChanged
-    end
-    
-    properties (Access = private, Transient, NonCopyable)
+    properties(Access=private,Transient,NonCopyable)
         Grid matlab.ui.container.GridLayout
         EditFields matlab.ui.control.EditField
         EditFieldLabels matlab.ui.control.Label
@@ -28,7 +50,7 @@ classdef SimpleForm < matlab.ui.componentcontainer.ComponentContainer
         CancelButton matlab.ui.control.Button
     end
     
-    methods (Access=protected)
+    methods(Access=protected)
         function setup(obj)
             
             obj.Units = 'normalized';

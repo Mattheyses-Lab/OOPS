@@ -1,8 +1,33 @@
 function hsurf = Csurf(X,Y,Z,C)
-% helper function to plot a surf with CData
-% temporary function to help plot a curve (x,y,z) where each point is associated with a value
-hsurf = surf([X(:) X(:)], [Y(:) Y(:)], [Z(:) Z(:)], [C C], ...  % Reshape and replicate data
-            'FaceColor', 'none', ...    % Don't bother filling faces with color
-            'EdgeColor', 'interp', ...  % Use interpolated color for edges
-            'LineWidth', 10);
+%%  CSURF helper function to plot a surf with CData
+%
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
+
+% plot the surface object
+hsurf = surf([X(:) X(:)],...
+    [Y(:) Y(:)],...
+    [Z(:) Z(:)],...
+    [C C],...
+    'FaceColor','none',...
+    'EdgeColor','interp',...
+    'LineWidth', 10);
+
 end

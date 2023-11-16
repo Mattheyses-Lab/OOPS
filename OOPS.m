@@ -4,12 +4,30 @@ function OOPS()
 %   NOTES:
 %
 %       Before starting, make sure all relevant files are reachable on the MATLAB PATH.
-%       (all files in the directory containing "OOPS.m", including all subdirectories
+%       (all files in the directory containing "OOPS.m", including all subdirectories)
 %
 %   USAGE:
 %
 %       Run the function to open the GUI by typing the following into the command window:
 %           >> OOPS
+%
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
 %
 %----------------------------------------------------------------------------------------------------------------------------
 
@@ -1431,7 +1449,8 @@ OOPSData.Handles.LabelContextMenu_ChangeColor = uimenu(OOPSData.Handles.LabelCon
 OOPSData.Handles.LabelContextMenu_MergeLabels = uimenu(OOPSData.Handles.LabelContextMenu,'Text','Merge selected labels','MenuSelectedFcn',{@MergeLabels,OOPSData.Handles.fH});
 OOPSData.Handles.LabelContextMenu_AddNewLabel = uimenu(OOPSData.Handles.LabelContextMenu,'Text','New label','MenuSelectedFcn',@AddNewLabel);
 
-defaultLabelTreeNode = uitreenode(OOPSData.Handles.LabelTree,...
+% set up the default label tree node
+uitreenode(OOPSData.Handles.LabelTree,...
     'Text',OOPSData.Settings.ObjectLabels(1).Name,...
     'NodeData',OOPSData.Settings.ObjectLabels(1),...
     'ContextMenu',OOPSData.Handles.LabelContextMenu,...
@@ -4813,19 +4832,17 @@ pause(0.5)
 
     function mbShowObjectImagesByLabel(~,~)
 
+        % figure to hold the image
         fH_ObjectImages = uifigure(...
             'Name','Object images by label',...
             'HandleVisibility','on',...
             'WindowStyle','alwaysontop',...
             'AutoResizeChildren','Off');
-        % grid layout object
-        ObjectImagesGrid = uigridlayout(fH_ObjectImages,[1,1]);
 
         ObjImgTiles = cell(OOPSData.Settings.nLabels,1);
 
-        % testing below - estimate grid width to form approximate square
-        gridWidth = round(sqrt(OOPSData.nObjects));
-        %
+        % estimate grid width to form approximate square
+        % gridWidth = round(sqrt(OOPSData.nObjects));
 
         for LabelIdx = 1:OOPSData.Settings.nLabels
             Objs = OOPSData.getObjectsByLabel(OOPSData.Settings.ObjectLabels(LabelIdx));
@@ -4836,12 +4853,6 @@ pause(0.5)
                 %ObjImgs{ObjIdx} = Objs(ObjIdx).OrderImageRGB();
             end
             
-            % ObjImgTiles{LabelIdx,1} = imtile(ObjImgs,...
-            %     'ThumbnailSize',[50 50],...
-            %     'BorderSize',1,...
-            %     'BackgroundColor',OOPSData.Settings.ObjectLabels(LabelIdx).Color,...
-            %     'GridSize',[NaN 30]);
-
             % 'optimal' grid width to form approximate square
             % ObjImgTiles{LabelIdx,1} = imtile(ObjImgs,...
             %     'ThumbnailSize',[50 50],...
@@ -4860,7 +4871,8 @@ pause(0.5)
 
         ObjImgTiles_hImg = imshow(ObjImgTilesCombined);
 
-        MyScrollPanel = imscrollpanel(fH_ObjectImages,ObjImgTiles_hImg);
+        %MyScrollPanel = imscrollpanel(fH_ObjectImages,ObjImgTiles_hImg);
+        imscrollpanel(fH_ObjectImages,ObjImgTiles_hImg);
 
         hMagBox = immagbox(fH_ObjectImages,ObjImgTiles_hImg);
         hMagBoxpos = get(hMagBox,'Position');

@@ -1,17 +1,39 @@
 function ZoomToCursor(source,~)
-%% ZoomToCursor
-%   allows for dynamic zooming/panning in GUI axes
-%   all OOPSGUI axes using ZoomToCursor will have a custom toolbar state
-%   button, clicking will activate ZoomToCursor behavior
-%           clicking button again will deactivate
-%           clicking within axes will increase zoom through a set number of
-%           zoom levels until max zoom is reached
-%           double-click will return to default zoom value
-%           shift-click will freeze axis limits at current zoom
+%%  ZoomToCursor allows for dynamic zooming/panning in GUI axes
 %
-% This function is a heavily modified version of zoom2cursor
-% (Written by Brett Shoelson, Ph.D. (shoelson@helix.nih.gov,
-% shoelson@hotmail.com))
+%   NOTES:
+%       All OOPSGUI axes using ZoomToCursor will have a custom toolbar state button with the following behavior
+%           clicking will activate ZoomToCursor behavior
+%           clicking button again will deactivate
+%
+%       When active:
+%           moving the cursor within the axes will shift the view to follow the cursor
+%           left-clicking within axes will increase zoom through a set number of zoom levels
+%           right-clicking within axes will decrease zoom through a set number of zoom levels
+%           double-click will return to default zoom value
+%           shift-click will freeze axis limits at current zoom and fix the position
+%
+%   This function is a heavily modified version of zoom2cursor
+%   (Written by Brett Shoelson, Ph.D. (shoelson@helix.nih.gov, shoelson@hotmail.com))
+%
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
 %----------------------------------------------------------------------------------------------------------------------------
 
     % get the GUI data

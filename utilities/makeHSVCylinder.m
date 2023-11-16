@@ -1,4 +1,47 @@
 function makeHSVCylinder(Options)
+%%  MAKEHSVCYLINDER draws an HSV cylinder in a new window with the option 
+%   to remove an angular "wedge" defined by the user
+%
+%   NAME-VALUE ARGUMENTS:
+%       
+%       'hueRepeats' | number of times the colors are repeated
+%
+%       'missingWedgeSize' | size (in degrees) of the missing wedge
+%       
+%       'cylinderRes' | number of individual wedges making up the cylinder (72 will yield 5° wedges, etc.)
+%
+%       'colorRes' | total number of unique colors used to color the top and side faces of each wedge
+%           (colorRes=20 will use 10 colors each for the top and side faces)
+%
+%       'cylinderRes' | number of individual wedges making up the cylinder (72 will yield 5° wedges, etc.)
+%
+%       'cylinderRadius' | radius of the cylinder
+%
+%       'cylinderHeight' | height of the cylinder
+%
+%       'outlineColor' | color of the lines used to outline sharp edges
+%
+%       'outlineWidth' | width of the lines used to outline sharp edges
+%
+%----------------------------------------------------------------------------------------------------------------------------
+%
+%   Object-Oriented Polarization Software (OOPS)
+%   Copyright (C) 2023  William Dean
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU General Public License for more details.
+% 
+%   You should have received a copy of the GNU General Public License
+%   along with this program.  If not, see https://www.gnu.org/licenses/.
+%
+%----------------------------------------------------------------------------------------------------------------------------
 
 arguments
     Options.hueRepeats (1,1) double = 1

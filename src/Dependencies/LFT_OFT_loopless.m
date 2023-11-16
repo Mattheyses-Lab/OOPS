@@ -1,45 +1,55 @@
 function [OFT,LFT,LFTO] =  LFT_OFT_loopless(Img, R, Nangles)
-% performs line filter transform and orientation filter transform of an image
-
-
-% Note: this function is modified from its original form (a mex file) to run quickly in MATLAB.
-% The original functionality is unchanged, but code is now highly vectorized and runs in parallel, 
-% no compilation required.
-% On my system, this function actually runs faster than the compiled mex, although the 
-% parallelization requires more optimization.
-
-%% Original developers
-% Developers: Zhen Zhang, Pakorn Kanchanawong
-% Contact: biekp@nus.edu.sg
+%%  LFT_OFT_LOOPLESS performs line filter transform and orientation filter transform of an image
+%
+%   NOTE: 
+%       This function is modified from its original form (a mex file) to run quickly in MATLAB.
+%       The original functionality is unchanged, but code is now highly vectorized and runs in parallel, 
+%       no compilation required.
+%
+%       On my system, this function actually runs faster than the compiled mex, although the 
+%       parallelization still requires more optimization.
+%
+%       If you use this code, please (i) refer first to the ORIGINAL COPYRIGHT notice below to ensure that your desired 
+%       use is permitted and (ii) cite the publication by the ORIGINAL AUTHORS.
+%
+%%  ORIGINAL AUTHOR INFORMATION
+%
+%   DEVELOPERS:
+%       Zhen Zhang, Pakorn Kanchanawong
+%   
+%   CONTACT:
+%       biekp@nus.edu.sg
 % 
-% Reference:
-% Sandberg, K. & Brega, M. Segmentation of thin structures in electron micrographs using orientation fields. J Struct Biol 157, 403-415 (2007). 
-
-%% Original copyright
-%--------------------------------------------------------------------------------
-% Copyright (c) 2016, Zhen Zhang, Pakorn Kanchanawong
-% All rights reserved.
+%   REFERENCE:
+%       Sandberg, K. & Brega, M. Segmentation of thin structures in electron micrographs using orientation fields. 
+%           J Struct Biol 157, 403-415 (2007). 
+%
+%%  ORIGINAL COPYRIGHT
+%
+%   Copyright (c) 2016, Zhen Zhang, Pakorn Kanchanawong
+%   All rights reserved.
 % 
-% Redistribution and use in source and binary forms, with or without
-% modification, are permitted provided that the following conditions are
-% met:
+%   Redistribution and use in source and binary forms, with or without
+%   modification, are permitted provided that the following conditions are
+%   met:
 % 
-%     * Redistributions of source code must retain the above copyright
-%       notice, this list of conditions and the following disclaimer.
-%     * Redistributions in binary form must reproduce the above copyright
-%       notice, this list of conditions and the following disclaimer in
-%       the documentation and/or other materials provided with the distribution
+%       * Redistributions of source code must retain the above copyright
+%           notice, this list of conditions and the following disclaimer.
+%       * Redistributions in binary form must reproduce the above copyright
+%           notice, this list of conditions and the following disclaimer in
+%           the documentation and/or other materials provided with the distribution
 % 
-% This software is provided by the copyright holders and contributors "as is" and 
-% any express or implied warranties of merchantability and fitness for a particular 
-% purpose are disclaimed. In no event shall the copyright owner or contributors 
-% be liable for any direct, indirect, incidental, special, exemplary, or consequential 
-% damages (including, but not limited to, procurement of substitute goods or services; 
-% loss of use, data, or profits; or business interruption) however caused and on any 
-% theory of liability, whether in contract, strict liability, or tort (including 
-% negligence or otherwise) arising in any way out of the use of this software even if 
-% advised of the possibility of such damage.
-%--------------------------------------------------------------------------------
+%   This software is provided by the copyright holders and contributors "as is" and 
+%   any express or implied warranties of merchantability and fitness for a particular 
+%   purpose are disclaimed. In no event shall the copyright owner or contributors 
+%   be liable for any direct, indirect, incidental, special, exemplary, or consequential 
+%   damages (including, but not limited to, procurement of substitute goods or services; 
+%   loss of use, data, or profits; or business interruption) however caused and on any 
+%   theory of liability, whether in contract, strict liability, or tort (including 
+%   negligence or otherwise) arising in any way out of the use of this software even if 
+%   advised of the possibility of such damage.
+%
+%----------------------------------------------------------------------------------------------------------------------------
 
     % height and width of the input image
     [H,W] = size(Img);
@@ -104,7 +114,6 @@ function [OFT,LFT,LFTO] =  LFT_OFT_loopless(Img, R, Nangles)
 %     LFTO(loopMask) = k(maxIdx);
 % toc
 %% end highly vectorized LFT code example
-
 
     k_column = repmat(k,nQ,1);
     k_column = k_column(:);
