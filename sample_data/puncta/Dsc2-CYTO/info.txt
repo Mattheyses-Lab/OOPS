@@ -1,0 +1,11 @@
+Cell line: A-431
+
+Fluorophore: mEGFP
+
+Treatment: Transfected with Dsc2-CYTO (Dsc2a with mEGFP inserted in intracellular domain)
+
+Date collected: 20210319
+
+Exposure time per frame: 50 ms
+
+Excitation polarizations: 0°, 45°, 90°, 135°
