@@ -67,18 +67,11 @@ classdef OOPSSettings < handle
         % drawable size of the main display (to set main window Position property)
         ScreenSize
 
-        % % size of the font across graphics objects in the GUI
-        % FontSize
-
         % themes and colors for GUI display
         GUITheme = 'Dark';
-        % GUIBackgroundColor = [0 0 0];
-        % GUIForegroundColor = [1 1 1];
-        % GUIHighlightColor = [1 1 1];
         
         % colormaps settings
         Colormaps struct
-        % xColormaps struct
         ColormapsSettings struct
 
         % palettes settings

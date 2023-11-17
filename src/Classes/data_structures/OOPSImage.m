@@ -434,7 +434,6 @@ classdef OOPSImage < handle & dynamicprops
             value = MaskRGB(vecind2rgb(im2uint8(imageData),obj.Settings.OrderColormap),obj.UserScaledAverageIntensityImage);
         end
 
-
 %% retrieve image data
 
         function averageIntensityRealLimits = get.averageIntensityRealLimits(obj)
@@ -529,7 +528,7 @@ classdef OOPSImage < handle & dynamicprops
 
                     switch obj.Settings.MaskName
 
-                        case 'Legacy'
+                        case 'Puncta'
                             minimumArea = 10;
 
                             % use disk-shaped structuring element to calculate BG
@@ -540,8 +539,9 @@ classdef OOPSImage < handle & dynamicprops
                             obj.EnhancedImg = medfilt2(BGSubtractedImg);
                             % scale so that max intensity is 1
                             obj.EnhancedImg = obj.EnhancedImg./max(max(obj.EnhancedImg));
-                            % initial threshold guess using graythresh() (Otsu's method)
+                            % initial threshold guess using Otsu's method
                             [obj.level,~] = graythresh(obj.EnhancedImg);
+
                             %% Build mask
                             tempObjects = 500;
                             notfirst = false;
@@ -578,7 +578,7 @@ classdef OOPSImage < handle & dynamicprops
                             obj.MaskName = obj.Settings.MaskName;
                             obj.MaskType = obj.Settings.MaskType;
 
-                        case 'Filament'
+                        case 'Filaments'
 
                             % enhance the contrast of fibrous structures
                             C = maxhessiannorm(obj.I,4);
@@ -602,7 +602,7 @@ classdef OOPSImage < handle & dynamicprops
 
                             obj.EnhancedImg = I_superopen;
 
-                            % clear a 10 px wide region around the image border
+                            % clear 10 pixels around the border
                             temp = ClearImageBorder(I_superopen,10);
 
                             %% Detect edges
@@ -626,7 +626,6 @@ classdef OOPSImage < handle & dynamicprops
                             end
 
                             obj.bw = sparse(bwtemp);
-                            %% end fill
 
                             % remove any "nearly" h-connected pixels (and the h-connected ones)
                             obj.bw = sparse(quasihbreak(full(obj.bw)));
@@ -654,8 +653,9 @@ classdef OOPSImage < handle & dynamicprops
                             % label individual branches (this has to be the last step if we want individually labeled branches)
                             [~,obj.L] = labelBranches(full(obj.bw));
 
-                            %% BUILD NEW OBJECTS
-                            % detect objects from the mask
+                            %% BUILD NEW OBJECTS AND FINISH
+
+                            % detect objects from the mask/label matrix
                             obj.DetectObjects();
                             % indicates mask was generated automatically
                             obj.ThresholdAdjusted = false;
@@ -664,37 +664,36 @@ classdef OOPSImage < handle & dynamicprops
                             % store the name of the mask used
                             obj.MaskName = obj.Settings.MaskName;
                             obj.MaskType = obj.Settings.MaskType;
+
                         case 'Adaptive'
-                            % use disk-shaped structuring element to calculate BG
-                            BGImg = imopen(obj.I,strel('disk',3,0));
-                            % subtract BG
-                            BGSubtractedImg = obj.I - BGImg;
-                            % median filter BG-subtracted image
-                            obj.EnhancedImg = medfilt2(BGSubtractedImg);
+                            %% ENHANCE CONTRAST
+
+                            % top-hat filter with disk-shaped structuring element followed by median filter
+                            obj.EnhancedImg = medfilt2(imtophat(obj.I,strel('disk',3,0)));
                             % normalize to max
                             obj.EnhancedImg = obj.EnhancedImg./max(max(obj.EnhancedImg));
+                            % initial sensitivity guess using Otsu threshold
+                            [obj.level,~] = graythresh(obj.EnhancedImg);
 
-                            % GUESS THRESHOLD WITH OTSU'S METHOD
-                            [obj.level,~] = graythresh(obj.I);
+                            %% BUILD MASK AND LABEL MATRIX
 
-                            %% Build mask
-                            obj.bw = sparse(imbinarize(obj.I,adaptthresh(obj.I,obj.level,'Statistic','Gaussian','NeighborhoodSize',3)));
-
-                            % CLEAR 10 PX BORDER
+                            obj.bw = sparse(imbinarize(obj.EnhancedImg,adaptthresh(obj.EnhancedImg,obj.level,'Statistic','Gaussian','NeighborhoodSize',3)));
+                            % clear 10 pixels around the border
                             obj.bw = ClearImageBorder(obj.bw,10);
 
-                            % FILTER OBJECTS WITH AREA < 10 PX
+                            % remove any objects with area < 10 px
                             CC = bwconncomp(full(obj.bw),4);
                             S = regionprops(CC, 'Area');
                             labelMatrix = labelmatrix(CC);
                             obj.bw = sparse(ismember(labelMatrix, find([S.Area] >=10)));
                             clear CC S L
 
-                            % BUILD 4-CONNECTED LABEL MATRIX
+                            % build 4-connected label matrix
                             obj.L = sparse(bwlabel(full(obj.bw),4));
 
-                            %% BUILD NEW OBJECTS
-                            % ...so we can detect the new ones (requires bw and L to be computed previously)
+                            %% BUILD NEW OBJECTS AND FINISH
+
+                            % detect objects from the mask/label matrix
                             obj.DetectObjects();
                             % indicates mask was generated automatically
                             obj.ThresholdAdjusted = 0;
@@ -703,6 +702,7 @@ classdef OOPSImage < handle & dynamicprops
                             % store the name of the mask used
                             obj.MaskName = obj.Settings.MaskName;
                             obj.MaskType = obj.Settings.MaskType;
+
                     end
 
                 case 'CustomScheme'
@@ -739,15 +739,9 @@ classdef OOPSImage < handle & dynamicprops
                     % set those pixels to 0
                     obj.bw(diagFill==1) = 0;
 
-
+                    % clear 10 px around the border
                     obj.bw = sparse(ClearImageBorder(full(obj.bw),10));
-                    % end testing
-
-
-                    % % use the mask to build the label matrix
-                    % cImage.L = sparse(bwlabel(full(cImage.bw),4));
-
-
+                    
                     % label individual branches
                     [~,obj.L] = labelBranches(full(obj.bw));
 
@@ -761,7 +755,6 @@ classdef OOPSImage < handle & dynamicprops
                     % store the name of the mask used
                     obj.MaskName = obj.Settings.MaskName;
                     obj.MaskType = obj.Settings.MaskType;
-
                     % clear the data once more
                     customScheme.ClearImageData();
                     % store a handle to the custom scheme
@@ -1517,7 +1510,7 @@ classdef OOPSImage < handle & dynamicprops
             switch obj.MaskType
                 case 'Default'
                     switch obj.MaskName
-                        case 'Legacy'
+                        case 'Puncta'
                             ThreshPanelTitle = 'Adjust threshold';
                         case 'Adaptive'
                             ThreshPanelTitle = 'Adjust adaptive threshold sensitivity';
@@ -1543,7 +1536,7 @@ classdef OOPSImage < handle & dynamicprops
             switch obj.MaskType
                 case 'Default'
                     switch obj.MaskName
-                        case 'Legacy'
+                        case 'Puncta'
                             ThreshStatisticName = 'Threshold';
                         case 'Adaptive'
                             ThreshStatisticName = 'Adaptive threshold sensitivity';
@@ -1570,7 +1563,7 @@ classdef OOPSImage < handle & dynamicprops
             switch obj.MaskType
                 case 'Default'
                     switch obj.MaskName
-                        case 'Legacy'
+                        case 'Puncta'
                             ManualThreshEnabled = true;
                         case 'Adaptive'
                             ManualThreshEnabled = true;
