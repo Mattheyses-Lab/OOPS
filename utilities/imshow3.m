@@ -4,7 +4,7 @@ function [hImg,hAx] = imshow3(I)
 %   NOTES:
 %       always opens a new figure by default
 %
-%       makes the figure window size 750x750, particularly useful for small images
+%       makes the figure window size 600x600, particularly useful for small images
 %
 %       makes the image fill the window as much as possible while maintaining aspect ratio
 %       
@@ -32,7 +32,7 @@ function [hImg,hAx] = imshow3(I)
 
 % create the uifigure to hold our image axes
 fH = uifigure('Visible','off','HandleVisibility','on','AutoResizeChildren','Off','WindowStyle','alwaysontop');
-fH.Position = [50 50 800 800];
+fH.Position = [200 200 800 800];
 
 % create an axes to hold our image object
 hAx = uiaxes(fH,"InnerPosition",[0 0 1 1],...

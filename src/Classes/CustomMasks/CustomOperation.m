@@ -1,7 +1,8 @@
 classdef CustomOperation < handle
-    %CustomOperations  
-    %   An instance of this class holds and determines various 
-    %   settings for a single run of PODS GUI
+%%  CUSTOMOPERATION Defines individual processing steps in a CustomMask  
+%
+%   See also CustomMask, CustomMaskMaker, CustomImage
+%
 %----------------------------------------------------------------------------------------------------------------------------
 %
 %   Object-Oriented Polarization Software (OOPS)
@@ -129,6 +130,14 @@ classdef CustomOperation < handle
                                 Sigma = obj.OperationParams{2};
                                 logFilter=fspecial('log',[FilterSize FilterSize],Sigma); 
                                 OutputImage=imfilter(I,logFilter,'replicate');
+                            case 'NonLocalMeans'
+                                DegreeOfSmoothing = obj.OperationParams{1};
+                                SearchWindowSize = obj.OperationParams{2};
+                                ComparisonWindowSize = obj.OperationParams{3};
+                                OutputImage = imnlmfilt(I,...
+                                    "DegreeOfSmoothing",DegreeOfSmoothing,...
+                                    "SearchWindowSize",SearchWindowSize,...
+                                    "ComparisonWindowSize",ComparisonWindowSize);
                         end
                     case 'ContrastEnhancement'
                         switch obj.OperationName

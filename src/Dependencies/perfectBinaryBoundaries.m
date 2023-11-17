@@ -1,5 +1,5 @@
 function boundaries = perfectBinaryBoundaries(I,Options)
-%%  PERFECTBINARYBOUNDARIES returns coordinates of all boundary pixels
+%%  PERFECTBINARYBOUNDARIES returns coordinates of boundary pixels
 %   for a single binary object
 %
 %   NOTES:
@@ -41,10 +41,6 @@ Isz = size(I);
 
 % algorithm unlikely to work correctly if there are holes -> fill them
 I = bwfill(I,'holes');
-
-% initialize boundaries coordinate list (1x2 double | [y,x])
-boundaries = [];
-edgeMidpoints = [];
 
 %% define the types of neighborhoods we are searching for to locate our boundary pixels
 % first the outer corners
@@ -101,24 +97,24 @@ flatedge{2} = [...
     0 0 ...
     ];
 
-%% find inner and outer corner pixels, store coordinates of the corners of those corner pixels and of midpoints of corner pixel edges
+%% find inner and outer corner pixels, store coordinates of their corners and the midpoints of their edges
 
 r = cell(6,1);
 c = cell(6,1);
 
-[r{1},c{1}] = ind2sub(Isz,find(bwlookup(I,makelut(@(x) all(x(:)==corners{1}(:)) || all(x(:)==incorners{1}(:)),2))));
+[r{1},c{1}] = ind2sub(Isz,find(bwlookup(I,makelut(@(x) isequal(x,corners{1}) || isequal(x,incorners{1}),2))));
 boundaries = [r{1} + 0.5, c{1} + 0.5; r{1}, c{1} + 0.5; r{1} + 0.5, c{1}];
 edgeMidpoints = [r{1}, c{1} + 0.5; r{1} + 0.5, c{1}];
 
-[r{2},c{2}] = ind2sub(Isz,find(bwlookup(I,makelut(@(x) all(x(:)==corners{2}(:)) || all(x(:)==incorners{2}(:)),2))));
+[r{2},c{2}] = ind2sub(Isz,find(bwlookup(I,makelut(@(x) isequal(x,corners{2}) || isequal(x,incorners{2}),2))));
 boundaries = [boundaries; r{2} + 0.5, c{2} + 0.5; r{2} + 0.5, c{2}; r{2} + 1, c{2} + 0.5];
 edgeMidpoints = [edgeMidpoints; r{2} + 0.5, c{2}; r{2} + 1, c{2} + 0.5];
 
-[r{3},c{3}] = ind2sub(Isz,find(bwlookup(I,makelut(@(x) all(x(:)==corners{3}(:)) || all(x(:)==incorners{3}(:)),2))));
+[r{3},c{3}] = ind2sub(Isz,find(bwlookup(I,makelut(@(x) isequal(x,corners{3}) || isequal(x,incorners{3}),2))));
 boundaries = [boundaries; r{3} + 0.5, c{3} + 0.5; r{3}, c{3} + 0.5; r{3} + 0.5, c{3} + 1];
 edgeMidpoints = [edgeMidpoints; r{3}, c{3} + 0.5; r{3} + 0.5, c{3} + 1];
 
-[r{4},c{4}] = ind2sub(Isz,find(bwlookup(I,makelut(@(x) all(x(:)==corners{4}(:)) || all(x(:)==incorners{4}(:)),2))));
+[r{4},c{4}] = ind2sub(Isz,find(bwlookup(I,makelut(@(x) isequal(x,corners{4}) || isequal(x,incorners{4}),2))));
 boundaries = [boundaries; r{4} + 0.5, c{4} + 0.5; r{4} + 1, c{4} + 0.5; r{4} + 0.5, c{4} + 1];
 edgeMidpoints = [edgeMidpoints; r{4} + 1, c{4} + 0.5; r{4} + 0.5, c{4} + 1];
 
@@ -132,179 +128,7 @@ edgeMidpoints = [edgeMidpoints; r{5}, c{5} + 0.5; r{5} + 1, c{5} + 0.5];
 boundaries = [boundaries; r{6} + 0.5, c{6} + 0.5; r{6} + 0.5, c{6}; r{6} + 0.5, c{6} + 1];
 edgeMidpoints = [edgeMidpoints; r{6} + 0.5, c{6}; r{6} + 0.5, c{6} + 1];
 
-%% uncondensed version of above code
-
-% %% corners{1} and incorners{1}
-% % anonymous lut function
-% cornerlutfun = @(x) all(x(:)==corners{1}(:)) || all(x(:)==incorners{1}(:));
-% % create 2x2 lut using function handle above
-% cornerlut = makelut(cornerlutfun,2);
-% % image representing locations of target pixels whose nhoods match corner{1}
-% cornerlocations = bwlookup(I,cornerlut);
-% % linear indices of the corner pixels we just found
-% cornerIdx = find(cornerlocations);
-% % now convert them to row and column coordinates (of the centers of those pixels)
-% [r,c] = ind2sub(Isz,cornerIdx);
-% % finally, get the x,y coordinates to the actual corner of those corner pixels
-% y = r + 0.5;
-% x = c + 0.5;
-% % add those coordinates to the coordinate list
-% boundaries = [boundaries;y x];
-% 
-% % now get coordinates to the center of pixel edges
-% y = r;
-% x = c + 0.5;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% y = r + 0.5;
-% x = c;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-%
-% %% corners{2} and incorners{2}
-% % anonymous lut function
-% cornerlutfun = @(x) all(x(:)==corners{2}(:)) || all(x(:)==incorners{2}(:));
-% % create 2x2 lut using function handle above
-% cornerlut = makelut(cornerlutfun,2);
-% % image representing locations of target pixels whose nhoods match corner{1}
-% cornerlocations = bwlookup(I,cornerlut);
-% % linear indices of the corner pixels we just found
-% cornerIdx = find(cornerlocations);
-% % now convert them to row and column coordinates (of the centers of those pixels)
-% [r,c] = ind2sub(Isz,cornerIdx);
-% % finally, get the x,y coordinates to the actual corner of those corner pixels
-% y = r + 0.5;
-% x = c + 0.5;
-% % add those coordinates to the coordinate list
-% boundaries = [boundaries;y x];
-% 
-% % now get coordinates to the center of pixel edges
-% y = r + 0.5;
-% x = c;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% y = r + 1;
-% x = c + 0.5;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% %% corners{3} and incorners{3}
-% % anonymous lut function
-% cornerlutfun = @(x) all(x(:)==corners{3}(:)) || all(x(:)==incorners{3}(:));
-% % create 2x2 lut using function handle above
-% cornerlut = makelut(cornerlutfun,2);
-% % image representing locations of target pixels whose nhoods match corner{1}
-% cornerlocations = bwlookup(I,cornerlut);
-% % linear indices of the corner pixels we just found
-% cornerIdx = find(cornerlocations);
-% % now convert them to row and column coordinates (of the centers of those pixels)
-% [r,c] = ind2sub(Isz,cornerIdx);
-% % finally, get the x,y coordinates to the actual corner of those corner pixels
-% y = r + 0.5;
-% x = c + 0.5;
-% % add those coordinates to the coordinate list
-% boundaries = [boundaries;y x];
-% 
-% % now get coordinates to the center of pixel edges
-% y = r;
-% x = c + 0.5;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% y = r + 0.5;
-% x = c + 1;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% %% corners{4} and incorners{4}
-% % anonymous lut function
-% cornerlutfun = @(x) all(x(:)==corners{4}(:)) || all(x(:)==incorners{4}(:));
-% % create 2x2 lut using function handle above
-% cornerlut = makelut(cornerlutfun,2);
-% % image representing locations of target pixels whose nhoods match corner{1}
-% cornerlocations = bwlookup(I,cornerlut);
-% % linear indices of the corner pixels we just found
-% cornerIdx = find(cornerlocations);
-% % now convert them to row and column coordinates (of the centers of those pixels)
-% [r,c] = ind2sub(Isz,cornerIdx);
-% % finally, get the x,y coordinates to the actual corner of those corner pixels
-% y = r + 0.5;
-% x = c + 0.5;
-% % add those coordinates to the coordinate list
-% boundaries = [boundaries;y x];
-% 
-% % now get coordinates to the center of pixel edges
-% y = r + 1;
-% x = c + 0.5;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% y = r + 0.5;
-% x = c + 1;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-%
-% %% flatedge{1} (vertical 2-pixel edge)
-% % anonymous lut function for a vertical 2-pixel edge
-% edgelutfun = @(x) checkEdgeMatch(x,flatedge{1});
-% % create 2x2 lut using function handle above
-% edgelut = makelut(edgelutfun,2);
-% % image representing locations of target pixels whose nhoods match edge{1} or any of its n*90° rotations
-% edgelocations = bwlookup(I,edgelut);
-% % linear idxs of the target pixel in 2x2 nhoods matching the edge or any of its n*90° rotations
-% edgeIdx = find(edgelocations);
-% % now convert them to row and column coordinates (of the centers of those pixels)
-% [r,c] = ind2sub(Isz,edgeIdx);
-% % we don't need to add an offset to get to the target pixel, the coordinate we want is at the center
-% % of the 2x2 nhood
-% y = r + 0.5;
-% x = c + 0.5;
-% % add those coordinates to the coordinate list
-% boundaries = [boundaries;y x];
-% 
-% % now get coordinates to the center of pixel edges
-% y = r;
-% x = c + 0.5;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% y = r + 1;
-% x = c + 0.5;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% %% flatedge{2} (horizontal 2-pixel edge)
-% % anonymous lut function for a vertical 2-pixel edge
-% edgelutfun = @(x) checkEdgeMatch(x,flatedge{2});
-% % create 2x2 lut using function handle above
-% edgelut = makelut(edgelutfun,2);
-% % image representing locations of target pixels whose nhoods match edge{1} or any of its n*90° rotations
-% edgelocations = bwlookup(I,edgelut);
-% % linear idxs of the target pixel in 2x2 nhoods matching the edge or any of its n*90° rotations
-% edgeIdx = find(edgelocations);
-% % now convert them to row and column coordinates (of the centers of those pixels)
-% [r,c] = ind2sub(Isz,edgeIdx);
-% % we don't need to add an offset to get to the target pixel, the coordinate we want is at the center
-% % of the 2x2 nhood
-% y = r + 0.5;
-% x = c + 0.5;
-% % add those coordinates to the coordinate list
-% boundaries = [boundaries;y x];
-% 
-% % now get coordinates to the center of pixel edges
-% y = r + 0.5;
-% x = c;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-% 
-% y = r + 0.5;
-% x = c + 1;
-% boundaries = [boundaries;y x];
-% edgeMidpoints = [edgeMidpoints;y x];
-
-%% now sort the coordinates to trace the object boundary
+%% sort the coordinates to trace the object boundary
 
 try
     % make sure we only have unique vetices
@@ -367,9 +191,12 @@ switch Options.method
         boundaries(end+1,:) = boundaries(1,:);
 end
 
+%% cleanup
+
 % round to 2 decimal places
 boundaries = round(boundaries,2);
 
+%% nested functions
 
     function innerCorners = getInnerCorners()
         % anonymous lut function for a 2x2 outer corner 
@@ -398,7 +225,7 @@ boundaries = round(boundaries,2);
             % pull the lut into ref
             ref = incorners{i};
             % check for a match with the lut
-            if all(nhood(:)==ref(:))
+            if isequal(nhood,ref)
                 match = true;
                 return
             end
@@ -428,13 +255,13 @@ boundaries = round(boundaries,2);
         % default result (no match found)
         match = false;
         % check for a match with the edge
-        if all(nhood(:)==ref(:))
+        if isequal(nhood,ref)
             match = true;
             return
         end    
         % rotate the edge 180° and check for a match again
         ref = rot90(ref,2);
-        if all(nhood(:)==ref(:))
+        if isequal(nhood,ref)
             match = true;
             return
         end
@@ -449,14 +276,16 @@ boundaries = round(boundaries,2);
             % pull the lut into ref
             ref = corners{i};
             % check for a match with the lut
-            if all(nhood(:)==ref(:))
+            if isequal(nhood,ref)
                 match = true;
                 return
             end
         end
     end
+
 end
 
+%% validation functions
 
 function mustEvenlyDivideIntoOne(a)
     % if interpolation resolution does not evenly divide into 1

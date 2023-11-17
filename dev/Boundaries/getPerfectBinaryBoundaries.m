@@ -1,5 +1,5 @@
 function boundaries = getPerfectBinaryBoundaries(I,Options)
-%%  GETPERFECTBINARYBOUNDARIES returns coordinates of all boundary pixels
+%%  GETPERFECTBINARYBOUNDARIES returns coordinates of boundary pixels
 %   for each of the connected components in a binary image
 %
 %   NOTES:

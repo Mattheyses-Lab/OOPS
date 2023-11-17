@@ -1,7 +1,7 @@
 classdef CustomMask < handle
-%%  PODSSettings - PODSGUI project & display settings
-%   An instance of this class holds and determines various
-%   settings for a single run of PODS GUI
+%%  CUSTOMMASK - For image enhancement and segmentation schemes made with CustomMaskMaker
+%   
+%   See also CustomMaskMaker, CustomOperation, CustomImage
 %
 %----------------------------------------------------------------------------------------------------------------------------
 %
@@ -88,6 +88,7 @@ classdef CustomMask < handle
             'Wiener',...
             'Bilateral',...
             'LaplacianOfGaussian',...
+            'NonLocalMeans'...
             };
 
         ArithmeticOperations = {...
@@ -212,8 +213,13 @@ classdef CustomMask < handle
         end
 
         function AddOperation(obj,OperationType,OperationName,Target,OperationParams,varargin)
-            % add new operation
-            obj.Operations(end+1) = CustomOperation(OperationType,OperationName,Target,OperationParams,varargin{:});
+            try
+                % add new operation
+                obj.Operations(end+1) = CustomOperation(OperationType,OperationName,Target,OperationParams,varargin{:});
+            catch ME
+                error('CustomMask:invalidOperationParameters',...
+                    ['Unable to add operation','\n',ME.message]);
+            end
             % add empty CustomImage to hold the image data when we call obj.execute()
             obj.Images(end+1) = CustomImage([]);
         end
@@ -222,8 +228,13 @@ classdef CustomMask < handle
             % we cannot simply replace the operation without preserving its output image
             % we need to save the image object in case any other operations depend on it
             imageToEdit = obj.Images(OperationIdx);
-            % edit an existing operation
-            obj.Operations(OperationIdx) = CustomOperation(OperationType,OperationName,Target,OperationParams,varargin{:});
+            try
+                % edit an existing operation
+                obj.Operations(OperationIdx) = CustomOperation(OperationType,OperationName,Target,OperationParams,varargin{:});
+            catch ME
+                error('CustomMask:invalidOperationParameters',...
+                    ['Unable to edit operation','\n',ME.message]);
+            end
             % add empty CustomImage to hold the image data when we call obj.Execute()
             obj.Images(OperationIdx) = imageToEdit;
         end

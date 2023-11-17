@@ -1,4 +1,16 @@
 function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
+%%  CUSTOMMASKMAKER GUI for creating custom segmentation schemes
+%
+%   NOTES:
+%       CustomMaskMaker was designed to facilitate the design of custom
+%       segmentation schemes in Object-Oriented Polarization Software (OOPS),
+%       but it can also be used independently.
+%
+%       If you use this function outside of OOPS, you will still need several
+%       dependencies which are in various locations in the OOPS file structure.
+%
+%   See also CustomMask, CustomOperation, CustomImage
+%
 %----------------------------------------------------------------------------------------------------------------------------
 %
 %   Object-Oriented Polarization Software (OOPS)
@@ -533,8 +545,8 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     ImageFilterOptionsGrid = uigridlayout(OperationParamsPanel,[3 2],...
         'Tag','ImageFilterOptionsGrid',...
         'Visible','Off');
-    ImageFilterOptionsGrid.RowHeight = {20,20,20};
-    ImageFilterOptionsGrid.ColumnWidth = {'1x','1x'};
+    ImageFilterOptionsGrid.RowHeight = {20,20,20,20};
+    ImageFilterOptionsGrid.ColumnWidth = {'fit','1x'};
 
     % target
     ImageFilterOptionsTargetLabel = uilabel(ImageFilterOptionsGrid,...
@@ -607,7 +619,59 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
     ImageFilterOptionsSpatialSigmaEditfield.Layout.Row = 3;
     ImageFilterOptionsSpatialSigmaEditfield.Layout.Column = 2;
 
-    % we should add laplacian of gaussian filter
+    % degree of smoothing for non-local means filter
+    ImageFilterOptionsDegreeOfSmoothingLabel = uilabel(ImageFilterOptionsGrid,...
+        "Text","Degree of smoothing (positive #)",...
+        "Tag",'ImageFilterOperations',...
+        "Visible","off",...
+        "UserData",{'NonLocalMeans'});
+    ImageFilterOptionsDegreeOfSmoothingLabel.Layout.Row = 2;
+    ImageFilterOptionsDegreeOfSmoothingLabel.Layout.Column = 1;
+
+    ImageFilterOptionsDegreeOfSmoothingEditfield = uieditfield(ImageFilterOptionsGrid,...
+        "Value",num2str(0.02),...
+        "Tag",'ImageFilterOperations',...
+        "ValueChangedFcn",@UpdateImageFilterOptions,...
+        "Visible","off",...
+        "UserData",{'NonLocalMeans'});
+    ImageFilterOptionsDegreeOfSmoothingEditfield.Layout.Row = 2;
+    ImageFilterOptionsDegreeOfSmoothingEditfield.Layout.Column = 2;
+
+    % search window size for non-local means filter
+    ImageFilterOptionsSearchWindowSizeLabel = uilabel(ImageFilterOptionsGrid,...
+        "Text","Search window size (positive, odd)",...
+        "Tag",'ImageFilterOperations',...
+        "Visible","off",...
+        "UserData",{'NonLocalMeans'});
+    ImageFilterOptionsSearchWindowSizeLabel.Layout.Row = 3;
+    ImageFilterOptionsSearchWindowSizeLabel.Layout.Column = 1;
+
+    ImageFilterOptionsSearchWindowSizeEditfield = uieditfield(ImageFilterOptionsGrid,...
+        "Value",num2str(21),...
+        "Tag",'ImageFilterOperations',...
+        "ValueChangedFcn",@UpdateImageFilterOptions,...
+        "Visible","off",...
+        "UserData",{'NonLocalMeans'});
+    ImageFilterOptionsSearchWindowSizeEditfield.Layout.Row = 3;
+    ImageFilterOptionsSearchWindowSizeEditfield.Layout.Column = 2;
+
+    % comparison window size for non-local means filter
+    ImageFilterOptionsComparisonWindowSizeLabel = uilabel(ImageFilterOptionsGrid,...
+        "Text","Comparison window size (positive, odd)",...
+        "Tag",'ImageFilterOperations',...
+        "Visible","off",...
+        "UserData",{'NonLocalMeans'});
+    ImageFilterOptionsComparisonWindowSizeLabel.Layout.Row = 4;
+    ImageFilterOptionsComparisonWindowSizeLabel.Layout.Column = 1;
+
+    ImageFilterOptionsComparisonWindowSizeEditfield = uieditfield(ImageFilterOptionsGrid,...
+        "Value",num2str(5),...
+        "Tag",'ImageFilterOperations',...
+        "ValueChangedFcn",@UpdateImageFilterOptions,...
+        "Visible","off",...
+        "UserData",{'NonLocalMeans'});
+    ImageFilterOptionsComparisonWindowSizeEditfield.Layout.Row = 4;
+    ImageFilterOptionsComparisonWindowSizeEditfield.Layout.Column = 2;
 
 %% ContrastEnhancement operation parameters
 
@@ -1022,35 +1086,28 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
 
             case 'ImageFilter'
 
-                FilterSize = CurrentOp.ParamsMap('FilterSize');
-                ImageFilterOptionsFilterSizeEditfield.Value = num2str(FilterSize);
                 ImageFilterOptionsTargetDropdown.Value = CurrentOp.Target;
 
                 switch NewOperationName
-                    case 'Median'
+                    case {'Median','Average','Wiener'}
+                        FilterSize = CurrentOp.ParamsMap('FilterSize');
+                        ImageFilterOptionsFilterSizeEditfield.Value = num2str(FilterSize);
                         ImageFilterOptions = {FilterSize};
                         NamedParams = {...
                             'FilterSize',FilterSize...
                             };
-                    case 'Average'
-                        ImageFilterOptions = {FilterSize};
-                        NamedParams = {...
-                            'FilterSize',FilterSize...
-                            };
-                    case 'Gaussian'
+                    case {'Gaussian','LaplacianOfGaussian'}
+                        FilterSize = CurrentOp.ParamsMap('FilterSize');
                         Sigma = CurrentOp.ParamsMap('Sigma');
-                        ImageFilterOptions = {FilterSize,Sigma};
+                        ImageFilterOptionsFilterSizeEditfield.Value = num2str(FilterSize);
                         ImageFilterOptionsSigmaEditfield.Value = num2str(Sigma);
+                        ImageFilterOptions = {FilterSize,Sigma};
                         NamedParams = {...
                             'FilterSize',FilterSize,...
                             'Sigma',Sigma...
                             };
-                    case 'Wiener'
-                        ImageFilterOptions = {FilterSize};
-                        NamedParams = {...
-                            'FilterSize',FilterSize...
-                            };
                     case 'Bilateral'
+                        FilterSize = CurrentOp.ParamsMap('FilterSize');
                         SpatialSigma = CurrentOp.ParamsMap('SpatialSigma');
                         ImageFilterOptions = {FilterSize,SpatialSigma};
                         ImageFilterOptionsSpatialSigmaEditfield.Value = num2str(SpatialSigma);
@@ -1058,13 +1115,18 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
                             'FilterSize',FilterSize,...
                             'SpatialSigma',SpatialSigma...
                             };
-                    case 'LaplacianOfGaussian'
-                        Sigma = CurrentOp.ParamsMap('Sigma');
-                        ImageFilterOptions = {FilterSize,Sigma};
-                        ImageFilterOptionsSigmaEditfield.Value = num2str(Sigma);
+                    case 'NonLocalMeans'
+                        DegreeOfSmoothing = CurrentOp.ParamsMap('DegreeOfSmoothing');
+                        SearchWindowSize = CurrentOp.ParamsMap('SearchWindowSize');
+                        ComparisonWindowSize = CurrentOp.ParamsMap('ComparisonWindowSize');
+                        ImageFilterOptions = {DegreeOfSmoothing,SearchWindowSize,ComparisonWindowSize};
+                        ImageFilterOptionsDegreeOfSmoothingEditfield.Value = num2str(DegreeOfSmoothing);
+                        ImageFilterOptionsSearchWindowSizeEditfield.Value = num2str(SearchWindowSize);
+                        ImageFilterOptionsComparisonWindowSizeEditfield.Value = num2str(ComparisonWindowSize);
                         NamedParams = {...
-                            'FilterSize',FilterSize,...
-                            'Sigma',Sigma...
+                            'DegreeOfSmoothing',DegreeOfSmoothing,...
+                            'SearchWindowSize',SearchWindowSize,...
+                            'ComparisonWindowSize',ComparisonWindowSize
                             };
                 end
 
@@ -1400,25 +1462,22 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
 
     function UpdateImageFilterOptions(~,~)
 
-        FilterSize = round(str2double(ImageFilterOptionsFilterSizeEditfield.Value));
-        ImageFilterOptionsFilterSizeEditfield.Value = num2str(FilterSize);
-
         switch OperationNameSelector.Value
-            case 'Median'
+            case {'Median','Average','Wiener'}
+                FilterSize = round(str2double(ImageFilterOptionsFilterSizeEditfield.Value));
+                ImageFilterOptionsFilterSizeEditfield.Value = num2str(FilterSize);
                 ImageFilterOptions = {FilterSize};
                 NamedParams = {'FilterSize',FilterSize};
-            case 'Average'
-                ImageFilterOptions = {FilterSize};
-                NamedParams = {'FilterSize',FilterSize};
-            case 'Gaussian'
+            case {'Gaussian','LaplacianOfGaussian'}
+                FilterSize = round(str2double(ImageFilterOptionsFilterSizeEditfield.Value));
+                ImageFilterOptionsFilterSizeEditfield.Value = num2str(FilterSize);
                 ImageFilterOptions = {FilterSize};
                 Sigma = abs(str2double(ImageFilterOptionsSigmaEditfield.Value));
                 ImageFilterOptions{2} = Sigma;
                 NamedParams = {'FilterSize',FilterSize,'Sigma',Sigma};
-            case 'Wiener'
-                ImageFilterOptions = {FilterSize};
-                NamedParams = {'FilterSize',FilterSize};
             case 'Bilateral'
+                FilterSize = round(str2double(ImageFilterOptionsFilterSizeEditfield.Value));
+                ImageFilterOptionsFilterSizeEditfield.Value = num2str(FilterSize);
                 if ~rem(FilterSize,2)
                     FilterSize = FilterSize + 1;
                     ImageFilterOptionsFilterSizeEditfield.Value = num2str(FilterSize);
@@ -1427,11 +1486,16 @@ function Scheme = CustomMaskMaker(InputImage,InputScheme,Inputcmap)
                 SpatialSigma = abs(str2double(ImageFilterOptionsSpatialSigmaEditfield.Value));
                 ImageFilterOptions{2} = SpatialSigma;
                 NamedParams = {'FilterSize',FilterSize,'SpatialSigma',SpatialSigma};
-            case 'LaplacianOfGaussian' % same as gaussian?
-                ImageFilterOptions = {FilterSize};
-                Sigma = abs(str2double(ImageFilterOptionsSigmaEditfield.Value));
-                ImageFilterOptions{2} = Sigma;
-                NamedParams = {'FilterSize',FilterSize,'Sigma',Sigma};
+            case 'NonLocalMeans'
+                DegreeOfSmoothing = str2double(ImageFilterOptionsDegreeOfSmoothingEditfield.Value);
+                SearchWindowSize = str2double(ImageFilterOptionsSearchWindowSizeEditfield.Value);
+                ComparisonWindowSize = str2double(ImageFilterOptionsComparisonWindowSizeEditfield.Value);
+                ImageFilterOptions = {DegreeOfSmoothing,SearchWindowSize,ComparisonWindowSize};
+                NamedParams = {...
+                    'DegreeOfSmoothing',DegreeOfSmoothing,...
+                    'SearchWindowSize',SearchWindowSize,...
+                    'ComparisonWindowSize',ComparisonWindowSize
+                    };
         end
     end
 
