@@ -1,0 +1,13 @@
+Cell line: A-431
+
+Fluorophore: mEGFP
+
+Treatment: Transfected with Dsc2-ECTOa (Dsc2a with mEGFP inserted in place of extracellular anchor domain)
+
+Notes: Images are very low S/B
+
+Date collected: 20201005
+
+Exposure time per frame: 50 ms
+
+Excitation polarizations: 0°, 45°, 90°, 135°
