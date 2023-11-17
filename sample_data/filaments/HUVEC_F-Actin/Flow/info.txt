@@ -1,0 +1,11 @@
+Cell line: Human umbilical vein endothelial cells (HUVEC)
+
+Fluorescent label: Alexa-488 phalloidin (manufacturer instructions)
+
+Treatment: Grown under fluidic shear stress (FSS)
+
+Date collected: 20220630
+
+Exposure time per frame: 50 ms
+
+Excitation polarizations: 0°, 45°, 90°, 135°
