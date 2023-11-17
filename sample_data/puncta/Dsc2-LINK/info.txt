@@ -1,0 +1,11 @@
+Cell line: A-431
+
+Fluorophore: mEGFP
+
+Treatment: Transfected with Dsc2-LINK (Dsc2a with mEGFP attached to the C-terminus with a flexible linker)
+
+Date collected: 20210319
+
+Exposure time per frame: 50 ms
+
+Excitation polarizations: 0°, 45°, 90°, 135°
