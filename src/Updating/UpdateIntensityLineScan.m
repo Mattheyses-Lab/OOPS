@@ -108,7 +108,7 @@ function UpdateIntensityLineScan(source)
 
 %% plot the linescan
 
-    plot(OOPSData.Handles.LineScanAxes,umXData,Scale0To1(IntegratedLineScan),'Color',[0 1 0],'LineWidth',2);
+    plot(OOPSData.Handles.LineScanAxes,umXData,Scale0To1(IntegratedLineScan),'Color',[0 0 0],'LineWidth',2);
 
     drawnow nocallbacks
 

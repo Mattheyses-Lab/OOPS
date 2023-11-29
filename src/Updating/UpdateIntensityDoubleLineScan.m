@@ -120,9 +120,9 @@ function UpdateIntensityDoubleLineScan(source)
 
     set(0,'CurrentFigure',OOPSData.Handles.LineScanAxes.Parent);
     set(gcf,'CurrentAxes',OOPSData.Handles.LineScanAxes);
-    plot(umXData,Scale0To1(IntegratedLineScan1),'Color','Green','LineWidth',2);
+    plot(umXData,Scale0To1(IntegratedLineScan1),'Color',[0 0 0],'LineWidth',2);
     hold on
-    plot(umXData,Scale0To1(IntegratedLineScan2),'Color','Magenta','LineWidth',2);
+    plot(umXData,Scale0To1(IntegratedLineScan2),'Color',[0.5 0.5 0.5],'LineWidth',2);
     hold off    
 
     drawnow nocallbacks
