@@ -1,5 +1,5 @@
 function OOPS()
-%%  OOPS Primary driver for the Object-Oriented Polarization Software (OOPS) GUI
+% OOPS  Primary driver for the Object-Oriented Polarization Software (OOPS) GUI
 %
 %   NOTES:
 %
