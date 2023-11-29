@@ -46,37 +46,30 @@ switch OOPSData.Settings.SummaryDisplayType
 
     case 'Project'
 
+        % get the data for the project table
         projectTable = OOPSData.ProjectSummaryDisplayTable;
+
+        % add the table data to the uitable
         OOPSData.Handles.ProjectSummaryTable.Data = projectTable;
+        % remove column and row names
         OOPSData.Handles.ProjectSummaryTable.ColumnName = {};
         OOPSData.Handles.ProjectSummaryTable.RowName = {};
 
-        % first remove all styles
+        % create styles for cells that are 'True' or 'False'
+        sPass = uistyle("Icon","success","IconAlignment","rightmargin");
+        sFail = uistyle("Icon","error","IconAlignment","rightmargin");
+
+        % find the cells with char vectors 'True' or 'False'
+        [rFalse,cFalse] = find(cellfun(@(x) strcmp(x,'False'), projectTable.Project));
+        cFalse = cFalse + 1;
+        [rTrue,cTrue] = find(cellfun(@(x) strcmp(x,'True'), projectTable.Project));
+        cTrue = cTrue + 1;
+
+        % remove all styles
         removeStyle(OOPSData.Handles.ProjectSummaryTable);
-
-        % color cell based on selected GUI background color
-        % get row and col coordinates to the cell corresponding to 'GUI background color'
-        [r,c] = find(ismember(projectTable.Variables,'GUI background color'));
-        % create an icon color style for the cell
-        s = uistyle('Icon',makeRGBColorSquare(OOPSData.Settings.GUIBackgroundColor,1));
-        % add the style to the table
-        addStyle(OOPSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
-
-        % color cell based on selected GUI foreground color
-        % get row and col coordinates to the cell corresponding to 'GUI background color'
-        [r,c] = find(ismember(projectTable.Variables,'GUI foreground color'));
-        % create an icon color style for the cell
-        s = uistyle('Icon',makeRGBColorSquare(OOPSData.Settings.GUIForegroundColor,1));
-        % add the style to the table
-        addStyle(OOPSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
-
-        % color cell based on selected GUI foreground color
-        % get row and col coordinates to the cell corresponding to 'GUI background color'
-        [r,c] = find(ismember(projectTable.Variables,'GUI highlight color'));
-        % create an icon color style for the cell
-        s = uistyle('Icon',makeRGBColorSquare(OOPSData.Settings.GUIHighlightColor,1));
-        % add the style to the table
-        addStyle(OOPSData.Handles.ProjectSummaryTable,s,'cell',[r,c+1]);
+        % add the styles to true or false cells
+        addStyle(OOPSData.Handles.ProjectSummaryTable,sFail,'cell',[rFalse,cFalse]);
+        addStyle(OOPSData.Handles.ProjectSummaryTable,sPass,'cell',[rTrue,cTrue]);
 
     case 'Group'
 
@@ -87,34 +80,29 @@ switch OOPSData.Settings.SummaryDisplayType
             % get the data for the group table
             groupTable = cGroup.GroupSummaryDisplayTable;
 
-            % create an alignment style to make sure all text is left aligned
-            sAlignment = uistyle("HorizontalAlignment","left");
-
-            % create styles for cells with missing (NaN) values
-            sMissing = uistyle("BackgroundColor",[1 0.6 0.6],"FontColor",[1 1 1]);
-            % find indices to the missing values
-            [rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), groupTable.Group));
-            % [rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), imageTable.Image));
-            cMissing = cMissing + 1;
-
-            % create styles for cells that are 'True' or 'False'
-            sPass = uistyle("Icon","success","IconAlignment","rightmargin");
-            sFail = uistyle("Icon","error","IconAlignment","rightmargin");
-            % find the cells that are 'True' or 'False'
-            [rFalse,cFalse] = find(cellfun(@isLogicalFalse,groupTable.Group));
-            cFalse = cFalse + 1;
-            [rTrue,cTrue] = find(cellfun(@isLogicalTrue,groupTable.Group));
-            cTrue = cTrue + 1;
-
-            % now adjust the table for display
-            [groupTable.Group(rTrue)] = {'True'};
-            [groupTable.Group(rFalse)] = {'False'};
-
             % add the table data to the uitable
             OOPSData.Handles.ProjectSummaryTable.Data = groupTable;
             % remove column and row names
             OOPSData.Handles.ProjectSummaryTable.ColumnName = {};
             OOPSData.Handles.ProjectSummaryTable.RowName = {};
+
+            % create an alignment style to make sure all text is left aligned
+            sAlignment = uistyle("HorizontalAlignment","left");
+            % create styles for cells with missing (NaN) values
+            sMissing = uistyle("BackgroundColor",[1 0.6 0.6],"FontColor",[1 1 1]);
+            % create styles for cells that are 'True' or 'False'
+            sPass = uistyle("Icon","success","IconAlignment","rightmargin");
+            sFail = uistyle("Icon","error","IconAlignment","rightmargin");
+
+            % find indices to the missing values
+            [rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), groupTable.Group));
+            cMissing = cMissing + 1;
+
+            % find the cells with char vectors 'True' or 'False'
+            [rFalse,cFalse] = find(cellfun(@(x) strcmp(x,'False'), groupTable.Group));
+            cFalse = cFalse + 1;
+            [rTrue,cTrue] = find(cellfun(@(x) strcmp(x,'True'), groupTable.Group));
+            cTrue = cTrue + 1;
 
             % first remove all styles
             removeStyle(OOPSData.Handles.ProjectSummaryTable);
@@ -135,11 +123,16 @@ switch OOPSData.Settings.SummaryDisplayType
 
     case 'Image'
 
+        % current image selection
         cImage = OOPSData.CurrentImage;
 
         if ~isempty(cImage)
 
-            imageTable = cImage(1).ImageSummaryDisplayTable;
+            % only use the first image in the selection
+            cImage = cImage(1);
+
+            % get the data for the image table
+            imageTable = cImage.ImageSummaryDisplayTable;
 
             % add the table data to the uitable
             OOPSData.Handles.ProjectSummaryTable.Data = imageTable;
@@ -158,12 +151,22 @@ switch OOPSData.Settings.SummaryDisplayType
             % create separate styles for cells that are 'True' or 'False'
             sPass = uistyle("Icon","success","IconAlignment","rightmargin");
             sFail = uistyle("Icon","error","IconAlignment","rightmargin");
+            % create style for cells with a warning (in case threshold is adjusted)
+            sWarning = uistyle('Icon',"warning","IconAlignment","rightmargin");
+
+            % if threshold adjusted, store idx to Mask threshold cell
+            if cImage.ThresholdAdjusted
+                % get row and col coordinates to the cell corresponding to 'Mask threshold'
+                [rWarning,cWarning] = find(ismember(imageTable.Row,'Mask threshold'));
+                % add one to col idx to get the cell containing the value
+                cWarning = cWarning+1;
+            end
 
             % find indices to the missing values
             [rMissing,cMissing] = find(cellfun(@(x) all(ismissing(x)), imageTable.Image));
             cMissing = cMissing + 1;
 
-            % find the cells with char vectors ['True'] or ['False']
+            % find the cells with char vectors 'True' or 'False'
             [rFalse,cFalse] = find(cellfun(@(x) strcmp(x,'False'), imageTable.Image));
             cFalse = cFalse + 1;
             [rTrue,cTrue] = find(cellfun(@(x) strcmp(x,'True'), imageTable.Image));
@@ -178,6 +181,12 @@ switch OOPSData.Settings.SummaryDisplayType
             addStyle(OOPSData.Handles.ProjectSummaryTable,sPass,'cell',[rTrue,cTrue]);
             % add the style to missing cells
             addStyle(OOPSData.Handles.ProjectSummaryTable,sMissing,'cell',[rMissing,cMissing]);
+
+            % if threshold adjusted, add warning style to Mask threshold value cell
+            if cImage.ThresholdAdjusted
+                % add the style to warning cells
+                addStyle(OOPSData.Handles.ProjectSummaryTable,sWarning,'cell',[rWarning,cWarning]);
+            end
 
         else
             OOPSData.Handles.AppInfoPanel.Title = 'No image found';
