@@ -23,15 +23,47 @@ function ScreenSize = GetMaximizedScreenSize()
 %
 %----------------------------------------------------------------------------------------------------------------------------
 
-% create a temporary figure set to fill the entire usable screen
-% keep invisible so it doesn't flash
-TempFig = uifigure('Visible','Off','Units','Normalized','Position',[0 0 1 1]);
-TempFig.WindowState = 'Maximized';
+%% get screen width and height using Java commands
 
-% change units to pixels
-TempFig.Units = 'Pixels';
-% ScreenSize comes from Postition property of temporary figure window
-ScreenSize = TempFig.Position;
-% close the figure
-close(TempFig)
+toolkit = java.awt.Toolkit.getDefaultToolkit();
+ss = toolkit.getScreenSize;
+screenWidth = ss.width;
+screenHeight = ss.height;
+
+%% get display scaling factor
+
+% get screen size from MATLAB graphics root object
+matlabScreenSize = get(0,"ScreenSize");
+
+% get scaling factor by comparing Java and matlab screen widths
+scaleFactor = matlabScreenSize(3)/screenWidth;
+
+%% get full screen size
+
+% adjust screen width and height
+ScreenSize = [1 1 screenWidth*scaleFactor screenHeight*scaleFactor];
+
+%% get screen inset sizes
+
+jframe = javax.swing.JFrame;
+insets = toolkit.getScreenInsets(jframe.getGraphicsConfiguration());
+
+%% rescale screen inset sizes
+
+leftInset = insets.left*scaleFactor;
+rightInset = insets.right*scaleFactor;
+bottomInset = insets.bottom*scaleFactor;
+topInset = insets.top*scaleFactor;
+
+%% get title bar height
+
+fTemp = figure('Menu','none','ToolBar','none','Visible','off');
+titleBarHeight = fTemp.OuterPosition(4) - fTemp.InnerPosition(4) + fTemp.OuterPosition(2) - fTemp.InnerPosition(2);
+delete(fTemp);
+
+%% get the final usable screen size, adjusting for title bar and insets
+
+ScreenSize = ScreenSize + ...
+    [leftInset, bottomInset, -leftInset-rightInset, -titleBarHeight-bottomInset-topInset];
+
 end
