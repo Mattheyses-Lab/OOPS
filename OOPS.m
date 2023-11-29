@@ -3989,11 +3989,14 @@ pause(0.5)
 %                 % test below (making uniform cyclic colormap)
 %                  AzimuthMap = MakeCircularColormap(AzimuthMap);
 %                 % end test
+
                 OOPSData.Handles.AzimuthAxH.Colormap = vertcat(AzimuthMap,AzimuthMap);
 
-
-                % OOPSData.Handles.PhaseBarAxH.Colormap = vertcat(AzimuthMap,AzimuthMap);
-                OOPSData.Handles.AzimuthColorbar.Colormap = vertcat(AzimuthMap,AzimuthMap);
+                if OOPSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value
+                    OOPSData.Handles.AzimuthColorbar.Colormap = vertcat(hsv,hsv);
+                else
+                    OOPSData.Handles.AzimuthColorbar.Colormap = vertcat(AzimuthMap,AzimuthMap);
+                end
 
                 if strcmp(OOPSData.Settings.CurrentTab,'Azimuth') && ...
                         strcmp(OOPSData.Settings.AzimuthColorMode,'Direction')
@@ -5586,6 +5589,7 @@ pause(0.5)
                 if source.Value
                     OOPSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value = "off";
                 end
+                UpdateColormaps('Azimuth');
                 UpdateAzimuthImage(source);
             otherwise
                 UpdateCustomStatImage(source);
@@ -5603,7 +5607,7 @@ pause(0.5)
         else
             OOPSData.Handles.ScaleToMaxAzimuth.Visible = "off";
         end
-        %UpdateImages(source);
+        UpdateColormaps('Azimuth');
         UpdateAzimuthImage(source);
     end
 
