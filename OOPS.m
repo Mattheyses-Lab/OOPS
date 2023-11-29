@@ -11,6 +11,8 @@ function OOPS()
 %       Run the function to open the GUI by typing the following into the command window:
 %           >> OOPS
 %
+%   See also OOPSProject, OOPSGroup, OOPSImage, OOPSObject, OOPSSettings
+%
 %----------------------------------------------------------------------------------------------------------------------------
 %
 %   Object-Oriented Polarization Software (OOPS)
@@ -864,7 +866,7 @@ OOPSData.Handles.ObjectSelectionLineWidthEditfield.Layout.Column = 2;
 % selected line width
 OOPSData.Handles.ObjectSelectionSelectedLineWidthLabel = uilabel(...
     'Parent',OOPSData.Handles.ObjectSelectionSettingsGrid,...
-    'Text','Line width',...
+    'Text','Selected line width',...
     'FontName',OOPSData.Settings.DefaultFont,...
     'FontColor','White');
 OOPSData.Handles.ObjectSelectionSelectedLineWidthLabel.Layout.Row = 5;
@@ -4307,32 +4309,32 @@ pause(0.5)
 %% Callbacks controlling dynamic resizing of GUI containers
 
     function ResetContainerSizes(source,~)
-        %disp('Figure Window Size Changed...');
+        % calculate the size of small images
         SmallWidth = round((source.InnerPosition(3)*0.38)/2);
-
         % update grid size to match new image sizes
         set(OOPSData.Handles.MainGrid,...
             'RowHeight',{'1x',SmallWidth,SmallWidth,'1x'},...
             'ColumnWidth',{'1x',SmallWidth,SmallWidth,SmallWidth,SmallWidth});
-
-        %drawnow limitrate
+        % update the display
         drawnow
     end
 
 %% Callbacks for interactive thresholding
 
-    % Set figure callbacks WindowButtonMotionFcn and WindowButtonUpFcn
+    % set up callbacks controlling draggable behavior
     function StartUserThresholding(~,~)
+        % set WindowButtonMotionFcn and WindowButtonUpFcn
         OOPSData.Handles.fH.WindowButtonMotionFcn = @MoveThresholdLine;
         OOPSData.Handles.fH.WindowButtonUpFcn = @StopMovingAndSetThresholdLine;
     end
 
-    % Update display while thresh line is moving
+    % update display while thresh line is moving
     function MoveThresholdLine(source,~)
-        xPosition = round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
+        % get position of line, clip to [0,1]
+        xPosition = min(max(round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4),0),1);
+        % set line position and label
         OOPSData.Handles.CurrentThresholdLine.Value = xPosition;
         OOPSData.Handles.CurrentThresholdLine.Label = {[OOPSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(OOPSData.Handles.CurrentThresholdLine.Value)]};
-
         % set the position of the line label
         switch xPosition > 0.5
             case true
@@ -4340,18 +4342,20 @@ pause(0.5)
             case false
                 OOPSData.Handles.CurrentThresholdLine.LabelHorizontalAlignment = "right";
         end
-
+        % execute this function whenever line is moving
         ThresholdLineMoving(source,OOPSData.Handles.CurrentThresholdLine.Value);
     end
 
-    % Set final thresh position and restore callbacks
+    % set final thresh position and restore callbacks
     function StopMovingAndSetThresholdLine(source,~)
+        % clear the figure window callbacks
         OOPSData.Handles.fH.WindowButtonMotionFcn = '';
         OOPSData.Handles.fH.WindowButtonUpFcn = '';
-        xPosition = round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4);
+        % get position of line, clip to [0,1]
+        xPosition = min(max(round(OOPSData.Handles.ThreshAxH.CurrentPoint(1,1),4),0),1);
+        % set line position and label
         OOPSData.Handles.CurrentThresholdLine.Value = xPosition;
         OOPSData.Handles.CurrentThresholdLine.Label = {[OOPSData.CurrentImage(1).ThreshStatisticName,' = ',num2str(OOPSData.Handles.CurrentThresholdLine.Value)]};
-
         % set the position of the line label
         switch xPosition > 0.5
             case true
@@ -4359,31 +4363,27 @@ pause(0.5)
             case false
                 OOPSData.Handles.CurrentThresholdLine.LabelHorizontalAlignment = "right";
         end
+        % execute this function whenever line is finished moving
         ThresholdLineMoved(source,OOPSData.Handles.CurrentThresholdLine.Value);
+        % update the display
         drawnow
     end
 
 %% Callbacks for intensity display scaling
 
     function AdjustPrimaryChannelIntensity(source,~)
-
+        % if no image is found, restore the default limits and return
         if isempty(OOPSData.CurrentImage)
             source.Value = [0 1];
             return
         end
-
+        % store the new primary intensity display limits for the current image
         OOPSData.CurrentImage(1).PrimaryIntensityDisplayLimits = source.Value;
-
+        % update if current View shows the AverageIntensity image
         if ismember(OOPSData.Settings.CurrentTab,[{'Mask','Order','Azimuth'},OOPSData.Settings.CustomStatisticDisplayNames.'])
             UpdateAverageIntensityImage(source);
-            % if OOPSData.CurrentImage(1).ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value
-            %     % UpdateCompositeRGB();
-            %     UpdateAverageIntensityImage(source);
-            % else
-            %     UpdateAverageIntensityImage(source);
-            % end
         end
-
+        % update if current View uses the AverageIntensity image as an overlay and the overlay is active
         switch OOPSData.Settings.CurrentTab
             case 'Order'
                 if OOPSData.Handles.ShowAsOverlayOrder.Value
@@ -4398,32 +4398,29 @@ pause(0.5)
                     UpdateCustomStatImage(source);
                 end
         end
-
+        % update the display, limit the draw rate for smoother animations
         drawnow limitrate
-
     end
 
     function AdjustReferenceChannelIntensity(source,~)
-
         % if no data exist for this image
         if isempty(OOPSData.CurrentImage)
             source.Value = [0 1];
             return
         end
-
         % if no reference image is loaded
         if ~OOPSData.CurrentImage(1).ReferenceImageLoaded
             source.Value = [0 1];
             return
         end
-
+        % store the new reference intensity display limits for the current image
         OOPSData.CurrentImage(1).ReferenceIntensityDisplayLimits = source.Value;
+        % update if ReferenceImage exists and is active
         if OOPSData.CurrentImage(1).ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value
             UpdateAverageIntensityImage(source);
         end
-
+        % update the display, limit the draw rate for smoother animations
         drawnow limitrate
-
     end
 
     function UpdateCompositeRGB()

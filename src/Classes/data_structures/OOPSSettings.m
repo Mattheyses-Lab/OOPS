@@ -1,8 +1,10 @@
 classdef OOPSSettings < handle
-% OOPSSettings  Settings class for Object-Oriented Polarization Software (OOPS)
+% OOPSSETTINGS  Settings class for Object-Oriented Polarization Software (OOPS)
 %
 %   An instance of this class loads, stores, and/or determines various
-%   settings for a single run of the OOPS GUI
+%   settings for a single run of the OOPS GUI.
+%
+%   See also OOPS, OOPSProject, OOPSGroup, OOPSImage, OOPSObject
 %
 %----------------------------------------------------------------------------------------------------------------------------
 %
@@ -341,15 +343,8 @@ classdef OOPSSettings < handle
             settings.CurrentTab = obj.CurrentTab;
             settings.PreviousTab = obj.PreviousTab;
 
-            % themes and colors for GUI display
-            settings.GUITheme = obj.GUITheme;
-            % settings.GUIBackgroundColor = obj.GUIBackgroundColor;
-            % settings.GUIForegroundColor = obj.GUIForegroundColor;
-            % settings.GUIHighlightColor = obj.GUIHighlightColor;
-
             % object labeling
             settings.ObjectLabels = obj.ObjectLabels;
-
         end
 
 %% load user settings/schemes/custom statistics
@@ -1000,12 +995,6 @@ classdef OOPSSettings < handle
             % monitor tab switching
             obj.CurrentTab = settings.CurrentTab;
             obj.PreviousTab = settings.PreviousTab;
-
-            % themes and colors for GUI display
-            obj.GUITheme = settings.GUITheme;
-            % obj.GUIBackgroundColor = settings.GUIBackgroundColor;
-            % obj.GUIForegroundColor = settings.GUIForegroundColor;
-            % obj.GUIHighlightColor = settings.GUIHighlightColor;
 
             % object labeling
             obj.ObjectLabels = settings.ObjectLabels;

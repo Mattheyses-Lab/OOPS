@@ -1,5 +1,10 @@
 classdef OOPSLabel < handle
-% simple class used for labeling objects
+% OOPSLABEL  Labels for OOPSObjects
+%
+%   An instance of this class defines a unique label
+%   applied to one or more OOPSObjects
+%
+%   See also OOPS, OOPSProject, OOPSGroup, OOPSImage, OOPSObject, OOPSSettings
 %
 %----------------------------------------------------------------------------------------------------------------------------
 %

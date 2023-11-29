@@ -1,4 +1,12 @@
 classdef OOPSProject < handle
+% OOPSPROJECT  Project-level of OOPS data hierarchy
+%
+%   An instance of this class stores all graphics 
+%   handles and data associated with a single run 
+%   of the OOPS GUI.
+%
+%   See also OOPS, OOPSGroup, OOPSImage, OOPSObject, OOPSSettings
+%
 %----------------------------------------------------------------------------------------------------------------------------
 %
 %   Object-Oriented Polarization Software (OOPS)
@@ -60,6 +68,18 @@ classdef OOPSProject < handle
         nSelected
         % nGroups x nLabels array of the number of objects with each label in this project
         labelCounts
+        % status flag indicating whether FFC stacks have been loaded for all groups
+        FFCAllLoaded logical
+        % status flag indicating whether flat-field correction has been performed for all images
+        FFCAllDone logical
+        % status flag indicating whether the all images have been segmented
+        MaskAllDone logical
+        % status flag indicating whether objects have been detected for all images
+        ObjectDetectionAllDone logical        
+        % status flag indicating whether FPM stats have been computed for all images 
+        FPMStatsAllDone logical
+        % status flag indicating whether local S/B has been detected for all images
+        LocalSBAllDone logical
     end
 
     methods
@@ -73,10 +93,12 @@ classdef OOPSProject < handle
             end
         end
 
+        % destructor method
         function delete(obj)
             obj.deleteGroups()
         end
 
+        % delete all groups in this project
         function deleteGroups(obj)
             % collect and delete the groups in this project
             Groups = obj.Group;
@@ -397,28 +419,38 @@ classdef OOPSProject < handle
         function ProjectSummaryDisplayTable = get.ProjectSummaryDisplayTable(obj)
 
             varNames = [...
-                "Project name",...
-                "Number of groups",...
-                "Current tab",...
-                "Previous tab",...
+                "Name",...
+                "Total groups",...
+                "Total images",...
+                "Total objects",...
+                "Current View",...
+                "Previous View",...
                 "Mask type",...
                 "Mask name",...
                 "GUI font size",...
-                "GUI background color",...
-                "GUI foreground color",...
-                "GUI highlight color"];
+                "FFC files loaded",...
+                "FFC performed",...
+                "Mask generated",...
+                "FPM stats calculated",...
+                "Objects detected",...
+                "Local S/B calculated"];
 
             ProjectSummaryDisplayTable = table(...
                 {obj.ProjectName},...
                 {num2str(obj.nGroups)},...
+                {num2str(obj.nImages)},...
+                {num2str(obj.nObjects)},...
                 {obj.Settings.CurrentTab},...
                 {obj.Settings.PreviousTab},...
                 {obj.Settings.MaskType},...
                 {obj.Settings.MaskName},...
                 {num2str(obj.Settings.GUIFontSize)},...
-                {num2str(obj.Settings.GUIBackgroundColor)},...
-                {num2str(obj.Settings.GUIForegroundColor)},...
-                {num2str(obj.Settings.GUIHighlightColor)},...
+                {Logical2String(obj.FFCAllLoaded)},...
+                {Logical2String(obj.FFCAllDone)},...
+                {Logical2String(obj.MaskAllDone)},...
+                {Logical2String(obj.FPMStatsAllDone)},...
+                {Logical2String(obj.ObjectDetectionAllDone)},...
+                {Logical2String(obj.LocalSBAllDone)},...
                 'VariableNames',varNames,...
                 'RowNames',"Project");
 
@@ -438,6 +470,98 @@ classdef OOPSProject < handle
                 % add the table data
                 stackedData(i).Data = obj.Group(i).objectDataTableForExport();
             end
+        end
+
+%% project status tracking
+
+        function FFCAllLoaded = get.FFCAllLoaded(obj)
+            if obj.nGroups == 0
+                FFCAllLoaded = false;
+                return
+            end
+            
+            for i = 1:obj.nGroups
+                if ~obj.Group(i).FFCLoaded
+                    FFCAllLoaded = false;
+                    return
+                end
+            end
+            FFCAllLoaded = true;
+        end
+
+        function FFCAllDone = get.FFCAllDone(obj)
+            if obj.nGroups == 0
+                FFCAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nGroups
+                if ~obj.Group(i).FFCAllDone
+                    FFCAllDone = false;
+                    return
+                end
+            end
+            FFCAllDone = true;
+        end
+
+        function MaskAllDone = get.MaskAllDone(obj)
+            if obj.nGroups == 0
+                MaskAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nGroups
+                if ~obj.Group(i).MaskAllDone
+                    MaskAllDone = false;
+                    return
+                end
+            end
+            MaskAllDone = true;
+        end
+
+        function ObjectDetectionAllDone = get.ObjectDetectionAllDone(obj)
+            if obj.nGroups == 0
+                ObjectDetectionAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nGroups
+                if ~obj.Group(i).ObjectDetectionAllDone
+                    ObjectDetectionAllDone = false;
+                    return
+                end
+            end
+            ObjectDetectionAllDone = true;
+        end
+
+        function LocalSBAllDone = get.LocalSBAllDone(obj)
+            if obj.nGroups == 0
+                LocalSBAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nGroups
+                if ~obj.Group(i).LocalSBAllDone
+                    LocalSBAllDone = false;
+                    return
+                end
+            end
+            LocalSBAllDone = true;
+        end
+
+        function FPMStatsAllDone = get.FPMStatsAllDone(obj)
+            if obj.nGroups == 0
+                FPMStatsAllDone = false;
+                return
+            end
+            
+            for i = 1:obj.nGroups
+                if ~obj.Group(i).FPMStatsAllDone
+                    FPMStatsAllDone = false;
+                    return
+                end
+            end
+            FPMStatsAllDone = true;
         end
 
     end

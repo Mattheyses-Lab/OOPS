@@ -1,4 +1,11 @@
 classdef OOPSImage < handle & dynamicprops
+% OOPSIMAGE  Image-level of OOPS data hierarchy
+%
+%   An instance of this class defines an individual Image
+%   belonging to its Parent OOPSGroup.
+%
+%   See also OOPS, OOPSProject, OOPSGroup, OOPSObject, OOPSSettings
+%
 %----------------------------------------------------------------------------------------------------------------------------
 %
 %   Object-Oriented Polarization Software (OOPS)
@@ -101,7 +108,7 @@ classdef OOPSImage < handle & dynamicprops
 
         rawReferenceImage (:,:)
         ReferenceImage (:,:) double
-        ReferenceImageEnhanced double
+        %ReferenceImageEnhanced double
         rawReferenceClass (1,:) char
         rawReferenceFileName (1,:) char
         rawReferenceFullName (1,:) char
@@ -669,7 +676,8 @@ classdef OOPSImage < handle & dynamicprops
                             %% ENHANCE CONTRAST
 
                             % top-hat filter with disk-shaped structuring element followed by median filter
-                            obj.EnhancedImg = medfilt2(imtophat(obj.I,strel('disk',3,0)));
+                            %obj.EnhancedImg = medfilt2(imtophat(obj.I,strel('disk',3,0)));
+                            obj.EnhancedImg = medfilt2(obj.I);
                             % normalize to max
                             obj.EnhancedImg = obj.EnhancedImg./max(max(obj.EnhancedImg));
                             % initial sensitivity guess using Otsu threshold
@@ -1593,8 +1601,7 @@ classdef OOPSImage < handle & dynamicprops
                 "Input image class",...
                 "Pixel size",...
                 "Mask threshold",...
-                "Threshold adjusted",...
-                "Number of objects",...
+                "Total objects",...
                 "Mask name",...
                 "Mean pixel Order",...
                 "FPM stack loaded",...
@@ -1610,7 +1617,6 @@ classdef OOPSImage < handle & dynamicprops
                 {obj.rawFPMClass},...
                 {obj.rawFPMPixelSize},...
                 {obj.level},...
-                {Logical2String(obj.ThresholdAdjusted)},...
                 {obj.nObjects},...
                 {obj.MaskName},...
                 {obj.OrderAvg},...
@@ -1868,7 +1874,7 @@ classdef OOPSImage < handle & dynamicprops
             % add the raw image data to this OOPSImage
             obj.rawFPMStack = imageData;
             % average the raw data (polarization stack)
-            obj.rawFPMAverage = mean(im2double(obj.rawFPMStack),3);
+            obj.rawFPMAverage = mean(im2double(obj.rawFPMStack),3) .* obj.rawFPMRange(2);
 
     %% load reference images
 

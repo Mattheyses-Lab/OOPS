@@ -1,4 +1,11 @@
 classdef OOPSObject < handle & dynamicprops
+% OOPSOBJECT  Object-level of OOPS data hierarchy
+%
+%   An instance of this class defines an individual Object
+%   belonging to its parent OOPSImage.
+%
+%   See also OOPS, OOPSProject, OOPSGroup, OOPSImage, OOPSSettings
+%
 %----------------------------------------------------------------------------------------------------------------------------
 %
 %   Object-Oriented Polarization Software (OOPS)
