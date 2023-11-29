@@ -112,6 +112,7 @@ classdef OOPSObject < handle & dynamicprops
         % various object images
         PaddedOrderSubImage
         MaxScaledOrderSubImage
+        UserScaledOrderSubImage
         MaskedOrderSubImage
         PaddedFFCIntensitySubImage
         PaddedMaskSubImage
@@ -693,6 +694,10 @@ classdef OOPSObject < handle & dynamicprops
 
         function MaxScaledOrderSubImage = get.MaxScaledOrderSubImage(obj)
             MaxScaledOrderSubImage = obj.Parent.MaxScaledOrderImage(obj.paddedSubarrayIdx{:});
+        end
+
+        function UserScaledOrderSubImage = get.UserScaledOrderSubImage(obj)
+            UserScaledOrderSubImage = imadjust(obj.PaddedOrderSubImage,obj.Parent.OrderDisplayLimits,[0 1]);
         end
 
         function MaskedOrderSubImage = get.MaskedOrderSubImage(obj)
