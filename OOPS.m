@@ -3225,6 +3225,14 @@ disp('Setting up object image axes...')
     clear pbarOriginal tagOriginal
     OOPSData.Handles.ObjectOrderAxH = SetAxisTitle(OOPSData.Handles.ObjectOrderAxH,'Order');
     
+    % make colorbar and set colormap for the axes, hide the colorbar and disable interactions with it
+    OOPSData.Handles.ObjectOrderCbar = colorbar(OOPSData.Handles.ObjectOrderAxH,...
+        'location','east',...
+        'color','white',...
+        'tag','ObjectOrderCbar',...
+        'Ticks',0:0.1:1);
+    OOPSData.Handles.ObjectOrderCbar.Visible = 'Off';
+    OOPSData.Handles.ObjectOrderCbar.HitTest = 'Off';
     OOPSData.Handles.ObjectOrderAxH.Colormap = OOPSData.Settings.OrderColormap;
     
     OOPSData.Handles.ObjectOrderAxH.Title.Visible = 'Off';
@@ -3260,6 +3268,9 @@ disp('Setting up object image axes...')
     OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.String = "Normalized intensity (A.U.)";
     OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.Color = [1 1 0];
     OOPSData.Handles.ObjectIntensityPlotAxH.YAxis.Label.FontName = OOPSData.Settings.DefaultPlotFont;
+
+    % replace default toolbar with an empty one
+    axtoolbar(OOPSData.Handles.ObjectIntensityPlotAxH,{});
     
     disableDefaultInteractivity(OOPSData.Handles.ObjectIntensityPlotAxH);
 
@@ -4445,6 +4456,7 @@ pause(0.5)
 
         % if scale to max buttons are enabled for Order axes, disable it
         OOPSData.Handles.ScaleToMaxOrder.Value = false;
+        OOPSData.Handles.ScaleToMaxObjectOrder.Value = false;
         OOPSData.Handles.ScaleToMaxAzimuth.Value = false;
 
         OOPSData.CurrentImage(1).OrderDisplayLimits = source.Value;
@@ -4456,6 +4468,8 @@ pause(0.5)
                 if OOPSData.Handles.ShowAzimuthHSVOverlayAzimuth.Value
                     UpdateAzimuthImage(source);
                 end
+            case 'Objects'
+                UpdateObjectOrderImage(source);
         end
 
         drawnow limitrate
@@ -4553,6 +4567,9 @@ pause(0.5)
                 addZoomToCursorToolbarBtn;
                 addApplyMaskToolbarBtn;
                 addShowAsOverlayToolbarBtn;
+                addShowColorbarToolbarBtn;
+                addScaleToMaxToolbarBtn;
+            case 'ObjectOrder'
                 addShowColorbarToolbarBtn;
                 addScaleToMaxToolbarBtn;
         end
@@ -5189,224 +5206,7 @@ pause(0.5)
 
     end
 
-%% Data saving/exporting
-
-    function SaveImages(source,~)
-        
-        % get screensize
-        ss = OOPSData.Settings.ScreenSize;
-        % center point (x,y) of screen
-        center = [ss(3)/2,ss(4)/2];
-
-        %% Data Selection
-        sz = [center(1)-150 center(2)-150 300 300];
-        
-        fig = uifigure('Name','Select Images to Save',...
-            'Menubar','None',...
-            'Position',sz,...
-            'HandleVisibility','On',...
-            'Visible','Off',...
-            'CloseRequestFcn',@ContinueToSave);
-
-        MainGrid = uigridlayout(fig,[2,1],'BackgroundColor','Black');
-        MainGrid.RowHeight = {'1x',20};
-        MainGrid.ColumnWidth = {'1x'};
-        
-        SaveOptionsPanel = uipanel(MainGrid);
-        SaveOptionsPanel.Title = 'Save Options';
-        
-        % cell array of char vectors of possible save options
-        SaveOptions = {'Average Intensity Image (8-bit .tif)';...
-            'Order (RGB .png)';...
-            'Max Scaled Order (RGB .png)';...
-            'Masked Order (RGB .png)';...
-            'Max Scaled Order-Intensity Overlay (RGB .png)';...
-            'Azimuth (RGB .png)';...
-            'Masked Azimuth (RGB .png)';...
-            'Azimuth HSV (RGB .png)';...
-            'Mask (8-bit .tif)';...
-            'Mask (RGB .png)';...
-            'Image Summary'...
-            };
-
-        % create grid for uitree with the possible save options
-        SaveOptionsTreeGrid = uigridlayout(SaveOptionsPanel,[1,1],...
-            'BackgroundColor','Black',...
-            'Padding',[0 0 0 0]);
-        % the uitree
-        SaveOptionsTree = uitree(SaveOptionsTreeGrid,'checkbox');
-        % the top level nodes (save options)
-        for OptionIdx = 1:numel(SaveOptions)
-            uitreenode(SaveOptionsTree,'Text',SaveOptions{OptionIdx},'NodeData',SaveOptions{OptionIdx});
-        end
-        % note: we could add children nodes for more user control over the saved data 
-        % (ex: select what to include in our image summary struct, etc.)
-
-        % button to indicate completion, leads to selecting save directory
-        uibutton(MainGrid,'Push',...
-            'Text','Choose Save Directory',...
-            'ButtonPushedFcn',@ContinueToSave);
-
-        % move the window to the center before showing it
-        movegui(fig,'center')
-        % now show it
-        fig.Visible = 'On';
-        % initialize save choices cell
-        UserSaveChoices = {};
-
-        % callback for Btn to close fig
-        function [] = ContinueToSave(~,~)
-            % hide main fig
-            OOPSData.Handles.fH.Visible = 'Off';
-            if numel(SaveOptionsTree.CheckedNodes)>0
-                % collect the selected options
-                [UserSaveChoices{1:numel(SaveOptionsTree.CheckedNodes),1}] = deal(SaveOptionsTree.CheckedNodes.NodeData);
-            end
-            % delete the figure
-            delete(fig)
-        end
-
-        % wait until fig deleted (by 'X' or continue button)
-        waitfor(fig);
-        % then check for valid input
-        if isempty(UserSaveChoices)
-            UpdateLog3(source,'No options selected.','append');
-            % turn main fig back on
-            OOPSData.Handles.fH.Visible = 'On';
-            return
-        end
-        % get save directory
-        folder_name = uigetdir(pwd);
-        % turn main fig back on
-        OOPSData.Handles.fH.Visible = 'On';
-        % move into user-selected save directory
-        cd(folder_name);
-
-        % save user-specified data for each currently selected image
-        for cImage = OOPSData.CurrentImage
-            
-            % control for mac vs pc
-            if ismac || isunix
-                loc = [folder_name '/' cImage.rawFPMShortName];
-            elseif ispc
-                loc = [folder_name '\' cImage.rawFPMShortName];
-            end
-            
-            if any(strcmp(UserSaveChoices,'Image Summary'))
-
-                % data struct to hold output variable for current image
-                ImageSummary = struct();
-                ImageSummary.I = cImage.I;
-                % mask and average Order
-                ImageSummary.MaskImage = cImage.bw;
-                ImageSummary.OrderAvg = cImage.OrderAvg;
-                % raw data, raw data normalized to stack-max, raw stack-average
-                ImageSummary.rawFPMStack = cImage.rawFPMStack;
-                ImageSummary.rawFPMAverage = cImage.rawFPMAverage;
-                % same as above, but with flat-field corrected data
-                ImageSummary.ffcFPMStack = cImage.ffcFPMStack;
-                ImageSummary.ffcFPMAverage = cImage.ffcFPMAverage;
-                % FF-corrected data normalized within each 4-px stack
-                ImageSummary.ffcFPMPixelNorm = cImage.ffcFPMPixelNorm;
-                % output images
-                ImageSummary.OrderImage = cImage.OrderImage;
-                ImageSummary.MaskedOrderImage = cImage.MaskedOrderImage;
-                ImageSummary.AzimuthImage = cImage.AzimuthImage;
-                % image info
-                ImageSummary.ImageName = cImage.rawFPMShortName;
-                % calculated obj data (SB,Order,etc.)
-                ImageSummary.ObjectData = GetImageObjectSummary(cImage);
-                
-                name = [loc,'_ImageSummary'];
-                UpdateLog3(source,name,'append');
-                save(name,'ImageSummary');
-                clear ImageSummary
-            end
-
-            %% Order
-            
-            if any(strcmp(UserSaveChoices,'Order (RGB .png)'))
-                name = [loc,'-Order_RGB.png'];
-                UpdateLog3(source,name,'append');
-                IOut = cImage.OrderImageRGB;
-                imwrite(IOut,name);
-            end
-
-
-            if any(strcmp(UserSaveChoices,'Max Scaled Order (RGB .png)'))
-                name = [loc,'-Scaled_Order_RGB.png'];
-                UpdateLog3(source,name,'append');
-                IOut = cImage.MaxScaledOrderImageRGB;
-                imwrite(IOut,name);
-            end
-
-            if any(strcmp(UserSaveChoices,'Masked Order (RGB .png)'))
-                name = [loc,'-MaskedOrder_RGB.png'];
-                UpdateLog3(source,name,'append');
-                IOut = cImage.MaskedOrderImageRGB;
-                imwrite(IOut,name);
-            end
-
-            if any(strcmp(UserSaveChoices,'Max Scaled Order-Intensity Overlay (RGB .png)'))
-                name = [loc,'-MaxScaledOrderIntensityOverlay_RGB.png'];
-                UpdateLog3(source,name,'append');
-                IOut = cImage.MaxScaledOrderIntensityOverlayRGB;
-                imwrite(IOut,name);
-            end
-
-            %% Azimuth
-            
-            if any(strcmp(UserSaveChoices,'Azimuth (RGB .png)'))
-                name = [loc,'-Azimuth_RGB.png'];
-                UpdateLog3(source,name,'append');
-                IOut = cImage.AzimuthRGB;
-                imwrite(IOut,name);
-            end
-            
-            if any(strcmp(UserSaveChoices,'Masked Azimuth (RGB .png)'))
-                name = [loc,'-MaskedAzimuth_RGB.png'];
-                UpdateLog3(source,name,'append');
-                IOut = cImage.MaskedAzimuthRGB;
-                imwrite(IOut,name);
-            end
-
-            if any(strcmp(UserSaveChoices,'Azimuth HSV (RGB .png)'))
-                name = [loc,'-AzimuthHSV_RGB.png'];
-                UpdateLog3(source,name,'append');
-                IOut = cImage.AzimuthOrderIntensityHSV;
-                imwrite(IOut,name);
-            end
-            
-            %% Average Intensity
-            
-            if any(strcmp(UserSaveChoices,'Average Intensity Image (8-bit .tif)'))
-                name = [loc '-AvgIntensity.tif'];
-                UpdateLog3(source,name,'append');
-                IOut = im2uint8(Scale0To1(cImage.ffcFPMAverage));
-                imwrite(IOut,OOPSData.Settings.IntensityColormap,name);                
-            end
-
-            %% Mask
-
-            if any(strcmp(UserSaveChoices,'Mask (8-bit .tif)'))    
-                name = [loc '-Mask.tif'];
-                UpdateLog3(source,name,'append');
-                IOut = im2uint8(full(cImage.bw));
-                imwrite(IOut,name);
-            end
-
-            if any(strcmp(UserSaveChoices,'Mask (RGB .png)'))    
-                name = [loc '-Mask_RGB.png'];
-                UpdateLog3(source,name,'append');
-                IOut = im2uint8(full(cImage.bw));
-                imwrite(IOut,name);
-            end
-            
-        end % end of main save loop
-
-        UpdateLog3(source,'Done.','append');
-        
-    end % end SaveImages
+%% Exporting object data
 
     function SaveObjectData(source,~)
         
@@ -5533,31 +5333,7 @@ pause(0.5)
         % make title visible if resetTitle is true
         cax.Title.Visible = resetTitle;
 
-        %% export_fig method
-        % tempfig = uifigure("HandleVisibility","On",...
-        %     "Visible","off",...
-        %     "InnerPosition",[0 0 1024 1024],...
-        %     "AutoResizeChildren","Off");
-        % % copy the axes into the new figure
-        % tempax = copyobj(cax,tempfig);
-        % % set various axes properties that improve export quality
-        % tempax.Visible = 'On';
-        % tempax.XColor = 'Black';
-        % tempax.YColor = 'Black';
-        % tempax.Box = 'On';
-        % tempax.LineWidth = 0.5;
-        % tempax.Color = 'Black';
-        % % hide the title
-        % tempax.Title.String = '';
-        % % set axes unit to normalized
-        % tempax.Units = 'Normalized';
-        % % set axes position to fill the whole figure
-        % tempax.InnerPosition = [0 0 1 1];
-        % % call export_fig with the relevant handle and filename
-        % export_fig([path,filename],tempfig,'-nocrop');
-        % % close the temporary figure
-        % close(tempfig)
-
+        % update log
         UpdateLog3(source,'Done.','append');
     end
 
@@ -5595,7 +5371,6 @@ pause(0.5)
                 UpdateCustomStatImage(source);
         end
 
-        %UpdateImages(source);
     end
 
     function tbShowAzimuthHSVOverlayStateChanged(source,~)
@@ -5650,13 +5425,14 @@ pause(0.5)
         end
 
         switch source.Tag
-            case 'ScaleToMaxOrder'
+            case {'ScaleToMaxOrder','ScaleToMaxObjectOrder'}
                 if event.Value && cImage.FPMStatsDone
                     OOPSData.Handles.OrderSlider.Value = [0 max(cImage.OrderImage,[],"all")];
                 elseif event.Value && ~cImage.FPMStatsDone
                     OOPSData.Handles.OrderSlider.Value = [0 1];
                 end
                 OOPSData.Handles.ScaleToMaxOrder.Value = event.Value;
+                OOPSData.Handles.ScaleToMaxObjectOrder.Value = event.Value;
                 OOPSData.Handles.ScaleToMaxAzimuth.Value = event.Value;
             case 'ScaleToMaxAzimuth'
                 if event.Value && cImage.FPMStatsDone
@@ -5734,7 +5510,8 @@ pause(0.5)
                     'WindowStyle','AlwaysOnTop',...
                     'Units','Normalized',...
                     'Position',[0.65 0.8 0.35 0.2],...
-                    'CloseRequestFcn',@CloseLineScanFig);
+                    'CloseRequestFcn',@CloseLineScanFig,...
+                    'Color',[1 1 1]);
                 
                 OOPSData.Handles.LineScanAxes = uiaxes(OOPSData.Handles.LineScanFig,...
                     'Units','Normalized',...
@@ -5765,7 +5542,7 @@ pause(0.5)
                     'Units','Normalized',...
                     'Position',[0.65 0.8 0.35 0.2],...
                     'CloseRequestFcn',@CloseLineScanFig,...
-                    'Color','White');
+                    'Color',[1 1 1]);
                 
                 OOPSData.Handles.LineScanAxes = uiaxes(OOPSData.Handles.LineScanFig,...
                     'Units','Normalized',...
@@ -5802,11 +5579,6 @@ pause(0.5)
         switch source.Tag
             case 'LineScanAverageIntensity'
                 if cImage.ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value==1
-                    % OOPSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(OOPSData.Handles.LineScanAxes,...
-                    %     OOPSData.Handles.LineScanROI.Position,...
-                    %     cImage.ffcFPMAverage,...
-                    %     cImage.ReferenceImageEnhanced,...
-                    %     cImage.RealWorldLimits);
                     UpdateIntensityDoubleLineScan(source);
                 else
                     UpdateIntensityLineScan(source);
@@ -5824,17 +5596,8 @@ pause(0.5)
         switch source.Tag
             case 'LineScanAverageIntensity'
                 if cImage.ReferenceImageLoaded && OOPSData.Handles.ShowReferenceImageAverageIntensity.Value==1
-                    % OOPSData.Handles.LineScanAxes = PlotIntegratedDoubleLineScan(OOPSData.Handles.LineScanAxes,...
-                    %     OOPSData.Handles.LineScanROI.Position,...
-                    %     cImage.ffcFPMAverage,...
-                    %     cImage.ReferenceImageEnhanced,...
-                    %     cImage.RealWorldLimits);
                     UpdateIntensityDoubleLineScan(source);
                 else
-                    % OOPSData.Handles.LineScanAxes = PlotIntegratedLineScan(OOPSData.Handles.LineScanAxes,...
-                    %     OOPSData.Handles.LineScanROI.Position,...
-                    %     cImage.ffcFPMAverage,...
-                    %     cImage.RealWorldLimits);
                     UpdateIntensityLineScan(source);
                 end
             case 'LineScanOrder'
