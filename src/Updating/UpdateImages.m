@@ -229,13 +229,7 @@ function [] = UpdateImages(source,varargin)
             end
             
             % display object Order image
-            try
-                ObjectOrderImg = cObject.PaddedOrderSubImage;
-                OOPSData.Handles.ObjectOrderImgH.CData = ObjectOrderImg;
-            catch
-                disp('Warning: Error displaying object Order image');
-                OOPSData.Handles.ObjectOrderImgH.CData = EmptyImage;
-            end
+            UpdateObjectOrderImage(source);
 
             % display the (padded) intensity image of the object
             try
@@ -331,8 +325,6 @@ function [] = UpdateImages(source,varargin)
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
                 % send a warning to the command window
                 warning(['Error displaying object azimuth sticks: ', ME.message]);
-                % send error message to the OOPS log window
-                % UpdateLog3(source,['Error displaying object azimuth sticks: ',ME.message],'append');
             end
 
 
@@ -358,10 +350,7 @@ function [] = UpdateImages(source,varargin)
 
             catch ME
                 UpdateLog3(source,['Warning: Error displaying object midline: ', ME.message],'append');
-                % % reset the axes limits to match the object image size
-                % OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
-                % OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
-
+                % reset the axes limits to match the object image size
                 OOPSData.Handles.ObjectMaskAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
                 OOPSData.Handles.ObjectMaskAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
             end
