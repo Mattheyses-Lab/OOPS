@@ -193,7 +193,10 @@ function TabSelection(source,~)
             OOPSData.Handles.ObjectAzimuthOverlayImgH.Visible = 'Off';
             % object Order image
             OOPSData.Handles.ObjectOrderAxH.Title.Visible = 'Off';
+            OOPSData.Handles.ObjectOrderAxH.Toolbar.Visible = 'Off';
+            OOPSData.Handles.ObjectOrderAxH.HitTest = 'Off';
             OOPSData.Handles.ObjectOrderImgH.Visible = 'Off';
+            OOPSData.Handles.ObjectOrderCbar.Visible = 'Off';
             % object intensity fit plot
             OOPSData.Handles.ObjectIntensityPlotAxH.Visible = 'Off';
             OOPSData.Handles.ObjectIntensityPlotAxH.HitTest = 'Off';
@@ -291,8 +294,6 @@ function TabSelection(source,~)
             OOPSData.Handles.MaskAxH.Toolbar.Visible = 'On';
             OOPSData.Handles.MaskAxH.HitTest = 'On';
             OOPSData.Handles.MaskAxH.Visible = 'On';
-
-            % OOPSData.Handles.AverageIntensityCbar.Visible = 'On';
     
             for i = 1:4
                 OOPSData.Handles.SmallPanels(1,i).Visible = 'Off';
@@ -414,6 +415,8 @@ function TabSelection(source,~)
             OOPSData.Handles.ObjectAzimuthOverlayImgH.Visible = 'On';
     
             OOPSData.Handles.ObjectOrderAxH.Title.Visible = 'On';
+            OOPSData.Handles.ObjectOrderAxH.Toolbar.Visible = 'On';
+            OOPSData.Handles.ObjectOrderAxH.HitTest = 'On';
             OOPSData.Handles.ObjectOrderImgH.Visible = 'On';
     
             OOPSData.Handles.ObjectNormIntStackImgH.Visible = 'On';
