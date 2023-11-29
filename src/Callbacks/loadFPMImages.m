@@ -79,7 +79,7 @@ function loadFPMImages(source,~)
     nFiles = numel(FPMFiles);
 
     % update log
-    UpdateLog3(source,['Opening ',num2str(nFiles),' FPM stacks...'],'append');
+    UpdateLog3(source,['Loading ',num2str(nFiles),' FPM stacks...'],'append');
 
     % create progress dialog
     hProgressDialog = uiprogressdlg(OOPSData.Handles.fH,"Message",'Loading FPM stacks');

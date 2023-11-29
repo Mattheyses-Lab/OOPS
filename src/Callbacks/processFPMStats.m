@@ -26,7 +26,7 @@ function processFPMStats(source,~)
     nImages = numel(OOPSData.CurrentImage);
 
     % update log to indicate # of images we are processing
-    UpdateLog3(source,['Computing FPM statistics statistics for ',num2str(nImages),' images'],'append');
+    UpdateLog3(source,['Computing FPM statistics for ',num2str(nImages),' images'],'append');
 
     % start a timer
     tic

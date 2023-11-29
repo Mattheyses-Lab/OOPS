@@ -51,7 +51,7 @@ end
 
 elapsedTime = toc;
 
-UpdateLog3(source,['Total time elapsed: ',num2str(elapsedTime),' s'],'append');
+UpdateLog3(source,['Time elapsed: ',num2str(elapsedTime),' s'],'append');
 
 % change to the Mask 'tab' if not there already
 if ~strcmp(OOPSData.Settings.CurrentTab,'Mask')
@@ -65,6 +65,7 @@ end
 UpdateSummaryDisplay(source);
 UpdateObjectListBox(source);
 UpdateThresholdSlider(source);
+UpdateLabelTree(source);
 
 % close the progress dialog
 close(hProgressDialog);

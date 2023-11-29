@@ -102,7 +102,10 @@ function processAll(source,~)
     UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});
 
     % update the intensity sliders
-    UpdateIntensitySliders(source)
+    UpdateIntensitySliders(source);
+
+    % update the label tree in case we added new labels
+    UpdateLabelTree(source);
 
     % close the progress dialog
     close(hProgressDialog);

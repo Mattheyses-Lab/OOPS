@@ -90,7 +90,7 @@ if numel(cImage) ~= nFiles
 end
 
 % update log
-UpdateLog3(source,['Opening ' num2str(nFiles) ' reference images...'],'append');
+UpdateLog3(source,['Loading ' num2str(nFiles) ' reference images...'],'append');
 
 % create progress dialog
 hProgressDialog = uiprogressdlg(OOPSData.Handles.fH,"Message",'Loading reference images');
@@ -139,7 +139,6 @@ for i=1:nFiles
     cImage(i).rawReferenceShortName = rawReferenceShortName;
     cImage(i).rawReferenceFileType = rawReferenceFileType;
     cImage(i).ReferenceImageLoaded = true;
-    cImage(i).ReferenceImageEnhanced = EnhanceGrayScale(cImage(i).ReferenceImage);
 
     % update log to display image dimensions
     UpdateLog3(source,['Dimensions of ', ...
