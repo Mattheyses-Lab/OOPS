@@ -30,4 +30,11 @@ OOPSData.Handles.hSummaryMenu.Enable = OOPSData.GUIProjectStarted;
 OOPSData.Handles.hObjectsMenu.Enable = OOPSData.GUIProjectStarted;
 OOPSData.Handles.hPlotMenu.Enable = OOPSData.GUIProjectStarted;
 
+% hide or show File menu options based on project status
+set(OOPSData.Handles.hFileMenu.Children,'Enable',OOPSData.GUIProjectStarted);
+
+% 'New project' and 'Load project' are always enables
+OOPSData.Handles.hNewProject.Enable = 'On';
+OOPSData.Handles.hLoadProject.Enable = 'On';
+
 end
