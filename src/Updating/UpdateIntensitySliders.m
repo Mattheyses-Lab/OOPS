@@ -68,6 +68,8 @@ function UpdateIntensitySliders(source)
             OOPSData.Handles.OrderSlider.Value = cImage.OrderDisplayLimits;
 
             OOPSData.Handles.ScaleToMaxOrder.Value = true;
+            OOPSData.Handles.ScaleToMaxObjectOrder.Value = true;
+            OOPSData.Handles.ScaleToMaxAzimuth.Value = true;
         else
             OOPSData.Handles.OrderSlider.Value = cImage.OrderDisplayLimits;
         end
