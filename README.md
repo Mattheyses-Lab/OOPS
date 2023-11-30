@@ -55,6 +55,7 @@ Notice: This product includes color specifications and designs developed by Cynt
 - [Cyclic color map](https://www.mathworks.com/matlabcentral/fileexchange/57020-cyclic-color-map) (PhaseBar, [BSD-3-Clause](https://opensource.org/license/bsd-2-clause/))
 - [wesMap](https://github.com/tristangstanford/wesMap) (wesMap- 1.0.0, [MIT License](https://opensource.org/license/mit/))
 - [ColorBrewer: Attractive and Distinctive Colormaps](https://www.mathworks.com/matlabcentral/fileexchange/45208-colorbrewer-attractive-and-distinctive-colormaps) (ColorBrewer, [Apache](https://www.apache.org/licenses/LICENSE-2.0))
+- [cmocean perceptually uniform colormaps](https://www.mathworks.com/matlabcentral/fileexchange/57773-cmocean-perceptually-uniform-colormaps) (cmocean, [MIT License](https://opensource.org/license/mit/))
 
 #### MATLAB Toolboxes
 
