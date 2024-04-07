@@ -636,6 +636,8 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
                     obj.Violins(i).ErrorBarsVisible = obj.ErrorBarsVisible;
                     obj.Violins(i).ErrorBarsLineWidth = obj.ErrorBarsLineWidth;
                     obj.Violins(i).ErrorBarsColor = obj.ErrorBarsColor(i,:);
+
+                    obj.Violins(i).Name = obj.GroupNames{i};
                 catch ME
                     disp(ME.getReport)
                     disp(ME.message)

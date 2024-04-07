@@ -48,6 +48,14 @@ classdef ViolinPlot < handle
         ErrorBarsVisible (1,1) matlab.lang.OnOffSwitchState
         ErrorBarsLineWidth (1,1) double
         ErrorBarsColor (1,3) double
+
+        % name (for the central stat marker)
+        Name (1,:) char
+
+    end
+
+    properties(Access=private,AbortSet=true)
+        user_Name (1,:) char = ''
     end
 
     properties(Access = private,Dependent = true)
@@ -58,6 +66,7 @@ classdef ViolinPlot < handle
         violinOutlines (1,1) matlab.graphics.primitive.Patch
         violinPoints (1,1) matlab.graphics.chart.primitive.Scatter
         errorBars (1,1) matlab.graphics.primitive.Patch
+        centralStatMarker (1,1) matlab.graphics.chart.primitive.Line
     end
 
     methods
@@ -89,6 +98,8 @@ classdef ViolinPlot < handle
                 NameValuePairs.ErrorBarsVisible (1,1) matlab.lang.OnOffSwitchState = "on"
                 NameValuePairs.ErrorBarsLineWidth (1,1) double = 1
                 NameValuePairs.ErrorBarsColor (1,3) double = [0 0 0]
+
+                NameValuePairs.Name (1,:) char = 'untitled';
             end
 
             % primitive patch to form the violin outlines
@@ -129,8 +140,18 @@ classdef ViolinPlot < handle
 
             obj.ErrorBarsVisible = NameValuePairs.ErrorBarsVisible;
             obj.ErrorBarsLineWidth = NameValuePairs.ErrorBarsLineWidth;
+            obj.ErrorBarsColor = NameValuePairs.ErrorBarsColor;
 
+            % interactive marker for the central statistic
+            obj.centralStatMarker = plot(Parent,NaN,NaN,...
+                'HitTest','off',...
+                'PickableParts','none',...
+                'Marker','o',...
+                'MarkerSize',10,...
+                'MarkerEdgeColor',obj.ErrorBarsColor,...
+                'MarkerFaceColor',obj.ErrorBarsColor);
 
+            obj.Name = NameValuePairs.Name;
         end
 
         function delete(obj)
@@ -138,6 +159,7 @@ classdef ViolinPlot < handle
             delete(obj.violinPoints);
             delete(obj.violinOutlines);
             delete(obj.errorBars);
+            delete(obj.centralStatMarker);
 
         end
 
@@ -293,6 +315,18 @@ classdef ViolinPlot < handle
             DataTipCell = {dtNames,dtData};
         end
 
+        %% name
+
+        function set.Name(obj,val)
+            obj.user_Name = val;
+            % update error bars
+            obj.updateErrorBars();
+        end
+
+        function Name = get.Name(obj)
+            Name = obj.user_Name;
+        end
+
     end
 
     %% Set and Get methods for public properties controlling violin outlines appearance
@@ -375,6 +409,7 @@ classdef ViolinPlot < handle
 
         function set.ErrorBarsColor(obj,val)
             obj.errorBars.EdgeColor = val;
+            set(obj.centralStatMarker,'MarkerEdgeColor',val,'MarkerFaceColor',val);
         end
 
         function ErrorBarsColor = get.ErrorBarsColor(obj)
@@ -444,18 +479,29 @@ classdef ViolinPlot < handle
 
             % get the data for this group
             groupData = obj.YData;
+
+            if isempty(groupData)
+                return
+            end
+
             % get the x position of the violin on its axes
             xPosition = obj.XData(1);
             % get the halved jitter width
             xJitter = 0.5*obj.XJitterWidth;
             % width of the major (middle) bar
             majorWidth = 0.75*xJitter;
-            % % width of the minor (upper and lower) bars
+            % width of the minor (upper and lower) bars
             minorWidth = 0.25*xJitter;
 
-            % find the mean and SD
+            % the name of this violin
+            groupName = obj.Name;
+
+            % calculate some stats
             groupMean = mean(groupData);
             groupStd = std(groupData);
+            groupN = numel(groupData);
+            groupMax = max(groupData);
+            groupMin = min(groupData);
 
             % calculate X and YData for each line of the error bar, separate by NaNs
             errorXData = [...
@@ -478,6 +524,18 @@ classdef ViolinPlot < handle
 
             % set X and YData of the error bar line object
             set(obj.errorBars,'XData',errorXData','YData',errorYData');
+
+            % set X and YData of the central stat marker
+            set(obj.centralStatMarker,'XData',xPosition,'YData',groupMean,'HitTest','On','PickableParts','Visible');
+
+            % add custom data tip rows for the central stat marker
+            obj.centralStatMarker.DataTipTemplate.DataTipRows(1) = dataTipTextRow("Group",categorical({groupName}));
+            obj.centralStatMarker.DataTipTemplate.DataTipRows(2) = dataTipTextRow("n",groupN);        
+            obj.centralStatMarker.DataTipTemplate.DataTipRows(3) = dataTipTextRow("Mean",groupMean);
+            obj.centralStatMarker.DataTipTemplate.DataTipRows(4) = dataTipTextRow("SD",groupStd);
+            obj.centralStatMarker.DataTipTemplate.DataTipRows(5) = dataTipTextRow("Max",groupMax);
+            obj.centralStatMarker.DataTipTemplate.DataTipRows(6) = dataTipTextRow("Min",groupMin);
+
         end
 
     end
