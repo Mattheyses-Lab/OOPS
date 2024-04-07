@@ -26,6 +26,8 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
         Title (1,:) char = 'Violin Chart'
         % color of axes and title text
         FontColor (1,3) double = [0 0 0]
+        % name of the axes font for titles and labels, defaul Arial
+        FontName (1,:) char = 'Arial'
         % color of axes axis lines
         ForegroundColor (1,3) double = [0 0 0]
         % spacing of violin plots
@@ -545,7 +547,8 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
                 "YColor",[0 0 0],...
                 "Box","off",...
                 "NextPlot","add",...
-                "TickDir","in");
+                "TickDir","in",...
+                "FontName",obj.FontName);
             obj.MainAxes.Layout.Row = 1;
             obj.MainAxes.Layout.Column = 1;
             % set up a title for the axes
@@ -645,6 +648,10 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             obj.MainAxes.Title.Color = obj.FontColor;
             obj.MainAxes.Title.FontSize = obj.FontSize;
             obj.MainAxes.Title.Visible = 'on';
+
+            %% update font name
+
+            obj.MainAxes.FontName = obj.FontName;
     
             %% update background and foreground colors
             
