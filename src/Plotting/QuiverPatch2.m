@@ -44,9 +44,14 @@ function hPatch = QuiverPatch2(hAx,...
     v = v';
     % scaling factor of each 'half-line'
     HalfLineScale = LineScale/2;
+
+    if ~(isscalar(HalfLineScale))
+        HalfLineScale = HalfLineScale';
+    end
+    
     % x and y coordinates for each 'half-line'
-    X = [x+HalfLineScale*u;x-HalfLineScale*u];
-    Y = [y-HalfLineScale*v;y+HalfLineScale*v];
+    X = [x+HalfLineScale.*u;x-HalfLineScale.*u];
+    Y = [y-HalfLineScale.*v;y+HalfLineScale.*v];
 
     % preallocate line colors array
     PatchColors = zeros(nLines,3);
@@ -102,10 +107,15 @@ function hPatch = QuiverPatch2(hAx,...
 
 C = Interleave2DArrays(PatchColors,nan(size(PatchColors)),'row');
 
-hPatch = patch(hAx,"XData",X,"YData",Y,"FaceVertexCData",C,"EdgeColor","Flat");
-hPatch.HitTest = 'Off';
-hPatch.PickableParts = 'None';
-hPatch.LineWidth = LineWidth;
-hPatch.EdgeAlpha = LineAlpha;
+hPatch = patch(hAx,...
+    "XData",X,...
+    "YData",Y,...
+    "FaceVertexCData",C,...
+    "EdgeColor","Flat",...
+    "HitTest","Off",...
+    "PickableParts","None",...
+    "LineWidth",LineWidth,...
+    "EdgeAlpha",LineAlpha,...
+    "Clipping","On");
 
 end
