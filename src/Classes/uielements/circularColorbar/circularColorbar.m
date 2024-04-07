@@ -238,20 +238,6 @@ classdef circularColorbar < handle
 
         function patchXYData = get.patchXYData(obj)
 
-            % theta = linspace(0,360,256+255*(obj.nRepeats-1));
-            % 
-            % XData1 = (obj.outerRadius * cosd(theta))+obj.centerX;
-            % YData1 = (obj.outerRadius * sind(theta))+obj.centerY;
-            % 
-            % XData2 = (obj.innerRadius * cosd(theta))+obj.centerX;
-            % YData2 = (obj.innerRadius * sind(theta))+obj.centerY;
-            % 
-            % XData = [XData1,XData2];
-            % YData = [YData1,YData2];
-            % 
-            % patchXYData = [XData;YData];
-
-
             theta = linspace(0,360,obj.nColors*obj.nRepeats+1);
 
             XData1 = (obj.outerRadius * cosd(theta))+obj.centerX;
@@ -265,27 +251,9 @@ classdef circularColorbar < handle
 
             patchXYData = [XData;YData];
 
-
         end
 
         function patchFaceVertexCData = get.patchFaceVertexCData(obj)
-
-            % cmap = obj.Colormap;
-            % 
-            % if obj.nRepeats == 1
-            %     CData = cmap;
-            % else
-            %     CData = [cmap;repmat(cmap(2:end,:),obj.nRepeats-1,1)];
-            % end
-            % 
-            % patchFaceVertexCData = [CData;CData];
-
-            % cmap = obj.Colormap;
-            % 
-            % CData = repmat(cmap,obj.nRepeats,1);
-            % 
-            % patchFaceVertexCData = [CData;CData];
-
 
             cmap = obj.Colormap;
 
@@ -436,31 +404,10 @@ classdef circularColorbar < handle
                 labelVerticalAlignment = {"middle";"bottom";"middle";"top"};
             end
 
-
-            % labelX = 0.95*obj.innerRadius*cos(labelThetas)+obj.centerX;
-            % labelY = 0.95*obj.innerRadius*sin(labelThetas)+obj.centerY;
-            % labelText = {"$0$","$\pi/2$","$\pi$","$-\pi/2$"};
-            % labelHorizontalAlignment = {"right","center","left","center"};
-            % 
-            % for i = 1:4
-            %     set(obj.thetaLabels(i),...
-            %         'Position',[labelX(i) labelY(i) 0],...
-            %         'String',labelText{i},...
-            %         'HorizontalAlignment',labelHorizontalAlignment{i},...
-            %         'VerticalAlignment',labelVerticalAlignment{i})
-            % 
-            % end
-
-
             labelPosition = mat2cell( ...
                 [0.95*obj.innerRadius*cos(labelThetas)+obj.centerX, ...
                 0.95*obj.innerRadius*sin(labelThetas)+obj.centerY, ...
                 zeros(4,1)],ones(4,1),3);
-            % 
-            % 
-            % 
-            % labelX = 0.95*obj.innerRadius*cos(labelThetas)+obj.centerX;
-            % labelY = 0.95*obj.innerRadius*sin(labelThetas)+obj.centerY;
 
             labelText = {"0";"\pi/2";"\pi";"-\pi/2"};
             labelHorizontalAlignment = {"right";"center";"left";"center"};
@@ -474,19 +421,15 @@ classdef circularColorbar < handle
                 'Color',obj.FontColor,...
                 'FontName',obj.FontName);
 
-            % for i = 1:4
-            %     set(obj.thetaLabels(i),...
-            %         'Position',[labelX(i) labelY(i) 0],...
-            %         'String',labelText{i},...
-            %         'HorizontalAlignment',labelHorizontalAlignment{i},...
-            %         'VerticalAlignment',labelVerticalAlignment{i})
-            % 
-            % end
-
-
-
-
         end
+
+    end
+
+    methods(Static) 
+
+
+
+
 
     end
 
