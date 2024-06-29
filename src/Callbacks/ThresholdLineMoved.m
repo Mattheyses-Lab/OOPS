@@ -153,10 +153,12 @@ switch MainReplicate.MaskType
 end
 
 % update display
-UpdateLog3(source,'Done.','append');
 UpdateObjectListBox(source);
 UpdateImages(source);
 UpdateSummaryDisplay(source,{'Group','Image','Object'});
+UpdateLabelTree(source);
+UpdateLog3(source,'Done.','append');
+
 
     %% nested function to update image AlphaData
 
