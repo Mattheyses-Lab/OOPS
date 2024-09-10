@@ -65,14 +65,10 @@ function UpdateIntensitySliders(source)
             else
                 cImage.OrderDisplayLimits = [0 1];
             end
-            OOPSData.Handles.OrderSlider.Value = cImage.OrderDisplayLimits;
-
-            OOPSData.Handles.ScaleToMaxOrder.Value = true;
-            OOPSData.Handles.ScaleToMaxObjectOrder.Value = true;
-            OOPSData.Handles.ScaleToMaxAzimuth.Value = true;
-        else
-            OOPSData.Handles.OrderSlider.Value = cImage.OrderDisplayLimits;
         end
+
+        OOPSData.Handles.OrderSlider.Value = cImage.OrderDisplayLimits;
+
     catch
         OOPSData.Handles.OrderSlider.Value = [0 1];
     end
@@ -95,12 +91,10 @@ function UpdateIntensitySliders(source)
                 else
                     cImage.([statName,'DisplayLimits']) = cImage.([statName,'DisplayRange']);
                 end
-                OOPSData.Handles.([statName,'Slider']).Value = cImage.([statName,'DisplayLimits']);
-    
-                OOPSData.Handles.ScaleToMaxCustomStat.Value = true;
-            else
-                OOPSData.Handles.([statName,'Slider']).Value = cImage.([statName,'DisplayLimits']);
             end
+
+            OOPSData.Handles.([statName,'Slider']).Value = cImage.([statName,'DisplayLimits']);
+
         catch
             OOPSData.Handles.([statName,'Slider']).Value = OOPSData.Handles.([statName,'Slider']).Limits;
         end
