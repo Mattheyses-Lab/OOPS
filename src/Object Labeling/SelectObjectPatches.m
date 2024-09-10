@@ -21,13 +21,21 @@ function SelectObjectPatches(source,~)
 %
 %----------------------------------------------------------------------------------------------------------------------------
 
-%% get the location of the clicked point and the object corresponding to it
-    % get (x,y) coordinates of most recent cursor position on axes
-    CurrentPoint = source.Parent.CurrentPoint(1,1:2);
-    % store this handle so we can use it to update after deleting an object box
-    hAx = source.Parent;
+%% get data and check for valid click
+
     % get the main data structure
     OOPSData = guidata(source);
+    % right-click - do nothing because the context menu will open
+    if strcmp(OOPSData.Handles.fH.SelectionType,'alt')
+        return
+    end
+
+%% get the location of the clicked point and the object corresponding to it
+
+    % get (x,y) coordinates of most recent cursor position on axes
+    CurrentPoint = source.Parent.CurrentPoint(1,1:2);
+    % store this axes handle so we can use it to update after deleting an object box
+    hAx = source.Parent;
     % get the handle to the active image in the GUI
     CurrentImage = OOPSData.CurrentImage(1);
     % round the (x,y) coordinates of the clicked point
@@ -39,8 +47,10 @@ function SelectObjectPatches(source,~)
     if ObjIdx==0
         return
     end
+
 %% depending on the type of click, either select/deselect the object, or make it active in the GUI
 % we could add more functionality here by including alternate click types (double-click, etc.)
+
     % if shift-click
     if strcmp(OOPSData.Handles.fH.SelectionType,'extend')
         % change the active object
@@ -57,4 +67,5 @@ function SelectObjectPatches(source,~)
         OOPSData.Handles.ObjectBoxes.Faces(ObjIdx,:) = OOPSData.Handles.SelectedObjectBoxes.Faces(ObjIdx,:);
         OOPSData.Handles.SelectedObjectBoxes.Faces(ObjIdx,:) = tempFace;
     end
+
 end
