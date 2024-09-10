@@ -1,4 +1,13 @@
 classdef PolarHistogramColorChart < matlab.ui.componentcontainer.ComponentContainer
+%%  POLARHISTOGRAMCOLORCHART Plots angular data into a polar histogram
+%
+%   The data to be plotted is specified by the property, polarData, a double vector of 
+%   angle values in radians and in the range [0 2pi]
+%
+%   See also OOPS, OOPSProject, OOPSGroup, OOPSObject, OOPSSettings
+%
+%
+%
 %----------------------------------------------------------------------------------------------------------------------------
 %
 %   Object-Oriented Polarization Software (OOPS)
@@ -24,14 +33,14 @@ properties
     nBins (1,1) double = 24
     wedgeColors (:,3) double = hsv(256)
     wedgeColorsRepeats (1,1) uint8 = 1
-    wedgeLineColor (1,3) double = [0 0 0]
-    wedgeFaceAlpha (1,1) double = 0.75
-    wedgeLineWidth (1,1) double = 1
-    wedgeEdgeColor (1,:) char {mustBeMember(wedgeEdgeColor,{'flat','interp'})} = 'flat'
-    wedgeFaceColor (1,:) char {mustBeMember(wedgeFaceColor,{'flat','interp'})} = 'flat'
+    WedgeEdgeColor (1,3) double = [0 0 0]
+    WedgeFaceAlpha (1,1) double = 0.75
+    WedgeLineWidth (1,1) double = 1
+    WedgeEdgeColorMode (1,:) char {mustBeMember(WedgeEdgeColorMode,{'flat','interp'})} = 'flat'
+    WedgeFaceColorMode (1,:) char {mustBeMember(WedgeFaceColorMode,{'flat','interp'})} = 'flat'
     rLimMode (1,:) char {mustBeMember(rLimMode,{'manual','Manual','auto','Auto'})} = 'auto'
-    circleBackgroundColor (1,3) double = [1 1 1]
-    circleColor (1,3) = [0 0 0]
+    CircleBackgroundColor (1,3) double = [1 1 1]
+    CircleColor (1,3) = [0 0 0]
     circleLineWidth (1,1) double = 2
     rGridlinesColor (1,3) double = [.9 .9 .9]
     rGridlinesLineWidth (1,1) double = 0.5
@@ -48,7 +57,7 @@ end
 
 % properties hidden from the user, used for set/get methods for rLim
 properties(Access = private)
-    user_rLim
+    rLim_
     obj_maxCounts = 1
 end
     
@@ -155,9 +164,9 @@ methods(Access = protected)
         obj.PolarAxesBG.XData = rMax*cos(circleThetas);
         obj.PolarAxesBG.YData = rMax*sin(circleThetas);
         obj.PolarAxesBG.FaceColor = 'flat';
-        obj.PolarAxesBG.FaceVertexCData = obj.circleBackgroundColor;
+        obj.PolarAxesBG.FaceVertexCData = obj.CircleBackgroundColor;
         obj.PolarAxesBG.LineWidth = obj.circleLineWidth;
-        obj.PolarAxesBG.EdgeColor = obj.circleColor;
+        obj.PolarAxesBG.EdgeColor = obj.CircleColor;
         %% draw circles for the polar axes gridlines
         gridlineSpacing = obj.rSpacing;
         gridlineRadiis = gridlineSpacing:gridlineSpacing:(rMax-gridlineSpacing);
@@ -270,8 +279,8 @@ methods(Access = protected)
             x1 = center(1) + radius*cos(thetaEdge1); y1 = center(2) + radius*sin(thetaEdge1);
             x2 = center(1) + radius*cos(thetaEdge2); y2 = center(2) + radius*sin(thetaEdge2);
             x3 = center(1); y3 = center(2);
-            % set the FaceVertexCData according to wedgeColors and wedgeFaceColor (face color mode for the patch object)
-            switch obj.wedgeFaceColor
+            % set the FaceVertexCData according to wedgeColors and WedgeFaceColorMode (face color mode for the patch object)
+            switch obj.WedgeFaceColorMode
                 case 'flat' % each face is a single solid color
                     % get the color of this wedge
                     wedgeColorIdx = floor(((thetaMean/(2*pi))*nColors)+1);
@@ -306,13 +315,13 @@ methods(Access = protected)
         obj.BinWedges.XData = wedgeXData;
         obj.BinWedges.YData = wedgeYData;
         obj.BinWedges.FaceVertexCData = wedgeFaceVertexCData;
-        obj.BinWedges.FaceColor = obj.wedgeFaceColor;
-        obj.BinWedges.FaceAlpha = obj.wedgeFaceAlpha;
-        obj.BinWedges.LineWidth = obj.wedgeLineWidth;        
+        obj.BinWedges.FaceColor = obj.WedgeFaceColorMode;
+        obj.BinWedges.FaceAlpha = obj.WedgeFaceAlpha;
+        obj.BinWedges.LineWidth = obj.WedgeLineWidth;        
         % set edge colors according to edge color mode
-        switch obj.wedgeEdgeColor
+        switch obj.WedgeEdgeColorMode
             case 'flat' % single color for all the wedge edges
-                obj.BinWedges.EdgeColor = obj.wedgeLineColor;
+                obj.BinWedges.EdgeColor = obj.WedgeEdgeColor;
             case 'interp' % edge colors are interpolated between vertices to match the faces
                 obj.BinWedges.EdgeColor = "interp";
         end
@@ -338,12 +347,12 @@ methods
                 rLim = min(allSpacing);
                 % i.e. if maxCounts is 6532, rLim will be 7000
             case {'manual','Manual'}
-                rLim = obj.user_rLim;
+                rLim = obj.rLim_;
         end
     end
 
     function set.rLim(obj,rLim)
-        obj.user_rLim = rLim;
+        obj.rLim_ = rLim;
         obj.rLimMode = 'manual';
     end
 
