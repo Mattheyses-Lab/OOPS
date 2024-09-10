@@ -168,7 +168,7 @@ methods(Access=protected)
         obj.expandedGrid.RowHeight{1} = 'fit';
         % set grid padding and row spacing to simulate borders
         obj.collapsedGrid.Padding = obj.gridPadding;
-        obj.expandedGrid.RowSpacing = obj.BorderWidth;
+        obj.expandedGrid.RowSpacing = obj.ExpandedBorderWidth;
         % update the item name label
         obj.itemLabel.Text = obj.Title;
         obj.itemLabel.FontColor = obj.FontColor;
