@@ -19,13 +19,21 @@ function editGroupColor(source,~,fH)
 %
 %----------------------------------------------------------------------------------------------------------------------------
 
+    % the main data structure
     OOPSData = guidata(source);
+    % get the selected node
     SelectedNode = fH.CurrentObject;
+    % get the associated group
     cGroup = SelectedNode.NodeData;
+    % open color picker
     cGroup.Color = uisetcolor();
+    % return focus to main window
     figure(fH);
+    % update group color square icon
     SelectedNode.Icon = makeRGBColorSquare(cGroup.Color,1);
+    % update the display if we are on the Plots view
     if strcmp(OOPSData.Settings.CurrentTab,'Plots')
         UpdateImages(source);
     end
+
 end
