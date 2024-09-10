@@ -99,7 +99,7 @@ switch OOPSData.Settings.SwarmPlotGroupingType
 
     %% get some other properties
 
-    XAxisLabel = "Label";
+        XAxisLabel = "Label";
 
     case 'Both'
     %% determine number of plots and get group names
@@ -120,23 +120,23 @@ switch OOPSData.Settings.SwarmPlotGroupingType
     %% gather the data
 
         % gather the data: cell array of Var2Get values, transposed so that rows = labels, cols = groups
-        ObjectData = OOPSData.GetObjectDataByLabel(Var2Plot)';
+        ObjectData = OOPSData.GetObjectDataByGroupAndLabel(Var2Plot)';
         % get object SelfIdxs for data tips
-        ObjectSelfIdxs = OOPSData.GetObjectDataByLabel('SelfIdx')';
+        ObjectSelfIdxs = OOPSData.GetObjectDataByGroupAndLabel('SelfIdx')';
         % get object GroupName for data tips
-        ObjectGroupNames = OOPSData.GetObjectDataByLabel('GroupName')';
+        ObjectGroupNames = OOPSData.GetObjectDataByGroupAndLabel('GroupName')';
         % get object ImageName for data tips
-        ObjectImageNames = OOPSData.GetObjectDataByLabel('texFriendlyImageName')';
+        ObjectImageNames = OOPSData.GetObjectDataByGroupAndLabel('texFriendlyImageName')';
         % get object LabelName for data tips
-        ObjectLabelNames = OOPSData.GetObjectDataByLabel('LabelName')';
+        ObjectLabelNames = OOPSData.GetObjectDataByGroupAndLabel('LabelName')';
         % get object GroupIdx for plot colors
-        ObjectLabelIdxs = OOPSData.GetObjectDataByLabel('LabelIdx')';
+        ObjectLabelIdxs = OOPSData.GetObjectDataByGroupAndLabel('LabelIdx')';
         % get object GroupIdxs for plot marker colors
-        ObjectGroupIdxs = OOPSData.GetObjectDataByLabel('GroupIdx')';
+        ObjectGroupIdxs = OOPSData.GetObjectDataByGroupAndLabel('GroupIdx')';
 
     %% get some other properties
 
-    XAxisLabel = "Group (Label)";
+        XAxisLabel = "Group (Label)";
 
 end
 
@@ -337,7 +337,7 @@ end
 
 MarkerSize = OOPSData.Settings.SwarmPlotMarkerSize;
 XJitterWidth = OOPSData.Settings.SwarmPlotXJitterWidth;
-ViolinsVisible = OOPSData.Settings.SwarmPlotViolinsVisible;
+ViolinOutlinesVisible = OOPSData.Settings.SwarmPlotViolinOutlinesVisible;
 MarkerFaceAlpha = OOPSData.Settings.SwarmPlotMarkerFaceAlpha;
 BGColor = OOPSData.Settings.SwarmPlotBackgroundColor;
 FGColor = OOPSData.Settings.SwarmPlotForegroundColor;
@@ -361,7 +361,7 @@ set(OOPSData.Handles.SwarmPlot,...
     "MarkerSize",MarkerSize,...
     "MarkerFaceAlpha",MarkerFaceAlpha,...
     "CData",CData,...
-    "ViolinOutlinesVisible",ViolinsVisible,...
+    "ViolinOutlinesVisible",ViolinOutlinesVisible,...
     "ViolinLineWidth",2,...
     "ViolinFaceColor",ViolinFaceColor,...
     "ViolinEdgeColor",ViolinEdgeColor,...
