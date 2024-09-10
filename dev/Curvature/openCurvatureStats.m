@@ -24,6 +24,14 @@ function [curvatureList, tangentList, tortuosity] = openCurvatureStats(curvePoin
 
 % number of points in the curve
 nPoints = length(curvePoints);
+
+if nPoints <= flankingPoints*2
+    curvatureList = [];
+    tangentList = [];
+    tortuosity = NaN;
+    return
+end
+
 % get the length of the curve
 curveLength = getCurveLength(curvePoints);
 % extend and then wrap the ends of the curve over one another
@@ -39,7 +47,7 @@ point3Idx = point1Idx+flankingPoints*2;
 point1 = wrappedCurve(point1Idx,:);
 point2 = wrappedCurve(point2Idx,:);
 point3 = wrappedCurve(point3Idx,:);
-% slopes between points 1 and 2; slopes between points 2 and 3
+% slopes of the chords between points 1 and 2; and between points 2 and 3
 slope12 = (point1(:,2)-point2(:,2))./(point1(:,1)-point2(:,1));
 slope23 = (point2(:,2)-point3(:,2))./(point2(:,1)-point3(:,1));
 % account for infinite or 0 slopes between points 1 and 2
@@ -53,14 +61,16 @@ slope23(bad23) = (point1(bad23,2)-point3(bad23,2))./(point1(bad23,1)-point3(bad2
 
 %% calculate (x,y) coordinates and radii of a series of osculating circles
 
-% x coordinates of the circle centers
+% x coordinates of the circle centers, expressed in terms of the linear equations of the perpendicular bisectors
+% of the chords between points 1 and 2; and 2 and 3
 x_centers = (slope12.*slope23.*(point1(:,2)-point3(:,2))...
     + slope23.*(point1(:,1) + point2(:,1))...
     - slope12.*(point2(:,1) + point3(:,1)))...
     ./(2.*(slope23-slope12));
 % find midpoints between points 1 and 2
 midpoint12 = (point1+point2)./2;
-% y coordinates of the circle centers
+% y coordinates of the circle centers, expressed in terms of the linear equation of the perpendicular bisector of 
+% the chord between points 1 and 2
 y_centers = (-1./slope12).*(x_centers-midpoint12(:,1)) + midpoint12(:,2);
 % radii of the circles
 circleRadii = sqrt((point1(:,1) - x_centers).^2 + (point1(:,2) - y_centers).^2);

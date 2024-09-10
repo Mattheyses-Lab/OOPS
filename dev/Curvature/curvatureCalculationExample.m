@@ -20,7 +20,7 @@ function curvatureCalculationExample()
 %
 %----------------------------------------------------------------------------------------------------------------------------
 
-    points = [1,1;5.5,5.5;10,3];
+    points = [1,5;5,10;10,5];
 
     point1 = points(1,:);
     point2 = points(2,:);
@@ -47,22 +47,22 @@ function curvatureCalculationExample()
 
     % if the boundary is curved
     else
-        slope12*slope23*(point1(1,2)-point3(1,2))
-        slope23*(point1(1,1)+point2(1,1))
         % calculate the curvature
+
+        % find x-coordinate by expressing it in terms of the linear equations for the two perpendicular bisectors
         x_center = (slope12*slope23*(point1(1,2)-point3(1,2))+slope23*(point1(1,1)+point2(1,1))...
                    -slope12*(point2(1,1)+point3(1,1)))/(2*(slope23-slope12));
-        midpoint12 = (point1+point2)/2
-        midpoint13 = (point1+point3)/2
+        % find the two midpoints of the chords between points 1 and 2 and points 2 and 3
+        midpoint12 = (point1+point2)/2;
+        midpoint13 = (point1+point3)/2;
 
+        % find y-coordinate by expressing it in terms of the linear equation of the perpendicular bisector of chord 1-2
         y_center = (-1/slope12)*(x_center-midpoint12(1,1))+midpoint12(1,2);
 
-        % should this be point2?
-        pointsCurvature = 1/sqrt((point1(1,1)-x_center)^2+(point1(1,2)-y_center)^2);
+        % plug in one of the points (point1 here) to find the radius
+        radius = sqrt((point1(1,1)-x_center)^2+(point1(1,2)-y_center)^2);
 
-
-        radius = sqrt((point2(1,1)-x_center)^2+(point2(1,2)-y_center)^2)
-        radius2 = sqrt((point1(1,1)-x_center)^2+(point1(1,2)-y_center)^2)
+        pointsCurvature = 1/radius;
 
 
     end
@@ -72,9 +72,6 @@ function curvatureCalculationExample()
 
     % hold on for more plots
     hold on
-
-    % display the coordinates of the circle center
-    disp(['Circle center (x,y): (',num2str(x_center),',', num2str(y_center),')']);
 
     % plot the center of the circle
     plot(x_center,y_center,'+')
@@ -89,10 +86,20 @@ function curvatureCalculationExample()
     circlePlot = viscircles([x_center,y_center],radius);
     text(x_center,y_center,['(',num2str(x_center),',',num2str(y_center),')'],'Units','Data','VerticalAlignment','top')
 
-    
-
     axis square
     axis equal
 
+    % display the coordinates of the circle center
+    disp(['Circle center (x,y): (',num2str(x_center),',', num2str(y_center),')']);
+
+    % slopes
+    disp(['Slope 1—2: ',num2str(slope12)]);
+    disp(['Slope 2—3: ',num2str(slope23)]);
+
+    % radius
+    disp(['Radius: ',num2str(radius)]);
+
+    % curvature
+    disp(['Curvature: ',num2str(pointsCurvature)]);
 
 end

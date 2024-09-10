@@ -91,8 +91,9 @@ function openCurvatureStatsExample(I)
     % movegui(curvatureImageFig,'center')
     % curvatureImageFig.Visible = 'on';
 
+    IRGB = ind2rgb(im2uint8(I),gray);
 
-    imshow2(I);
+    imshow3(IRGB);
     hold on;
 
     X = Midline(:,1);
@@ -104,5 +105,7 @@ function openCurvatureStatsExample(I)
 
     set(gca,'CLim',[0 max(curvatureList)]);
     set(gca,'Colormap',turbo)
+
+    colorbar
 
 end
