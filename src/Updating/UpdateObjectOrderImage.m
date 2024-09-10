@@ -44,6 +44,9 @@ try
     OOPSData.Handles.ObjectOrderImgH.CData = cImage.CurrentObject.UserScaledOrderSubImage;
     % set the colorbar tick labels
     OOPSData.Handles.ObjectOrderCbar.TickLabels = round(linspace(orderDisplayLimits(1),orderDisplayLimits(2),11),2);
+    % set the axes limits
+    OOPSData.Handles.ObjectOrderAxH.XLim = [0.5 size(OOPSData.Handles.ObjectOrderImgH.CData,2)+0.5];
+    OOPSData.Handles.ObjectOrderAxH.YLim = [0.5 size(OOPSData.Handles.ObjectOrderImgH.CData,1)+0.5];
 catch
     disp('Warning: Error displaying object Order image...')
     % set placeholders
