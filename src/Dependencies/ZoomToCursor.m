@@ -99,7 +99,7 @@ function ZoomToCursor(source,~)
 
     % check if ZoomToCursor button was pressed on or off
     switch source.Value
-        case 1 % on
+        case 1 % switch on
             % set status as active
             Zoom.Active = true;
             % set current zoom button, obj that called the callback
@@ -110,15 +110,22 @@ function ZoomToCursor(source,~)
             Zoom.DynamicAxesParent = Zoom.DynamicAxes.Parent;
             % Determine the positioning of the axes that called the callback
             pos = Zoom.DynamicAxes.InnerPosition;
+
+            % get the handle to the image that will be changing sizes
+            Zoom.DynamicImage = findobj(Zoom.DynamicAxes,'Type','image');
+            % get the XLim and YLim needed to fill the axes with the image
+            [defaultXLim,defaultYLim] = getAxesLimitsForImage(Zoom.DynamicImage.CData);
+
             % Build new axes with same position and limits
             Zoom.StaticAxes = uiaxes(Zoom.DynamicAxesParent,...
                 'Units','Normalized',...
                 'InnerPosition',pos,...
                 'XTick',[],...
                 'YTick',[],...
-                'XLim',Zoom.DynamicAxes.XLim,...
-                'YLim',Zoom.DynamicAxes.YLim,...
+                'XLim',defaultXLim,...
+                'YLim',defaultYLim,...
                 'Tag','StaticReferenceAxes');
+
             Zoom.StaticAxes.Toolbar.Visible = 'Off';
             % Hide the static axes
             Zoom.StaticAxes.Visible = 'Off';
@@ -147,8 +154,8 @@ function ZoomToCursor(source,~)
             pbarOriginal = Zoom.StaticAxes.PlotBoxAspectRatio;
             tagOriginal = Zoom.StaticAxes.Tag;
             
-            % get the handle to the image that will be changing sizes
-            Zoom.DynamicImage = findobj(Zoom.DynamicAxes,'Type','image');
+            % % get the handle to the image that will be changing sizes
+            % Zoom.DynamicImage = findobj(Zoom.DynamicAxes,'Type','image');
             % placeholder image in the reference (static) axes
             Zoom.StaticImage = imshow(Zoom.DynamicImage.CData,'Parent',Zoom.StaticAxes);
 
@@ -162,8 +169,8 @@ function ZoomToCursor(source,~)
             axes(Zoom.StaticAxes);
 
             % store the old axes limits in the event we need to restore them
-            Zoom.OldXLim = Zoom.DynamicAxes.XLim;
-            Zoom.OldYLim = Zoom.DynamicAxes.YLim;
+            Zoom.OldXLim = defaultXLim;
+            Zoom.OldYLim = defaultYLim;
 
             % get the current axes ranges by taking the difference of each axis limit
             Zoom.XRange = diff(Zoom.DynamicAxes.XLim);
@@ -188,7 +195,7 @@ function ZoomToCursor(source,~)
             Zoom.DynamicImage.ButtonDownFcn = @(o,e) ChangeZoomLevel(o,OOPSData);
             Zoom.DynamicImage.HitTest = 'On';
             
-        case 0 % off
+        case 0 % switch off
             Zoom.Active = false;
             Handles.fH.WindowButtonMotionFcn = Zoom.OldWindowButtonMotionFcn;
             Zoom.DynamicImage.ButtonDownFcn = Zoom.OldImageButtonDownFcn;
@@ -382,7 +389,6 @@ function [] = CursorMoving(~,OOPSData)
 
         OOPSData.Handles.fH.Pointer = 'arrow';
 
-        %DynamicAxes.CursorPositionLabel.Text = sprintf('x = %3.0f;  y = %3.0f',0,0);
         DynamicAxes.CursorPositionLabel.Text = ' (X,Y) = (0,0)';
         
         if ~Zoom.Freeze
