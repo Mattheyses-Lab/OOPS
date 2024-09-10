@@ -33,10 +33,6 @@ function TabSelection(source,~)
         RestoreProps.freezeState = OOPSData.Settings.Zoom.Freeze;
         RestoreProps.XLimState = OOPSData.Settings.Zoom.DynamicAxes.XLim;
         RestoreProps.YLimState = OOPSData.Settings.Zoom.DynamicAxes.YLim;
-        % unclick the currently pressed zoom toolbar button
-        OOPSData.Settings.Zoom.CurrentButton.Value = 0;
-        % invoke the callback as if user had just unchecked the button
-        ZoomToCursor(OOPSData.Settings.Zoom.CurrentButton);
         % add the zoom properties to the zoom settings struct and set the restore flag
         OOPSData.Settings.Zoom.RestoreProps = RestoreProps;
         OOPSData.Settings.Zoom.Restore = true;
@@ -151,18 +147,7 @@ function TabSelection(source,~)
         case 'Plots'
     
             % hide the scatter plot
-            OOPSData.Handles.ScatterPlotGrid.Visible = 'Off';
-            delete(OOPSData.Handles.ScatterPlotAxH.Children)
-    
-            if isvalid(OOPSData.Handles.ScatterPlotAxH.Legend)
-                OOPSData.Handles.ScatterPlotAxH.Legend.Visible = 'Off';
-            end
-            OOPSData.Handles.ScatterPlotAxH.Title.Visible = 'Off';
-            OOPSData.Handles.ScatterPlotAxH.Toolbar.Visible = 'Off';
-            OOPSData.Handles.ScatterPlotAxH.Visible = 'Off';
-            OOPSData.Handles.ScatterPlotAxH.XAxis.Label.Visible = 'Off';
-            OOPSData.Handles.ScatterPlotAxH.YAxis.Label.Visible = 'Off';
-            OOPSData.Handles.ScatterPlotAxH.HitTest = 'Off';
+            OOPSData.Handles.GroupScatterPlot.Visible = 'Off';
 
             % hide the swarm plot
             OOPSData.Handles.SwarmPlot.Visible = 'Off';
@@ -280,9 +265,18 @@ function TabSelection(source,~)
             OOPSData.Handles.ImgPanel2.Visible = 'Off';
     
         case 'Mask'
+
+            % if zoom restore flag set, restore the axis limits before showing
+            % ui components and image data for smoother transitions
+            if OOPSData.Settings.Zoom.Restore
+                set([OOPSData.Handles.MaskAxH,OOPSData.Handles.AverageIntensityAxH],...
+                    "XLim",OOPSData.Settings.Zoom.RestoreProps.XLimState,...
+                    "YLim",OOPSData.Settings.Zoom.RestoreProps.YLimState);
+            end
+
             OOPSData.Handles.ImgPanel1.Visible = 'On';
             OOPSData.Handles.ImgPanel2.Visible = 'On';
-    
+
             OOPSData.Handles.AverageIntensityImgH.Visible = 'On';
             OOPSData.Handles.AverageIntensityAxH.Title.Visible = 'On';
             OOPSData.Handles.AverageIntensityAxH.Toolbar.Visible = 'On';
@@ -307,6 +301,14 @@ function TabSelection(source,~)
             end
     
         case 'Order'
+
+            % if zoom restore flag set, restore the axis limits before showing
+            % ui components and image data for smoother transitions
+            if OOPSData.Settings.Zoom.Restore
+                set([OOPSData.Handles.OrderAxH,OOPSData.Handles.AverageIntensityAxH],...
+                    "XLim",OOPSData.Settings.Zoom.RestoreProps.XLimState,...
+                    "YLim",OOPSData.Settings.Zoom.RestoreProps.YLimState);
+            end
     
             OOPSData.Handles.OrderImgH.Visible = 'On';
             OOPSData.Handles.OrderAxH.Title.Visible = 'On';
@@ -335,6 +337,14 @@ function TabSelection(source,~)
             end
     
         case 'Azimuth'
+
+            % if zoom restore flag set, restore the axis limits before showing
+            % ui components and image data for smoother transitions
+            if OOPSData.Settings.Zoom.Restore
+                set([OOPSData.Handles.AzimuthAxH,OOPSData.Handles.AverageIntensityAxH],...
+                    "XLim",OOPSData.Settings.Zoom.RestoreProps.XLimState,...
+                    "YLim",OOPSData.Settings.Zoom.RestoreProps.YLimState);
+            end
     
             OOPSData.Handles.AzimuthImgH.Visible = 'On';
             OOPSData.Handles.AzimuthAxH.Title.Visible = 'On';
@@ -366,17 +376,7 @@ function TabSelection(source,~)
     
         case 'Plots'
     
-            if isvalid(OOPSData.Handles.ScatterPlotAxH.Legend)
-                OOPSData.Handles.ScatterPlotAxH.Legend.Visible = 'On';
-            end
-    
-            OOPSData.Handles.ScatterPlotGrid.Visible = 'On';
-            OOPSData.Handles.ScatterPlotAxH.Title.Visible = 'On';
-            OOPSData.Handles.ScatterPlotAxH.Toolbar.Visible = 'On';
-            OOPSData.Handles.ScatterPlotAxH.Visible = 'On';
-            OOPSData.Handles.ScatterPlotAxH.XAxis.Label.Visible = 'On';
-            OOPSData.Handles.ScatterPlotAxH.YAxis.Label.Visible = 'On';
-            OOPSData.Handles.ScatterPlotAxH.HitTest = 'On';
+            OOPSData.Handles.GroupScatterPlot.Visible = 'On';
 
             OOPSData.Handles.SwarmPlot.Visible = 'On';
 
@@ -436,6 +436,14 @@ function TabSelection(source,~)
 
         otherwise % custom stats view
 
+            % if zoom restore flag set, restore the axis limits before showing
+            % ui components and image data for smoother transitions
+            if OOPSData.Settings.Zoom.Restore
+                set([OOPSData.Handles.CustomStatAxH,OOPSData.Handles.AverageIntensityAxH],...
+                    "XLim",OOPSData.Settings.Zoom.RestoreProps.XLimState,...
+                    "YLim",OOPSData.Settings.Zoom.RestoreProps.YLimState);
+            end
+
             OOPSData.Handles.CustomStatImgH.Visible = 'On';
             OOPSData.Handles.CustomStatAxH.Title.Visible = 'On';
             OOPSData.Handles.CustomStatAxH.Toolbar.Visible = 'On';
@@ -471,19 +479,30 @@ function TabSelection(source,~)
 
     % if the restore flag is set and the selected tab is zoomable
     if OOPSData.Settings.Zoom.Restore && ismember(OOPSData.Settings.CurrentTab,zoomableTabs)
+        % unclick the currently pressed zoom toolbar button
+        OOPSData.Settings.Zoom.CurrentButton.Value = 0;
+        % invoke the callback as if user had just unchecked the button
+        ZoomToCursor(OOPSData.Settings.Zoom.CurrentButton);
         % set the button to active in the axes for which we will activate zoom (average intensity axes)
         OOPSData.Handles.ZoomToCursorAverageIntensity.Value = 1;
         % restore zoom on the average intensity axes (easiest for now as it is in all zoomable tabs)
         ZoomToCursor(OOPSData.Handles.ZoomToCursorAverageIntensity);
+        % now remove the restore properties and unset the restore flag
+        OOPSData.Settings.Zoom.RestoreProps = [];
+        OOPSData.Settings.Zoom.Restore = false;
     end
-    % now remove the restore properties and unset the restore flag
-    OOPSData.Settings.Zoom.RestoreProps = [];
-    OOPSData.Settings.Zoom.Restore = false;
 
-    % % testing below
+    % if the restore flag is set and the selected tab is not zoomable
+    if OOPSData.Settings.Zoom.Restore && ~ismember(OOPSData.Settings.CurrentTab,zoomableTabs)
+        % unclick the currently pressed zoom toolbar button
+        OOPSData.Settings.Zoom.CurrentButton.Value = 0;
+        % invoke the callback as if user had just unchecked the button
+        ZoomToCursor(OOPSData.Settings.Zoom.CurrentButton);
+        % do not unset the restore flag or clear the restore props, so when
+        % the user switches back to a zoomable tab, the zoom will be restored
+    end
+
     UpdateIntensitySliders(source);
-
-    % end testing
     UpdateImages(source);
     UpdateSummaryDisplay(source,{'Project'});
 end
