@@ -42,7 +42,8 @@ function exportImages(source,~)
         'Intensity';...
         'Order';...
         'Azimuth';...
-        'Mask'...
+        'Mask';...
+        'Reference';...
         };
 
     % get subcategory display names for each output category
@@ -202,13 +203,45 @@ function exportImages(source,~)
 
     % save user-specified data for each currently selected image
     for i = 1:nImages
-        
-        % control for mac vs pc
+
         if ismac || isunix
-            loc = [pathname '/' cImage(i).rawFPMShortName];
+            pathSep = '/';
         elseif ispc
-            loc = [pathname '\' cImage(i).rawFPMShortName];
+            pathSep = '\';
         end
+
+        % name for the directory in which the output images for this image will be saved
+        newDirName = [pathname,pathSep,cImage(i).rawFPMShortName];
+
+        try
+            % create the new directory
+            mkdir(newDirName)
+        catch
+            % if unable to create directory, warn the user
+            UpdateLog3(source,['Warning: Unable to create directory: ',newDirName],'append');
+            % then continue to the next image
+            continue
+        end
+
+        % base name for each exported image, including file path
+        loc = [pathname,pathSep,cImage(i).rawFPMShortName,pathSep,cImage(i).rawFPMShortName];
+        
+        % % control for mac vs pc
+        % if ismac || isunix
+        %     newDirName = [pathname '/' cImage(i).rawFPMShortName];
+        %     try
+        %         % create a new folder in the specified directory with the short name of the image
+        %         mkdir(newDirName)
+        %     catch
+        %         % if unable to create directory, warn the user
+        %         UpdateLog3(source,['Warning: Unable to create directory: ',newDirName],'append');
+        %         % then continue to the next image
+        %         continue
+        %     end
+        %     loc = [pathname '/' cImage(i).rawFPMShortName '/' cImage(i).rawFPMShortName];
+        % elseif ispc
+        %     loc = [pathname '\' cImage(i).rawFPMShortName '\' cImage(i).rawFPMShortName];
+        % end
         
         %% Intensity
 
@@ -226,58 +259,104 @@ function exportImages(source,~)
             write16BitTiff(IOut,name,'Software',softwareName);                
         end
 
-        if any(strcmp(UserSaveChoices,'Average intensity (RGB, 8-bit, PNG, auto)'))
+        if any(strcmp(UserSaveChoices,'Average intensity (RGB, 24-bit, PNG, auto)'))
             name = [loc '-auto_scaled_average_intensity_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).MaxScaledAverageIntensityImageRGB;
-            imwrite(IOut,name,'Software',softwareName);                
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = [0, max(max(cImage(i).ffcFPMAverage))];
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Intensity Display Range: ',intensityDisplayRangeChar]);                
         end
 
-        if any(strcmp(UserSaveChoices,'Average intensity (RGB, 8-bit, PNG, user)'))
+        if any(strcmp(UserSaveChoices,'Average intensity (RGB, 24-bit, PNG, user)'))
             name = [loc '-user_scaled_average_intensity_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).UserScaledAverageIntensityImageRGB;
-            imwrite(IOut,name,'Software',softwareName);                
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = cImage(i).PrimaryIntensityDisplayLimits.*cImage(i).averageIntensityRealLimits(2);
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Intensity Display Range: ',intensityDisplayRangeChar]);                
         end
 
         %% Order
 
         if any(strcmp(UserSaveChoices,'Order (grayscale, 32-bit, TIFF, none)'))
-            name = [loc '-order_32_bit.png'];
+            name = [loc '-order_32_bit.tif'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).OrderImage;
             write32BitTiff(IOut,name,'Software',softwareName);            
         end
 
-        if any(strcmp(UserSaveChoices,'Order (RGB, 8-bit, PNG, auto)'))
+        if any(strcmp(UserSaveChoices,'Order (RGB, 24-bit, PNG, auto)'))
             name = [loc '-auto_scaled_order_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).MaxScaledOrderImageRGB;
-            imwrite(IOut,name,'Software',softwareName);            
+            % dynamic range used to export the order image
+            orderDisplayRange = [0 max(max(cImage(i).OrderImage))];
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar]);            
         end
 
-        if any(strcmp(UserSaveChoices,'Order (RGB, 8-bit, PNG, user)'))
+        if any(strcmp(UserSaveChoices,'Order (RGB, 24-bit, PNG, user)'))
             name = [loc '-user_scaled_order_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).UserScaledOrderImageRGB;
-            imwrite(IOut,name,'Software',softwareName);            
+            % dynamic range used to export the order image
+            orderDisplayRange = cImage(i).OrderDisplayLimits;
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar]);            
         end
 
-        if any(strcmp(UserSaveChoices,'Order-intensity overlay (RGB, 8-bit, PNG, auto)'))
+        if any(strcmp(UserSaveChoices,'Order-intensity overlay (RGB, 24-bit, PNG, auto)'))
             name = [loc '-auto_scaled_order_intensity_overlay_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).MaxScaledOrderIntensityOverlayRGB;
-            imwrite(IOut,name,'Software',softwareName);            
+            % dynamic range used to export the order image
+            orderDisplayRange = [0 max(max(cImage(i).OrderImage))];
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = [0, max(max(cImage(i).ffcFPMAverage))];
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar,' | ',...
+                'Intensity Display Range: ',intensityDisplayRangeChar]);            
         end
 
-        if any(strcmp(UserSaveChoices,'Order-intensity overlay (RGB, 8-bit, PNG, user)'))
+        if any(strcmp(UserSaveChoices,'Order-intensity overlay (RGB, 24-bit, PNG, user)'))
             name = [loc '-user_scaled_order_intensity_overlay_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).UserScaledOrderIntensityOverlayRGB;
-            imwrite(IOut,name,'Software',softwareName);    
+            % dynamic range used to export the order image
+            orderDisplayRange = cImage(i).OrderDisplayLimits;
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = cImage(i).PrimaryIntensityDisplayLimits.*cImage(i).averageIntensityRealLimits(2);
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar,' | ',...
+                'Intensity Display Range: ',intensityDisplayRangeChar]); 
         end
 
-        if any(strcmp(UserSaveChoices,'Masked order (RGB, 8-bit, PNG, none)'))
+        if any(strcmp(UserSaveChoices,'Masked order (RGB, 24-bit, PNG, none)'))
             name = [loc '-masked_order_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).MaskedOrderImageRGB;
@@ -293,42 +372,86 @@ function exportImages(source,~)
             write32BitTiff(IOut,name,'Software',softwareName);
         end
 
-        if any(strcmp(UserSaveChoices,'Azimuth (RGB, 8-bit, PNG, none)'))
+        if any(strcmp(UserSaveChoices,'Azimuth (RGB, 24-bit, PNG, none)'))
             name = [loc '-azimuth_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).AzimuthRGB;
             imwrite(IOut,name,'Software',softwareName);
         end
 
-        if any(strcmp(UserSaveChoices,'Azimuth-intensity overlay (RGB, 8-bit, PNG, auto)'))
+        if any(strcmp(UserSaveChoices,'Azimuth-intensity overlay (RGB, 24-bit, PNG, auto)'))
             name = [loc '-auto_scaled_azimuth_intensity_overlay_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).AzimuthIntensityOverlayRGB;
-            imwrite(IOut,name,'Software',softwareName);
+            % dynamic range used to export the order image
+            orderDisplayRange = [0 max(max(cImage(i).OrderImage))];
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = [0, max(max(cImage(i).ffcFPMAverage))];
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar,' | ',...
+                'Intensity Display Range: ',intensityDisplayRangeChar]);
         end
 
-        if any(strcmp(UserSaveChoices,'Azimuth-intensity overlay (RGB, 8-bit, PNG, user)'))
+        if any(strcmp(UserSaveChoices,'Azimuth-intensity overlay (RGB, 24-bit, PNG, user)'))
             name = [loc '-user_scaled_azimuth_intensity_overlay_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).UserScaledAzimuthIntensityOverlayRGB;
-            imwrite(IOut,name,'Software',softwareName);
+            % dynamic range used to export the order image
+            orderDisplayRange = cImage(i).OrderDisplayLimits;
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = cImage(i).PrimaryIntensityDisplayLimits.*cImage(i).averageIntensityRealLimits(2);
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar,' | ',...
+                'Intensity Display Range: ',intensityDisplayRangeChar]);
         end
 
-        if any(strcmp(UserSaveChoices,'Azimuth-order-intensity HSV overlay (RGB, 8-bit, PNG, auto)'))
+        if any(strcmp(UserSaveChoices,'Azimuth-order-intensity HSV overlay (RGB, 24-bit, PNG, auto)'))
             name = [loc '-auto_scaled_azimuth_order_intensity_HSV_overlay_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).AzimuthOrderIntensityHSV;
-            imwrite(IOut,name,'Software',softwareName);
+            % dynamic range used to export the order image
+            orderDisplayRange = [0 max(max(cImage(i).OrderImage))];
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = [0, max(max(cImage(i).ffcFPMAverage))];
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar,' | ',...
+                'Intensity Display Range: ',intensityDisplayRangeChar]);
         end
 
-        if any(strcmp(UserSaveChoices,'Azimuth-order-intensity HSV overlay (RGB, 8-bit, PNG, user)'))
+        if any(strcmp(UserSaveChoices,'Azimuth-order-intensity HSV overlay (RGB, 24-bit, PNG, user)'))
             name = [loc '-user_scaled_azimuth_order_intensity_HSV_overlay_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).UserScaledAzimuthOrderIntensityHSV;
-            imwrite(IOut,name,'Software',softwareName);
+            % dynamic range used to export the order image
+            orderDisplayRange = cImage(i).OrderDisplayLimits;
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = cImage(i).PrimaryIntensityDisplayLimits.*cImage(i).averageIntensityRealLimits(2);
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar,' | ',...
+                'Intensity Display Range: ',intensityDisplayRangeChar]);
         end
 
-        if any(strcmp(UserSaveChoices,'Masked azimuth (RGB, 8-bit, PNG, none)'))
+        if any(strcmp(UserSaveChoices,'Masked azimuth (RGB, 24-bit, PNG, none)'))
             name = [loc '-masked_azimuth_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).MaskedAzimuthRGB;
@@ -345,11 +468,101 @@ function exportImages(source,~)
             % imwrite(IOut,name,'Software',softwareName);
         end
 
-        if any(strcmp(UserSaveChoices,'Mask (RGB, 8-bit, PNG, none)'))
+        if any(strcmp(UserSaveChoices,'Mask (RGB, 24-bit, PNG, none)'))
             name = [loc '-mask_RGB.png'];
             UpdateLog3(source,name,'append');
             IOut = cImage(i).MaskRGBImage;
             imwrite(IOut,name,'Software',softwareName);
+        end
+
+        %% Reference
+
+        if any(strcmp(UserSaveChoices,'Reference (grayscale, 16-bit, TIFF, none)'))
+            name = [loc '-reference_16_bit.tif'];
+            UpdateLog3(source,name,'append');
+            rawReferenceRange = getrangefromclass(cImage(i).rawReferenceImage);
+            rawReferenceDouble = im2double(cImage(i).rawReferenceImage).*rawReferenceRange(2);
+            IOut = im2uint16(rawReferenceDouble./65535);
+            write16BitTiff(IOut,name,'Software',softwareName);
+        end
+
+        if any(strcmp(UserSaveChoices,'Reference (RGB, 24-bit, PNG, auto)'))
+            name = [loc '-auto_scaled_reference_RGB.png'];
+            UpdateLog3(source,name,'append');
+            IOut = cImage(i).ReferenceImageRGB;
+            % dynamic range used to export the reference image
+            referenceDisplayRange = [min(min(cImage(i).rawReferenceImage)), max(max(cImage(i).rawReferenceImage))];
+            % char vector to store the display range in the PNG 'comment' field
+            referenceDisplayRangeChar = makeDislpayRangeChar(round(referenceDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Reference Display Range: ',referenceDisplayRangeChar]);
+        end
+
+        if any(strcmp(UserSaveChoices,'Reference (RGB, 24-bit, PNG, user)'))
+            name = [loc '-user_scaled_reference_RGB.png'];
+            UpdateLog3(source,name,'append');
+            IOut = cImage(i).UserScaledReferenceImageRGB;
+
+            rawReferenceRange = getrangefromclass(cImage(i).rawReferenceImage);
+            rawReferenceDouble = im2double(cImage(i).rawReferenceImage).*rawReferenceRange(2);
+
+            userReferenceDisplayLimits = cImage(i).ReferenceIntensityDisplayLimits;
+            lowerLim = userReferenceDisplayLimits(1).*max(max(rawReferenceDouble)) + min(min(rawReferenceDouble));
+            upperLim = userReferenceDisplayLimits(2).*max(max(rawReferenceDouble));
+
+            % dynamic range used to export the reference image
+            referenceDisplayRange = [lowerLim, upperLim];
+            % char vector to store the display range in the PNG 'comment' field
+            referenceDisplayRangeChar = makeDislpayRangeChar(round(referenceDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Reference Display Range: ',referenceDisplayRangeChar]);
+        end
+
+        if any(strcmp(UserSaveChoices,'Intensity-reference composite (RGB, 24-bit, PNG, auto)'))
+            name = [loc '-auto_scaled_intensity_reference_composite_RGB.png'];
+            UpdateLog3(source,name,'append');
+            IOut = cImage(i).MaxScaledAverageIntensityImageRGB + cImage(i).ReferenceImageRGB;
+            % dynamic range used to export the reference image
+            referenceDisplayRange = [min(min(cImage(i).rawReferenceImage)), max(max(cImage(i).rawReferenceImage))];
+            % char vector to store the display range in the PNG 'comment' field
+            referenceDisplayRangeChar = makeDislpayRangeChar(round(referenceDisplayRange));
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = [0, max(max(cImage(i).ffcFPMAverage))];
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Intensity Display Range: ',intensityDisplayRangeChar,' | ',...
+                'Reference Display Range: ',referenceDisplayRangeChar]);
+        end
+
+        if any(strcmp(UserSaveChoices,'Intensity-reference composite (RGB, 24-bit, PNG, user)'))
+            name = [loc '-user_scaled_intensity_reference_composite_RGB.png'];
+            UpdateLog3(source,name,'append');
+            IOut = cImage(i).UserScaledAverageIntensityReferenceCompositeRGB;
+
+            rawReferenceRange = getrangefromclass(cImage(i).rawReferenceImage);
+            rawReferenceDouble = im2double(cImage(i).rawReferenceImage).*rawReferenceRange(2);
+
+
+            userReferenceDisplayLimits = cImage(i).ReferenceIntensityDisplayLimits;
+            lowerLim = userReferenceDisplayLimits(1).*max(max(rawReferenceDouble)) + min(min(rawReferenceDouble));
+            upperLim = userReferenceDisplayLimits(2).*max(max(rawReferenceDouble));
+
+            % dynamic range used to export the reference image
+            referenceDisplayRange = [lowerLim, upperLim];
+            % char vector to store the display range in the PNG 'comment' field
+            referenceDisplayRangeChar = makeDislpayRangeChar(round(referenceDisplayRange));
+            % dynamic range used to export the intensity image
+            intensityDisplayRange = cImage(i).PrimaryIntensityDisplayLimits.*cImage(i).averageIntensityRealLimits(2);
+            % char vector to store the display range in the PNG 'comment' field
+            intensityDisplayRangeChar = makeDislpayRangeChar(round(intensityDisplayRange));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Intensity Display Range: ',intensityDisplayRangeChar,' | ',...
+                'Reference Display Range: ',referenceDisplayRangeChar]);
         end
 
     end % end of main save loop
@@ -365,34 +578,48 @@ function exportImages(source,~)
                 subCats = {...
                     'Average intensity (grayscale, 8-bit, TIFF, none)';...
                     'Average intensity (grayscale, 16-bit, TIFF, none)';...
-                    'Average intensity (RGB, 8-bit, PNG, auto)';...
-                    'Average intensity (RGB, 8-bit, PNG, user)'...
+                    'Average intensity (RGB, 24-bit, PNG, auto)';...
+                    'Average intensity (RGB, 24-bit, PNG, user)'...
                     };
             case 'Order'
                 subCats = {...
                     'Order (grayscale, 32-bit, TIFF, none)';...
-                    'Order (RGB, 8-bit, PNG, auto)';...
-                    'Order (RGB, 8-bit, PNG, user)';...
-                    'Order-intensity overlay (RGB, 8-bit, PNG, auto)';...
-                    'Order-intensity overlay (RGB, 8-bit, PNG, user)';...
-                    'Masked order (RGB, 8-bit, PNG, none)'
+                    'Order (RGB, 24-bit, PNG, auto)';...
+                    'Order (RGB, 24-bit, PNG, user)';...
+                    'Order-intensity overlay (RGB, 24-bit, PNG, auto)';...
+                    'Order-intensity overlay (RGB, 24-bit, PNG, user)';...
+                    'Masked order (RGB, 24-bit, PNG, none)'
                     };
             case 'Azimuth'
                 subCats = {...
                     'Azimuth (grayscale, 32-bit, TIFF, none)';...
-                    'Azimuth (RGB, 8-bit, PNG, none)';...
-                    'Azimuth-intensity overlay (RGB, 8-bit, PNG, auto)';...
-                    'Azimuth-intensity overlay (RGB, 8-bit, PNG, user)';...
-                    'Azimuth-order-intensity HSV overlay (RGB, 8-bit, PNG, auto)';...
-                    'Azimuth-order-intensity HSV overlay (RGB, 8-bit, PNG, user)';...
-                    'Masked azimuth (RGB, 8-bit, PNG, none)'...
+                    'Azimuth (RGB, 24-bit, PNG, none)';...
+                    'Azimuth-intensity overlay (RGB, 24-bit, PNG, auto)';...
+                    'Azimuth-intensity overlay (RGB, 24-bit, PNG, user)';...
+                    'Azimuth-order-intensity HSV overlay (RGB, 24-bit, PNG, auto)';...
+                    'Azimuth-order-intensity HSV overlay (RGB, 24-bit, PNG, user)';...
+                    'Masked azimuth (RGB, 24-bit, PNG, none)'...
                     };
             case 'Mask'
                 subCats = {...
                     'Mask (grayscale, 8-bit, TIFF, none)';...
-                    'Mask (RGB, 8-bit, PNG, none)'...
+                    'Mask (RGB, 24-bit, PNG, none)'...
+                    };
+            case 'Reference'
+                subCats = {...
+                    'Reference (grayscale, 16-bit, TIFF, none)';...
+                    'Reference (RGB, 24-bit, PNG, auto)';...
+                    'Reference (RGB, 24-bit, PNG, user)';...
+                    'Intensity-reference composite (RGB, 24-bit, PNG, auto)';...
+                    'Intensity-reference composite (RGB, 24-bit, PNG, user)';...
                     };
         end
+    end
+
+%% helper function to convert display range to a character vector for export
+
+    function displayRangeChar = makeDislpayRangeChar(displayRange)
+        displayRangeChar = ['[',num2str(displayRange(1)),',',num2str(displayRange(2)),']'];
     end
 
 end
