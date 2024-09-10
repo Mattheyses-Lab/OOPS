@@ -93,6 +93,8 @@ classdef OOPSObject < handle & dynamicprops
         paddedPixelIdxList (:,1) double = []
         % list of tangents for each pixel in the object
         pixelMidlineTangentList (:,1) double = []
+        % % list of local curvature values for each pixel in the object
+        % pixelMidlineCurvatureList (:,1) double = []
 
     end % end properties
     
@@ -120,6 +122,7 @@ classdef OOPSObject < handle & dynamicprops
         MidlineTangentImage
         MidlineRelativeAzimuthImage
         PaddedAverageIntensityImageNorm
+        % MidlineCurvatureImage
 
         % x coordinate of the centroid
         CentroidX
@@ -128,6 +131,7 @@ classdef OOPSObject < handle & dynamicprops
 
         % Order properties of this object, dependent on Order image of Parent
         OrderAvg
+        OrderStd
         OrderMin
         OrderMax
         OrderPixelValues
@@ -170,6 +174,7 @@ classdef OOPSObject < handle & dynamicprops
         Tortuosity
         MidlineLength
         TangentAverage
+        % CurvatureAverage
 
         %% Summaries
 
@@ -251,6 +256,7 @@ classdef OOPSObject < handle & dynamicprops
             obj.imageToPaddedObjectShift = ObjectProps.imageToPaddedObjectShift;
             obj.paddedPixelIdxList = ObjectProps.paddedPixelIdxList;
             obj.pixelMidlineTangentList = ObjectProps.pixelMidlineTangentList;
+            % obj.pixelMidlineCurvatureList = ObjectProps.pixelMidlineCurvatureList;
 
             % set default object label
             obj.Label = Label;
@@ -505,6 +511,15 @@ classdef OOPSObject < handle & dynamicprops
                 OrderAvg = NaN;
             end
         end
+
+        function OrderStd = get.OrderStd(obj)
+            % average Order of all pixels identified by the mask
+            try
+                OrderStd = std(obj.Parent.OrderImage(obj.PixelIdxList));
+            catch
+                OrderStd = NaN;
+            end
+        end
         
         function OrderMax = get.OrderMax(obj)
             % max Order of all pixels in the object mask
@@ -549,6 +564,14 @@ classdef OOPSObject < handle & dynamicprops
             end
         end
 
+        % function CurvatureAverage = get.CurvatureAverage(obj)
+        %     try
+        %         CurvatureAverage = mean(obj.pixelMidlineCurvatureList);
+        %     catch
+        %         CurvatureAverage = NaN;
+        %     end
+        % end
+
         function AzimuthStd = get.AzimuthStd(obj)
             try
                 AzimuthStd = getAzimuthStd(obj.AzimuthPixelValues);
@@ -582,6 +605,11 @@ classdef OOPSObject < handle & dynamicprops
         function MidlineLength = get.MidlineLength(obj)
             try
                 MidlineLength = getCurveLength(obj.Midline);
+
+                if ~isnan(obj.Parent.rawFPMPixelSize)
+                    MidlineLength = MidlineLength*obj.Parent.rawFPMPixelSize;
+                end
+
             catch
                 MidlineLength = NaN;
             end
@@ -737,6 +765,11 @@ classdef OOPSObject < handle & dynamicprops
             MidlineRelativeAzimuthImage = zeros(size(obj.paddedSubImage));
             MidlineRelativeAzimuthImage(obj.paddedPixelIdxList) = angle(exp(2i*azimuthValues)./exp(2i*tangentValues))*0.5;
         end
+
+        % function MidlineCurvatureImage = get.MidlineCurvatureImage(obj)
+        %     MidlineCurvatureImage = zeros(size(obj.paddedSubImage));
+        %     MidlineCurvatureImage(obj.paddedPixelIdxList) = obj.pixelMidlineCurvatureList;
+        % end
 
 %% RGB output images
 

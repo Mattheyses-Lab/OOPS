@@ -124,8 +124,9 @@ classdef OOPSSettings < handle
         % default font used in plots
         DefaultPlotFont (1,:) char = 'Arial';
         
-        % real world size of each input pixel (micron/px)
-        PixelSize = 0.1083;
+        % real world size of each input pixel (default = 1 um/px)
+        % PixelSize = 0.1083;
+        PixelSize = 1;
         
         % custom mask schemes
         CustomSchemes CustomMask
@@ -153,12 +154,26 @@ classdef OOPSSettings < handle
         % scatterplot settings
         ScatterPlotXVariable
         ScatterPlotYVariable
+        ScatterPlotGroupingType
+        ScatterPlotMarkerMode
         ScatterPlotMarkerSize
         ScatterPlotColorMode
         ScatterPlotMarkerFaceAlpha
+        ScatterPlotMarkerEdgeColor
+        ScatterPlotMarkerEdgeColorMode
+        ScatterPlotMarkerEdgeAlpha
         ScatterPlotBackgroundColor
         ScatterPlotForegroundColor
         ScatterPlotLegendVisible
+        ScatterPlotHullVisible
+        ScatterPlotHullType
+        ScatterPlotHullLineWidth
+        ScatterPlotHullFaceColor
+        ScatterPlotHullFaceColorMode
+        ScatterPlotHullFaceAlpha
+        ScatterPlotHullEdgeColor
+        ScatterPlotHullEdgeAlpha
+        ScatterPlotHullEdgeColorMode
 
         % swarmplot settings
         SwarmPlotYVariable
@@ -176,7 +191,7 @@ classdef OOPSSettings < handle
         SwarmPlotMarkerEdgeColorMode
         SwarmPlotMarkerEdgeColor
         SwarmPlotXJitterWidth
-        SwarmPlotViolinsVisible
+        SwarmPlotViolinOutlinesVisible
         SwarmPlotViolinEdgeColorMode
         SwarmPlotViolinEdgeColor
         SwarmPlotViolinFaceColorMode
@@ -188,9 +203,9 @@ classdef OOPSSettings < handle
         PolarHistogramWedgeFaceAlpha
         PolarHistogramCircleBackgroundColor
         PolarHistogramWedgeFaceColor
-        PolarHistogramWedgeEdgeColor
+        PolarHistogramWedgeEdgeColorMode
         PolarHistogramWedgeLineWidth
-        PolarHistogramWedgeLineColor
+        PolarHistogramWedgeEdgeColor
         PolarHistogramGridlinesColor
         PolarHistogramLabelsColor
         PolarHistogramCircleColor
@@ -238,7 +253,6 @@ classdef OOPSSettings < handle
         % MaskSettings
         MaskType
         MaskName
-
 
         % Object variables "long" names
         ObjectPlotVariablesLong
@@ -450,19 +464,63 @@ classdef OOPSSettings < handle
 
 %% object label management
     
-        function AddNewObjectLabel(obj,LabelName,LabelColor)
+        function AddNewObjectLabel(obj,labelName,labelColor)
             % add a new OOPSLabel to the project
 
             % get a unique color for the new label
-            if isempty(LabelColor)
-                LabelColor = obj.getUniqueLabelColor;
+            if isempty(labelColor)
+                labelColor = obj.getUniqueLabelColor;
             end
             % create a default name for the new label if none was given
-            if isempty(LabelName)
-                LabelName = ['Label ',num2str(obj.nLabels+1)];
+            if isempty(labelName)
+                labelName = obj.getUniqueLabelName;
             end
             % add the OOPSLabel object to ObjectLabels
-            obj.ObjectLabels(end+1,1) = OOPSLabel(LabelName,LabelColor,obj);
+            obj.ObjectLabels(end+1,1) = OOPSLabel(labelName,labelColor,obj);
+            % reorder the object labels so the names/numbers make sense
+            obj.reorderObjectLabels;
+        end
+
+        function labelName = getUniqueLabelName(obj)
+            for i = 2:obj.nLabels+2
+                labelName = ['Label ',num2str(i)];
+                if ~ismember(labelName,obj.LabelNames)
+                    return
+                end
+            end
+        end
+
+        function reorderObjectLabels(obj)
+            % prealocate array of idxs for reordering
+            labelIdxs = zeros(obj.nLabels,1);
+            % true if the default label exists
+            %defaultExists = false;
+
+            for i = 1:obj.nLabels
+                % find the location of the next auto-named label (if it exists)
+                nextIdx = find(ismember(obj.LabelNames,['Label ',num2str(i+1)]));
+                % if label found, add its idx to the next position
+                if ~isempty(nextIdx)
+                    labelIdxs(i) = nextIdx;
+                end
+            end
+
+            % find location of 'Default' label (if it exists)
+            defaultIdx = find(ismember(obj.LabelNames,'Default'));
+
+            % remove any elements == 0
+            labelIdxs(labelIdxs==0) = [];
+
+            % add any missing idxs (for user-named labels)
+            if numel(labelIdxs) < obj.nLabels
+                userIdxs = setdiff((1:obj.nLabels).',[defaultIdx;labelIdxs]);
+                sortedIdxs = [defaultIdx;userIdxs;labelIdxs];
+            else
+                sortedIdxs = [defaultIdx;labelIdxs];
+            end
+
+            % reorder the labels
+            obj.ObjectLabels = obj.ObjectLabels(sortedIdxs);
         end
    
         function NewColor = getUniqueLabelColor(obj)
@@ -500,29 +558,29 @@ classdef OOPSSettings < handle
             end
         end
 
-        function DeleteObjectLabel(obj,Label)
-            Label2Delete = Label;
-            LabelIdx = find(obj.ObjectLabels==Label2Delete);
-            if LabelIdx == 1
-                if obj.nLabels > 1
-                    obj.ObjectLabels = obj.ObjectLabels(2:end);
-                else
-                    obj.ObjectLabels = OOPSLabel.empty();
-                end
-            elseif LabelIdx == obj.nLabels
-                obj.ObjectLabels = obj.ObjectLabels(1:end-1);
+        function DeleteObjectLabel(obj,label2Delete)
+
+            if obj.nLabels > 1
+                obj.ObjectLabels = obj.ObjectLabels(setdiff((1:obj.nLabels).',label2Delete.SelfIdx));
             else
-                obj.ObjectLabels = [obj.ObjectLabels(1:LabelIdx-1);obj.ObjectLabels(LabelIdx+1:end)];
+                obj.ObjectLabels = OOPSLabel.empty();
             end
-            delete(Label2Delete);
+
+            delete(label2Delete);
+
         end
 
         function restoreDefaultLabel(obj)
-            if isempty(obj.DefaultLabel)
-                obj.AddNewObjectLabel('Default',[])
-            else
-                return
+        % restore the label 'Default'
+
+            % if 'Default' label does not exist
+            if ~ismember('Default',obj.LabelNames)
+                % create it
+                obj.AddNewObjectLabel('Default',[]);
+                % then update the label colors
+                obj.UpdateLabelColors();
             end
+
         end
 
 %% object plot variables
@@ -605,6 +663,14 @@ classdef OOPSSettings < handle
             ScatterPlotYVariable = obj.ScatterPlotSettings.YVariable;
         end
 
+        function ScatterPlotGroupingType = get.ScatterPlotGroupingType(obj)
+            ScatterPlotGroupingType = obj.ScatterPlotSettings.GroupingType;
+        end
+
+        function ScatterPlotMarkerMode = get.ScatterPlotMarkerMode(obj)
+            ScatterPlotMarkerMode = obj.ScatterPlotSettings.MarkerMode;
+        end
+
         function ScatterPlotMarkerSize = get.ScatterPlotMarkerSize(obj)
             ScatterPlotMarkerSize = obj.ScatterPlotSettings.MarkerSize;
         end
@@ -627,6 +693,54 @@ classdef OOPSSettings < handle
 
         function ScatterPlotLegendVisible = get.ScatterPlotLegendVisible(obj)
             ScatterPlotLegendVisible = obj.ScatterPlotSettings.LegendVisible;
+        end
+
+        function ScatterPlotHullLineWidth = get.ScatterPlotHullLineWidth(obj)
+            ScatterPlotHullLineWidth = obj.ScatterPlotSettings.HullLineWidth;
+        end
+
+        function ScatterPlotHullFaceColor = get.ScatterPlotHullFaceColor(obj)
+            ScatterPlotHullFaceColor = obj.ScatterPlotSettings.HullFaceColor;
+        end
+
+        function ScatterPlotHullFaceAlpha = get.ScatterPlotHullFaceAlpha(obj)
+            ScatterPlotHullFaceAlpha = obj.ScatterPlotSettings.HullFaceAlpha;
+        end
+
+        function ScatterPlotMarkerEdgeColorMode = get.ScatterPlotMarkerEdgeColorMode(obj)
+            ScatterPlotMarkerEdgeColorMode = obj.ScatterPlotSettings.MarkerEdgeColorMode;
+        end
+
+        function ScatterPlotHullFaceColorMode = get.ScatterPlotHullFaceColorMode(obj)
+            ScatterPlotHullFaceColorMode = obj.ScatterPlotSettings.HullFaceColorMode;
+        end
+
+        function ScatterPlotHullEdgeColorMode = get.ScatterPlotHullEdgeColorMode(obj)
+            ScatterPlotHullEdgeColorMode = obj.ScatterPlotSettings.HullEdgeColorMode;
+        end
+
+        function ScatterPlotHullEdgeColor = get.ScatterPlotHullEdgeColor(obj)
+            ScatterPlotHullEdgeColor = obj.ScatterPlotSettings.HullEdgeColor;
+        end
+
+        function ScatterPlotMarkerEdgeAlpha = get.ScatterPlotMarkerEdgeAlpha(obj)
+            ScatterPlotMarkerEdgeAlpha = obj.ScatterPlotSettings.MarkerEdgeAlpha;
+        end
+
+        function ScatterPlotMarkerEdgeColor = get.ScatterPlotMarkerEdgeColor(obj)
+            ScatterPlotMarkerEdgeColor = obj.ScatterPlotSettings.MarkerEdgeColor;
+        end
+
+        function ScatterPlotHullVisible = get.ScatterPlotHullVisible(obj)
+            ScatterPlotHullVisible = obj.ScatterPlotSettings.HullVisible;
+        end
+
+        function ScatterPlotHullEdgeAlpha = get.ScatterPlotHullEdgeAlpha(obj)
+            ScatterPlotHullEdgeAlpha = obj.ScatterPlotSettings.HullEdgeAlpha;
+        end
+
+        function ScatterPlotHullType = get.ScatterPlotHullType(obj)
+            ScatterPlotHullType = obj.ScatterPlotSettings.HullType;
         end
 
 %% swarm plot settings
@@ -683,8 +797,8 @@ classdef OOPSSettings < handle
             SwarmPlotXJitterWidth = obj.SwarmPlotSettings.XJitterWidth;
         end        
 
-        function SwarmPlotViolinsVisible = get.SwarmPlotViolinsVisible(obj)
-            SwarmPlotViolinsVisible = obj.SwarmPlotSettings.ViolinsVisible;
+        function SwarmPlotViolinOutlinesVisible = get.SwarmPlotViolinOutlinesVisible(obj)
+            SwarmPlotViolinOutlinesVisible = obj.SwarmPlotSettings.ViolinOutlinesVisible;
         end
 
         function SwarmPlotViolinEdgeColorMode = get.SwarmPlotViolinEdgeColorMode(obj)
@@ -725,16 +839,16 @@ classdef OOPSSettings < handle
             PolarHistogramWedgeFaceColor = obj.PolarHistogramSettings.WedgeFaceColor;
         end
 
-        function PolarHistogramWedgeEdgeColor = get.PolarHistogramWedgeEdgeColor(obj)
-            PolarHistogramWedgeEdgeColor = obj.PolarHistogramSettings.WedgeEdgeColor;
+        function PolarHistogramWedgeEdgeColorMode = get.PolarHistogramWedgeEdgeColorMode(obj)
+            PolarHistogramWedgeEdgeColorMode = obj.PolarHistogramSettings.WedgeEdgeColorMode;
         end
 
         function PolarHistogramWedgeLineWidth = get.PolarHistogramWedgeLineWidth(obj)
             PolarHistogramWedgeLineWidth = obj.PolarHistogramSettings.WedgeLineWidth;
         end
 
-        function PolarHistogramWedgeLineColor = get.PolarHistogramWedgeLineColor(obj)
-            PolarHistogramWedgeLineColor = obj.PolarHistogramSettings.WedgeLineColor;
+        function PolarHistogramWedgeEdgeColor = get.PolarHistogramWedgeEdgeColor(obj)
+            PolarHistogramWedgeEdgeColor = obj.PolarHistogramSettings.WedgeEdgeColor;
         end
 
         function PolarHistogramGridlinesColor = get.PolarHistogramGridlinesColor(obj)
@@ -848,15 +962,11 @@ classdef OOPSSettings < handle
         end
 
         function LabelNames = get.LabelNames(obj)
-            % initialize label colors array
-            LabelNames = cell(obj.nLabels,1);
-            % add the colors from each label
-            for i = 1:obj.nLabels
-                LabelNames{i,1} = obj.ObjectLabels(i).Name;
-            end
+            LabelNames = arrayfun(@(lbl) lbl.Name,obj.ObjectLabels,'UniformOutput',false);
         end
 
         function DefaultLabel = get.DefaultLabel(obj)
+            % return the default label
             DefaultLabel = obj.ObjectLabels(find(ismember(obj.LabelNames,'Default')));
         end
 
@@ -926,6 +1036,8 @@ classdef OOPSSettings < handle
             switch NameIn
                 case 'OrderAvg'
                     NameOut = 'Mean Order';
+                case 'OrderStd'
+                    NameOut = 'Order Standard Deviation';
                 case 'SBRatio'
                     NameOut = 'Local S/B';
                 case 'Area'
@@ -966,6 +1078,8 @@ classdef OOPSSettings < handle
                     NameOut = 'Midline Length';
                 case 'AzimuthAngularDeviation'
                     NameOut = 'Azimuth Angular Deviation';
+                case 'CurvatureAverage'
+                    NameOut = 'Mean Curvature';
                 otherwise
                     % check if the input is a custom statistic
                     if obj.isCustomStatistic(NameIn)

@@ -236,18 +236,31 @@ classdef OOPSProject < handle
 
         % return Var2Get data for each object, grouped by object group and label
         function ObjectDataByLabel = GetObjectDataByLabel(obj,Var2Get)
+            % get nGroups x nLabels cell array of Var2Get (see GetObjectDataByGroupAndLabel())
+            ObjectDataByGroupAndLabel = obj.GetObjectDataByGroupAndLabel(Var2Get);
+            % 'flatten' the cell array along first dimension so the data are grouped by label only
+            %ObjectDataByLabel = cellfun(@(c) horzcat(c{:}), num2cell(ObjectDataByGroupAndLabel, 1), 'UniformOutput', false);
+
+            ObjectDataByLabel = cellfun(@(c) vertcat(c{:}), num2cell(ObjectDataByGroupAndLabel, 1), 'UniformOutput', false);
+
+            % transpose so that the dimensions of the final cell array are nLabels x 1
+            ObjectDataByLabel = ObjectDataByLabel';
+        end
+
+        % return Var2Get data for each object, grouped by object group and label
+        function ObjectDataByGroupAndLabel = GetObjectDataByGroupAndLabel(obj,Var2Get)
             nLabels = length(obj.Settings.ObjectLabels);
 
             % cell array to hold all object data for the project, split by group and label
             %   each row is one group, each column is a unique label
-            ObjectDataByLabel = cell(obj.nGroups,nLabels);
+            ObjectDataByGroupAndLabel = cell(obj.nGroups,nLabels);
 
             for i = 1:obj.nGroups
-                % cell array of ObjectDataByLabel for one replicate
-                % each cell is a vector of values for one label
-                ObjectDataByLabel(i,:) = obj.Group(i).GetObjectDataByLabel(Var2Get);
+                % cell array of ObjectDataByGroupAndLabel for one group
+                % each cell is a vector of values for one label in one group
+                ObjectDataByGroupAndLabel(i,:) = obj.Group(i).GetObjectDataByLabel(Var2Get);
             end
-        end
+        end        
 
         % return Var2Get data for each object, grouped by object group
         function ObjectDataByGroup = GetObjectDataByGroup(obj,Var2Get)

@@ -312,7 +312,7 @@
                 ReplicateObjectDataByLabel = obj.Replicate(i).GetObjectDataByLabel(Var2Get);
                 
                 for ii = 1:nLabels
-                    ObjectDataByLabel{ii} = [ObjectDataByLabel{ii} ReplicateObjectDataByLabel{ii}];
+                    ObjectDataByLabel{ii} = [ObjectDataByLabel{ii}; ReplicateObjectDataByLabel{ii}];
                 end
 
             end

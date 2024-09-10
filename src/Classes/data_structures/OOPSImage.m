@@ -1054,8 +1054,6 @@ classdef OOPSImage < handle & dynamicprops
             for i = 1:numel(obj.Object)
                 obj.L(obj.Object(i).PixelIdxList) = obj.Object(i).SelfIdx;
             end
-
-
         end
         
         % apply OOPSLabel:Label to all selected objects in this OOPSImage
@@ -1083,6 +1081,57 @@ classdef OOPSImage < handle & dynamicprops
                 return
             end
 
+        end
+
+        % delete objects based on their idx
+        function DeleteObjectByIdx(obj,Idx)
+            
+            % get handles to all objects in this image
+            AllObjects = obj.Object;
+
+            % the object to delete
+            Bad = AllObjects(Idx);
+            % the objects to keep
+            Good = AllObjects(setdiff(1:obj.nObjects,Idx));
+
+            % replace the Object array of this image with only the ones we are keeping
+            obj.Object = Good;
+
+            % in case current object is greater than the total # of objects
+            if obj.CurrentObjectIdx > obj.nObjects
+                % select the last object in the list
+                obj.CurrentObjectIdx = obj.nObjects;
+            end
+
+            % delete the bad objects
+            % set object pixel idxs to 0 in the mask
+            for i = 1:length(Bad)
+                obj.bw(Bad(i).PixelIdxList) = 0;
+                delete(Bad(i));
+            end
+            % clear Bad array
+            clear Bad
+
+            % make new label matrix
+            obj.L(:) = 0;
+            for i = 1:numel(obj.Object)
+                obj.L(obj.Object(i).PixelIdxList) = obj.Object(i).SelfIdx;
+            end
+        end
+
+        % returns idx of object closest to a given point in the image
+        function nearestIdx = findNearestObject(obj,pointXY)
+
+            % round the (x,y) coordinates of the point
+            x = round(pointXY(1));
+            y = round(pointXY(2));
+            % using the label matrix, find the label closest to the clicked point
+            % binary distance transform of the binarized label image, 
+            % each element in idx is the linear idx of the closest non-zero pixel
+            [~,idx] = bwdist(full(obj.L)~=0);
+            % use the closest idx to the clicked point to find the corresponding object
+            nearestIdx = full(obj.L(idx(y,x)));
+            
         end
 
 %% retrieve object data
@@ -1129,7 +1178,7 @@ classdef OOPSImage < handle & dynamicprops
                 % find idx to all object with that label
                 ObjectLabelIdxs = find([obj.Object.Label]==obj.Settings.ObjectLabels(i));
                 % add [Var2Get] from those objects to cell i of ObjectDataByLabel
-                ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)];
+                ObjectDataByLabel{i} = [obj.Object(ObjectLabelIdxs).(Var2Get)]';
             end
 
         end
@@ -1475,9 +1524,22 @@ classdef OOPSImage < handle & dynamicprops
                 getPixelValuesFromCurveValues(midline,midlinetangent,paddedsubimage), ...
                 {M,MidlineTangent,paddedSubImage}, ...
                 'UniformOutput',0);
-            % add object pixelTangentList cell to props struct
+            % add object pixelMidlineTangentList cell to props struct
             ObjectProperties(end).pixelMidlineTangentList = [];
             [ObjectProperties(:).pixelMidlineTangentList] = deal(pixelMidlineTangentList{:});
+
+            %% TESTING
+
+            % % get a list of curvature values for each object midline
+            % [MidlineCurvature,~,~] = parcellfun_multi(@(midline) openCurvatureStats(midline,5), {M}, 'UniformOutput',0);
+            % % get a list of curvature values for each pixel in the padded object mask image
+            % pixelMidlineCurvatureList = parcellfun_multi(@(midline,midlinecurvature,paddedsubimage) ...
+            %     getPixelValuesFromCurveValues(midline,midlinecurvature,paddedsubimage), ...
+            %     {M,MidlineCurvature,paddedSubImage}, ...
+            %     'UniformOutput',0);
+            % % add object pixelMidlineCurvatureList cell to props struct
+            % ObjectProperties(end).pixelMidlineCurvatureList = [];
+            % [ObjectProperties(:).pixelMidlineCurvatureList] = deal(pixelMidlineCurvatureList{:});
 
         end
 
