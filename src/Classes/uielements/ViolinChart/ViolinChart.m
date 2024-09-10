@@ -82,25 +82,25 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
 
     properties(Access = private, AbortSet = true)
         % x-axis tick labels for each violin plot
-        user_GroupNames (:,1) cell = {}
+        GroupNames_ (:,1) cell = {}
         % color(s) of violin faces - matrix of one or more RGB triplets
-        user_ViolinFaceColor (:,3) double = []
+        ViolinFaceColor_ (:,3) double = []
         % color(s) of violin edges - matrix of one or more RGB triplets
-        user_ViolinEdgeColor (:,3) double = [0 0 0]
+        ViolinEdgeColor_ (:,3) double = [0 0 0]
         % edge color of each plot marker
-        user_MarkerEdgeColor (:,3) double = [0 0 0]
+        MarkerEdgeColor_ (:,3) double = [0 0 0]
         % face color of each plot marker
-        user_MarkerFaceColor (:,3) double = []
+        MarkerFaceColor_ (:,3) double = []
         % color of the error bar lines
-        user_ErrorBarsColor (:,3) double = []
+        ErrorBarsColor_ (:,3) double = []
         % edge color of each plot marker
-        user_CData {mustBeValidCData(user_CData)} = {}
+        CData_ {mustBeValidCData(CData_)} = {}
         % color limits of the axes
-        user_CLim (1,2) double = [0 1]
+        CLim_ (1,2) double = [0 1]
         % how CLim is set | 'auto' - CLim set to data range | 'manual' - CLim set by user
-        user_CLimMode (1,:) {mustBeMember(user_CLimMode,{'auto','manual'})} = 'auto'
+        CLimMode_ (1,:) {mustBeMember(CLimMode_,{'auto','manual'})} = 'auto'
         % data tip info
-        user_DataTipCell (:,2) cell = {{},{}}
+        DataTipCell_ (:,2) cell = {{},{}}
     end
     
     properties(Dependent = true, AbortSet = true)
@@ -132,29 +132,29 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             % check to make sure number of names matches number of violins
             % if not, create default names to replace missing before returning
 
-            nGiven = numel(obj.user_GroupNames);
+            nGiven = numel(obj.GroupNames_);
             nNeeded = obj.nViolins;
 
             if nGiven == nNeeded
-                GroupNames = obj.user_GroupNames;
+                GroupNames = obj.GroupNames_;
             elseif nGiven >= nNeeded
-                GroupNames = obj.user_GroupNames(1:nNeeded);
+                GroupNames = obj.GroupNames_(1:nNeeded);
             else % create more default names if necessary
                 %nameIdx = obj.violinIdxs((nGiven+1):end);
-                GroupNames = [obj.user_GroupNames;...
+                GroupNames = [obj.GroupNames_;...
                     arrayfun(@(x) ['data',num2str(x)],obj.violinIdxs((nGiven+1):end),'UniformOutput',false)];
             end
-            % update user_GroupNames so we don't have to adjust every time
-            obj.user_GroupNames = GroupNames;
+            % update GroupNames_ so we don't have to adjust every time
+            obj.GroupNames_ = GroupNames;
         end
 
         function set.GroupNames(obj,val)
-            obj.user_GroupNames = val;
+            obj.GroupNames_ = val;
         end
 
         function CData = get.CData(obj)
 
-            nCells = numel(obj.user_CData);
+            nCells = numel(obj.CData_);
             nData = obj.nViolins;
 
             if nCells == 0
@@ -162,43 +162,43 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
                 CData = mat2cell(obj.MarkerFaceColor,ones(1,nData));
             elseif nCells >= nData
                 % if number of CData cells greater than or equal to number of Data cells, return the amount we need
-                CData = obj.user_CData(1:nData);
+                CData = obj.CData_(1:nData);
             else
                 % otherwise, return the CData cells we have, plus the remaining MarkerFaceColor rows converted to cell
-                CData = [obj.user_CData(1:nCells);mat2cell(obj.MarkerFaceColor(nCells+1:end,:),ones(1,nData-nCells))];
+                CData = [obj.CData_(1:nCells);mat2cell(obj.MarkerFaceColor(nCells+1:end,:),ones(1,nData-nCells))];
             end
 
         end
 
         function set.CData(obj,val)
-            obj.user_CData = val;
+            obj.CData_ = val;
         end
 
         function MarkerFaceColor = get.MarkerFaceColor(obj)
             switch obj.MarkerFaceColorMode
                 case 'single'
                     % number of colors supplied
-                    nColors = size(obj.user_MarkerFaceColor,1);
+                    nColors = size(obj.MarkerFaceColor_,1);
                     % if no colors supplied, take the first default color from the axes
                     if nColors == 0
-                        obj.user_MarkerFaceColor(1,:) = obj.MainAxes.ColorOrder(1,:);
+                        obj.MarkerFaceColor_(1,:) = obj.MainAxes.ColorOrder(1,:);
                     end
                     % if single color mode, just use the first RGB triplet for each plot
-                    MarkerFaceColor = repmat(obj.user_MarkerFaceColor(1,:),obj.nViolins,1);
+                    MarkerFaceColor = repmat(obj.MarkerFaceColor_(1,:),obj.nViolins,1);
                 case 'multi'
-                    if size(obj.user_MarkerFaceColor,1) >= obj.nViolins
-                        MarkerFaceColor = obj.user_MarkerFaceColor(obj.violinIdxs,:);
+                    if size(obj.MarkerFaceColor_,1) >= obj.nViolins
+                        MarkerFaceColor = obj.MarkerFaceColor_(obj.violinIdxs,:);
                     else
-                        nGiven = size(obj.user_MarkerFaceColor,1);
+                        nGiven = size(obj.MarkerFaceColor_,1);
                         nNeeded = obj.nViolins - nGiven;
                         idx = nGiven+1;
                         % add new colors from ColorOrder to the existing colors
-                        MarkerFaceColor = [obj.user_MarkerFaceColor;obj.nextNColorsFromIdx(idx,nNeeded)];
+                        MarkerFaceColor = [obj.MarkerFaceColor_;obj.nextNColorsFromIdx(idx,nNeeded)];
                     end
                 case 'auto'
                     MarkerFaceColor = obj.nextNColorsFromIdx(1,obj.nViolins);
             end
-            obj.user_MarkerFaceColor = MarkerFaceColor;
+            obj.MarkerFaceColor_ = MarkerFaceColor;
         end
 
         function set.MarkerFaceColor(obj,val)
@@ -212,34 +212,34 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             elseif nColors == 1
                 obj.MarkerFaceColorMode = "single";
             end
-            obj.user_MarkerFaceColor = val;
+            obj.MarkerFaceColor_ = val;
         end
 
         function ViolinFaceColor = get.ViolinFaceColor(obj)
             switch obj.ViolinFaceColorMode
                 case 'single'
                     % number of colors supplied
-                    nColors = size(obj.user_ViolinFaceColor,1);
+                    nColors = size(obj.ViolinFaceColor_,1);
                     % if no colors supplied, take the first default color from the axes
                     if nColors == 0
-                        obj.user_ViolinFaceColor(1,:) = obj.MainAxes.ColorOrder(1,:);
+                        obj.ViolinFaceColor_(1,:) = obj.MainAxes.ColorOrder(1,:);
                     end
                     % if single color mode, just use the first RGB triplet for each plot
-                    ViolinFaceColor = repmat(obj.user_ViolinFaceColor(1,:),obj.nViolins,1);
+                    ViolinFaceColor = repmat(obj.ViolinFaceColor_(1,:),obj.nViolins,1);
                 case 'multi'
-                    if size(obj.user_ViolinFaceColor,1) >= obj.nViolins
-                        ViolinFaceColor = obj.user_ViolinFaceColor(obj.violinIdxs,:);
+                    if size(obj.ViolinFaceColor_,1) >= obj.nViolins
+                        ViolinFaceColor = obj.ViolinFaceColor_(obj.violinIdxs,:);
                     else
-                        nGiven = size(obj.user_ViolinFaceColor,1);
+                        nGiven = size(obj.ViolinFaceColor_,1);
                         nNeeded = obj.nViolins - nGiven;
                         idx = nGiven+1;
                         % add new colors from ColorOrder to the existing colors
-                        ViolinFaceColor = [obj.user_ViolinFaceColor;obj.nextNColorsFromIdx(idx,nNeeded)];
+                        ViolinFaceColor = [obj.ViolinFaceColor_;obj.nextNColorsFromIdx(idx,nNeeded)];
                     end
                 case 'auto'
                     ViolinFaceColor = obj.nextNColorsFromIdx(1,obj.nViolins);
             end
-            obj.user_ViolinFaceColor = ViolinFaceColor;
+            obj.ViolinFaceColor_ = ViolinFaceColor;
         end
 
         function set.ViolinFaceColor(obj,val)
@@ -253,34 +253,34 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             elseif nColors == 1
                 obj.ViolinFaceColorMode = "single";
             end
-            obj.user_ViolinFaceColor = val;
+            obj.ViolinFaceColor_ = val;
         end
 
         function ViolinEdgeColor = get.ViolinEdgeColor(obj)
             switch obj.ViolinEdgeColorMode
                 case 'single'
                     % number of colors supplied
-                    nColors = size(obj.user_ViolinEdgeColor,1);
+                    nColors = size(obj.ViolinEdgeColor_,1);
                     % if no colors supplied, take the first default color from the axes
                     if nColors == 0
-                        obj.user_ViolinEdgeColor(1,:) = obj.MainAxes.ColorOrder(1,:);
+                        obj.ViolinEdgeColor_(1,:) = obj.MainAxes.ColorOrder(1,:);
                     end
                     % if single color mode, just use the first RGB triplet for each plot
-                    ViolinEdgeColor = repmat(obj.user_ViolinEdgeColor(1,:),obj.nViolins,1);
+                    ViolinEdgeColor = repmat(obj.ViolinEdgeColor_(1,:),obj.nViolins,1);
                 case 'multi'
-                    if size(obj.user_ViolinEdgeColor,1) >= obj.nViolins
-                        ViolinEdgeColor = obj.user_ViolinEdgeColor(obj.violinIdxs,:);
+                    if size(obj.ViolinEdgeColor_,1) >= obj.nViolins
+                        ViolinEdgeColor = obj.ViolinEdgeColor_(obj.violinIdxs,:);
                     else
-                        nGiven = size(obj.user_ViolinEdgeColor,1);
+                        nGiven = size(obj.ViolinEdgeColor_,1);
                         nNeeded = obj.nViolins - nGiven;
                         idx = nGiven+1;
                         % add new colors from ColorOrder to the existing colors
-                        ViolinEdgeColor = [obj.user_ViolinEdgeColor;obj.nextNColorsFromIdx(idx,nNeeded)];
+                        ViolinEdgeColor = [obj.ViolinEdgeColor_;obj.nextNColorsFromIdx(idx,nNeeded)];
                     end
                 case 'auto'
                     ViolinEdgeColor = obj.nextNColorsFromIdx(1,obj.nViolins);
             end
-            obj.user_ViolinEdgeColor = ViolinEdgeColor;
+            obj.ViolinEdgeColor_ = ViolinEdgeColor;
         end
 
         function set.ViolinEdgeColor(obj,val)
@@ -294,34 +294,34 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             elseif nColors == 1
                 obj.ViolinEdgeColorMode = "single";
             end
-            obj.user_ViolinEdgeColor = val;
+            obj.ViolinEdgeColor_ = val;
         end
 
         function ErrorBarsColor = get.ErrorBarsColor(obj)
             switch obj.ErrorBarsColorMode
                 case 'single'
                     % number of colors supplied
-                    nColors = size(obj.user_ErrorBarsColor,1);
+                    nColors = size(obj.ErrorBarsColor_,1);
                     % if no colors supplied, take the first default color from the axes
                     if nColors == 0
-                        obj.user_ErrorBarsColor(1,:) = obj.MainAxes.ColorOrder(1,:);
+                        obj.ErrorBarsColor_(1,:) = obj.MainAxes.ColorOrder(1,:);
                     end
                     % if single color mode, just use the first RGB triplet for each plot
-                    ErrorBarsColor = repmat(obj.user_ErrorBarsColor(1,:),obj.nViolins,1);
+                    ErrorBarsColor = repmat(obj.ErrorBarsColor_(1,:),obj.nViolins,1);
                 case 'multi'
-                    if size(obj.user_ErrorBarsColor,1) >= obj.nViolins
-                        ErrorBarsColor = obj.user_ErrorBarsColor(obj.violinIdxs,:);
+                    if size(obj.ErrorBarsColor_,1) >= obj.nViolins
+                        ErrorBarsColor = obj.ErrorBarsColor_(obj.violinIdxs,:);
                     else
-                        nGiven = size(obj.user_ErrorBarsColor,1);
+                        nGiven = size(obj.ErrorBarsColor_,1);
                         nNeeded = obj.nViolins - nGiven;
                         idx = nGiven+1;
                         % add new colors from ColorOrder to the existing colors
-                        ErrorBarsColor = [obj.user_ErrorBarsColor;obj.nextNColorsFromIdx(idx,nNeeded)];
+                        ErrorBarsColor = [obj.ErrorBarsColor_;obj.nextNColorsFromIdx(idx,nNeeded)];
                     end
                 case 'auto'
                     ErrorBarsColor = obj.nextNColorsFromIdx(1,obj.nViolins);
             end
-            obj.user_ErrorBarsColor = ErrorBarsColor;
+            obj.ErrorBarsColor_ = ErrorBarsColor;
         end
 
         function set.ErrorBarsColor(obj,val)
@@ -335,48 +335,48 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             elseif nColors == 1
                 obj.ErrorBarsColorMode = "single";
             end
-            obj.user_ErrorBarsColor = val;
+            obj.ErrorBarsColor_ = val;
         end
 
         function MarkerEdgeColor = get.MarkerEdgeColor(obj)
             switch obj.MarkerEdgeColorMode
                 case 'single'
                     % number of colors supplied
-                    nColors = size(obj.user_MarkerEdgeColor,1);
+                    nColors = size(obj.MarkerEdgeColor_,1);
                     % if no colors supplied, take the first default color from the axes
                     if nColors == 0
-                        obj.user_MarkerEdgeColor(1,:) = obj.MainAxes.ColorOrder(1,:);
+                        obj.MarkerEdgeColor_(1,:) = obj.MainAxes.ColorOrder(1,:);
                     end
                     % if single color mode, just use the first RGB triplet for each plot
-                    MarkerEdgeColor = repmat(obj.user_MarkerEdgeColor(1,:),obj.nViolins,1);
+                    MarkerEdgeColor = repmat(obj.MarkerEdgeColor_(1,:),obj.nViolins,1);
                     % % if single color mode, just use the first RGB triplet for each plot
-                    % MarkerEdgeColor = repmat(obj.user_MarkerEdgeColor(1,:),obj.nViolins,1);
+                    % MarkerEdgeColor = repmat(obj.MarkerEdgeColor_(1,:),obj.nViolins,1);
                 case 'multi'
-                    if size(obj.user_MarkerEdgeColor,1) >= obj.nViolins
-                        MarkerEdgeColor = obj.user_MarkerEdgeColor(obj.violinIdxs,:);
+                    if size(obj.MarkerEdgeColor_,1) >= obj.nViolins
+                        MarkerEdgeColor = obj.MarkerEdgeColor_(obj.violinIdxs,:);
                     else
-                        nGiven = size(obj.user_MarkerEdgeColor,1);
+                        nGiven = size(obj.MarkerEdgeColor_,1);
                         nNeeded = obj.nViolins - nGiven;
                         idx = nGiven+1;
                         % add new colors from ColorOrder to the existing colors
-                        MarkerEdgeColor = [obj.user_MarkerEdgeColor;obj.nextNColorsFromIdx(idx,nNeeded)];
+                        MarkerEdgeColor = [obj.MarkerEdgeColor_;obj.nextNColorsFromIdx(idx,nNeeded)];
                     end
 
-                    % if size(obj.user_MarkerEdgeColor,1) >= obj.nViolins
-                    %     MarkerEdgeColor = obj.user_MarkerEdgeColor(obj.violinIdxs,:);
+                    % if size(obj.MarkerEdgeColor_,1) >= obj.nViolins
+                    %     MarkerEdgeColor = obj.MarkerEdgeColor_(obj.violinIdxs,:);
                     % else
                     %     % number of RGB triplets in the ColorOrder property of the axes
                     %     nColorsInOrder = size(obj.MainAxes.ColorOrder,1);
                     %     % idxs to RGB triplets in the ColorOrder (cycled if more violins than colors)
-                    %     newColorIdxs = mod(obj.violinIdxs(size(obj.user_MarkerEdgeColor,1)+1:end),nColorsInOrder);
+                    %     newColorIdxs = mod(obj.violinIdxs(size(obj.MarkerEdgeColor_,1)+1:end),nColorsInOrder);
                     %     newColorIdxs(newColorIdxs==0) = nColorsInOrder;
                     %     % add new colors from ColorOrder to the existing colors
-                    %     MarkerEdgeColor = [obj.user_MarkerEdgeColor;obj.MainAxes.ColorOrder(newColorIdxs,:)];
+                    %     MarkerEdgeColor = [obj.MarkerEdgeColor_;obj.MainAxes.ColorOrder(newColorIdxs,:)];
                     % end
                 case 'auto'
                     MarkerEdgeColor = obj.nextNColorsFromIdx(1,obj.nViolins);
             end
-            obj.user_MarkerEdgeColor = MarkerEdgeColor;
+            obj.MarkerEdgeColor_ = MarkerEdgeColor;
         end
 
         function set.MarkerEdgeColor(obj,val)
@@ -390,21 +390,21 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             elseif nColors == 1
                 obj.MarkerEdgeColorMode = "single";
             end
-            obj.user_MarkerEdgeColor = val;
+            obj.MarkerEdgeColor_ = val;
         end
 
         function CLimMode = get.CLimMode(obj)
-            CLimMode = obj.user_CLimMode;
+            CLimMode = obj.CLimMode_;
         end
 
         function set.CLimMode(obj,val)
-            obj.user_CLimMode = val;
-            obj.user_CLim = obj.CLim;
+            obj.CLimMode_ = val;
+            obj.CLim_ = obj.CLim;
         end
 
         function CLim = get.CLim(obj)
-            % if CLimMode is 'auto', set user_CLim to data range
-            if strcmp(obj.user_CLimMode,'auto')
+            % if CLimMode is 'auto', set CLim_ to data range
+            if strcmp(obj.CLimMode_,'auto')
                 CLim = [min(cellfun(@(x) min(x),obj.Data,'UniformOutput',true)) max(cellfun(@(x) max(x),obj.Data,'UniformOutput',true))];
                 if any(isnan(CLim))
                     CLim = [0 1];
@@ -414,23 +414,25 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
                     CLim = [0 1];
                 end
 
-                obj.user_CLim = CLim;
+                obj.CLim_ = CLim;
             else
-                CLim = obj.user_CLim;
+                CLim = obj.CLim_;
             end
         end
 
         function set.CLim(obj,val)
-            obj.user_CLim = val;
+            obj.CLim_ = val;
             obj.CLimMode = "manual";
         end
+
+
 
         function DataTipCell = get.DataTipCell(obj)
 
             % column vector cell of datatip labels
-            dtNames = obj.user_DataTipCell(:,1);
+            dtNames = obj.DataTipCell_(:,1);
             % column vector cell of datatip values
-            dtData = obj.user_DataTipCell(:,2);
+            dtData = obj.DataTipCell_(:,2);
 
             nGiven = min(size(dtNames,1),size(dtData,1));
 
@@ -439,7 +441,7 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             if nNeeded==0
                 DataTipCell = {{},{}};
             elseif nGiven==nNeeded
-                DataTipCell = obj.user_DataTipCell;
+                DataTipCell = obj.DataTipCell_;
             elseif nGiven < nNeeded
                 n2Add = nNeeded - nGiven;
                 dtNames = [dtNames(1:nGiven); repmat({{}},n2Add,1)];
@@ -451,11 +453,11 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
                 DataTipCell = [dtNames, dtData];
             end
 
-            obj.user_DataTipCell = DataTipCell;
+            obj.DataTipCell_ = DataTipCell;
         end
 
         function set.DataTipCell(obj,val)
-            obj.user_DataTipCell = val;
+            obj.DataTipCell_ = val;
         end
 
     end
@@ -548,7 +550,9 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
                 "Box","off",...
                 "NextPlot","add",...
                 "TickDir","in",...
-                "FontName",obj.FontName);
+                "FontName",obj.FontName,...
+                "LabelFontSizeMultiplier",1,...
+                "TitleFontSizeMultiplier",1);
             obj.MainAxes.Layout.Row = 1;
             obj.MainAxes.Layout.Column = 1;
             % set up a title for the axes
@@ -574,7 +578,7 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
         
         function update(obj)
             
-            %% update x-axis limits, tick locations, tick labels, and font sizes
+            %% update x-axis limits, tick locations, tick labels
 
             % set ticks at locations specified by number of plots and plot spacing
             obj.MainAxes.XTick = obj.XTick;
@@ -586,7 +590,6 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
 
             % set x-axis label string and font size
             obj.MainAxes.XLabel.String = obj.XLabel;
-            obj.MainAxes.XLabel.FontSize = obj.FontSize;
             
             %% update the plots
 
@@ -647,8 +650,8 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             %% update axis title
 
             obj.MainAxes.Title.String = obj.Title;
-            obj.MainAxes.Title.Color = obj.FontColor;
-            obj.MainAxes.Title.FontSize = obj.FontSize;
+            %obj.MainAxes.Title.Color = obj.FontColor;
+            obj.MainAxes.Title.Color = obj.ForegroundColor;
             obj.MainAxes.Title.Visible = 'on';
 
             %% update font name
@@ -667,8 +670,10 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
 
             %% update x-axis and y-axis label font colors
 
-            obj.MainAxes.XLabel.Color = obj.FontColor;
-            obj.MainAxes.YLabel.Color = obj.FontColor;
+            % obj.MainAxes.XLabel.Color = obj.FontColor;
+            % obj.MainAxes.YLabel.Color = obj.FontColor;
+            obj.MainAxes.XLabel.Color = obj.ForegroundColor;
+            obj.MainAxes.YLabel.Color = obj.ForegroundColor;
 
             %% update y-axis
 
@@ -676,7 +681,9 @@ classdef ViolinChart < matlab.ui.componentcontainer.ComponentContainer
             obj.MainAxes.YTickLabelMode = 'Auto';
             obj.MainAxes.YLimMode = 'Auto';
             obj.MainAxes.YLabel.String = obj.YLabel;
-            obj.MainAxes.YLabel.FontSize = obj.FontSize;
+
+            %% font size
+
             obj.MainAxes.FontSize = obj.FontSize;
 
             %% update axes colormap and color limits
