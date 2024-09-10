@@ -1,4 +1,4 @@
-function [] = UpdateImages(source,varargin)
+function UpdateImages(source,varargin)
 %
 %----------------------------------------------------------------------------------------------------------------------------
 %
@@ -136,78 +136,33 @@ function [] = UpdateImages(source,varargin)
 
         case 'Plots'
 
-            try
-                delete(OOPSData.Handles.ScatterPlotAxH.Children)
-            catch
-                % do nothing
-            end
-            
             % update the scatter plot
-            OOPSData.Handles.hScatterPlot = PlotGroupScatterPlot(source,...
-                OOPSData.Handles.ScatterPlotAxH);
+            UpdateGroupScatterPlot(source);
 
             % update the swarm chart
             UpdateSwarmChart(source);
 
         case 'Polar Plots'
 
-            if isempty(cImage)
-                polarData = [];
-                groupPolarData = [];
-            else
-                % get the polar data for this image
-                polarData = deg2rad([cImage.Object(:).(OOPSData.Settings.PolarHistogramVariable)]);
-                polarData(isnan(polarData)) = [];
-                polarData(polarData<0) = polarData(polarData<0)+pi;
-                % get the polar data for this group
-                groupPolarData = deg2rad(OOPSData.CurrentGroup.GetAllObjectData(OOPSData.Settings.PolarHistogramVariable));
-                groupPolarData(isnan(groupPolarData)) = [];
-                groupPolarData(groupPolarData<0) = groupPolarData(groupPolarData<0)+pi;                
-            end
-
-            % set polar data and title for image polar histogram
-            OOPSData.Handles.ImagePolarHistogram.polarData = [polarData,polarData+pi];
-            OOPSData.Handles.ImagePolarHistogram.Title = ['Image - Object ',OOPSData.Settings.expandVariableName(OOPSData.Settings.PolarHistogramVariable)];
-
-            % set polar data and title for group polar histogram
-            OOPSData.Handles.GroupPolarHistogram.polarData = [groupPolarData,groupPolarData+pi];
-            OOPSData.Handles.GroupPolarHistogram.Title = ['Group - Object ',OOPSData.Settings.expandVariableName(OOPSData.Settings.PolarHistogramVariable)];
+            UpdatePolarHistogram(source)
 
         case 'Objects'
+
 
             try
                 % get handle to the current object
                 cObject = cImage.CurrentObject;
-                % get object mask image, restricted -> does not include nearby objects
-                % within padded object bounding box
+                % get padded object mask sub image
                 paddedSubImage = cObject.paddedSubImage;
-                % pad the object subarrayidx with 5 pixels per side
-                paddedSubarrayIdx = padSubarrayIdx(cObject.SubarrayIdx,5);
+                % get padded subarray idx
+                paddedSubarrayIdx = cObject.paddedSubarrayIdx;
             catch
                 disp('Warning: Error retrieving object data')
             end
-            
-            if any(isvalid(OOPSData.Handles.ObjectIntensityPlotAxH.Children))
-                delete(OOPSData.Handles.ObjectIntensityPlotAxH.Children);
-            end      
 
-            try
-                % initialize pixel-normalized intensity stack for curve fitting
-                PaddedObjPixelNormIntensity = zeros([size(paddedSubImage),4]);
-                % get pixel-normalized intensity stack for curve fitting
-                PaddedObjPixelNormIntensity(:) = cObject.Parent.ffcFPMPixelNorm(paddedSubarrayIdx{:},:);
-                % calculate and plot object intensity curve fits
-                OOPSData.Handles.ObjectIntensityPlotAxH = PlotObjectIntensityProfile([0,pi/4,pi/2,3*(pi/4)],...
-                    PaddedObjPixelNormIntensity,...
-                    paddedSubImage,...
-                    OOPSData.Handles.ObjectIntensityPlotAxH,...
-                    OOPSData.Settings.ObjectIntensityProfileFitLineColor,...
-                    OOPSData.Settings.ObjectIntensityProfilePixelLinesColor,...
-                    OOPSData.Settings.ObjectIntensityProfileAnnotationsColor,...
-                    OOPSData.Settings.ObjectIntensityProfileAzimuthLinesColor);
-            catch
-                disp('Warning: Error displaying object sinusoidal intensity fit curves');
-            end
+            % update the object intensity fit plot
+            UpdateObjectIntensityProfile(source);
+
 
             % display the (padded) intensity image of the object
             try
@@ -317,14 +272,14 @@ function [] = UpdateImages(source,varargin)
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
                 
-            catch ME
+            catch
                 % because setting the axes limits will change lim mode to 'manual', we need to set the limits
                 % if the sticks don't display properly in the try block above. Otherwise, the limits of 
                 % the axes might not match the size of CData of the image object it holds
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
-                % send a warning to the command window
-                warning(['Error displaying object azimuth sticks: ', ME.message]);
+
+                disp('Warning: Error displaying object azimuth sticks');
             end
 
 
