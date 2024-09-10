@@ -1,6 +1,6 @@
 # Object-Oriented Polarization Software (OOPS)
 
-[![version: v1.8.0](https://img.shields.io/badge/version-v1.8.0-green)](https://github.com/Mattheyses-Lab/OOPS/releases)
+[![version: v1.9.0](https://img.shields.io/badge/version-v1.8.0-green)](https://github.com/Mattheyses-Lab/OOPS/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](https://opensource.org/license/gpl-3-0/)
 
 A GUI-based MATLAB software package for object-oriented analysis of excitation-resolved, widefield fluorescence polarization microscopy (FPM) data.
@@ -14,8 +14,11 @@ To calculate pixel-by-pixel order and azimuth, you will need:
 0°, 45°, 90°, and 135° (counter-clockwise with respect to the horizontal direction in the image)
 - (optional) 4-image flat-field stack(s) captured at the same excitation polarizations
 
-For a more detailed description of our imaging setup and calculations, please see: 
-[Defining domain-specific orientational order in the desmosomal cadherins](https://www.sciencedirect.com/science/article/pii/S0006349522008293).
+For a more detailed information about the software, please read: 
+[OOPS: Object-Oriented Polarization Software for analysis of fluorescence polarization microscopy images](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011723)
+
+For more detailed information about out imaging setup and calculations, also see:
+[Defining domain-specific orientational order in the desmosomal cadherins](https://www.sciencedirect.com/science/article/pii/S0006349522008293)
 
 ## Key features
 
