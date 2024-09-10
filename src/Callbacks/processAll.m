@@ -28,6 +28,9 @@ function processAll(source,~)
     % number of groups in the project
     nGroups = OOPSData.nGroups;
 
+    % update log
+    UpdateLog3(source,sprintf('Processing %i groups containing a total of %i images',nGroups,nImages),'append');
+
     % create progress dialog
     hProgressDialog = uiprogressdlg(OOPSData.Handles.fH,"Message",'Performing flat-field correction');
 
@@ -90,7 +93,7 @@ function processAll(source,~)
         end
     end
 
-    % change to the Order Factor 'tab' if not there already
+    % change to the Order 'tab' if not there already
     if ~strcmp(OOPSData.Settings.CurrentTab,'Order')
         feval(OOPSData.Handles.hTabOrder.Callback,OOPSData.Handles.hTabOrder,[]);
     else
@@ -100,6 +103,9 @@ function processAll(source,~)
 
     % update display
     UpdateSummaryDisplay(source,{'Project','Group','Image','Object'});
+
+    % update the threshold slider
+    UpdateThresholdSlider(source);
 
     % update the intensity sliders
     UpdateIntensitySliders(source);
