@@ -21,6 +21,10 @@ function cmap_out = colormapDesigner(I)
 %
 %----------------------------------------------------------------------------------------------------------------------------
 
+    arguments
+        I (:,:) double = im2double(imread("rice.png"))
+    end
+
     % default output colormap
     cmap_out = gray;
 

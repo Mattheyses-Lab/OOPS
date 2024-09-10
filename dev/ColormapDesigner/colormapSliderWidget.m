@@ -58,6 +58,10 @@ classdef colormapSliderWidget < matlab.ui.componentcontainer.ComponentContainer
         colormapListener (1,1)
     end
 
+    properties(Dependent=true)
+        nNodes (1,1) double
+    end
+
     events (HasCallbackProperty, NotifyAccess = protected)
         ColormapChanged % ColormapChangedFcn callback property will be generated
     end
@@ -152,6 +156,8 @@ classdef colormapSliderWidget < matlab.ui.componentcontainer.ComponentContainer
         function slidingNodeClicked(obj,source,~)
             % the index of the clicked node
             nodeIdx = source.ID;
+            % select the node
+            obj.selectNode(nodeIdx);
             % choose behavior based on the type of click
             switch obj.parentFig.SelectionType
                 case 'alt'
@@ -286,6 +292,29 @@ classdef colormapSliderWidget < matlab.ui.componentcontainer.ComponentContainer
             for nodeIdx = obj.nodeIDs
                 obj.slidingNodes(nodeIdx).ID = nodeIdx;
             end
+        end
+
+        function selectNode(obj,nodePosition)
+            % set the active node idx
+            obj.activeNodeIdx = nodePosition;
+
+            for i = 1:obj.nNodes
+                if i == obj.activeNodeIdx
+                    obj.slidingNodes(i).EdgeWidth = 2;
+                else
+                    obj.slidingNodes(i).EdgeWidth = 1;
+                end
+            end
+        end
+
+    end
+
+    %% node info
+
+    methods
+
+        function nNodes = get.nNodes(obj)
+            nNodes = numel(obj.slidingNodes(isvalid(obj.slidingNodes)));
         end
 
     end
