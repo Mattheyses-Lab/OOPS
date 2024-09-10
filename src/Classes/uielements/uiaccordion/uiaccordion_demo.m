@@ -26,19 +26,15 @@ function accordion = uiaccordion_demo()
 
     accordionGrid = uigridlayout(fH,[1,1]);
 
-
-    % works
+    % create the accordion
     accordion = uiaccordion(accordionGrid);
-
-
-
 
     %% ACCORDION ITEM 1
 
     % add first accordion item
     accordion.addItem("Title","Accordion item properties");
     % set size and spacing of pane grid
-    accordion.Items(1).Pane.RowHeight = {25,25,25,25};
+    accordion.Items(1).Pane.RowHeight = {25,25,25,25,25};
     accordion.Items(1).Pane.ColumnWidth = {'fit','1x'};
     accordion.Items(1).Pane.RowSpacing = 5;
     accordion.Items(1).Pane.ColumnSpacing = 5;
@@ -71,7 +67,22 @@ function accordion = uiaccordion_demo()
         "ButtonPushedFcn",@setAccordionColors,...
         "Tag","FontColor",... % accordion property
         "UserData",accordion.Items(1)); % the accordion
-
+    % Border Width
+    uilabel(accordion.Items(1).Pane,"Text","Border Width","FontColor",[0 0 0]);
+    uieditfield(...
+        accordion.Items(1).Pane,...
+        "numeric",...
+        "ValueChangedFcn",@borderWidthChanged,...
+        "Value",1,...
+        "UserData",accordion.Items(1));
+    % Expanded Border Width
+    uilabel(accordion.Items(1).Pane,"Text","Expanded Border Width","FontColor",[0 0 0]);
+    uieditfield(...
+        accordion.Items(1).Pane,...
+        "numeric",...
+        "ValueChangedFcn",@expandedBorderWidthChanged,...
+        "Value",1,...
+        "UserData",accordion.Items(1));
    
     %% ACCORDION ITEM 2
 
@@ -112,7 +123,8 @@ function accordion = uiaccordion_demo()
     A_editfield = uieditfield(...
         accordion.Items(3).Pane,...
         "numeric",...
-        "ValueChangedFcn",@updatePlot);
+        "ValueChangedFcn",@updatePlot,...
+        "Value",1);
     % B
     uilabel(accordion.Items(3).Pane,"Text","B","FontColor",[0 0 0]);
     B_editfield = uieditfield(...
@@ -125,12 +137,6 @@ function accordion = uiaccordion_demo()
         accordion.Items(3).Pane,...
         "numeric",...
         "ValueChangedFcn",@updatePlot);
-
-
-
-
-
-
 
     % add another accordion item to show plot
     accordion.addItem("Title","Plot");
@@ -177,30 +183,24 @@ function accordion = uiaccordion_demo()
     end
 
     % plot update callback
-    function updatePlot(source,event)
-
-        % fun = plotTypeListBox.Value;
-
-        % A = 1;
-        % B = 0;
-        % C = 0;
+    function updatePlot(~,~)
 
         A = A_editfield.Value;
         B = B_editfield.Value;
         C = C_editfield.Value;
 
-        % YData = fun(1:360,A,B,C);
-        % 
-
-        % hPlot.YData = fun(0:360,A,B,C);
-
         hAx.Title.String = plotTypeListBox.Items{plotTypeListBox.ValueIndex};
         hPlot.YData = plotTypeListBox.Value(0:360,A,B,C);
 
-
     end
 
+    function borderWidthChanged(source,~)
+        source.UserData.BorderWidth = source.Value;
+    end
 
+    function expandedBorderWidthChanged(source,~)
+        source.UserData.ExpandedBorderWidth = source.Value;
+    end
 
 
 end
