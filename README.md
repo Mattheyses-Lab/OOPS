@@ -1,35 +1,42 @@
 # Object-Oriented Polarization Software (OOPS)
 
-[![version: v1.8.0](https://img.shields.io/badge/version-v1.8.0-green)](https://github.com/Mattheyses-Lab/OOPS/releases)
+[![version: v1.9.0](https://img.shields.io/badge/version-v1.9.0-green)](https://github.com/Mattheyses-Lab/OOPS/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](https://opensource.org/license/gpl-3-0/)
 
-A GUI-based MATLAB software package for object-oriented analysis of excitation-resolved, widefield fluorescence polarization microscopy (FPM) data.
+A GUI-based MATLAB software package for object-oriented analysis of fluorescence polarization microscopy (FPM) data.
+
+If you use this software, please cite:
+
+*Dean, W. F., Nawara, T. J., Albert, R. M. and Mattheyses, A. L. (2024) PLOS Computational Biology, 20(8). doi: 10.1371/journal.pcbi.1011723.*
 
 The ultimate goal of the software is to retrieve pixel-by-pixel order and orientation statistics. We refer to these throughout as:
 - Order - in-plane orientational order of all the dipoles in a single pixel
 - Azimuth - ensemble average direction of the dipoles in each pixel, as projected into the sample plane
 
-To calculate pixel-by-pixel order and azimuth, you will need:
-- (**required**) 4-image FPM stack(s), where individual images were captured using excitation polarizations of 
+To run OOPS, you will need:
+- (**required**) 4-image FPM stack(s), where individual images were captured using excitation polarizations (or emission analyzer orientations) of 
 0°, 45°, 90°, and 135° (counter-clockwise with respect to the horizontal direction in the image)
-- (optional) 4-image flat-field stack(s) captured at the same excitation polarizations
+- (optional) 4-image flat-field stack(s) captured using the same excitation polarizations
 
-For a more detailed description of our imaging setup and calculations, please see: 
-[Defining domain-specific orientational order in the desmosomal cadherins](https://www.sciencedirect.com/science/article/pii/S0006349522008293).
+For more information, please see our paper describing the software:
+[OOPS: Object-Oriented Polarization Software for analysis of fluorescence polarization microscopy images](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011723)
+
+For more detailed information about out imaging setup and calculations, also see:
+[Defining domain-specific orientational order in the desmosomal cadherins](https://www.sciencedirect.com/science/article/pii/S0006349522008293)
 
 ## Key features
 
 - Analyze and manage FPM datasets containing multiple experimental conditions and replicates
 - Flexible image segmentation: use built-in segmentation schemes, design custom segmentation schemes, or upload masks generated elsewhere
-- Calculate a large number of object properties
-- Automatically detect object midlines to calculate relative azimuths
+- Calculate a large number of object properties including order and orientation statistics derived from the polarization response data, morphological features measured from the binary image masks, and intensity statistics determined from the raw input data
+- Automatically detect object midlines to calculate azimuth orientations relative to biological features of interest
 - Group, sort, and filter objects: label objects manually, group objects automatically with k-means clustering, or sort objects based on property values
 - Export sortable object data tables for use in other plotting/statistics software
 - Export publication-quality images and plots directly from the software with various customization options
 
 ## Installation and usage
 
-This software has only been fully tested in MATLAB version `R2023b`. It is not guaranteed to work with any previous versions.
+This software has only been fully tested in MATLAB version `R2024a`. It is not guaranteed to work with any previous versions.
 
 OOPS makes use of several libraries sourced from the [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/) or elsewhere, each of which are subject to their own licenses. These libraries are included with the source in the `lib` directory, so you do not have to download them yourself. However, if you intend to use this software, read the documentation for each library to ensure that your desired use is permitted. The versions included with OOPS may or may not be the latest versions. If you update these libraries yourself, the software is not guaranteed to work. Links to each library and their licenses can be found in the [Sources](#sources) section.
 
