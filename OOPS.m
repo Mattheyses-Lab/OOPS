@@ -4979,9 +4979,11 @@ pause(0.5)
 
     function tbExportAxes(source,~)
         % get the parent toolbar of the calling button
-        ctb = source.Parent;
+        %ctb = source.Parent;
         % get the parent axes of that toolbar, which we will export
-        cax = ctb.Parent;
+        %cax = ctb.Parent;
+
+        cax = ancestor(source,'axes');
 
         uialert(OOPSData.Handles.fH,'Choose directory and filename','Export axes',...
             'Icon','',...
@@ -5023,7 +5025,7 @@ pause(0.5)
         end
 
         % export the axes as an image at 600 dpi
-        exportgraphics(cax,[pathname,filename],"ContentType","image","Resolution",600);
+        exportgraphics(cax.Parent,[pathname,filename],"ContentType","image","Resolution",600);
 
         % make title visible if resetTitle is true
         cax.Title.Visible = resetTitle;
