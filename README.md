@@ -36,7 +36,7 @@ For more detailed information about out imaging setup and calculations, also see
 
 ## Installation and usage
 
-This software has only been fully tested in MATLAB version `R2023b`. It is not guaranteed to work with any previous versions.
+This software has only been fully tested in MATLAB version `R2024a`. It is not guaranteed to work with any previous versions.
 
 OOPS makes use of several libraries sourced from the [MATLAB File Exchange](https://www.mathworks.com/matlabcentral/fileexchange/) or elsewhere, each of which are subject to their own licenses. These libraries are included with the source in the `lib` directory, so you do not have to download them yourself. However, if you intend to use this software, read the documentation for each library to ensure that your desired use is permitted. The versions included with OOPS may or may not be the latest versions. If you update these libraries yourself, the software is not guaranteed to work. Links to each library and their licenses can be found in the [Sources](#sources) section.
 
