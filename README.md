@@ -7,7 +7,7 @@ A GUI-based MATLAB software package for object-oriented analysis of fluorescence
 
 If you use this software, please cite:
 
-Dean, W. F., Nawara, T. J., Albert, R. M. and Mattheyses, A. L. (2024) PLOS Computational Biology, 20(8). doi: 10.1371/journal.pcbi.1011723.
+*Dean, W. F., Nawara, T. J., Albert, R. M. and Mattheyses, A. L. (2024) PLOS Computational Biology, 20(8). doi: 10.1371/journal.pcbi.1011723.*
 
 The ultimate goal of the software is to retrieve pixel-by-pixel order and orientation statistics. We refer to these throughout as:
 - Order - in-plane orientational order of all the dipoles in a single pixel
