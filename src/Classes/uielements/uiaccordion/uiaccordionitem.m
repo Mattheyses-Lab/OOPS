@@ -20,7 +20,14 @@ classdef uiaccordionitem < matlab.ui.componentcontainer.ComponentContainer
 %----------------------------------------------------------------------------------------------------------------------------
 
 properties
-    FontSize (1,1) double = 12
+
+    % font size of the title label
+    TitleFontSize (1,1) double = 12
+    % font size of objects placed in the pane
+    ContentFontSize (1,1) double = 12
+    % whether to use ContentFontSize when the component updates, disable to use manual font sizes
+    MatchPaneFontSizes (1,1) logical = true
+
     FontName (1,:) char = 'Helvetica'
     Title (1,:) char = 'Title'
     TitleBackgroundColor (1,3) double = [0.95 0.95 0.95]
@@ -29,6 +36,11 @@ properties
     BorderColor (1,3) double = [0.7 0.7 0.7]
     BorderWidth (1,1) = 1
     ExpandedBorderWidth (1,1) = 1
+
+    % padding above and below title
+    TitlePadding (1,1) double = 1
+
+    % expand/collapse indicator icons
     expandedIconLight (1,:) char = "AccordionExpandedIconWhite.png"
     collapsedIconLight (1,:) char = "AccordionCollapsedIconWhite.png"
     expandedIconDark (1,:) char = "AccordionExpandedIcon.png"
@@ -105,7 +117,7 @@ methods(Access=protected)
         obj.accordionButton = uibutton(obj.itemGrid,...
             "BackgroundColor",obj.TitleBackgroundColor,...
             "FontColor",[1 1 1],...
-            "FontSize",obj.FontSize,...
+            "FontSize",obj.TitleFontSize,...
             "Icon","AccordionCollapsedIcon.png",...
             "IconAlignment","center",...
             "ButtonPushedFcn",@(o,e) obj.componentNodeClicked(o,e),...
@@ -116,7 +128,7 @@ methods(Access=protected)
         obj.itemLabel = uilabel(obj.itemGrid,...
             "BackgroundColor",obj.TitleBackgroundColor,...
             "FontColor",obj.FontColor,...
-            "FontSize",obj.FontSize,...
+            "FontSize",obj.TitleFontSize,...
             "Text","Item");
         obj.itemLabel.Layout.Column = 2;
         obj.itemLabel.Layout.Row = 1;
@@ -163,24 +175,38 @@ methods(Access=protected)
         obj.itemGrid.RowHeight = obj.nodeSize;
         obj.itemGrid.ColumnWidth{1} = obj.nodeSize;
 
+        % add TitlePadding above and below title text
+        obj.itemGrid.Padding = [1,obj.TitlePadding,1,obj.TitlePadding];
+
         % make sure collapsed and expanded grids are sized to fit components
         obj.collapsedGrid.RowHeight{1} = 'fit';
         obj.expandedGrid.RowHeight{1} = 'fit';
+
         % set grid padding and row spacing to simulate borders
         obj.collapsedGrid.Padding = obj.gridPadding;
         obj.expandedGrid.RowSpacing = obj.ExpandedBorderWidth;
-        % update the item name label
+
+        % update the item title label
         obj.itemLabel.Text = obj.Title;
         obj.itemLabel.FontColor = obj.FontColor;
-        obj.itemLabel.FontSize = obj.FontSize;
+        obj.itemLabel.FontSize = obj.TitleFontSize;
         obj.itemLabel.FontName = obj.FontName;
         obj.itemLabel.BackgroundColor = obj.TitleBackgroundColor;
+
+        if obj.MatchPaneFontSizes
+            % update font sizes of objects in the Pane
+            fontsize(obj.Pane,obj.ContentFontSize,"pixels");
+        end
+
         % update the background color of item grid
         obj.itemGrid.BackgroundColor = obj.TitleBackgroundColor;
+
         % update font name of the title
         obj.accordionButton.FontName = obj.FontName;
+
         % update the background color of the Pane
         obj.Pane.BackgroundColor = obj.PaneBackgroundColor;
+
         % update border colors
         obj.expandedGrid.BackgroundColor = obj.BorderColor;
         obj.collapsedGrid.BackgroundColor = obj.BorderColor;
@@ -210,11 +236,11 @@ methods
     end
 
     function nodeSize = get.nodeSize(obj)
-        nodeSize = obj.FontSize + 6;
+        nodeSize = obj.TitleFontSize + 6;
     end
 
     function nodeSizeWithBorders = get.nodeSizeWithBorders(obj)
-        nodeSizeWithBorders = obj.nodeSize + obj.BorderWidth*2 + 2;
+        nodeSizeWithBorders = obj.nodeSize + obj.BorderWidth*2 + obj.TitlePadding*2;
     end
 
     function gridPadding = get.gridPadding(obj)
