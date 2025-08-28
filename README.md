@@ -21,7 +21,7 @@ To run OOPS, you will need:
 For more information, please see our paper describing the software:
 [OOPS: Object-Oriented Polarization Software for analysis of fluorescence polarization microscopy images](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1011723)
 
-For more detailed information about out imaging setup and calculations, also see:
+For more detailed information about our imaging setup and calculations, also see:
 [Defining domain-specific orientational order in the desmosomal cadherins](https://www.sciencedirect.com/science/article/pii/S0006349522008293)
 
 ## Key features
