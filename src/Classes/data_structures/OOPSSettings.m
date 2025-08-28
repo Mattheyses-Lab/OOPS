@@ -970,8 +970,6 @@ classdef OOPSSettings < handle
             DefaultLabel = obj.ObjectLabels(find(ismember(obj.LabelNames,'Default')));
         end
 
-
-
 %% k-means clustering settings
 
         function ClusterVariableList = get.ClusterVariableList(obj)
@@ -1080,6 +1078,8 @@ classdef OOPSSettings < handle
                     NameOut = 'Azimuth Angular Deviation';
                 case 'CurvatureAverage'
                     NameOut = 'Mean Curvature';
+                case 'ReferenceAverage'
+                    NameOut = 'Mean Reference Intensity';
                 otherwise
                     % check if the input is a custom statistic
                     if obj.isCustomStatistic(NameIn)

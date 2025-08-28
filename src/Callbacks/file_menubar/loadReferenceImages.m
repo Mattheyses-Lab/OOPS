@@ -120,6 +120,7 @@ for i=1:nFiles
     rawReferenceImage = imageInfo{1,1};
     % get the dimensions of the reference image
     [Height,Width] = size(rawReferenceImage);
+
     % check for valid image dimensions
     try
         assert(isequal([Height,Width],[cImage(i).Height,cImage(i).Width]),...
@@ -127,17 +128,28 @@ for i=1:nFiles
     catch ME
         uialert(OOPSData.Handles.fH,ME.message,'Error'); return
     end
+
     % get the class of the input
     rawReferenceClass = class(rawReferenceImage);
+    % get the range of values in the input stack using its class
+    rawReferenceRange = getrangefromclass(rawReferenceImage);
 
     % add all the data to the OOPSImage
-    cImage(i).rawReferenceImage = rawReferenceImage;
-    cImage(i).ReferenceImage = Scale0To1(im2double(cImage(i).rawReferenceImage));
     cImage(i).rawReferenceClass = rawReferenceClass;
+    cImage(i).rawReferenceRange = rawReferenceRange;
     cImage(i).rawReferenceFileName = rawReferenceFileName;
     cImage(i).rawReferenceFullName = rawReferenceFullName;
     cImage(i).rawReferenceShortName = rawReferenceShortName;
     cImage(i).rawReferenceFileType = rawReferenceFileType;
+    cImage(i).rawReferenceImage = rawReferenceImage;
+
+    referenceImageDouble = im2double(cImage(i).rawReferenceImage);
+    cImage(i).ReferenceImage = referenceImageDouble./max(max(referenceImageDouble));
+
+
+    %cImage(i).ReferenceImage = im2double(cImage(i).rawReferenceImage) .* cImage(i).rawReferenceRange(2);
+
+    % update status flag
     cImage(i).ReferenceImageLoaded = true;
 
     % update log to display image dimensions

@@ -36,7 +36,7 @@ function UpdateIntensityDoubleLineScan(source)
     % get the first image
     I = cImage.ffcFPMAverage;
     % get the second image
-    I2 = cImage.ReferenceImageEnhanced;
+    I2 = cImage.ReferenceImage;
 
     % position of the central axis of the line scan ROI
     ScanLinePosition = OOPSData.Handles.LineScanROI.Position;

@@ -100,8 +100,9 @@ classdef OOPSObject < handle & dynamicprops
     
     properties(Dependent = true)
 
-        % list of azimuth pixel values
-        AzimuthPixelValues
+
+        %% object parent info 
+
         % name of the group that to which this object belongs
         GroupName
         % idx of the group to which this object belongs
@@ -111,7 +112,22 @@ classdef OOPSObject < handle & dynamicprops
         % name of this object's parent image, but with some special characters preceeded by '\'
         texFriendlyImageName
 
-        % various object images
+        %% general object info
+
+        % index of this object in its parent 'Object' array
+        SelfIdx
+        % object name, based on SelfIdx
+        Name
+
+        %% object label properties, depend on currently applied label (OOPSLabel object)
+
+        LabelIdx
+        LabelName
+        LabelColor
+        LabelColorSquare
+
+        %% various object subimages
+
         PaddedOrderSubImage
         MaxScaledOrderSubImage
         UserScaledOrderSubImage
@@ -124,57 +140,58 @@ classdef OOPSObject < handle & dynamicprops
         PaddedAverageIntensityImageNorm
         % MidlineCurvatureImage
 
+        %% object location and boundary coordinates
+
         % x coordinate of the centroid
         CentroidX
         % y coordinate of the centroid
         CentroidY
+        % simplified boundary (may store in memory if becomes useful)
+        SimplifiedBoundary
+        % the expanded bounding box of this object (left,bottom,width,height)
+        expandedBoundingBox
+        % the coordinates to the four vertices in the expanded bounding box
+        expandedBoundingBoxCoordinates
+        % object boundary with respect to the padded object subimage
+        paddedSubImageBoundary
 
-        % Order properties of this object, dependent on Order image of Parent
+        %% Order stats of this object, dependent on Order image of Parent
+
         OrderAvg
         OrderStd
         OrderMin
         OrderMax
         OrderPixelValues
+
+        %% Azimuth stats of this object, dependent on Azimuth image of Parent and midline orientation
+
+        AzimuthAverage
+        AzimuthStd
+        AzimuthAngularDeviation
+        AzimuthPixelValues
+        MidlineRelativeAzimuth
+        NormalRelativeAzimuth
         
-        % object label properties, depend on currently applied label (OOPSLabel object)
-        LabelIdx
-        LabelName
-        LabelColor
-        LabelColorSquare
-
-        % index of this object in its parent 'Object' array
-        SelfIdx
-
-        % object name, based on SelfIdx
-        Name
-
-        % simplified boundary (may store in memory if becomes useful)
-        SimplifiedBoundary
-
-        % the expanded bounding box of this object (left,bottom,width,height)
-        expandedBoundingBox
-
-        % the coordinates to the four vertices in the expanded bounding box
-        expandedBoundingBoxCoordinates
-
-        % object boundary with respect to the padded object subimage
-        paddedSubImageBoundary
+        %% midline stats of this object
 
         % list of values for each object pixel representing the direction normal to the closest midline point
         pixelMidlineNormalList
 
-        % azimuth stats
-        AzimuthAverage
-        AzimuthStd
-        AzimuthAngularDeviation
-        MidlineRelativeAzimuth
-        NormalRelativeAzimuth
-
-        % midline stats
+        % tortuosity of the object midline
         Tortuosity
+        % length of the object midline (in the same units as the pixel dimensions of the input data) 
         MidlineLength
+        % axial mean direction of the midline tangents
         TangentAverage
+
         % CurvatureAverage
+
+        %% reference stats of this object, dependent on Reference image of Parent
+
+        % mean reference intensity
+        ReferenceAverage
+
+
 
         %% Summaries
 
@@ -629,6 +646,23 @@ classdef OOPSObject < handle & dynamicprops
                 Tortuosity = NaN;
             end
         end
+
+        function ReferenceAverage = get.ReferenceAverage(obj)
+
+            % return NaN if no reference image exists
+            if ~obj.Parent.ReferenceImageLoaded
+                ReferenceAverage = NaN;
+                return
+            end
+
+            % average Reference intensity of all pixels identified by the mask
+            try
+                ReferenceAverage = mean(obj.Parent.rawReferenceImage(obj.PixelIdxList));
+            catch
+                ReferenceAverage = NaN;
+            end
+        end
+
         
 %% summaries
 
@@ -652,6 +686,7 @@ classdef OOPSObject < handle & dynamicprops
                 "Solidity",...
                 "Mean signal intensity",...
                 "Mean BG intensity",...
+                "Mean reference intensity",...
                 "Index",...
                 "Tortuosity",...
                 "Midline length",...
@@ -675,38 +710,13 @@ classdef OOPSObject < handle & dynamicprops
                 {sprintf('%.2f',obj.Solidity)},...
                 {sprintf('%d A.U.',round(obj.SignalAverage))},...
                 {sprintf('%d A.U.',round(obj.BGAverage))},...
+                {sprintf('%d A.U.',round(obj.ReferenceAverage))},...
                 {sprintf('%d',obj.SelfIdx)},...
                 {sprintf('%.2f',obj.Tortuosity)},...
                 {sprintf('%.2f px',obj.MidlineLength)},...
                 {sprintf('%.2f°',obj.TangentAverage)},...
                 'VariableNames',varNames,...
                 'RowNames',"Object");
-
-            % ObjectSummaryDisplayTable = table(...
-            %     {obj.Name},...
-            %     {obj.Label.Name},...
-            %     {obj.OrderAvg},...
-            %     {obj.AzimuthAverage},...
-            %     {obj.MidlineRelativeAzimuth},...
-            %     {obj.NormalRelativeAzimuth},...
-            %     {obj.AzimuthStd},...
-            %     {obj.SBRatio},...
-            %     {obj.Area},...
-            %     {obj.ConvexArea},...
-            %     {obj.Perimeter},...
-            %     {obj.Circularity},...
-            %     {obj.Eccentricity},...
-            %     {obj.Extent},...
-            %     {obj.Solidity},...
-            %     {obj.SignalAverage},...
-            %     {obj.BGAverage},...
-            %     {obj.SelfIdx},...
-            %     {obj.Tortuosity},...
-            %     {obj.MidlineLength},...
-            %     {obj.TangentAverage},...
-            %     'VariableNames',varNames,...
-            %     'RowNames',"Object");
-
 
             ObjectSummaryDisplayTable = rows2vars(ObjectSummaryDisplayTable,"VariableNamingRule","preserve");
 

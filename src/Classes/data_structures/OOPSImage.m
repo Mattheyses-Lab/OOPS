@@ -110,6 +110,7 @@ classdef OOPSImage < handle & dynamicprops
         ReferenceImage (:,:) double
         %ReferenceImageEnhanced double
         rawReferenceClass (1,:) char
+        rawReferenceRange  (1,2) double
         rawReferenceFileName (1,:) char
         rawReferenceFullName (1,:) char
         rawReferenceShortName (1,:) char

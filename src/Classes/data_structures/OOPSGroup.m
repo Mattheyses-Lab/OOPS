@@ -546,6 +546,7 @@
                 'MinFeretDiameter',0,...
                 'MinorAxisLength',0,...
                 'Perimeter',0,...
+                'ReferenceAverage',0,...
                 'Solidity',0,...
                 'Tortuosity',0);
 
@@ -595,6 +596,9 @@
                     dataStruct(MasterIdx).NormalRelativeAzimuth = thisObject.NormalRelativeAzimuth;
                     dataStruct(MasterIdx).OrderAvg = thisObject.OrderAvg;
                     dataStruct(MasterIdx).Perimeter = thisObject.Perimeter;
+
+                    dataStruct(MasterIdx).ReferenceAverage = thisObject.ReferenceAverage;
+                    
                     dataStruct(MasterIdx).SBRatio = thisObject.SBRatio;
                     dataStruct(MasterIdx).SignalAverage = thisObject.SignalAverage;
                     dataStruct(MasterIdx).Solidity = thisObject.Solidity;
