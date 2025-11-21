@@ -30,10 +30,12 @@ function UpdateImages(source,varargin)
     if ~isempty(cImage)
         % then we will update the display according to the first image in the list
         cImage = cImage(1);
+        % empty image to serve as a placeholder
+        EmptyImage = sparse(zeros(cImage.Height,cImage.Width));
+    else
+        % empty image to serve as a placeholder
+        EmptyImage = sparse(zeros(1024,1024));
     end
-
-    % empty image to serve as a placeholder
-    EmptyImage = sparse(zeros(cImage.Height,cImage.Width));
     
     % check if we really need to update to prevent unnecessary overhead
     % ex: if varargin{1} = {'Files','Mask'}, only update if the current tab is 'Files' or 'Mask'
@@ -51,10 +53,21 @@ function UpdateImages(source,varargin)
             try
                 for i = 1:4
                     OOPSData.Handles.FFCImgH(i).CData = cGroup.FFC_cal_norm(:,:,i);
+                    % OOPSData.Handles.FFCAxH(i).XLim = [0.5 cImage.Width+0.5];
+                    % OOPSData.Handles.FFCAxH(i).YLim = [0.5 cImage.Height+0.5];
+                    OOPSData.Handles.FFCAxH(i).XLim = [0.5 cGroup.FFC_Width+0.5];
+                    OOPSData.Handles.FFCAxH(i).YLim = [0.5 cGroup.FFC_Height+0.5];
+
                 end
             catch
                 for i = 1:4
                     OOPSData.Handles.FFCImgH(i).CData = EmptyImage;
+                    % OOPSData.Handles.FFCAxH(i).XLim = [0.5 cImage.Width+0.5];
+                    % OOPSData.Handles.FFCAxH(i).YLim = [0.5 cImage.Height+0.5];
+                    OOPSData.Handles.FFCAxH(i).XLim = [0.5 size(EmptyImage,2)+0.5];
+                    OOPSData.Handles.FFCAxH(i).YLim = [0.5 size(EmptyImage,1)+0.5];
+
+
                 end
             end
 
@@ -62,11 +75,18 @@ function UpdateImages(source,varargin)
                 images = cImage.rawFPMStack_normalizedbystack;
                 for i = 1:4
                     OOPSData.Handles.RawIntensityImgH(i).CData = images(:,:,i);
+                    OOPSData.Handles.RawIntensityAxH(i).XLim = [0.5 cImage.Width+0.5];
+                    OOPSData.Handles.RawIntensityAxH(i).YLim = [0.5 cImage.Height+0.5];
                 end
                 clear images
             catch
                 for i = 1:4
                     OOPSData.Handles.RawIntensityImgH(i).CData = EmptyImage;
+                    % OOPSData.Handles.RawIntensityAxH(i).XLim = [0.5 cImage.Width+0.5];
+                    % OOPSData.Handles.RawIntensityAxH(i).YLim = [0.5 cImage.Height+0.5];
+                    OOPSData.Handles.RawIntensityAxH(i).XLim = [0.5 size(EmptyImage,2)+0.5];
+                    OOPSData.Handles.RawIntensityAxH(i).YLim = [0.5 size(EmptyImage,1)+0.5];
+
                 end                
             end
         case 'FFC'
@@ -75,11 +95,18 @@ function UpdateImages(source,varargin)
                 images = cImage.ffcFPMStack_normalizedbystack;
                 for i = 1:4
                     OOPSData.Handles.PolFFCImgH(i).CData = images(:,:,i);
+                    OOPSData.Handles.PolFFCAxH(i).XLim = [0.5 cImage.Width+0.5];
+                    OOPSData.Handles.PolFFCAxH(i).YLim = [0.5 cImage.Height+0.5];
                 end
                 clear images
             catch
                 for i = 1:4
                     OOPSData.Handles.PolFFCImgH(i).CData = EmptyImage;
+                    % OOPSData.Handles.PolFFCAxH(i).XLim = [0.5 cImage.Width+0.5];
+                    % OOPSData.Handles.PolFFCAxH(i).YLim = [0.5 cImage.Height+0.5];
+                    OOPSData.Handles.PolFFCAxH(i).XLim = [0.5 size(EmptyImage,2)+0.5];
+                    OOPSData.Handles.PolFFCAxH(i).YLim = [0.5 size(EmptyImage,1)+0.5];
+
                 end                      
             end
 
@@ -88,11 +115,18 @@ function UpdateImages(source,varargin)
                 images = cImage.rawFPMStack_normalizedbystack;
                 for i = 1:4
                     OOPSData.Handles.RawIntensityImgH(i).CData = images(:,:,i);
+                    OOPSData.Handles.RawIntensityAxH(i).XLim = [0.5 cImage.Width+0.5];
+                    OOPSData.Handles.RawIntensityAxH(i).YLim = [0.5 cImage.Height+0.5];
                 end
                 clear images
             catch
                 for i = 1:4
                     OOPSData.Handles.RawIntensityImgH(i).CData = EmptyImage;
+                    % OOPSData.Handles.RawIntensityAxH(i).XLim = [0.5 cImage.Width+0.5];
+                    % OOPSData.Handles.RawIntensityAxH(i).YLim = [0.5 cImage.Height+0.5];
+                    OOPSData.Handles.RawIntensityAxH(i).XLim = [0.5 size(EmptyImage,2)+0.5];
+                    OOPSData.Handles.RawIntensityAxH(i).YLim = [0.5 size(EmptyImage,1)+0.5];
+
                 end
             end         
 
@@ -156,6 +190,8 @@ function UpdateImages(source,varargin)
                 paddedSubImage = cObject.paddedSubImage;
                 % get padded subarray idx
                 paddedSubarrayIdx = cObject.paddedSubarrayIdx;
+                % get size of padded object subimage for setting axes limits
+                objectPaddedSize = size(cObject.paddedSubImage);
             catch
                 disp('Warning: Error retrieving object data')
             end
@@ -167,6 +203,8 @@ function UpdateImages(source,varargin)
             % display the (padded) intensity image of the object
             try
                 OOPSData.Handles.ObjectPolFFCImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
+                OOPSData.Handles.ObjectPolFFCAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
+                OOPSData.Handles.ObjectPolFFCAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
             catch
                 disp('Warning: Error displaying object intensity image');
                 OOPSData.Handles.ObjectPolFFCImgH.CData = EmptyImage;
@@ -176,8 +214,8 @@ function UpdateImages(source,varargin)
             try
                 % testing below - use RGB instead of logical for easier exporting
                 OOPSData.Handles.ObjectMaskImgH.CData = cObject.MaskImageRGB;
-                OOPSData.Handles.ObjectMaskAxH.XLim = OOPSData.Handles.ObjectPolFFCAxH.XLim;
-                OOPSData.Handles.ObjectMaskAxH.YLim = OOPSData.Handles.ObjectPolFFCAxH.YLim;
+                OOPSData.Handles.ObjectMaskAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
+                OOPSData.Handles.ObjectMaskAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
             catch
                 disp('Warning: Error displaying object binary image');
                 OOPSData.Handles.ObjectMaskImgH.CData = EmptyImage;
@@ -189,6 +227,8 @@ function UpdateImages(source,varargin)
             % display the (padded) intensity image of the object
             try
                 OOPSData.Handles.ObjectAzimuthOverlayImgH.CData = Scale0To1(cObject.PaddedFFCIntensitySubImage);
+                OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
+                OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
             catch
                 disp('Warning: Error displaying object intensity image');
                 OOPSData.Handles.ObjectAzimuthOverlayImgH.CData = EmptyImage;
@@ -267,7 +307,7 @@ function UpdateImages(source,varargin)
                     LineScale,...
                     theta2);
 
-                objectPaddedSize = size(cObject.paddedSubImage);
+                %objectPaddedSize = size(cObject.paddedSubImage);
 
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
                 OOPSData.Handles.ObjectAzimuthOverlayAxH.XLim = [0.5 objectPaddedSize(2)+0.5];
@@ -340,6 +380,10 @@ function UpdateImages(source,varargin)
                     PaddedObjNormIntensity(:,:,2),...
                     PaddedObjNormIntensity(:,:,3),...
                     PaddedObjNormIntensity(:,:,4)];
+
+                OOPSData.Handles.ObjectNormIntStackAxH.YLim = [0.5 objectPaddedSize(1)+0.5];
+                OOPSData.Handles.ObjectNormIntStackAxH.XLim = [0.5 objectPaddedSize(2)*4+0.5];
+
             catch
                 disp('Warning: Error displaying stack-normalized object intensity')
                 OOPSData.Handles.ObjectNormIntStackImgH.CData = repmat(EmptyImage,1,4);

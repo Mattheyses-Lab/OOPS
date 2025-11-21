@@ -308,10 +308,10 @@ OOPSData.Handles.SettingsAccordion = uiaccordion(OOPSData.Handles.SettingsPanelG
 
 %% set up some variables used broadly by multiple settings objects
 
-% default matlab colors and colornames
-[colorNames,colorCodes] = colornames('MATLAB');
-colorNames = colorNames';
-colorCodesCell = mat2cell(colorCodes,ones(size(colorCodes,1),1),3)';
+% % default matlab colors and colornames
+% [colorNames,colorCodes] = colornames('MATLAB');
+% colorNames = colorNames';
+% colorCodesCell = mat2cell(colorCodes,ones(size(colorCodes,1),1),3)';
 
 %% CHECKPOINT
 
@@ -3547,11 +3547,11 @@ disp('Opening...')
 
 % some functionality will work better if the MATLAB desktop window is minimized
 % uses the com.mathworks package, which will be removed in the future
-try
-    minimizeMLDesktop();
-catch
-    warning('Could not minimize MATLAB desktop window');
-end
+% try
+%     minimizeMLDesktop();
+% catch
+%     warning('Could not minimize MATLAB desktop window');
+% end
 
 % set figure to visible to draw containers
 OOPSData.Handles.fH.Visible = 'On';

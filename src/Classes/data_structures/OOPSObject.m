@@ -105,6 +105,8 @@ classdef OOPSObject < handle & dynamicprops
 
         % name of the group that to which this object belongs
         GroupName
+        % name of this object's parent group, but with some special characters preceeded by '\'
+        texFriendlyGroupName
         % idx of the group to which this object belongs
         GroupIdx
         % name of this object's parent image
@@ -409,6 +411,12 @@ classdef OOPSObject < handle & dynamicprops
         function GroupName = get.GroupName(obj)
             % convert the name of this object's group to a string, return
             GroupName = convertCharsToStrings(obj.Parent.Parent.GroupName);
+        end
+
+        function texFriendlyGroupName = get.texFriendlyGroupName(obj)
+            % testing below
+            nameSplit = strsplit(obj.Parent.Parent.GroupName,'_');
+            texFriendlyGroupName = convertCharsToStrings(strjoin(nameSplit,"\_"));
         end
 
         function GroupIdx = get.GroupIdx(obj)

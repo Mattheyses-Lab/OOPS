@@ -27,7 +27,6 @@ classdef OOPSProject < handle
 %
 %----------------------------------------------------------------------------------------------------------------------------
 
-    % experimental groups class
     properties
         % name of the project
         ProjectName = 'Untitled';
