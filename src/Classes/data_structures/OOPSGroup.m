@@ -545,6 +545,7 @@
                 'MidlineLength',0,...
                 'MinFeretDiameter',0,...
                 'MinorAxisLength',0,...
+                'Orientation',0,...
                 'Perimeter',0,...
                 'ReferenceAverage',0,...
                 'Solidity',0,...
@@ -568,45 +569,44 @@
                     % get the object
                     thisObject = obj.Replicate(j).Object(k);
         
-                    % add group, image, and object names/idxs to the table
-                    dataStruct(MasterIdx).GroupIdx = obj.SelfIdx;
-                    dataStruct(MasterIdx).GroupName = obj.GroupName;
-                    dataStruct(MasterIdx).ImageIdx = j;
-                    dataStruct(MasterIdx).ImageName = obj.Replicate(j).rawFPMShortName;
-                    dataStruct(MasterIdx).ObjectIdx = k;
+                    % add group, image, object, label names/idxs to the table
+                    dataStruct(MasterIdx).GroupIdx   = obj.SelfIdx;
+                    dataStruct(MasterIdx).GroupName  = obj.GroupName;
+                    dataStruct(MasterIdx).ImageIdx   = j;
+                    dataStruct(MasterIdx).ImageName  = obj.Replicate(j).rawFPMShortName;
+                    dataStruct(MasterIdx).ObjectIdx  = k;
+                    dataStruct(MasterIdx).LabelName  = thisObject.LabelName;
         
                     % add object data to the table for each built-in property
-                    dataStruct(MasterIdx).Area = thisObject.Area;
-                    dataStruct(MasterIdx).AzimuthAngularDeviation = thisObject.AzimuthAngularDeviation;
-                    dataStruct(MasterIdx).AzimuthAverage = thisObject.AzimuthAverage;
-                    dataStruct(MasterIdx).AzimuthStd = thisObject.AzimuthStd;
-                    dataStruct(MasterIdx).BGAverage = thisObject.BGAverage;
-                    dataStruct(MasterIdx).Circularity = thisObject.Circularity;
-                    dataStruct(MasterIdx).ConvexArea = thisObject.ConvexArea;
-                    dataStruct(MasterIdx).Eccentricity = thisObject.Eccentricity;
-                    dataStruct(MasterIdx).EquivDiameter = thisObject.EquivDiameter;
-                    dataStruct(MasterIdx).Extent = thisObject.Extent;
-                    dataStruct(MasterIdx).LabelName = thisObject.LabelName;
-                    dataStruct(MasterIdx).MajorAxisLength = thisObject.MajorAxisLength;
-                    dataStruct(MasterIdx).MaxFeretDiameter = thisObject.MaxFeretDiameter;
-                    dataStruct(MasterIdx).MidlineLength = thisObject.MidlineLength;
-                    dataStruct(MasterIdx).MidlineRelativeAzimuth = thisObject.MidlineRelativeAzimuth;
-                    dataStruct(MasterIdx).MinFeretDiameter = thisObject.MinFeretDiameter;
-                    dataStruct(MasterIdx).MinorAxisLength = thisObject.MinorAxisLength;
-                    dataStruct(MasterIdx).NormalRelativeAzimuth = thisObject.NormalRelativeAzimuth;
-                    dataStruct(MasterIdx).OrderAvg = thisObject.OrderAvg;
-                    dataStruct(MasterIdx).Perimeter = thisObject.Perimeter;
-
-                    dataStruct(MasterIdx).ReferenceAverage = thisObject.ReferenceAverage;
-                    
-                    dataStruct(MasterIdx).SBRatio = thisObject.SBRatio;
-                    dataStruct(MasterIdx).SignalAverage = thisObject.SignalAverage;
-                    dataStruct(MasterIdx).Solidity = thisObject.Solidity;
-                    dataStruct(MasterIdx).Tortuosity = thisObject.Tortuosity;
+                    dataStruct(MasterIdx).Area                       = round(thisObject.Area,2);
+                    dataStruct(MasterIdx).AzimuthAngularDeviation    = round(thisObject.AzimuthAngularDeviation,2);
+                    dataStruct(MasterIdx).AzimuthAverage             = round(thisObject.AzimuthAverage,2);
+                    dataStruct(MasterIdx).AzimuthStd                 = round(thisObject.AzimuthStd,2);
+                    dataStruct(MasterIdx).BGAverage                  = round(thisObject.BGAverage,2);
+                    dataStruct(MasterIdx).Circularity                = round(thisObject.Circularity,2);
+                    dataStruct(MasterIdx).ConvexArea                 = round(thisObject.ConvexArea,2);
+                    dataStruct(MasterIdx).Eccentricity               = round(thisObject.Eccentricity,2);
+                    dataStruct(MasterIdx).EquivDiameter              = round(thisObject.EquivDiameter,2);
+                    dataStruct(MasterIdx).Extent                     = round(thisObject.Extent,2);
+                    dataStruct(MasterIdx).MajorAxisLength            = round(thisObject.MajorAxisLength,2);
+                    dataStruct(MasterIdx).MaxFeretDiameter           = round(thisObject.MaxFeretDiameter,2);
+                    dataStruct(MasterIdx).MidlineLength              = round(thisObject.MidlineLength,2);
+                    dataStruct(MasterIdx).MidlineRelativeAzimuth     = round(thisObject.MidlineRelativeAzimuth,2);
+                    dataStruct(MasterIdx).MinFeretDiameter           = round(thisObject.MinFeretDiameter,2);
+                    dataStruct(MasterIdx).MinorAxisLength            = round(thisObject.MinorAxisLength,2);
+                    dataStruct(MasterIdx).NormalRelativeAzimuth      = round(thisObject.NormalRelativeAzimuth,2);
+                    dataStruct(MasterIdx).Orientation                = round(thisObject.Orientation,2);
+                    dataStruct(MasterIdx).OrderAvg                   = round(thisObject.OrderAvg,4);
+                    dataStruct(MasterIdx).Perimeter                  = round(thisObject.Perimeter,2);
+                    dataStruct(MasterIdx).ReferenceAverage           = round(thisObject.ReferenceAverage,2);
+                    dataStruct(MasterIdx).SBRatio                    = round(thisObject.SBRatio,2);
+                    dataStruct(MasterIdx).SignalAverage              = round(thisObject.SignalAverage,2);
+                    dataStruct(MasterIdx).Solidity                   = round(thisObject.Solidity,2);
+                    dataStruct(MasterIdx).Tortuosity                 = round(thisObject.Tortuosity,2);
 
                     % add object data for each custom property
                     for statIdx = 1:numel(nCustomStats)
-                        dataStruct(MasterIdx).(customStats{statIdx}) = thisObject.(customStats{statIdx});
+                        dataStruct(MasterIdx).(customStats{statIdx}) = round(thisObject.(customStats{statIdx}),4);
                     end
 
                     MasterIdx = MasterIdx+1;

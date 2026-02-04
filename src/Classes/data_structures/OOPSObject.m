@@ -184,7 +184,7 @@ classdef OOPSObject < handle & dynamicprops
         % length of the object midline (in the same units as the pixel dimensions of the input data) 
         MidlineLength
         % axial mean direction of the midline tangents
-        TangentAverage
+        Orientation
 
         % CurvatureAverage
 
@@ -581,11 +581,11 @@ classdef OOPSObject < handle & dynamicprops
             end
         end
 
-        function TangentAverage = get.TangentAverage(obj)
+        function Orientation = get.Orientation(obj)
             try
-                TangentAverage = rad2deg(getAzimuthAverage(getMidlineTangent(obj.Midline)));
+                Orientation = rad2deg(getAzimuthAverage(getMidlineTangent(obj.Midline)));
             catch
-                TangentAverage = NaN;
+                Orientation = NaN;
             end
         end
 
@@ -698,7 +698,7 @@ classdef OOPSObject < handle & dynamicprops
                 "Index",...
                 "Tortuosity",...
                 "Midline length",...
-                "Mean midline tangent"];
+                "Orientation"];
 
             ObjectSummaryDisplayTable = table(...
                 {obj.Name},...
@@ -722,7 +722,7 @@ classdef OOPSObject < handle & dynamicprops
                 {sprintf('%d',obj.SelfIdx)},...
                 {sprintf('%.2f',obj.Tortuosity)},...
                 {sprintf('%.2f px',obj.MidlineLength)},...
-                {sprintf('%.2f°',obj.TangentAverage)},...
+                {sprintf('%.2f°',obj.Orientation)},...
                 'VariableNames',varNames,...
                 'RowNames',"Object");
 
