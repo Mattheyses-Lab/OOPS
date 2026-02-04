@@ -50,6 +50,8 @@ OOPSData.Handles.fH.Visible = 'Off';
 % supported by Bio-Formats
 if bfCheckJavaPath()
     fileExtensions = bfGetFileExtensions();
+    % remove invalid file filters ('*.')
+    fileExtensions = fileExtensions(~ismember(fileExtensions(:,1),'*.'),:);
 else
     fileExtensions = {'*'};
 end
