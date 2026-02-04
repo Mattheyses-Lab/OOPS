@@ -77,6 +77,7 @@ set(OOPSData.Handles.fH,'defaultTextFontWeight','bold');
 
 % turn off any warnings that do not adversely affect computation
 warning('off','MATLAB:polyshape:repairedBySimplify');
+warning('off','MATLAB:handle_graphics:exceptions:SceneNode') % still unsure what pops this warning in R2025b
 
 %% CHECKPOINT
 
@@ -99,8 +100,10 @@ OOPSData.Handles.hLoadMaskImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Loa
 OOPSData.Handles.hLoadMaskImages_4conn = uimenu(OOPSData.Handles.hLoadMaskImages,'Text','Label 4-connected objects','Callback',@loadMaskImages,'Tag','4conn');
 OOPSData.Handles.hLoadMaskImages_branches = uimenu(OOPSData.Handles.hLoadMaskImages,'Text','Label branches','Callback',@loadMaskImages,'Tag','branches');
 % save data
-OOPSData.Handles.hSaveImageData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export images','Separator','On','Callback',@exportImages);
-OOPSData.Handles.hSaveObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export object data','Callback',@SaveObjectData);
+OOPSData.Handles.hExportImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Export images','Separator','On','Callback',@exportImages);
+OOPSData.Handles.hExportObjectData = uimenu(OOPSData.Handles.hFileMenu,'Text','Export object data','Callback',@SaveObjectData);
+OOPSData.Handles.hExportObjectImages = uimenu(OOPSData.Handles.hFileMenu,'Text','Export object images');
+OOPSData.Handles.hExportObjectImages_montage = uimenu(OOPSData.Handles.hExportObjectImages,'Text','Intensity montage','Callback',@exportObjectIntensityMontage);
 % segmentation schemes
 OOPSData.Handles.hNewSegmentationScheme = uimenu(OOPSData.Handles.hFileMenu,'Text','New segmentation scheme','Separator','On','Callback',@BuildNewScheme);
 % save settings

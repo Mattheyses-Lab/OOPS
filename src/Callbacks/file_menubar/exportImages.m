@@ -210,38 +210,7 @@ function exportImages(source,~)
             pathSep = '\';
         end
 
-        % name for the directory in which the output images for this image will be saved
-        newDirName = [pathname,pathSep,cImage(i).rawFPMShortName];
-
-        try
-            % create the new directory
-            mkdir(newDirName)
-        catch
-            % if unable to create directory, warn the user
-            UpdateLog3(source,['Warning: Unable to create directory: ',newDirName],'append');
-            % then continue to the next image
-            continue
-        end
-
-        % base name for each exported image, including file path
-        loc = [pathname,pathSep,cImage(i).rawFPMShortName,pathSep,cImage(i).rawFPMShortName];
-        
-        % % control for mac vs pc
-        % if ismac || isunix
-        %     newDirName = [pathname '/' cImage(i).rawFPMShortName];
-        %     try
-        %         % create a new folder in the specified directory with the short name of the image
-        %         mkdir(newDirName)
-        %     catch
-        %         % if unable to create directory, warn the user
-        %         UpdateLog3(source,['Warning: Unable to create directory: ',newDirName],'append');
-        %         % then continue to the next image
-        %         continue
-        %     end
-        %     loc = [pathname '/' cImage(i).rawFPMShortName '/' cImage(i).rawFPMShortName];
-        % elseif ispc
-        %     loc = [pathname '\' cImage(i).rawFPMShortName '\' cImage(i).rawFPMShortName];
-        % end
+        loc = [pathname,pathSep,cImage(i).rawFPMShortName];
         
         %% Intensity
 
@@ -361,6 +330,32 @@ function exportImages(source,~)
             UpdateLog3(source,name,'append');
             IOut = cImage(i).MaskedOrderImageRGB;
             imwrite(IOut,name,'Software',softwareName);         
+        end
+
+        if any(strcmp(UserSaveChoices,'Masked order (RGB, 24-bit, PNG, auto)'))
+            name = [loc '-auto_scaled_masked_order_RGB.png'];
+            UpdateLog3(source,name,'append');
+            IOut = MaskRGB(cImage(i).MaxScaledOrderImageRGB,cImage(i).bw);
+            % dynamic range used to export the order image
+            orderDisplayRange = [0 max(max(cImage(i).OrderImage))];
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar]);       
+        end
+
+        if any(strcmp(UserSaveChoices,'Masked order (RGB, 24-bit, PNG, user)'))
+            name = [loc '-user_scaled_masked_order_RGB.png'];
+            UpdateLog3(source,name,'append');
+            IOut = MaskRGB(cImage(i).UserScaledOrderImageRGB,cImage(i).bw);
+            % dynamic range used to export the order image
+            orderDisplayRange = cImage(i).OrderDisplayLimits;
+            % char vector to store the display range in the PNG 'comment' field
+            orderDisplayRangeChar = makeDislpayRangeChar(round(orderDisplayRange,2));
+            % write the image data
+            imwrite(IOut,name,'Software',softwareName,...
+                'Comment',['Order Display Range: ',orderDisplayRangeChar]);         
         end
 
         %% Azimuth
@@ -588,7 +583,9 @@ function exportImages(source,~)
                     'Order (RGB, 24-bit, PNG, user)';...
                     'Order-intensity overlay (RGB, 24-bit, PNG, auto)';...
                     'Order-intensity overlay (RGB, 24-bit, PNG, user)';...
-                    'Masked order (RGB, 24-bit, PNG, none)'
+                    'Masked order (RGB, 24-bit, PNG, none)';...
+                    'Masked order (RGB, 24-bit, PNG, auto)';...
+                    'Masked order (RGB, 24-bit, PNG, user)'...
                     };
             case 'Azimuth'
                 subCats = {...
