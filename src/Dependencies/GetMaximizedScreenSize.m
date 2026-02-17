@@ -23,6 +23,11 @@ function ScreenSize = GetMaximizedScreenSize()
 %
 %----------------------------------------------------------------------------------------------------------------------------
 
+if ispc
+    ScreenSize = get(0,"ScreenSize");
+    return
+end
+
 %% get screen width and height using Java commands
 
 toolkit = java.awt.Toolkit.getDefaultToolkit();
