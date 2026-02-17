@@ -176,6 +176,11 @@ OOPSData.Handles.hPlotMenu = uimenu(OOPSData.Handles.fH,'Text','Plot');
 OOPSData.Handles.hPlotGroupScatterPlotMatrix = uimenu(OOPSData.Handles.hPlotMenu,'Text','Group scatter plot matrix','MenuSelectedFcn',@PlotGroupScatterPlotMatrix);
 OOPSData.Handles.hPlotObjectIntensityProfile = uimenu(OOPSData.Handles.hPlotMenu,'Text','Object intensity profile','MenuSelectedFcn',@xPlotObjectIntensityProfile);
 OOPSData.Handles.hPlotFullAzimuthQuiver = uimenu(OOPSData.Handles.hPlotMenu,'Text','Azimuth stick plot','MenuSelectedFcn',@PlotFullAzimuthQuiver);
+OOPSData.Handles.hPlotMidlineScan = uimenu(OOPSData.Handles.hPlotMenu,'Text','Object midline scan');
+OOPSData.Handles.hPlotMidlineScan_order = uimenu(OOPSData.Handles.hPlotMidlineScan,'Text','Object midline scan (Order only)','MenuSelectedFcn',@(o,e) plotObjectMidlineScan(o,'order'));
+OOPSData.Handles.hPlotMidlineScan_order_intensity = uimenu(OOPSData.Handles.hPlotMidlineScan,'Text','Object midline scan (Order + Intensity)','MenuSelectedFcn',@(o,e) plotObjectMidlineScan(o,'order+intensity'));
+OOPSData.Handles.hPlotMidlineScan_order_reference = uimenu(OOPSData.Handles.hPlotMidlineScan,'Text','Object midline scan (Order + Reference)','MenuSelectedFcn',@(o,e) plotObjectMidlineScan(o,'order+reference'));
+
 % Show images
 OOPSData.Handles.hPlot_Images = uimenu(OOPSData.Handles.hPlotMenu,'Text','Images');
 % options for 'Images'

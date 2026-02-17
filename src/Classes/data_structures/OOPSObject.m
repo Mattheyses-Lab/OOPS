@@ -140,8 +140,8 @@ classdef OOPSObject < handle & dynamicprops
         MidlineTangentImage
         MidlineRelativeAzimuthImage
         PaddedAverageIntensityImageNorm
-        % MidlineCurvatureImage
 
+        PaddedAverageIntensityImage
         PaddedReferenceSubImage
 
         %% object location and boundary coordinates
@@ -633,9 +633,9 @@ classdef OOPSObject < handle & dynamicprops
             try
                 MidlineLength = getCurveLength(obj.Midline);
 
-                if ~isnan(obj.Parent.rawFPMPixelSize)
-                    MidlineLength = MidlineLength*obj.Parent.rawFPMPixelSize;
-                end
+                % if ~isnan(obj.Parent.rawFPMPixelSize)
+                %     MidlineLength = MidlineLength*obj.Parent.rawFPMPixelSize;
+                % end
 
             catch
                 MidlineLength = NaN;
@@ -850,6 +850,12 @@ classdef OOPSObject < handle & dynamicprops
             PaddedAverageIntensityImageNorm = obj.Parent.I(obj.paddedSubarrayIdx{:});
             PaddedAverageIntensityImageNorm = Scale0To1(PaddedAverageIntensityImageNorm);
         end
+
+        function PaddedAverageIntensityImage = get.PaddedAverageIntensityImage(obj)
+            % flatfield-corrected intensity subimage, unscaled
+            PaddedAverageIntensityImage = obj.Parent.ffcFPMAverage(obj.paddedSubarrayIdx{:});
+        end
+
 
         function PaddedAverageIntensityImageNormRGB = get.PaddedAverageIntensityImageNormRGB(obj)
             PaddedAverageIntensityImageNormRGB = ...
