@@ -142,6 +142,8 @@ classdef OOPSObject < handle & dynamicprops
         PaddedAverageIntensityImageNorm
         % MidlineCurvatureImage
 
+        PaddedReferenceSubImage
+
         %% object location and boundary coordinates
 
         % x coordinate of the centroid
@@ -762,8 +764,9 @@ classdef OOPSObject < handle & dynamicprops
         end
         
         function PaddedMaskSubImage = get.PaddedMaskSubImage(obj)
-            PaddedMaskSubImage = obj.Parent.bw(obj.paddedSubarrayIdx);
+            PaddedMaskSubImage = obj.Parent.bw(obj.paddedSubarrayIdx{:});
         end
+
 
         function MidlineTangentImage = get.MidlineTangentImage(obj)
             MidlineTangentImage = zeros(size(obj.paddedSubImage));
@@ -784,10 +787,9 @@ classdef OOPSObject < handle & dynamicprops
             MidlineRelativeAzimuthImage(obj.paddedPixelIdxList) = angle(exp(2i*azimuthValues)./exp(2i*tangentValues))*0.5;
         end
 
-        % function MidlineCurvatureImage = get.MidlineCurvatureImage(obj)
-        %     MidlineCurvatureImage = zeros(size(obj.paddedSubImage));
-        %     MidlineCurvatureImage(obj.paddedPixelIdxList) = obj.pixelMidlineCurvatureList;
-        % end
+        function PaddedReferenceSubImage = get.PaddedReferenceSubImage(obj)
+            PaddedReferenceSubImage = obj.Parent.rawReferenceImage(obj.paddedSubarrayIdx{:});
+        end
 
 %% RGB output images
 
