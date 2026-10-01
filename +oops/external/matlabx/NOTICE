@@ -1,0 +1,208 @@
+matlabx third-party notices
+===========================
+
+This project includes or interoperates with third-party software. The
+matlabx project itself is licensed under the GNU General Public License,
+version 2 or later. See LICENSE for the full license text.
+
+
+Bio-Formats / bfmatlab
+----------------------
+
+This repository bundles the Bio-Formats MATLAB helper files under:
+
+    external/bfmatlab/
+
+and the Bio-Formats Java package:
+
+    external/bfmatlab/bioformats_package.jar
+
+The bundled JAR manifest identifies it as:
+
+    Implementation-Title: bioformats_package
+    Implementation-Version: 8.5.0
+    Implementation-Date: 18 March 2026
+    Implementation-Vendor: Open Microscopy Environment
+    Implementation-Build: 877c317e4e396381dc76e56c1539b24947f71dce
+    Implementation-URL: https://www.openmicroscopy.org/bio-formats/
+
+Bio-Formats is developed by the Open Microscopy Environment (OME):
+
+    https://www.openmicroscopy.org/bio-formats/
+    https://github.com/ome/bioformats
+
+Bio-Formats is distributed under GNU public copyleft licenses or more
+permissive open source licenses depending on component. The bundled
+bioformats_package.jar contains embedded license and notice metadata,
+including:
+
+    META-INF/LICENSE
+    META-INF/LICENSE.txt
+    META-INF/NOTICE
+    META-INF/NOTICE.txt
+    META-INF/third-party-licenses/
+
+OME's licensing information is available at:
+
+    https://www.openmicroscopy.org/licensing/
+
+
+ColorBrewer
+-----------
+
+This repository bundles ColorBrewer color scheme data under:
+
+    assets/colormaps/Brewer/
+
+ColorBrewer color specifications and designs are developed by Cynthia Brewer,
+Mark Harrower, and The Pennsylvania State University.
+
+Copyright (c) 2002 Cynthia Brewer, Mark Harrower, and The Pennsylvania State
+University. All rights reserved.
+
+This product includes color specifications and designs developed by Cynthia
+Brewer (http://colorbrewer.org/).
+
+The ColorBrewer color schemes are distributed under an Apache-style software
+license for ColorBrewer software and ColorBrewer color schemes. The name
+"ColorBrewer" must not be used to endorse or promote products derived from
+this software without prior written permission.
+
+
+cmocean
+-------
+
+This repository bundles cmocean-style colormap data under:
+
+    assets/colormaps/cmocean/
+
+cmocean is a collection of perceptually uniform colormaps for oceanography and
+related scientific visualization. The MATLAB cmocean package is associated with
+Kristen M. Thyng and Chad A. Greene, with additional authorship/citation
+information in the cmocean project documentation:
+
+    https://github.com/chadagreene/cmocean
+    https://github.com/matplotlib/cmocean
+
+If these colormaps are useful in scientific work, please consider citing:
+
+    Thyng, K.M., C.A. Greene, R.D. Hetland, H.M. Zimmerle, and S.F. DiMarco.
+    2016. True colors of oceanography: Guidelines for effective and accurate
+    colormap selection. Oceanography 29(3):9-13.
+    https://dx.doi.org/10.5670/oceanog.2016.66
+
+cmocean is distributed under an MIT-style license in its upstream packages.
+
+
+Scientific colour maps by Fabio Crameri
+---------------------------------------
+
+This repository bundles Scientific colour map data under:
+
+    assets/colormaps/Crameri/
+
+These colour maps are developed by Fabio Crameri and collaborators for
+accurate, colour-blind-friendly scientific visualization:
+
+    https://www.fabiocrameri.ch/colourmaps/
+    https://doi.org/10.5281/zenodo.1243862
+
+If these colormaps are useful in scientific work, please cite the upstream
+Scientific colour maps publication/version as appropriate. Common citations
+include:
+
+    Crameri, F. (2018). Scientific colour maps. Zenodo.
+    https://doi.org/10.5281/zenodo.1243862
+
+    Crameri, F., Shephard, G.E., and Heron, P.J. (2020). The misuse of colour
+    in science communication. Nature Communications, 11, 5444.
+    https://doi.org/10.1038/s41467-020-19160-7
+
+
+Matplotlib perceptual colormaps
+-------------------------------
+
+This repository bundles Matplotlib perceptual colormap data under:
+
+    assets/colormaps/Matplotlib/
+
+The bundled maps include Magma, Inferno, Plasma, and Viridis. These colormaps
+were created for Matplotlib by Nathaniel J. Smith and Stefan van der Walt, and
+in the case of Viridis also Eric Firing.
+
+The original colormap data are released under the CC0 public domain dedication:
+
+    https://bids.github.io/colormap/
+    https://creativecommons.org/publicdomain/zero/1.0/
+    https://matplotlib.org/stable/project/license.html
+
+
+Fiji/ImageJ lookup tables
+-------------------------
+
+This repository bundles Fiji/ImageJ-style lookup table data under:
+
+    assets/colormaps/Fiji/
+
+Fiji and ImageJ are open scientific image processing projects. Fiji is a
+"batteries-included" distribution of ImageJ, and its components are distributed
+under GPL and other open licenses depending on component:
+
+    https://imagej.net/licensing/
+    https://github.com/fiji/fiji
+
+The lookup table names and data in this folder are intended to provide familiar
+Fiji/ImageJ visualization options within matlabx.
+
+
+Wes Anderson palettes
+---------------------
+
+This repository bundles Wes Anderson-inspired palette data under:
+
+    assets/colormaps/WesAnderson/
+
+These palettes are associated with the R package "wesanderson", a Wes Anderson
+palette generator by Karthik Ram and contributors:
+
+    https://github.com/karthik/wesanderson
+    https://CRAN.R-project.org/package=wesanderson
+
+The upstream R package is distributed under the MIT license plus its LICENSE
+file.
+
+
+matlabx-authored colormaps
+--------------------------
+
+This repository includes matlabx-authored colormap data under:
+
+    assets/colormaps/Colors/
+    assets/colormaps/Custom/
+
+The Colors maps are simple black-to-color linear RGB gradients. These maps are
+part of matlabx and are covered by the matlabx project license.
+
+The MATLAB colormap category exposed by matlabx is generated at runtime from
+the user's installed MATLAB built-in colormap functions; matlabx does not
+redistribute MathWorks colormap data.
+
+
+COLORNAMES
+----------
+
+This repository bundles Stephen Cobeldick's COLORNAMES utility under:
+
+    external/colornames/
+
+The bundled license file is:
+
+    external/colornames/license.txt
+
+COLORNAMES is distributed under a BSD-style license. Its copyright notice
+begins:
+
+    Copyright (c) 2026, Stephen Cobeldick
+    All rights reserved.
+
+The full license terms are retained in the bundled license file.

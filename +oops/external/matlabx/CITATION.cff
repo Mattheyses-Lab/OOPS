@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: matlabx
+message: "If you use matlabx in your work, please cite this repository."
+type: software
+authors:
+  - family-names: Dean
+    given-names: William
+repository-code: "https://github.com/will-f-dean-36/matlabx"
+url: "https://github.com/will-f-dean-36/matlabx"
+license: GPL-2.0-or-later
+abstract: "MATLAB utilities for app building, image display, interaction routing, and image analysis."
