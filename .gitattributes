@@ -1,0 +1,21 @@
+* text=auto
+
+# MATLAB/source text
+*.m text
+*.md text
+*.txt text
+
+# Binary assets/data/dependencies
+*.fig binary
+*.jar binary
+*.mat binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.pdf binary
+
+# Preserve vendored/external files exactly as provided
+external/** -text
