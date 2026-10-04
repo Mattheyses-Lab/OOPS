@@ -151,6 +151,15 @@ classdef ImageAxesContextMenuManager < handle
                     matlab.lang.OnOffSwitchState(obj.Host.currentComponentCanHaveColor());
             end
 
+            if isfield(obj.BuiltinUI, "Overlays")
+                obj.BuiltinUI.Overlays.Checked = obj.Host.OverlaysVisible;
+            end
+
+            if isfield(obj.BuiltinUI, "Mask")
+                obj.BuiltinUI.Mask.Checked = obj.Host.MaskEnabled;
+                obj.BuiltinUI.Mask.Enable = matlab.lang.OnOffSwitchState(~isempty(obj.Host.Mask));
+            end
+
             if isfield(obj.BuiltinUI, "ViewportBox")
                 obj.BuiltinUI.ViewportBox.Checked = obj.Host.ViewportBoxVisible;
             end
@@ -405,6 +414,14 @@ classdef ImageAxesContextMenuManager < handle
         %BUILDDISPLAYMENU Add grouped image display-aid commands.
             S.Display = uimenu(obj.Menu, "Text", "Display");
             S = obj.buildViewportBoxMenu(S, S.Display);
+            S.Overlays = uimenu(S.Display, ...
+                "Text", "Show Overlays", ...
+                "MenuSelectedFcn", @(~,~) obj.Host.toggleOverlays(), ...
+                "Checked", obj.Host.OverlaysVisible);
+            S.Mask = uimenu(S.Display, ...
+                "Text", "Mask Image", ...
+                "MenuSelectedFcn", @(~,~) obj.Host.toggleMask(), ...
+                "Checked", obj.Host.MaskEnabled);
         end
 
         function S = buildImagePropertiesMenu(obj, S, parent, separator)

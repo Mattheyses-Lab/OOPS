@@ -387,6 +387,11 @@ classdef ImageAxesOverlayManager < handle
                 opts.Type (1,:) string = ""
             end
 
+            if obj.Host.OverlaysVisible == "off"
+                ids = string.empty(1,0);
+                return
+            end
+
             candidateIDs = obj.idsForTypes(opts.Type);
             keep = false(size(candidateIDs));
 
@@ -399,7 +404,7 @@ classdef ImageAxesOverlayManager < handle
         end
 
         function refreshVisibility(obj)
-        %REFRESHVISIBILITY Sync overlay visibility to current C/Z/T view.
+        %REFRESHVISIBILITY Combine host visibility with current C/Z/T applicability.
             vals = obj.Registry.values;
             for i = 1:numel(vals)
                 overlay = vals{i};
@@ -407,7 +412,7 @@ classdef ImageAxesOverlayManager < handle
                     continue
                 end
 
-                visible = overlay.appliesToView( ...
+                visible = obj.Host.OverlaysVisible == "on" && overlay.appliesToView( ...
                     obj.Host.C, obj.Host.Z, obj.Host.T, obj.Host.ShowComposite);
                 overlay.setViewVisible(matlab.lang.OnOffSwitchState(visible));
             end
