@@ -84,48 +84,65 @@ classdef ImageAxesOverlayManager < handle
         end
 
         function remove(obj, id)
-        %REMOVE Delete and unregister an overlay by ID.
-            id = obj.normalizeId(id);
-            if ~obj.has(id)
-                return
+        %REMOVE Delete one overlay using the same notification path as a batch.
+            obj.removeMany(obj.normalizeId(id));
+        end
+
+        function removeMany(obj, ids)
+        %REMOVEMANY Delete overlays and publish their final shared state.
+        %
+        %   Duplicate/missing IDs are ignored. Surviving overlays retain their
+        %   state and selection order. This is a graphics/registry operation:
+        %   it never invokes a tool's application deletion-request callback.
+        %
+        %   OverlayRemoved fires once per removed ID for compatibility, in
+        %   request order, after the ENTIRE batch is removed. It retains its
+        %   existing empty event payload. ActiveChanged, HoverChanged, and
+        %   SelectionChanged then fire at most once each, only when affected.
+        %   Listeners should query the manager for the completed batch state.
+
+            ids = unique(obj.normalizeIds(ids), "stable");
+            ids = ids(arrayfun(@(id) obj.has(id), ids));
+            if isempty(ids), return; end
+
+            activeChanged = any(ismember(obj.ActiveID, ids));
+            hoverChanged = any(ismember(obj.HoverID, ids));
+            selectedRemoved = ismember(obj.SelectedIDs, ids);
+            selectionChanged = any(selectedRemoved);
+
+            % Keep handles locally while detaching the entire batch. Clear the
+            % manager's references before deleting graphics, since destruction
+            % itself can run user listeners. No manager event is emitted yet.
+            overlays = cell(1, numel(ids));
+            for i = 1:numel(ids)
+                overlays{i} = obj.get(ids(i));
+            end
+            if activeChanged, obj.ActiveID = ""; end
+            if hoverChanged, obj.HoverID = ""; end
+            obj.SelectedIDs(selectedRemoved) = [];
+            obj.Registry.remove(cellstr(ids));
+
+            % Do not repaint doomed overlays by clearing their appearance
+            % flags first. They are no longer registered and are being deleted.
+            for i = 1:numel(overlays)
+                if isvalid(overlays{i})
+                    delete(overlays{i});
+                end
             end
 
-            overlay = obj.get(id);
-            wasActive = obj.ActiveID == id;
-            wasHover = obj.HoverID == id;
-            wasSelected = any(obj.SelectedIDs == id);
-
-            % State is manager-owned, so removal also clears any state pointing
-            % at this overlay before its graphics disappear.
-            obj.clearStateForID(id);
-            obj.Registry.remove(char(id));
-
-            if isvalid(overlay)
-                delete(overlay);
+            % Retain legacy removal notification counts, but coalesce shared
+            % state notifications so applications reconcile selection once.
+            for i = 1:numel(ids)
+                notify(obj, 'OverlayRemoved');
             end
-
-            notify(obj, 'OverlayRemoved');
-            if wasActive
-                notify(obj, 'ActiveChanged');
-            end
-            if wasHover
-                notify(obj, 'HoverChanged');
-            end
-            if wasSelected
-                notify(obj, 'SelectionChanged');
-            end
+            if activeChanged, notify(obj, 'ActiveChanged'); end
+            if hoverChanged, notify(obj, 'HoverChanged'); end
+            if selectionChanged, notify(obj, 'SelectionChanged'); end
         end
 
         function clear(obj)
-        %CLEAR Delete all overlays and reset active/hover/selection state.
-            ids = obj.ids();
-            for i = numel(ids):-1:1
-                obj.remove(ids(i));
-            end
-
-            obj.ActiveID = "";
-            obj.HoverID = "";
-            obj.SelectedIDs = string.empty(1,0);
+        %CLEAR Remove all overlays with the same final-state batch semantics.
+            obj.removeMany(obj.ids());
         end
 
         function overlay = get(obj, id)
@@ -286,36 +303,39 @@ classdef ImageAxesOverlayManager < handle
         end
 
         function setSelected(obj, ids, opts)
-        %SETSELECTED Replace selected overlay IDs.
+        %SETSELECTED Replace membership, optionally within one overlay type.
+        %   Retained IDs keep their order and appearance. New IDs are appended
+        %   in request order. Unchanged membership produces no notification;
+        %   a real change produces exactly one SelectionChanged notification.
             arguments
                 obj
                 ids
                 opts.Type (1,1) string = ""
             end
 
-            ids = obj.normalizeIds(ids);
+            ids = unique(obj.normalizeIds(ids), "stable");
             ids = ids(arrayfun(@(id) obj.has(id), ids));
             ids = obj.filterIDsByType(ids, opts.Type);
 
-            % A type-filtered replacement should only modify selection for that
-            % overlay family, leaving other future overlay types untouched.
+            % Compare membership only. Reordering the same IDs must not repaint
+            % retained overlays or trigger application reconciliation.
             old = obj.getSelectedIDs(Type=opts.Type);
-            for i = 1:numel(old)
-                if obj.has(old(i))
-                    overlay = obj.get(old(i));
+            removed = old(~ismember(old, ids));
+            added = ids(~ismember(ids, old));
+            if isempty(removed) && isempty(added), return; end
+
+            % Preserve all survivors in their existing order (including other
+            % overlay types), then append additions in stable request order.
+            % Publish IDs before appearance setters, which can run listeners.
+            obj.SelectedIDs = [obj.SelectedIDs(~ismember(obj.SelectedIDs, removed)), added];
+            for i = 1:numel(removed)
+                overlay = obj.get(removed(i));
+                if ~isempty(overlay) && isvalid(overlay)
                     overlay.Selected = false;
                 end
             end
-
-            if strlength(opts.Type) > 0
-                keep = obj.SelectedIDs(~ismember(obj.SelectedIDs, old));
-                obj.SelectedIDs = [keep, unique(ids, "stable")];
-            else
-                obj.SelectedIDs = unique(ids, "stable");
-            end
-
-            for i = 1:numel(ids)
-                overlay = obj.get(ids(i));
+            for i = 1:numel(added)
+                overlay = obj.get(added(i));
                 overlay.Selected = true;
             end
 
@@ -420,26 +440,6 @@ classdef ImageAxesOverlayManager < handle
     end
 
     methods (Access=private)
-        function clearStateForID(obj, id)
-        %CLEARSTATEFORID Remove one ID from active/hover/selection state.
-            if obj.has(id)
-                overlay = obj.get(id);
-                if isvalid(overlay)
-                    overlay.Active = false;
-                    overlay.Hovered = false;
-                    overlay.Selected = false;
-                end
-            end
-
-            if obj.ActiveID == id
-                obj.ActiveID = "";
-            end
-            if obj.HoverID == id
-                obj.HoverID = "";
-            end
-            obj.SelectedIDs(obj.SelectedIDs == id) = [];
-        end
-
         function ids = filterIDsByType(obj, ids, typeName)
         %FILTERIDSBYTYPE Keep only IDs whose overlays match typeName.
             ids = obj.normalizeIds(ids);

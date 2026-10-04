@@ -19,10 +19,18 @@ classdef Polygon < matlabx.ui.axes.AxesTool
 %
 %   This tool controls all Polygon overlays in the host registry. It keeps no
 %   duplicate overlay list. Removing the tool leaves the overlays intact.
-%   PolygonDeletedFcn receives data.ID for deletions requested through this tool.
+%   By default, PolygonDeletedFcn receives data.ID after each tool deletion.
+%   With PolygonsDeleteRequestedFcn installed, one data.IDs request is sent
+%   instead and the application owns deletion and overlay reconciliation.
 %   Activation and selection callbacks also reflect manager/rectangle selection.
 
     properties
+        % Optional application-owned deletion. Called once with data.IDs;
+        % no overlays/state are changed by the tool when this is installed.
+        % The application reconciles accepted deletions using Overlays.removeMany.
+        PolygonsDeleteRequestedFcn = []
+        % Legacy notification after each optimistic deletion; used only when
+        % PolygonsDeleteRequestedFcn is empty.
         PolygonDeletedFcn = []
         PolygonActivatedFcn = []
         PolygonSelectionChangedFcn = []
@@ -122,14 +130,8 @@ classdef Polygon < matlabx.ui.axes.AxesTool
         end
 
         function removePolygon(obj, id)
-        %REMOVEPOLYGON Delete one polygon and notify the application.
-            overlay = obj.Host.Overlays.get(id);
-            if ~isa(overlay, 'matlabx.ui.axes.overlays.Polygon'), return; end
-            id = overlay.ID;
-            obj.Host.Overlays.remove(id);
-            if ~isempty(obj.PolygonDeletedFcn)
-                obj.PolygonDeletedFcn(obj, struct('ID', id));
-            end
+        %REMOVEPOLYGON Request deletion, or delete optimistically in legacy mode.
+            obj.requestDeletion(id);
         end
 
         function selectAllPolygons(obj)
@@ -160,17 +162,17 @@ classdef Polygon < matlabx.ui.axes.AxesTool
 
         function deleteActivePolygon(obj)
             id = obj.Host.Overlays.getActiveID(Type="Polygon");
-            if strlength(id) > 0, obj.removePolygon(id); end
+            obj.requestDeletion(id);
         end
 
         function deleteSelectedPolygons(obj)
             ids = obj.getSelectedPolygonIDs();
-            for i = 1:numel(ids), obj.removePolygon(ids(i)); end
+            obj.requestDeletion(ids);
         end
 
         function deleteAllPolygons(obj)
             ids = obj.Host.Overlays.ids(Type="Polygon");
-            for i = 1:numel(ids), obj.removePolygon(ids(i)); end
+            obj.requestDeletion(ids);
         end
 
         function summary = getHelpSummary(~)
@@ -194,11 +196,54 @@ classdef Polygon < matlabx.ui.axes.AxesTool
             notes = ["Active and selected are separate states. Geometry cannot be dragged or edited."; ...
                 "All loops of a polygon, including holes, belong to one region."; ...
                 "Deleting a polygon does not modify the image mask."; ...
+                "When configured, the application handles deletion requests before overlays change."; ...
                 "Removing this tool preserves polygon overlays."];
         end
     end
 
     methods (Access=private)
+        function requestDeletion(obj, ids)
+        %REQUESTDELETION Single entry point for clicks and batch menu actions.
+            ids = unique(matlabx.ui.axes.ImageAxesOverlayManager.normalizeIds(ids), "stable");
+            % Ignore stale IDs and other overlay families before notifying the
+            % app. Empty requests are no-ops, not empty application callbacks.
+            keep = false(size(ids));
+            for i = 1:numel(ids)
+                overlay = obj.Host.Overlays.get(ids(i));
+                keep(i) = isa(overlay, 'matlabx.ui.axes.overlays.Polygon') && isvalid(overlay);
+            end
+            ids = ids(keep);
+            if isempty(ids), return; end
+
+            if ~isempty(obj.PolygonsDeleteRequestedFcn)
+                % This callback owns the decision AND model update. Do not clear
+                % selection or delete anything first. Intentionally do not catch
+                % exceptions: failure must never fall back to optimistic removal.
+                % Changes made by the callback itself cannot be rolled back here.
+                obj.PolygonsDeleteRequestedFcn(obj, struct('IDs', ids));
+                return
+            end
+
+            % Preserve legacy sequencing: remove one, notify one, then continue.
+            % An old callback may reconcile other IDs, so recheck each overlay.
+            % Never call removePolygon here; it routes back to this helper.
+            for i = 1:numel(ids)
+                obj.removePolygonOptimistically(ids(i));
+            end
+        end
+
+        function removePolygonOptimistically(obj, id)
+        %REMOVEPOLYGONOPTIMISTICALLY Legacy deletion and per-ID notification.
+            overlay = obj.Host.Overlays.get(id);
+            if ~isa(overlay, 'matlabx.ui.axes.overlays.Polygon') || ~isvalid(overlay)
+                return
+            end
+            obj.Host.Overlays.remove(id);
+            if ~isempty(obj.PolygonDeletedFcn)
+                obj.PolygonDeletedFcn(obj, struct('ID', id));
+            end
+        end
+
         function tf = rectangleSelectionEnabled(obj)
             tools = obj.Host.Tools;
             tf = isfield(tools, 'RectangleSelect') && tools.RectangleSelect.Enabled;
