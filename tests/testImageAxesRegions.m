@@ -82,21 +82,37 @@ function testMaskAcrossViews(testCase)
     verifyEqual(testCase, h.AlphaData, double(ax.Mask));
 end
 
-function testPolygonGeometryAndHoles(testCase)
+function testPolygonGeometry(testCase)
     ax = testCase.TestData.Axes;
-    vertices = [1 1; 9 1; 9 9; 1 9; NaN NaN; 3 3; 3 7; 7 7; 7 3];
+    vertices = [0 0; 4 0; 2 2; 0 2];
     p = ax.Overlays.add('Polygon','Vertices',vertices,'ID','region');
-    verifyEqual(testCase, p.Center, [5 5], 'AbsTol',1e-12);
-    fill = findobj(ax.getAxes(), 'Tag','OverlayPolygonFill');
-    mesh = triangulation(fill.Faces,fill.Vertices);
-    verifyTrue(testCase, isnan(pointLocation(mesh,[5 5])));
-    verifyFalse(testCase, isnan(pointLocation(mesh,[2 2])));
-    verifyTrue(testCase, p.isInsideRectangle([4 6 4 6]));
-    verifyEqual(testCase, ax.Overlays.idsInsideRectangle([4 6 4 6]), "region");
+    patch = findobj(ax.getAxes(), 'Tag','OverlayPolygon');
+    verifyEqual(testCase,numel(patch),1);
+    verifyEqual(testCase,patch.Type,'patch');
+    verifyEqual(testCase,patch.Vertices,vertices);
+    verifyEqual(testCase,patch.Faces,1:4);
+    verifyEqual(testCase,p.Center,[14/9 8/9],'AbsTol',1e-12);
+    verifyEqual(testCase,ax.Overlays.idsInsideRectangle([1 2 0 1]),"region");
+    % Closure, duplicate vertices, and winding are app-owned and preserved.
+    closed = [vertices; vertices(1,:)];
+    verifyWarningFree(testCase,@() set(p,'Vertices',closed));
+    verifyEqual(testCase,p.Vertices,closed);
+    verifyEqual(testCase,p.Center,[14/9 8/9],'AbsTol',1e-12);
+    p.Vertices = flipud(closed) + 1e6;
+    verifyEqual(testCase,p.Center,[14/9 8/9]+1e6,'AbsTol',1e-9);
+    p.Vertices = [1 1; 2 2; 3 3];
+    verifyEqual(testCase,p.Center,[2 2]);
+    % Self-touching contours must not trigger normalization warnings.
+    raw = [0 0; 4 0; 2 2; 4 4; 0 4; 2 2; 0 0];
+    verifyWarningFree(testCase,@() set(p,'Vertices',raw));
+    verifyEqual(testCase,patch.Vertices,raw);
+    p.Selected = true;
+    verifyEqual(testCase,patch.LineWidth,p.SelectionLineWidth);
     p.Visible = 'off';
-    verifyEmpty(testCase, ax.Overlays.idsInsideRectangle([4 6 4 6]));
-    p.Vertices = [1 1; 3 1; 3 3; 1 3];
-    verifyEqual(testCase, p.Center, [2 2], 'AbsTol',1e-12);
+    verifyEqual(testCase,string(patch.Visible),"off");
+    p.Vertices = zeros(0,2);
+    verifyEmpty(testCase,patch.Faces);
+    verifyTrue(testCase,all(isnan(p.Center)));
 end
 
 function testPolygonSelectionAndDeletion(testCase)
@@ -127,7 +143,7 @@ end
 function testPolygonClickAndMarqueeRouting(testCase)
     ax = testCase.TestData.Axes;
     ax.Overlays.add('Polygon','ID','a','Vertices',[1 1; 3 1; 3 3; 1 3]);
-    target = findobj(ax.getAxes(),'Tag','OverlayPolygonBoundary');
+    target = findobj(ax.getAxes(),'Tag','OverlayPolygon');
     E = matlabx.ui.interaction.HubEvent(testCase.TestData.Figure,target,'Down',[]);
     ax.routeEventToTools(E);
     verifyEqual(testCase, ax.Overlays.getActiveID(), "a");
@@ -193,7 +209,7 @@ function testGlobalOverlayVisibility(testCase)
     ax.OverlaysVisible = 'off';
     verifyEqual(testCase, string(p.Visible), "on");
     verifyEqual(testCase, string(p.ViewVisible), "off");
-    boundary = findobj(ax.getAxes(),'Tag','OverlayPolygonBoundary');
+    boundary = findobj(ax.getAxes(),'Tag','OverlayPolygon');
     verifyEqual(testCase, string(boundary.Visible), "off");
     verifyEmpty(testCase, ax.Overlays.idsInsideRectangle([0 12 0 10]));
     added = ax.Overlays.add('Box','ID','added','Center',[4 4]);
