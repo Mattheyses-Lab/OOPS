@@ -398,7 +398,8 @@ classdef ImageAxesToolManager < handle
                         'ValueChangedFcn', @(btn,~) host.onToolToggle(btn.Value, tool.Name));
             end
 
-            host.mainAxes.Toolbar.reset;
+            % below commented - errors in R2026
+            %host.mainAxes.Toolbar.reset;
         end
 
         function removeToolbarButton(obj, tool)
@@ -417,7 +418,8 @@ classdef ImageAxesToolManager < handle
 
             delete(tbButton)
             host.ToolbarButtons = rmfield(host.ToolbarButtons, tool.Name);
-            host.mainAxes.Toolbar.reset;
+            % below commented - errors in R2026
+            %host.mainAxes.Toolbar.reset;
         end
 
         function contributeContextMenu(obj, tool)

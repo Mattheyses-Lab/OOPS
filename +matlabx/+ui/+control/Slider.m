@@ -257,7 +257,7 @@ classdef Slider < matlab.ui.componentcontainer.ComponentContainer
                 'Visible','off');
             obj.sliderThumbAxes.Layout.Row    = 2;
             obj.sliderThumbAxes.Layout.Column = 1;
-            obj.sliderThumbAxes.Toolbar.Visible = 'off';
+            obj.sliderThumbAxes.Toolbar = []; % will not work with toolbar, even if hidden
             disableDefaultInteractivity(obj.sliderThumbAxes);
             obj.sliderThumbAxes.Interactions = [];
 
@@ -980,6 +980,95 @@ classdef Slider < matlab.ui.componentcontainer.ComponentContainer
             obj.parentFig.Pointer = 'arrow';
         end
 
+    end
+
+    %% Debugging helpers
+    methods (Hidden)
+        function S = debug(obj, opts)
+        %DEBUG Print Slider status and optionally enter keyboard debug mode.
+        %
+        %   s.debug() prints values, thumb/edit-field state, interaction state,
+        %   and layout diagnostics. S = s.debug() returns the report silently.
+        %
+        %   s.debug("Stop",true) calls KEYBOARD so private state such as
+        %   obj.sliderThumb, obj.sliderValueEditField, and the local report S
+        %   can be inspected interactively from the command window.
+        %
+        %   s.debug("IncludeSizeDiagnostics",false) omits layout diagnostics.
+
+            arguments
+                obj (1,1) matlabx.ui.control.Slider
+                opts.Stop (1,1) logical = false
+                opts.IncludeSizeDiagnostics (1,1) logical = true
+            end
+
+            S = struct();
+            S.Title = string(obj.Title);
+            S.Class = string(class(obj));
+            S.ValueMode = obj.ValueMode;
+            S.Value = obj.Value;
+            S.Limits = obj.Limits;
+            S.Display = struct( ...
+                "Visible", string(obj.Visible), ...
+                "ShowEditFields", string(obj.ShowEditFields), ...
+                "ShowFill", string(obj.ShowFill), ...
+                "RoundValues", string(obj.RoundValues), ...
+                "RoundDigits", obj.RoundDigits, ...
+                "ValueDisplayFormat", string(obj.ValueDisplayFormat));
+            S.Interaction = struct( ...
+                "InStartup", obj.inStartup, ...
+                "IsSliding", obj.isSliding, ...
+                "ActiveThumbIndex", obj.activeThumbIdx, ...
+                "HoverThumbIndex", obj.hoverThumbIdx, ...
+                "PendingUpdate", obj.pendingUpdate, ...
+                "RouterId", obj.RouterId, ...
+                "HasValidHub", ~isempty(obj.Hub) && isvalid(obj.Hub));
+
+            % Include hidden controls too, to expose stale state in scalar mode.
+            S.Thumbs = struct([]);
+            for i = 1:numel(obj.sliderThumb)
+                thumb = obj.sliderThumb(i);
+                S.Thumbs(i).Index = i;
+                S.Thumbs(i).Value = thumb.Value;
+                S.Thumbs(i).Visible = string(thumb.Visible);
+                S.Thumbs(i).IsSelected = thumb.isSelected;
+            end
+
+            S.EditFields = struct([]);
+            for i = 1:numel(obj.sliderValueEditField)
+                field = obj.sliderValueEditField(i);
+                S.EditFields(i).Index = i;
+                S.EditFields(i).Value = field.Value;
+                S.EditFields(i).Limits = field.Limits;
+                S.EditFields(i).Visible = string(field.Visible);
+            end
+
+            if opts.IncludeSizeDiagnostics
+                S.SizeDiagnostics = struct( ...
+                    "Position", obj.Position, ...
+                    "ComponentHeight", obj.ComponentHeight, ...
+                    "Height", obj.Height, ...
+                    "TrackHeight", obj.TrackHeight, ...
+                    "RangeHeight", obj.RangeHeight, ...
+                    "FontSize", obj.FontSize);
+                S.SizeDiagnostics.GridRowHeight = obj.containerGrid.RowHeight;
+                S.SizeDiagnostics.GridColumnWidth = obj.containerGrid.ColumnWidth;
+                S.SizeDiagnostics.GridPadding = obj.containerGrid.Padding;
+                S.SizeDiagnostics.AxesUnits = string(obj.sliderThumbAxes.Units);
+                S.SizeDiagnostics.AxesPosition = obj.sliderThumbAxes.Position;
+                S.SizeDiagnostics.AxesInnerPosition = obj.sliderThumbAxes.InnerPosition;
+                S.SizeDiagnostics.AxesXLim = obj.sliderThumbAxes.XLim;
+                S.SizeDiagnostics.AxesYLim = obj.sliderThumbAxes.YLim;
+            end
+
+            if nargout == 0
+                matlabx.struct.prettyPrint(S, StringArrayStyle="lines");
+            end
+
+            if opts.Stop
+                keyboard %#ok<KEYBOARDFUN>
+            end
+        end
     end
 
     methods (Static)
