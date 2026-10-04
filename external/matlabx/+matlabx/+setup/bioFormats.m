@@ -21,6 +21,7 @@ function info = bioFormats()
 %   bundled with matlabx. Competing Bio-Formats folders are removed from
 %   the MATLAB search path, and competing Bio-Formats JARs are removed from
 %   the dynamic Java class path.
+%   Bio-Formats logging is disabled by setting its root logging level to OFF.
 %
 %   INFO = matlabx.setup.bioFormats() returns a struct describing the
 %   resulting configuration.
@@ -159,6 +160,11 @@ function info = bioFormats()
             "class path:\n\n  %s", ...
             strjoin(remainingIncorrect,"\n  "));
     end
+
+    % Disable logging before any readers initialize native libraries.
+    % enableLogging alone can leave an already initialized logger at DEBUG.
+    javaMethod('enableLogging', 'loci.common.DebugTools', 'OFF');
+    javaMethod('setRootLevel', 'loci.common.DebugTools', 'OFF');
 
     info = struct( ...
         "Folder",             bfFolder, ...

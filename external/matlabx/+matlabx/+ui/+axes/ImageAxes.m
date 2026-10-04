@@ -332,7 +332,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 'NextPlot','add', ...
                 'HitTest','on', ...
                 'PickableParts','all');
-            obj.mainAxes.Toolbar = axtoolbar(obj.mainAxes,{});
+            obj.mainAxes.Toolbar = axtoolbar(obj.mainAxes,{}, ...
+                "Expanded","on");
             obj.mainAxes.Interactions = [];
             disableDefaultInteractivity(obj.mainAxes);
 
@@ -352,7 +353,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 'PositionConstraint','innerposition', ...
                 'HitTest','off', ...
                 'PickableParts','none');
-            obj.staticAxes.Toolbar = axtoolbar(obj.staticAxes,{});
+            % obj.staticAxes.Toolbar = axtoolbar(obj.staticAxes,{});
+            obj.staticAxes.Toolbar = [];
             obj.staticAxes.Interactions = [];
             disableDefaultInteractivity(obj.staticAxes);
             obj.staticAxes.PlotBoxAspectRatio = [1 1 1];
@@ -3269,6 +3271,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % toggle Enabled state of "state" tool specified by name (toolbar button ValueChangedFcn)
         function onToolToggle(obj,toolState,name)
+            focus(obj.ParentFig); % attempt to defocus the axes toolbar so that the axes can receive keyboard input
             obj.ToolManager.toggle(toolState, name);
         end
 
@@ -3810,6 +3813,18 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             I = matlabx.image.Image5D.demo();
             ax = matlabx.app.quickshow(I,"Title","Example 5D Image");
         end
+
+
+        function ax = demoOverlays()
+            I = matlabx.image.Image5D.demo();
+            ax = matlabx.app.quickshow(I,...
+                "Title","Overlay Demo", ...
+                "Tools",{'Zoom','Line','Point','Rectangle','Box','RectangleSelect'}, ...
+                "ComponentColorMode","colors", ...
+                "Location","center");
+        end
+
+
 
 
     end
