@@ -125,6 +125,10 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         C (1,1) double
         Z (1,1) double
         T (1,1) double
+        % Optional logical Y-by-X display mask; cleared when image data changes.
+        Mask
+        MaskEnabled         (1,1) matlab.lang.OnOffSwitchState
+        OverlaysVisible     (1,1) matlab.lang.OnOffSwitchState
         ShowComposite       (1,1) matlab.lang.OnOffSwitchState
         CLim                (1,2) double
         CLimMode            (1,:) char {mustBeMember(CLimMode,{'auto','manual'})}
@@ -156,6 +160,10 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     properties (Access=private)
         % Current view coordinates and display modes.
         ViewState_ (1,1) matlabx.ui.axes.ImageAxesViewState = matlabx.ui.axes.ImageAxesViewState()
+
+        OverlaysVisible_ (1,1) matlab.lang.OnOffSwitchState = "on"
+        Mask_ = []
+        MaskEnabled_ (1,1) matlab.lang.OnOffSwitchState = "off"
 
         % Canonical Image5D data model.
         ImageData_ (1,1) matlabx.image.Image5D = matlabx.image.Image5D.fromComponents(zeros(256,256,3))
@@ -1886,6 +1894,15 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         function updateImageCData(obj)
             matlabx.ui.axes.ImageAxesDisplayRenderer.updateImageCData( ...
                 obj.hImage, obj.DisplayCData);
+            obj.updateImageMask();
+        end
+
+        function updateImageMask(obj)
+            if isempty(obj.hImage) || ~isgraphics(obj.hImage)
+                return
+            end
+            matlabx.ui.axes.ImageAxesDisplayRenderer.updateImageMask( ...
+                obj.hImage, obj.Mask_, obj.MaskEnabled_);
         end
 
         function updateColorbar(obj)
@@ -2045,6 +2062,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
             oldSummary = obj.getImageDataEventSummary_();
             obj.ImageData_ = val;
+            obj.Mask_ = [];
             obj.syncViewStateToImageData();
             obj.syncSelfFromFirstLinkedPeer();
             obj.syncRenderSourceToView(ResetView=true);
@@ -2062,11 +2080,60 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
             oldSummary = obj.getImageDataEventSummary_();
             obj.ImageData_ = matlabx.image.Image5D.fromComponents(cdata);
+            obj.Mask_ = [];
 
             obj.syncViewStateToImageData();
             obj.syncSelfFromFirstLinkedPeer();
             obj.syncRenderSourceToView(ResetView=true);
             obj.notifyImageDataChanged_(oldSummary, obj.getImageDataEventSummary_());
+        end
+
+        function value = get.Mask(obj), value = obj.Mask_; end
+
+        function set.Mask(obj, value)
+            if ~isempty(value) && (~islogical(value) || ~ismatrix(value) || ...
+                    ~isequal(size(value), [obj.ImageData_.SizeY obj.ImageData_.SizeX]))
+                error('matlabx:ui:axes:ImageAxes:InvalidMask', ...
+                    'Mask must be empty or a logical array matching the image Y-by-X dimensions.');
+            end
+            if isempty(value), value = []; end
+            previous = obj.Mask_;
+            obj.Mask_ = value;
+            obj.updateImageMask();
+            obj.refreshContextMenu();
+            obj.notifyDisplayStateChanged_("Mask", [], previous, value);
+        end
+
+        function value = get.MaskEnabled(obj), value = obj.MaskEnabled_; end
+
+        function set.MaskEnabled(obj, value)
+            previous = obj.MaskEnabled_;
+            obj.MaskEnabled_ = value;
+            obj.updateImageMask();
+            obj.refreshContextMenu();
+            obj.notifyDisplayStateChanged_("MaskEnabled", [], previous, value);
+        end
+
+        function value = get.OverlaysVisible(obj), value = obj.OverlaysVisible_; end
+
+        function set.OverlaysVisible(obj, value)
+            previous = obj.OverlaysVisible_;
+            obj.OverlaysVisible_ = value;
+            if ~isempty(obj.OverlayManager)
+                obj.OverlayManager.refreshVisibility();
+            end
+            obj.refreshContextMenu();
+            obj.notifyDisplayStateChanged_("OverlaysVisible", [], previous, value);
+        end
+
+        function toggleOverlays(obj)
+        %TOGGLEOVERLAYS Show/hide overlays without changing their own Visible flags.
+            obj.OverlaysVisible = ~obj.OverlaysVisible;
+        end
+
+        function toggleMask(obj)
+        %TOGGLEMASK Toggle display masking without changing the stored mask.
+            obj.MaskEnabled = ~obj.MaskEnabled;
         end
 
         % --- RenderSource: selected plane or computed composite ---
@@ -2819,6 +2886,9 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 "ZoomFactor", viewport.ZoomFactor, ...
                 "ZoomLevel", viewport.ZoomLevel);
             S.Display = struct( ...
+                "MaskEnabled", string(obj.MaskEnabled), ...
+                "HasMask", ~isempty(obj.Mask), ...
+                "OverlaysVisible", string(obj.OverlaysVisible), ...
                 "ColorbarVisible", string(obj.ColorbarVisible), ...
                 "ViewportBoxVisible", string(obj.ViewportBoxVisible), ...
                 "MaxRenderedResolution", obj.MaxRenderedResolution, ...
@@ -3814,6 +3884,49 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             ax = matlabx.app.quickshow(I,"Title","Example 5D Image");
         end
 
+
+        function [ax,fig] = demoSegmentation(opts)
+        %DEMOSEGMENTATION Inspect segmented rice with a mask and polygon regions.
+        %
+        %   ax = matlabx.ui.axes.ImageAxes.demoSegmentation() displays rice.png.
+        %   Use Mask/Overlays to flicker the results, RectangleSelect for batch
+        %   selection, and the Polygon context menu to delete regions.
+        %   Deleting a polygon leaves the display mask unchanged.
+        %   Requires Image Processing Toolbox.
+            arguments
+                opts.Visible (1,1) matlab.lang.OnOffSwitchState = "on"
+            end
+
+            I = imread('rice.png');
+            % Remove slowly varying illumination before thresholding the grains.
+            background = imopen(I, strel('disk',15,0));
+            mask = imbinarize(I - background);
+            mask = bwareaopen(mask, 50, 8);
+            mask = imfill(mask, 'holes');
+            % Pixel-edge tracing avoids backtracking along thin pixel centers.
+            boundaries = bwboundaries(mask, 8, 'noholes', 'TraceStyle', 'pixeledge');
+
+            [ax,fig] = matlabx.app.quickshow(I, ...
+                "Title", "Rice Segmentation", ...
+                "Tools", {'Zoom','Mask','Overlays','Polygon','RectangleSelect'}, ...
+                "Visible", "off");
+            ax.Mask = mask;
+            ax.MaskEnabled = "on";
+            ax.Tools.RectangleSelect.TargetTypes = "Polygon";
+
+            for i = 1:numel(boundaries)
+                % bwboundaries returns [row column]; overlays use [x y].
+                vertices = boundaries{i}(:,[2 1]);
+                % Drop repeated closing/touching vertices from the traced loop.
+                vertices = unique(vertices, 'rows', 'stable');
+                ax.Tools.Polygon.addPolygon("rice-" + i, vertices, ...
+                    "Label", "Grain " + i, ...
+                    "EdgeColor", [0 1 0], ...
+                    "FaceColor", [0 1 0]);
+            end
+
+            fig.Visible = opts.Visible;
+        end
 
         function ax = demoOverlays()
             I = matlabx.image.Image5D.demo();

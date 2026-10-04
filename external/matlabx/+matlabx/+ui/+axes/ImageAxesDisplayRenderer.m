@@ -74,6 +74,16 @@ classdef ImageAxesDisplayRenderer
             hImage.CData = cdata;
         end
 
+        function updateImageMask(hImage, mask, enabled)
+        %UPDATEIMAGEMASK Reveal the black axes background outside the mask.
+            hImage.AlphaDataMapping = 'none';
+            if enabled && ~isempty(mask)
+                hImage.AlphaData = double(mask);
+            else
+                hImage.AlphaData = 1;
+            end
+        end
+
         function updateAxesColormap(ax, componentDisplay, componentIndex)
         %UPDATEAXESCOLORMAP Assign the current component display map to axes.
             % MATLAB colormap is axes-scoped, so ImageAxes updates it whenever the

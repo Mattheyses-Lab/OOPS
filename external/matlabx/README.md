@@ -479,6 +479,48 @@ ax.ContextMenuItems = ["ResetView", "ComponentColor", "ViewportBox"];
 The order of `ContextMenuItems` is honored for top-level built-ins. Tool menus
 are contributed below the built-ins and separated from them automatically.
 
+### Display masking
+
+`Mask` is an optional logical Y-by-X array matching the image dimensions.
+`MaskEnabled` controls display only: false pixels reveal the black axes
+background, while image values, colormaps, and overlays remain unchanged.
+
+```matlab
+ax.Mask = mask;
+ax.MaskEnabled = "on";
+ax.toggleMask();                    % Flicker without recomputing the image
+```
+
+An empty mask leaves the image fully visible. Replacing `ImageData` or `CData`
+clears the mask. The same mask applies across C/Z/T views until your app replaces
+it; volume masks and segmentation-to-boundary conversion remain app-owned.
+The Display context menu also includes a **Mask Image** toggle. Install the
+`Mask` toolbar tool for one-click toggling; it is safe to enable without a mask:
+
+```matlab
+ax.loadTools({"Mask","Overlays"});
+ax.installTool("Mask");
+ax.installTool("Overlays");
+ax.OverlaysVisible = "off";         % Hide all registered overlays
+ax.toggleOverlays();               % Restore eligible overlays
+```
+
+The `Overlays` tool and **Display → Show Overlays** menu toggle
+`OverlaysVisible` (default `"on"`). This preserves each overlay's own `Visible`
+flag, C/Z/T applicability, and active/selected state. Newly added overlays also
+respect the global visibility setting. Both toolbar toggles stay synchronized
+with property and menu changes.
+
+Try the complete rice segmentation demo (requires Image Processing Toolbox):
+
+```matlab
+ax = matlabx.ui.axes.ImageAxes.demoSegmentation();
+```
+
+It displays `rice.png` through `quickshow`, with a background-corrected binary
+mask, one polygon per rice region, and Zoom, Mask, Overlays, Polygon, and
+RectangleSelect tools. Polygon deletion leaves the mask unchanged.
+
 ### Overlays
 
 `ImageAxes` owns an overlay manager available as `ax.Overlays`. Overlays are
@@ -533,8 +575,36 @@ First-party overlays currently include:
 - `matlabx.ui.axes.overlays.Point`
 - `matlabx.ui.axes.overlays.Line`
 - `matlabx.ui.axes.overlays.Rectangle`
+- `matlabx.ui.axes.overlays.Polygon`
 - `matlabx.ui.axes.overlays.PointSet`
 - `matlabx.ui.axes.overlays.PointClusters`
+
+Polygon regions accept image-space `[x y]` vertices. NaN-separated loops can
+represent holes or disconnected parts of one selectable region:
+
+```matlab
+ax.loadTools({"Polygon","RectangleSelect"});
+ax.installTool("Polygon");
+ax.installTool("RectangleSelect");
+p = ax.Tools.Polygon.addPolygon("region-1", ...
+    [20 20; 80 20; 80 80; 20 80], "EdgeColor", [0 1 0]);
+ax.Tools.Polygon.selectAllPolygons();
+ax.Tools.Polygon.clearPolygonSelection();
+```
+
+The Polygon tool controls all Polygon overlays registered with the host,
+including those added directly through `ax.Overlays.add("Polygon",...)`.
+Click activates; shift-click toggles selection; alt-click clears activation;
+control-right-click deletes. Its context menu provides batch selection/deletion
+and help. Its toolbar button opens help; interactions work while installed.
+RectangleSelect uses each visible polygon's centroid as its selection point.
+Polygons have no drawing or dragging behavior yet.
+
+`PolygonDeletedFcn` receives `data.ID` for tool-requested deletions.
+`PolygonActivatedFcn` receives `data.ID`, and `PolygonSelectionChangedFcn`
+receives `data.IDs`, including changes made through rectangle selection or the
+manager. The app decides whether deletion should update a segmentation mask.
+Removing the tool preserves its overlays; `deleteAllPolygons()` removes them.
 
 The overlay base class is intentionally small. Custom overlays inherit from
 `matlabx.ui.axes.ImageAxesOverlay`, own their graphics handles, implement

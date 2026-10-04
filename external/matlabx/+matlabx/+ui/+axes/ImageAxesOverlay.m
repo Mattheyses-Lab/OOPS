@@ -157,7 +157,7 @@ classdef ImageAxesOverlay < handle & matlab.mixin.SetGetExactNames
         end
 
         function setViewVisible(obj, value)
-        %SETVIEWVISIBLE Set manager-controlled C/Z/T visibility.
+        %SETVIEWVISIBLE Set manager-controlled host and C/Z/T visibility.
             obj.ViewVisible = value;
             obj.updateVisibility();
         end
