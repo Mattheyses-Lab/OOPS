@@ -579,8 +579,11 @@ First-party overlays currently include:
 - `matlabx.ui.axes.overlays.PointSet`
 - `matlabx.ui.axes.overlays.PointClusters`
 
-Polygon regions accept image-space `[x y]` vertices. NaN-separated loops can
-represent holes or disconnected parts of one selectable region:
+Polygon regions accept finite image-space `[x y]` vertices for one closed loop.
+A single patch displays the coordinates unchanged and closes the boundary; the
+app is responsible for their order and correctness. No geometry repair or hole
+handling is performed. Rectangle selection uses the area-weighted centroid
+(with a bounding-box center fallback for zero-area loops):
 
 ```matlab
 ax.loadTools({"Polygon","RectangleSelect"});

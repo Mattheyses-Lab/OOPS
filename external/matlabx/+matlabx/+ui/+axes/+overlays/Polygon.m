@@ -15,11 +15,12 @@
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
 classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
-%POLYGON Polygon region with optional holes in image coordinates.
+%POLYGON One closed loop drawn directly from application-supplied coordinates.
 %
-%   Vertices is an N-by-2 [x y] array. Separate boundary loops with [NaN NaN]
-%   rows to represent holes or disconnected parts of the same selectable region.
-%   Geometry is normalized by polyshape. Tools own interaction policy.
+%   Vertices is a finite N-by-2 [x y] array in boundary order. The patch closes
+%   the loop automatically; repeating the first vertex at the end is also OK.
+%   Coordinates are stored unchanged. The app owns geometry correctness; this
+%   overlay does not simplify, normalize, or repair contours or support holes.
 
     properties (Dependent, SetObservable, AbortSet)
         Vertices
@@ -43,18 +44,17 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
     end
 
     properties (Access=private)
-        Shape (1,1) polyshape = polyshape()
+        Vertices_ (:,2) double = zeros(0,2)
     end
 
     properties (Access=private, Transient, NonCopyable)
-        FillPatch = []
-        BoundaryLine = []
+        PolygonPatch = []
         L event.listener = event.listener.empty()
     end
 
     methods
         function obj = Polygon(host, opts)
-        %POLYGON Create one selectable region, including all its boundary loops.
+        %POLYGON Create one selectable closed loop.
             arguments
                 host matlabx.ui.axes.ImageAxes
                 opts.Vertices (:,2) double = zeros(0,2)
@@ -76,17 +76,14 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
                 "UserData", opts.UserData, "C", opts.C, "Z", opts.Z, "T", opts.T, ...
                 "Visible", opts.Visible, "ActivateOnCreate", opts.ActivateOnCreate);
 
-            % Triangulate only the fill; a separate line avoids internal edges.
-            % PickableParts=all keeps unfilled interiors clickable, excluding holes.
-            obj.FillPatch = patch(obj.TargetAxes, ...
+            % A single face supplies both fill and closed boundary. Keep the
+            % interior pickable even when the default fill is transparent.
+            obj.PolygonPatch = patch(obj.TargetAxes, ...
                 'Faces', [], 'Vertices', zeros(0,2), ...
                 'FaceColor', opts.FaceColor, 'FaceAlpha', opts.FaceAlpha, ...
-                'EdgeColor', 'none', 'HitTest', 'on', 'PickableParts', 'all', ...
-                'Tag', 'OverlayPolygonFill');
-            obj.BoundaryLine = line(obj.TargetAxes, NaN, NaN, ...
-                'Color', opts.EdgeColor, 'HitTest', 'on', 'PickableParts', 'all', ...
-                'Tag', 'OverlayPolygonBoundary');
-            obj.registerGraphics([obj.FillPatch; obj.BoundaryLine]);
+                'EdgeColor', opts.EdgeColor, 'HitTest', 'on', 'PickableParts', 'all', ...
+                'Tag', 'OverlayPolygon');
+            obj.registerGraphics(obj.PolygonPatch);
             obj.FaceColor = opts.FaceColor;
             obj.EdgeColor = opts.EdgeColor;
             obj.FaceAlpha = opts.FaceAlpha;
@@ -106,39 +103,51 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
             end
         end
 
-        function value = get.Vertices(obj), value = obj.Shape.Vertices; end
+        function value = get.Vertices(obj), value = obj.Vertices_; end
 
         function set.Vertices(obj, value)
-            validateattributes(value, {'double'}, {'2d','ncols',2,'real'});
-            if any(isinf(value(:))) || any(xor(isnan(value(:,1)), isnan(value(:,2))))
+            validateattributes(value, {'double'}, {'2d','ncols',2,'real','finite'});
+            if ~isempty(value) && size(value,1) < 3
                 error('matlabx:ui:axes:Polygon:InvalidVertices', ...
-                    'Vertices must contain finite coordinates or NaN separator rows.');
+                    'Vertices must be empty or contain at least three [x y] rows.');
             end
-            shape = polyshape(value);
-            obj.Shape = shape;
+            obj.Vertices_ = value;
             obj.updateGeometry();
         end
 
         function value = get.Center(obj)
-            [x,y] = centroid(obj.Shape);
-            value = [x y];
+        %GET.CENTER Signed-area centroid, independent of winding direction.
+            vertices = obj.Vertices_;
+            if isempty(vertices)
+                value = [NaN NaN];
+                return
+            end
+
+            % Translate before the shoelace calculation to avoid cancellation
+            % from a large coordinate offset. This does not alter stored data.
+            origin = vertices(1,:);
+            v = vertices - origin;
+            next = v([2:end 1],:);
+            cross = v(:,1).*next(:,2) - next(:,1).*v(:,2);
+            twiceArea = sum(cross);
+            if abs(twiceArea) <= eps(sum(abs(cross)))
+                % A collapsed/zero-area loop has no area centroid. Use its
+                % bounding-box center so selection still has a stable anchor.
+                value = origin + (min(v,[],1) + max(v,[],1))/2;
+            else
+                value = origin + sum((v + next).*cross,1)/(3*twiceArea);
+            end
         end
 
         function updateGeometry(obj)
-            if isempty(obj.FillPatch) || ~isgraphics(obj.FillPatch), return; end
-            if isempty(obj.Shape.Vertices)
-                set(obj.FillPatch, 'Faces', [], 'Vertices', zeros(0,2));
-                set(obj.BoundaryLine, 'XData', NaN, 'YData', NaN);
-                return
-            end
-            mesh = triangulation(obj.Shape);
-            set(obj.FillPatch, 'Faces', mesh.ConnectivityList, 'Vertices', mesh.Points);
-            [x,y] = boundary(obj.Shape);
-            set(obj.BoundaryLine, 'XData', x, 'YData', y);
+        %UPDATEGEOMETRY Pass through vertices without normalization or repair.
+            if isempty(obj.PolygonPatch) || ~isgraphics(obj.PolygonPatch), return; end
+            faces = 1:size(obj.Vertices_,1);
+            set(obj.PolygonPatch, 'Faces', faces, 'Vertices', obj.Vertices_);
         end
 
         function updateAppearance(obj)
-            if isempty(obj.FillPatch) || ~isgraphics(obj.FillPatch), return; end
+            if isempty(obj.PolygonPatch) || ~isgraphics(obj.PolygonPatch), return; end
             if obj.Hovered
                 width = obj.HoverLineWidth;
                 alpha = obj.HoverFaceAlpha;
@@ -155,8 +164,8 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
                 width = obj.LineWidth;
                 alpha = obj.FaceAlpha;
             end
-            set(obj.FillPatch, 'FaceColor', obj.FaceColor, 'FaceAlpha', alpha);
-            set(obj.BoundaryLine, 'Color', obj.EdgeColor, 'LineWidth', width);
+            set(obj.PolygonPatch, 'FaceColor', obj.FaceColor, 'FaceAlpha', alpha, ...
+                'EdgeColor', obj.EdgeColor, 'LineWidth', width);
         end
 
         function tf = isInsideRectangle(obj, rect)
