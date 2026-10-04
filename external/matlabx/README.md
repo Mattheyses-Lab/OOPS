@@ -606,6 +606,45 @@ receives `data.IDs`, including changes made through rectangle selection or the
 manager. The app decides whether deletion should update a segmentation mask.
 Removing the tool preserves its overlays; `deleteAllPolygons()` removes them.
 
+For application-owned models, use one deletion request for the complete set:
+
+```matlab
+ax.Tools.Polygon.PolygonsDeleteRequestedFcn = ...
+    @(tool,event) deleteModelRegions(event.IDs);
+
+% Inside your application, after updating the model:
+ax.Overlays.removeMany(deletedIDs);
+```
+
+`PolygonsDeleteRequestedFcn` receives a stable, deduplicated row string array
+in `event.IDs`. Single, active, selected, and all-polygon deletion actions use
+this same path. Missing IDs and other overlay types are filtered out; an empty
+request does nothing. With this callback installed, the tool does not delete
+anything or change selection/activation first, and does not call the legacy
+`PolygonDeletedFcn`. Callback errors propagate without an optimistic fallback;
+changes the callback itself has already made are not rolled back.
+
+Without the new callback, deletion retains the existing sequence: remove one
+polygon, invoke `PolygonDeletedFcn` for that ID, and continue. Manager calls
+such as `removeMany` never invoke either tool deletion callback, so application
+reconciliation cannot recursively request deletion.
+
+`removeMany` ignores duplicate/missing IDs and preserves unrelated overlays and
+state. The whole batch is detached and deleted before manager notifications.
+For compatibility, `OverlayRemoved` still fires once per removed ID (in request
+order) with its existing empty payload, but each notification sees the final
+batch state. Affected `ActiveChanged`, `HoverChanged`, and `SelectionChanged`
+events fire at most once each, after the removal notifications. `remove(id)`
+and `clear()` use this same path. Listeners doing expensive reconciliation
+should not repeat it for every `OverlayRemoved` notification.
+
+`setSelected` updates only added/removed members and emits one event when
+membership changes. Reordering an unchanged set is a no-op. Surviving IDs keep
+their existing order; additions follow in request order. Type-filtered changes
+preserve selection in other overlay families. These manager improvements apply
+to all overlays, but tools such as Box/Rectangle still own additional local
+bookkeeping: continue using those tools' deletion APIs for their objects.
+
 The overlay base class is intentionally small. Custom overlays inherit from
 `matlabx.ui.axes.ImageAxesOverlay`, own their graphics handles, implement
 `updateGeometry` and `updateAppearance`, and call `registerGraphics` for
