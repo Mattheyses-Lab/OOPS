@@ -14,6 +14,8 @@ classdef Object < handle
         PixelIdxList (:,1) double
         TightBoundsRC (2,2) double % Inclusive [rowMin rowMax; colMin colMax].
         LabelID (1,1) string = "unlabeled"
+        Midline (:,2) double = zeros(0,2) % Ordered [x y] coordinates in the parent image.
+        PixelMidlineTangentList (:,1) double = [] % Tangent radians aligned with PixelIdxList.
     end
 
     %% Scalar analysis results (NaN means not yet measured)
@@ -204,6 +206,31 @@ classdef Object < handle
 
     %% Stored scalar measurements
     methods
+
+        function setMidlineResult(obj,coordinates,pixelTangents,scalars)
+        %SETMIDLINERESULT Store traced geometry and its scalar measurements.
+
+            try
+                validateattributes(coordinates,{'numeric'},{'2d','ncols',2,'real'});
+                validateattributes(pixelTangents,{'numeric'},{'column','real'});
+
+                if ~isempty(pixelTangents) && numel(pixelTangents) ~= numel(obj.PixelIdxList)
+                    error('oops:model:MidlinePixelCountMismatch', ...
+                        'Pixel tangents must align one-to-one with PixelIdxList.');
+                end
+
+                % Durable geometry uses parent-image coordinates and membership order.
+                obj.Midline = double(coordinates);
+                obj.PixelMidlineTangentList = double(pixelTangents);
+
+                % Length, tortuosity, and orientation use the ordinary scalar path.
+                obj.setMeasurements(scalars);
+                obj.changed("ObjectMidline");
+            catch ME
+                oops.Log.EXCEPTION(ME);
+                rethrow(ME);
+            end
+        end
 
         function setMeasurements(obj,values)
         %SETMEASUREMENTS Store a partial scalar result struct after validation.
@@ -434,14 +461,15 @@ classdef Object < handle
 
         function T = get.SummaryTable(obj)
         %GET.SUMMARYTABLE Format stored scalar measurements without recomputing them.
-        % Midline and reference-image fields remain deferred until their pipelines
-        % exist. NaN remains visible for measurements not yet available.
+        % Reference-image fields remain deferred. NaN remains visible for
+        % measurements that have not yet been calculated.
 
             % Row labels for the scalar object measurements currently supported.
-            names = ["Name","Label","Mean order","Mean azimuth","Azimuth circular SD", ...
+            names = ["Name","Label","Mean order","Mean azimuth", ...
+                "Mean azimuth (midline)","Mean azimuth (normal)","Azimuth circular SD", ...
                 "Local S/B","Area","Convex area","Perimeter","Circularity", ...
                 "Eccentricity","Extent","Solidity","Mean signal intensity", ...
-                "Mean BG intensity","Index"];
+                "Mean BG intensity","Index","Tortuosity","Midline length","Orientation"];
 
             % Formatted identity, morphology, intensity, and polarization values.
             label = obj.Label;
@@ -453,12 +481,15 @@ classdef Object < handle
             end
 
             values = {obj.Name,labelName,sprintf('%.2f',obj.OrderAvg), ...
-                sprintf('%.2f°',obj.AzimuthAverage),sprintf('%.2f°',obj.AzimuthStd), ...
+                sprintf('%.2f°',obj.AzimuthAverage),sprintf('%.2f°',obj.MidlineRelativeAzimuth), ...
+                sprintf('%.2f°',obj.NormalRelativeAzimuth),sprintf('%.2f°',obj.AzimuthStd), ...
                 sprintf('%.2f',obj.SBRatio),sprintf('%g px²',obj.Area), ...
                 sprintf('%g px²',obj.ConvexArea),sprintf('%.2f px',obj.Perimeter), ...
                 sprintf('%.2f',obj.Circularity),sprintf('%.2f',obj.Eccentricity), ...
                 sprintf('%.2f',obj.Extent),sprintf('%.2f',obj.Solidity), ...
-                sprintf('%.2f A.U.',obj.SignalAverage),sprintf('%.2f A.U.',obj.BGAverage),obj.SelfIdx};
+                sprintf('%.2f A.U.',obj.SignalAverage),sprintf('%.2f A.U.',obj.BGAverage),obj.SelfIdx, ...
+                sprintf('%.2f',obj.Tortuosity),sprintf('%.2f px',obj.MidlineLength), ...
+                sprintf('%.2f°',obj.Orientation)};
 
             % Single-column summary with statistic names supplied as table row names.
             T = oops.model.internal.summaryTable(names,values);

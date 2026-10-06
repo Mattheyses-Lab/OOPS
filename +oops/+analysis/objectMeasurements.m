@@ -2,9 +2,13 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-function values = objectMeasurements(mask,pixelLists,average,order,azimuth,settings)
+function values = objectMeasurements(mask,pixelLists,average,order,azimuth,settings,pixelTangents)
 %OBJECTMEASUREMENTS Derive pixel-unit morphology, intensity, and axial FPM summaries.
 % Background rings exclude other objects/buffers according to hidden settings.
+
+if nargin < 7
+    pixelTangents = cell(size(pixelLists));
+end
 
 % Connected-component description built from the supplied object pixel lists.
 cc = struct('Connectivity',4,'ImageSize',size(mask),'NumObjects',numel(pixelLists), ...
@@ -127,6 +131,32 @@ for k = 1:numel(pixelLists)
 
             s.AzimuthStd = rad2deg(.5*sqrt(-2*log(r)));
             s.AzimuthAngularDeviation = rad2deg(.5*sqrt(2*(1-r)));
+
+            % Per-pixel midline tangent values computed from immutable geometry.
+            tangents = pixelTangents{k};
+
+            if ~isempty(tangents)
+
+                % Retain only corresponding finite azimuth/tangent pairs.
+                objectAzimuth = azimuth(pixelLists{k});
+                good = isfinite(objectAzimuth) & isfinite(tangents);
+
+                if any(good)
+                    objectAzimuth = objectAzimuth(good);
+                    tangents = tangents(good);
+
+                    % Axial angular differences relative to tangent and normal.
+                    tangentDifference = angle(exp(2i*objectAzimuth)./exp(2i*tangents))*0.5;
+                    normals = tangents+pi/2;
+                    normals(normals > pi/2) = normals(normals > pi/2)-pi;
+                    normalDifference = angle(exp(2i*objectAzimuth)./exp(2i*normals))*0.5;
+
+                    % Legacy doubled-angle means, converted to degrees.
+                    s.MidlineRelativeAzimuth = rad2deg(angle(mean(exp(2i*tangentDifference)))*0.5);
+                    s.NormalRelativeAzimuth = rad2deg(angle(mean(exp(2i*normalDifference)))*0.5);
+                end
+
+            end
         end
 
     end

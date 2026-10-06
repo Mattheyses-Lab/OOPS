@@ -26,6 +26,12 @@ classdef Analyzer
             [mask,lists,diagnostics] = oops.analysis.segment.mask(average,settings);
         end
 
+        function result = midline(mask)
+        %MIDLINE Delegate legacy centerline and tangent analysis.
+
+            result = oops.analysis.midline.analyze(mask);
+        end
+
         function flat = calibration(project,ids,opts)
         %CALIBRATION Average project-owned stacks and normalize their shared response.
 
@@ -424,9 +430,43 @@ classdef Analyzer
             % Cell array of immutable pixel membership for the image's current objects.
             lists = arrayfun(@(x) x.PixelIdxList,image.Objects,'UniformOutput',false);
 
+            % Cell array of per-pixel midline tangents aligned with each membership list.
+            pixelTangents = cell(1,numel(image.Objects));
+
+            % Trace geometry once for newly constructed objects. Subsequent FPM
+            % analysis reuses it because object membership has not changed.
+            for k = 1:numel(image.Objects)
+
+                % Current object whose local padded mask feeds the legacy tracer.
+                object = image.Objects(k);
+
+                if isempty(object.Midline)
+
+                    % Object-only square crop and its parent-coordinate transform.
+                    [localMask,geometry] = object.getMask(Margin=5,Square=true);
+
+                    % Legacy centerline, tangents, and geometry scalar results.
+                    midline = oops.analysis.Analyzer.midline(localMask);
+
+                    % Convert local [x y] curve coordinates into parent [x y].
+                    parentRC = geometry.toParent(midline.Coordinates(:,[2 1]));
+                    coordinates = parentRC(:,[2 1]);
+
+                    % Scalar subset stored through the model's measurement API.
+                    scalars = struct( ...
+                        'MidlineLength',midline.Length, ...
+                        'Tortuosity',midline.Tortuosity, ...
+                        'Orientation',midline.Orientation);
+                    object.setMidlineResult(coordinates,midline.PixelTangents,scalars);
+                end
+
+                pixelTangents{k} = object.PixelMidlineTangentList;
+            end
+
             % Computed scalar-measurement structs, one per object.
             values = oops.analysis.objectMeasurements(image.Mask,reshape(lists,1,[]), ...
-                image.Results.AverageIntensity,image.Order,image.Azimuth,settings.LocalBackground);
+                image.Results.AverageIntensity,image.Order,image.Azimuth,settings.LocalBackground, ...
+                pixelTangents);
 
             % Store the computed scalar measurement struct on each corresponding object.
             for k = 1:numel(image.Objects)

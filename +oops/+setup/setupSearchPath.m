@@ -20,7 +20,12 @@ function setupSearchPath()
                 'The bundled matlabx subtree is missing: %s',dependency);
         end
 
-        addpath(root,dependency);
+        % Legacy midline tracing uses John D'Errico's bundled interparc
+        % implementation. Keep the third-party function in lib rather than
+        % copying it into the application package.
+        interpolation = fullfile(root,'lib','interparc');
+
+        addpath(root,dependency,interpolation);
     catch ME
         % A missing dependency may make the logger unavailable. Preserve the
         % original bootstrap error instead of replacing it with a logger error.

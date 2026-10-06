@@ -133,9 +133,15 @@ im = g.addImage(input(truth));
 oops.analysis.Analyzer.segmentImages(im,p.Settings);
 t.verifyNotEmpty(im.Objects); t.verifyGreaterThan(im.Objects(1).Area,0);
 t.verifyGreaterThan(im.Objects(1).SignalAverage,im.Objects(1).BGAverage);
+t.verifyNotEmpty(im.Objects(1).Midline);
+t.verifyEqual(size(im.Objects(1).Midline,2),2);
+t.verifyEqual(numel(im.Objects(1).PixelMidlineTangentList),numel(im.Objects(1).PixelIdxList));
+t.verifyTrue(isfinite(im.Objects(1).MidlineLength));
 oops.analysis.Analyzer.analyzeImages(im,p.Settings);
 t.verifyEqual(im.Objects(1).OrderAvg,.5,'AbsTol',1e-12);
 t.verifyEqual(im.Objects(1).AzimuthAverage,35,'AbsTol',1e-12);
+t.verifyTrue(isfinite(im.Objects(1).MidlineRelativeAzimuth));
+t.verifyTrue(isfinite(im.Objects(1).NormalRelativeAzimuth));
 t.verifyTrue(isfinite(im.Objects(1).MaxFeretDiameter));
 logs = oops.Log.asTable(); t.verifyTrue(any(logs.level == "WARN" & contains(logs.msg,"No calibration")));
 end
