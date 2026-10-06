@@ -653,6 +653,75 @@ The overlay base class is intentionally small. Custom overlays inherit from
 `updateGeometry` and `updateAppearance`, and call `registerGraphics` for
 hit-test ownership and manager lookup.
 
+## Transferable Plot Content
+
+`matlabx.ui.axes.PlotAxes` is a stable UI host, similar to `ImageAxes` in its
+separation of host and content. The host owns its layout and Cartesian UIAxes;
+renderers own their data, style, and graphics. Applications supply normalized
+values rather than passing model or settings objects into the plotting layer.
+
+```matlab
+fig = uifigure;
+grid = uigridlayout(fig,[1 2]);
+hostA = matlabx.ui.axes.PlotAxes(grid);
+hostB = matlabx.ui.axes.PlotAxes(grid);
+
+renderer = matlabx.ui.axes.plot.ScatterRenderer();
+data = matlabx.ui.axes.plot.ScatterData( ...
+    XData={[1 2 3]}, YData={[2 4 3]}, ...
+    SeriesNames="Samples", CData={[0.2 0.5 0.8]});
+style = matlabx.ui.axes.plot.ScatterStyle( ...
+    Title="Measurements", XLabel="X", YLabel="Y", LegendVisible=true);
+renderer.update(data,style);
+hostA.mount(renderer);
+hostB.mount(renderer);              % Same renderer and primitives; hosts stay put
+```
+
+Renderers expose read-only `Data` and `Style` properties and methods
+`setData(data)`, `setStyle(style)`, `update(data,style)`, and `refresh()`.
+`update` validates both values before assigning them and refreshes once.
+Detached renderers retain their values; rendering resumes when mounted.
+
+`ScatterData` contains X/Y cell arrays, `SeriesNames`, and `CData`.
+`ViolinData` contains a `Values` cell array, `SeriesNames`, and `CData`.
+Each cell is one logical group, with numeric vectors normalized to rows and
+one name/color entry required per group. Colors can be scalar, an RGB triplet,
+a point-aligned scalar vector, or an N-by-3 RGB array. As with MATLAB scatter,
+a three-element color vector is interpreted as RGB. Data values have private
+setters; construct a new value to change them. Style classes are ordinary value
+objects containing labels, colors, marker/hull/violin options, and visibility.
+They have no persistence, settings events, or application dependencies.
+
+`PlotContent` provides the shared attach/detach lifecycle. `host.clear()` hides
+and detaches content without destroying it. Detaching sets the owned primitives'
+parents to `[]`, so they do not affect another renderer's limits and survive
+closure of their former figure. The application owns renderer lifetime and
+should call `delete(renderer)` when finished; this also clears its host.
+Legends/proxies are recreated for the active axes. Host/content identities stay
+synchronized whether you use `mount`/`clear` or `attach`/`detach`.
+
+Before mounting different content, the host explicitly resets axes presentation
+(ticks, labels, scales, limits, aspect ratios, grids, view, legends, and colorbars).
+It never uses `cla reset` or reparents a ComponentContainer. Renderer Style
+supplies background/foreground colors through the host's presentation properties.
+The `routeEvent(kind,event)` / `handleEvent(kind,event)` seam is preserved for
+future integration; this version does not add FigureEventHub routing, tools,
+hotkeys, or polar axes.
+
+Low-level `matlabx.ui.axes.plot.Scatter` and `Violin` each own one logical dataset
+and several graphics primitives. `setParent(axes)` moves every owned primitive;
+`setParent([])` detaches them. Violin density estimation uses `ksdensity` from
+Statistics and Machine Learning Toolbox. Rendering algorithms otherwise follow
+the OOPS prototype, including mean ± standard deviation error bars.
+
+Try both renderers and transfer their content interactively:
+
+```matlab
+[hosts,renderers,fig] = matlabx.ui.axes.PlotAxes.demo();
+hosts.Second.mount(renderers.Scatter); % Displaces, but retains, Violin
+hosts.First.mount(renderers.Violin);
+```
+
 ## Reusable Components And Apps
 
 matlabx includes smaller UI pieces that are useful outside `ImageAxes`.
