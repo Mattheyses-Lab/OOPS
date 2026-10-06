@@ -25,12 +25,13 @@ function teardownOnce(~)
 end
 
 function testDefaultRegistrySupportsStableLookups(t)
-%TESTDEFAULTREGISTRYSUPPORTSSTABLELOOKUPS Resolve defaults by ID and hotkey.
+%TESTDEFAULTREGISTRYSUPPORTSSTABLELOOKUPS Resolve the default and added labels.
 
     registry = oops.model.LabelRegistry.default();
     cleanup = onCleanup(@() delete(registry)); %#ok<NASGU>
 
-    t.verifyEqual(registry.ids(),["unlabeled","object","background"]);
+    t.verifyEqual(registry.ids(),"unlabeled");
+    registry.add("Object",ID="object",Hotkey="1",Color=[0.2 0.8 0.2]);
     t.verifyEqual(registry.getByHotkey("1").ID,"object");
     t.verifyEqual(registry.active().ID,"unlabeled");
     t.verifyError(@() registry.add("Duplicate",Hotkey="1"), ...
@@ -42,6 +43,7 @@ function testImageAppliesOneLabelToSelectedObjectBatch(t)
 
     project = oops.model.Project("Labels");
     cleanup = onCleanup(@() delete(project)); %#ok<NASGU>
+    project.addLabel("Object",ID="object",Hotkey="1",Color=[0.2 0.8 0.2]);
     group = project.addGroup("Group");
     plane = zeros(10,12);
     input = matlabx.image.Image5D.fromComponents({plane,plane,plane,plane});

@@ -117,6 +117,7 @@ function testLabelHotkeyAppliesToCheckedObjects(t)
 
 ui = t.TestData.GUI;
 image = ui.Project.ActiveImage;
+ui.Project.addLabel("Object",ID="object",Hotkey="1",Color=[0.2 0.8 0.2]);
 image.setSelectedObjects(image.Objects(2));
 
 callback = ui.CommandRouter.HotkeyFcnDict("1");
@@ -166,8 +167,11 @@ t.verifyClass(ui.SettingsUI.Segmentation.Connectivity,'matlab.ui.control.DropDow
 t.verifyEqual(ui.SettingsUI.Segmentation.Connectivity.ItemsData,[4 8]);
 t.verifyEqual(ui.Project.Settings.Segmentation.Connectivity,4);
 t.verifyClass(ui.SettingsUI.View.LeftSource,'matlab.ui.control.DropDown');
+sources = oops.config.View.sources();
 t.verifyEqual(string(ui.SettingsUI.View.LeftSource.Items), ...
-    oops.config.View.sources());
+    sources(sources ~= "Objects"));
+t.verifyEqual(string(ui.SettingsUI.View.RightSource.Items), ...
+    sources);
 t.verifyTrue(ui.SettingsAccordion.hasItem("Scatterplot"));
 t.verifyTrue(ui.SettingsAccordion.hasItem("Swarmplot"));
 t.verifyFalse(isprop(ui.Project.Settings,'Analysis'));
