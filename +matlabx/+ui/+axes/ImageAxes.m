@@ -386,6 +386,18 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 'HitTest','off',...
                 'PickableParts','none');
 
+            % This group is created immediately above the image and before
+            % interactive graphics. Child ordering keeps all mounted content
+            % below interactive overlays, including content mounted later.
+            obj.mainAxes.SortMethod = 'childorder';
+            obj.ApplicationOverlayLayer = hggroup(obj.mainAxes, ...
+                'Tag','ApplicationOverlayLayer','Visible',obj.OverlaysVisible, ...
+                'HitTest','off','PickableParts','none');
+            % Detach before axes children are destroyed (ComponentContainer
+            % teardown can precede the ImageAxes destructor).
+            obj.ApplicationOverlayLifetimeListener = addlistener(obj.mainAxes, ...
+                'ObjectBeingDestroyed',@(~,~) obj.detachApplicationOverlays());
+
             % Update CLim, PlotBoxAspectRatio, and DataAspectRatio *after* creating image object
             obj.mainAxes.CLim               = [0 1];
             obj.mainAxes.PlotBoxAspectRatio = [1 1 1];
@@ -2119,6 +2131,9 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         function set.OverlaysVisible(obj, value)
             previous = obj.OverlaysVisible_;
             obj.OverlaysVisible_ = value;
+            if isgraphics(obj.ApplicationOverlayLayer)
+                obj.ApplicationOverlayLayer.Visible = value;
+            end
             if ~isempty(obj.OverlayManager)
                 obj.OverlayManager.refreshVisibility();
             end
@@ -3940,10 +3955,91 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     end
 
+    % Passive application content has its own lifetime registry. It does not
+    % participate in the interactive overlay manager's selection or tools.
+    properties (Access=private)
+        ApplicationOverlayLayer = []
+        ApplicationOverlayMounts = {}
+        ApplicationOverlayLifetimeListener = []
+    end
+
+    methods
+        function mount = mountOverlay(obj,content)
+        %MOUNTOVERLAY Attach application-owned passive content, or transfer it.
+            arguments
+                obj
+                content (1,1) matlabx.ui.axes.ImageAxesOverlayContent
+            end
+            if ~isvalid(content)
+                error('matlabx:ui:InvalidOverlayContent','Content has been deleted.');
+            end
+            previous = content.Mount;
+            if ~isempty(previous) && isvalid(previous)
+                if any(cellfun(@(m) m == previous,obj.ApplicationOverlayMounts))
+                    mount = previous;
+                    return;
+                end
+                previous.remove();
+            end
+            mount = matlabx.ui.axes.ImageAxesOverlayMount( ...
+                obj,content,obj.ApplicationOverlayLayer);
+            obj.ApplicationOverlayMounts{end+1} = mount;
+            content.Mount = mount;
+            try
+                mount.attachContent();
+            catch exception
+                % Detach partial graphics while preserving the attach error.
+                try
+                    mount.remove();
+                catch
+                    % The mount's cleanup still deletes its graphics group.
+                end
+                rethrow(exception);
+            end
+        end
+
+        function unmountOverlay(obj,content)
+        %UNMOUNTOVERLAY Remove only this host's relationship with content.
+            mounts = obj.ApplicationOverlayMounts;
+            for k = 1:numel(mounts)
+                if mounts{k}.Content == content
+                    mounts{k}.remove();
+                    return;
+                end
+            end
+        end
+    end
+
+    methods (Access=?matlabx.ui.axes.ImageAxesOverlayMount)
+        function releaseOverlayMount(obj,mount)
+            obj.ApplicationOverlayMounts = obj.ApplicationOverlayMounts( ...
+                ~cellfun(@(m) m == mount,obj.ApplicationOverlayMounts));
+        end
+    end
+
+    methods (Access=private)
+        function detachApplicationOverlays(obj)
+            % Snapshot because each removal unregisters itself. Continue even
+            % if application cleanup fails, so other content can survive.
+            mounts = obj.ApplicationOverlayMounts;
+            for k = 1:numel(mounts)
+                if isvalid(mounts{k})
+                    try
+                        mounts{k}.remove();
+                    catch exception
+                        warning('matlabx:ui:OverlayDetachFailed','%s',exception.message);
+                    end
+                end
+            end
+        end
+    end
+
     %% Teardown
     methods
 
         function delete(obj)
+
+            obj.detachApplicationOverlays();
 
             % remove listeners first
             if ~isempty(obj.L), delete(obj.L(isvalid(obj.L))); end
