@@ -761,6 +761,46 @@ Useful general apps and dialogs include:
 - `matlabx.app.SliderGroupDialog`: grouped slider dialog used by display
   limits controls
 
+## Cached SVG Icons
+
+Generate a transparent circle icon for UI components such as tree nodes:
+
+```matlab
+node.Icon = matlabx.ui.icon.get( ...
+    Shape="circle", Color=[0 0.4470 0.7410], Size=16);
+```
+
+`Color` is an RGB triplet in `[0,1]`, rounded to eight-bit RGB. `Size` is a
+positive integer specifying the square SVG canvas size. The filled circle
+has no border and occupies 75 percent of the canvas diameter.
+
+Identical rendering options reuse an SVG beneath
+`fullfile(prefdir,'matlabx','cache','icons')`. Missing files are regenerated
+on the next call, so the cache can be deleted. Store colors and other icon
+options in application data; generated paths are disposable runtime values.
+Currently, only `Shape="circle"` is supported.
+
+Encode or decode icon styles without reading or writing files:
+
+```matlab
+name = matlabx.ui.icon.encode(Color=[0 0.4470 0.7410], Size=16);
+% "v1-circle-0072BD-16.svg"
+style = matlabx.ui.icon.decode(name);
+file = matlabx.ui.icon.get(name); % Regenerate in the local cache if missing.
+```
+
+`decode` returns a struct with `Shape`, `Color`, and `Size`; `Color` contains
+quantized eight-bit RGB values divided by 255. Both `decode` and the encoded
+form of `get` accept a full path but use only its basename, including for
+paths from another platform. They do not read the supplied file. Names use
+uppercase hexadecimal colors and canonical positive integer sizes. Malformed
+names, unsupported versions, and unsupported shapes raise errors.
+
+Storing styles remains convenient for editing. Encoded basenames can also be
+stored as versioned icon descriptions; absolute cache paths are not portable.
+The encoded form of `get` does not accept additional style overrides.
+
+
 ## Colormaps And Colors
 
 `matlabx.colors.maps.Registry` discovers bundled colormaps and exposes a common
