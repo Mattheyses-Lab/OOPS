@@ -653,6 +653,43 @@ The overlay base class is intentionally small. Custom overlays inherit from
 `updateGeometry` and `updateAppearance`, and call `registerGraphics` for
 hit-test ownership and manager lookup.
 
+### Passive Application Overlays
+
+Applications can mount derived graphics without adding interactive overlay types.
+Subclass `matlabx.ui.axes.ImageAxesOverlayContent` and implement just
+`attach(parent,context)` and `detach()`:
+
+```matlab
+field = MyOrientationField(); % Application-defined content class.
+mount = viewer.mountOverlay(field);
+field.setData(...);          % Application-defined data API.
+mount.Visible = false;
+mount.remove();              % Detach; field remains reusable.
+```
+
+`attach` receives a dedicated `hggroup` and a struct containing `context.Host`.
+Create or reparent primitives beneath that group with `HitTest="off"` and
+`PickableParts="none"`. Coordinates are image axes coordinates, so graphics
+follow zoom and pan automatically. The application updates its own content
+when image data or view-dependent quantities change; there are no context
+notifications in this initial API.
+
+`detach` must tolerate repeated calls and partial attachment. It should delete
+primitives or set their `Parent=[]` to preserve them for reuse. The mount deletes
+its group afterwards. The application owns the content and is responsible for
+finally disposing of any retained primitives when deleting the content.
+
+`viewer.unmountOverlay(field)` and deleting the mount also detach content.
+Deleting a viewer detaches content before its axes are destroyed. Mounting on
+the same viewer returns the existing mount; mounting on another viewer removes
+the old mount and creates a new one. Deleting content removes its mount.
+Use the viewer methods to mount/unmount rather than calling lifecycle hooks
+directly. Failed attachment cleans up the relationship and rethrows the error.
+
+Mounted graphics sit above the image and below interactive overlays. They
+participate in `OverlaysVisible` without losing their own `mount.Visible`
+setting, but do not participate in selection, tools, or event routing.
+
 ## Transferable Plot Content
 
 `matlabx.ui.axes.PlotAxes` is a stable UI host, similar to `ImageAxes` in its
