@@ -2,3 +2,9 @@
 *.asv
 *.tif
 .DS_Store
+
+# New implementation: local app settings and user outputs
+/user/
+
+# Session log files
+/logs/
