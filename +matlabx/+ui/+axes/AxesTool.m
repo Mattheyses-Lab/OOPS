@@ -202,7 +202,8 @@ classdef AxesTool < handle
             % set Enabled status
             obj.Enabled = true;
             % ensure that toolbar button (if valid) reflects Enabled status correctly
-            if isvalid(obj.Host.ToolbarButtons.(obj.Name))
+            if isfield(obj.Host.ToolbarButtons,obj.Name) && ...
+                    isvalid(obj.Host.ToolbarButtons.(obj.Name))
                 obj.Host.ToolbarButtons.(obj.Name).Value = obj.Enabled;
             end
             % forward to subclass hook
@@ -220,7 +221,8 @@ classdef AxesTool < handle
             % set Enabled status
             obj.Enabled = false;
             % ensure that toolbar button (if valid) reflects Enabled status correctly
-            if isvalid(obj.Host.ToolbarButtons.(obj.Name))
+            if isfield(obj.Host.ToolbarButtons,obj.Name) && ...
+                    isvalid(obj.Host.ToolbarButtons.(obj.Name))
                 obj.Host.ToolbarButtons.(obj.Name).Value = obj.Enabled;
             end
             % forward to subclass hook
@@ -228,6 +230,7 @@ classdef AxesTool < handle
         end
 
         function install(obj)
+            if obj.Installed, return; end
             % indicate status in command window
             obj.printStatus(sprintf('Installing "%s" tool...', obj.Name));
 
@@ -237,7 +240,16 @@ classdef AxesTool < handle
             % set Installed status
             obj.Installed = true;
             % forward to subclass hook
-            obj.onInstall();
+            try
+                obj.onInstall();
+            catch exception
+                try
+                    obj.uninstall();
+                catch
+                    % Preserve the installation error after releasing UI.
+                end
+                rethrow(exception);
+            end
 
             % indicate status in command window
             obj.printStatus(sprintf('"%s" tool installed', obj.Name));
@@ -245,11 +257,17 @@ classdef AxesTool < handle
 
 
         function uninstall(obj)
+            if ~obj.Installed, return; end
             % indicate status in command window
             obj.printStatus(sprintf('Uninstalling "%s" tool...', obj.Name));
 
-            % make sure tool is disabled before uninstalling
-            obj.disable();
+            % A failing application hook must not strand its UI/registry.
+            disableError = [];
+            try
+                obj.disable();
+            catch exception
+                disableError = exception;
+            end
             % remove self from Host registry
             obj.Host.unregisterTool(obj);
 
@@ -257,6 +275,9 @@ classdef AxesTool < handle
             obj.Installed = false;
             % forward to subclass hook
             obj.onUninstall();
+            if ~isempty(disableError)
+                rethrow(disableError);
+            end
 
             % indicate status in command window
             obj.printStatus(sprintf('"%s" tool uninstalled', obj.Name));
@@ -416,6 +437,7 @@ classdef AxesTool < handle
 
         function printStatus(obj,status)
         %PRINTSTATUS Emit a debug log message for this tool.
+            if isempty(obj.Host) || ~isvalid(obj.Host), return; end
             matlabx.Log.DEBUG( ...
                 strip(string(status)), ...
                 "Source", class(obj), ...
@@ -428,7 +450,7 @@ classdef AxesTool < handle
 
     %% teardown
 
-    methods (Access = {?matlabx.ui.axes.AxesTool, ?matlabx.ui.axes.ImageAxes, ?matlabx.ui.axes.ImageAxesToolManager})
+    methods
 
         % subclass delete() will be called before this runs
         function delete(obj)

@@ -623,8 +623,9 @@ classdef ImageAxesContextMenuManager < handle
             end
 
             if isa(a, 'handle') || isa(b, 'handle')
-                tf = isa(a, 'handle') && isa(b, 'handle') && isvalid(a) && ...
-                    isvalid(b) && a == b;
+                % Destructors can run after isvalid becomes false. Identity
+                % still matters here so deleting a tool removes its menus.
+                tf = isa(a, 'handle') && isa(b, 'handle') && isequal(a,b);
                 return
             end
 
