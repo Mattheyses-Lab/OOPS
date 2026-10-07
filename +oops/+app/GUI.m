@@ -26,6 +26,7 @@ classdef GUI < handle
         ObjectViewerPanels
         ObjectViewers cell = {}
         OrientationFields cell = {}
+        OrientationFieldTools cell = {}
         ScatterRenderer matlabx.ui.axes.plot.ScatterRenderer
         SwarmRenderer matlabx.ui.axes.plot.ViolinRenderer
         ViewerPanels
@@ -56,7 +57,6 @@ classdef GUI < handle
         Closing (1,1) logical = false
         ViewerKeys (1,2) string = ["",""]
         ObjectViewerKey (1,1) string = ""
-        OrientationMounts cell = {}
         LabelHotkeys (1,:) string = string.empty(1,0)
     end
 
@@ -262,8 +262,15 @@ classdef GUI < handle
                     delete(obj(k).SwarmRenderer);
                 end
 
-                % Application-owned overlay content removes its mount before
-                % the ImageAxes graphics hierarchy is destroyed.
+                % Application tools unregister their toolbar/menu contributions
+                % while the ImageAxes graphics hierarchy is still alive.
+                for tool = obj(k).OrientationFieldTools
+                    if ~isempty(tool{1}) && isvalid(tool{1})
+                        delete(tool{1});
+                    end
+                end
+
+                % Application-owned content removes its passive mount next.
                 for field = obj(k).OrientationFields
                     if ~isempty(field{1}) && isvalid(field{1})
                         delete(field{1});
@@ -1104,9 +1111,11 @@ classdef GUI < handle
                 % Passive axial field uses MATLABX's application-overlay layer.
                 field = oops.render.OrientationField();
                 mount = viewer.mountOverlay(field);
-                mount.Visible = 'off';
+                tool = oops.ui.axes.tools.OrientationField(viewer,mount);
+                viewer.installTool(tool);
+                tool.enable();
                 obj.OrientationFields{k} = field;
-                obj.OrientationMounts{k} = mount;
+                obj.OrientationFieldTools{k} = tool;
 
                 if k == 1
                     obj.LeftViewer = viewer;
@@ -2457,9 +2466,9 @@ classdef GUI < handle
 
             for k = 1:2
 
-                % Application-owned content and its MATLABX-owned mount relationship.
+                % Application-owned content and its visibility tool for this panel.
                 field = obj.OrientationFields{k};
-                mount = obj.OrientationMounts{k};
+                tool = obj.OrientationFieldTools{k};
 
                 % The first implementation is intentionally limited to the
                 % average-intensity source and requires completed FPM analysis.
@@ -2467,8 +2476,8 @@ classdef GUI < handle
                     ~isempty(image) && ~isempty(image.Order) && ~isempty(image.Azimuth);
 
                 if ~available
-                    mount.Visible = 'off';
                     field.clear();
+                    tool.setAvailable(false);
                     continue;
                 end
 
@@ -2513,7 +2522,7 @@ classdef GUI < handle
                     Alpha=settings.LineAlpha, ...
                     Scale=settings.LineScale);
                 field.setData(x,y,angle,magnitude);
-                mount.Visible = 'on';
+                tool.setAvailable(true);
             end
 
         end

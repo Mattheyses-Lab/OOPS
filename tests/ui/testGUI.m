@@ -112,6 +112,51 @@ oops.Log.INFO("UI sink verification"); oops.Log.flush();
 t.verifyTrue(any(contains(string(ui.LogTextArea.Value),"UI sink verification")));
 end
 
+function testOrientationFieldToolKeepsIndependentVisibility(t)
+%TESTORIENTATIONFIELDTOOLKEEPINDEPENDENTVISIBILITY Preserve user state across sources.
+
+ui = t.TestData.GUI;
+image = ui.Project.ActiveImage;
+
+% Supply completed analysis images and show the supported intensity source.
+image.setResults(struct( ...
+    'AverageIntensity',ones(20,30), ...
+    'Order',0.5*ones(20,30), ...
+    'Azimuth',(pi/6)*ones(20,30)));
+ui.Project.Settings.AzimuthDisplay.ScaleDownFactor = 4;
+ui.Project.Settings.View.LeftSource = "Average intensity";
+
+tool = ui.OrientationFieldTools{1};
+field = ui.OrientationFields{1};
+t.verifyTrue(tool.Enabled);
+t.verifyTrue(tool.Available);
+t.verifyEqual(string(field.Graphic.Parent.Visible),"on");
+
+% A user-disabled field stays hidden through appearance and source refreshes.
+ui.LeftViewer.disableTool("OrientationField");
+ui.Project.Settings.AzimuthDisplay.LineScale = 20;
+t.verifyFalse(tool.Enabled);
+t.verifyTrue(tool.Available);
+t.verifyEqual(string(field.Graphic.Parent.Visible),"off");
+
+ui.Project.Settings.View.LeftSource = "Mask";
+t.verifyFalse(tool.Available);
+ui.Project.Settings.View.LeftSource = "Average intensity";
+t.verifyTrue(tool.Available);
+t.verifyEqual(string(field.Graphic.Parent.Visible),"off");
+
+% The application tool contributes both toolbar and context-menu controls.
+button = findall(ui.LeftViewer.getAxes().Toolbar, ...
+    'Tooltip','Show/Hide Orientation Field');
+t.verifyNumElements(button,1);
+menu = ui.LeftViewer.ContextMenu.Children( ...
+    string({ui.LeftViewer.ContextMenu.Children.Text}) == "Show orientation field");
+t.verifyNumElements(menu,1);
+menu.MenuSelectedFcn(menu,[]);
+t.verifyTrue(tool.Enabled);
+t.verifyEqual(string(field.Graphic.Parent.Visible),"on");
+end
+
 function testLabelHotkeyAppliesToCheckedObjects(t)
 %TESTLABELHOTKEYAPPLIESTOCHECKEDOBJECTS Route label commands through model IDs.
 
