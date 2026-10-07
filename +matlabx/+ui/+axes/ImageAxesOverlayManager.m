@@ -355,25 +355,26 @@ classdef ImageAxesOverlayManager < handle
             notify(obj, 'SelectionChanged');
         end
 
-        function deselect(obj, id)
-        %DESELECT Remove one overlay from the selected set.
-            id = obj.normalizeId(id);
-            obj.SelectedIDs(obj.SelectedIDs == id) = [];
-            if obj.has(id)
-                overlay = obj.get(id);
-                overlay.Selected = false;
-            end
-            notify(obj, 'SelectionChanged');
+        function deselect(obj, ids)
+        %DESELECT Remove one or more overlays in one selection transaction.
+        %   Missing, duplicate, and already-unselected IDs are harmless. The
+        %   differential setSelected path updates visuals once per affected
+        %   overlay and emits at most one SelectionChanged notification.
+            ids = unique(obj.normalizeIds(ids), "stable");
+            final = obj.SelectedIDs(~ismember(obj.SelectedIDs, ids));
+            obj.setSelected(final);
         end
 
-        function toggleSelected(obj, id)
-        %TOGGLESELECTED Toggle selected state for one overlay.
-            id = obj.normalizeId(id);
-            if any(obj.SelectedIDs == id)
-                obj.deselect(id);
-            else
-                obj.select(id);
-            end
+        function toggleSelected(obj, ids)
+        %TOGGLESELECTED Toggle one or more overlays in one transaction.
+        %   Surviving selections retain their order. Newly selected IDs are
+        %   appended in stable request order. Each valid ID is toggled once.
+            ids = unique(obj.normalizeIds(ids), "stable");
+            ids = ids(arrayfun(@(id) obj.has(id), ids));
+            remove = ids(ismember(ids, obj.SelectedIDs));
+            add = ids(~ismember(ids, obj.SelectedIDs));
+            final = [obj.SelectedIDs(~ismember(obj.SelectedIDs, remove)), add];
+            obj.setSelected(final);
         end
 
         function clearSelection(obj, opts)
@@ -421,6 +422,33 @@ classdef ImageAxesOverlayManager < handle
             end
 
             ids = candidateIDs(keep);
+        end
+
+        function selectInsideRectangle(obj, rect, opts)
+        %SELECTINSIDERECTANGLE Apply one batched rectangle-selection update.
+        %   Mode is "replace", "toggle", or "remove". Type accepts the same
+        %   scalar/vector filters as idsInsideRectangle. Restricted replace
+        %   preserves selected overlays outside the requested types.
+            arguments
+                obj
+                rect (1,4) double
+                opts.Mode (1,1) string {mustBeMember(opts.Mode, ...
+                    ["replace","toggle","remove"])} = "replace"
+                opts.Type (1,:) string = ""
+            end
+
+            enclosed = obj.idsInsideRectangle(rect, Type=opts.Type);
+            switch opts.Mode
+                case "toggle"
+                    obj.toggleSelected(enclosed);
+                case "remove"
+                    obj.deselect(enclosed);
+                case "replace"
+                    current = obj.getSelectedIDs();
+                    targeted = obj.filterIDsByType(current, opts.Type);
+                    survivors = current(~ismember(current, targeted));
+                    obj.setSelected([survivors, enclosed]);
+            end
         end
 
         function refreshVisibility(obj)

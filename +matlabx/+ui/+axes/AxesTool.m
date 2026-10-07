@@ -109,6 +109,14 @@ classdef AxesTool < handle
         L event.listener                        % listens to host events
     end
 
+    properties
+        % These switches affect only UI contributed during installation. A
+        % headless tool remains installed and keeps its hotkeys, lifecycle,
+        % callbacks, and event-routing behavior.
+        ContributeToolbar (1,1) logical = true
+        ContributeContextMenu (1,1) logical = true
+    end
+
     properties (Dependent)
         IsInterceptor (1,1) logical     % this tool actively receives at least one type of event when Enabled=true
         IsPassiveInterceptor (1,1) logical      % this tool passively receives at least one type of event

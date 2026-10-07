@@ -680,6 +680,12 @@ unregisters it. Host teardown uninstalls tools while host graphics still exist;
 application-owned instances survive and should be deleted by their application.
 They remain bound to their original host.
 
+Set `ContributeToolbar=false` or `ContributeContextMenu=false` before
+installation to suppress either UI contribution independently. A tool with both
+set to `false` still installs normally and retains its hotkeys, lifecycle hooks,
+callbacks, and event routing. These settings are read during installation;
+uninstall and reinstall to apply a changed setting.
+
 Built-in name-based loading and installation are unchanged. Built-ins created
 by `loadTools` remain manager-owned and are deleted when unloaded or when their
 host is destroyed. Supplied instances are never added to that owning registry.
