@@ -22,10 +22,10 @@ properties
     Title (1,1) string
 
     % expand/collapse indicator icons
-    expandedIconLight (1,:) char = matlabx.internal.Paths.icons('ExpandedBlack.png')
-    collapsedIconLight (1,:) char = matlabx.internal.Paths.icons('CollapsedBlack.png')
-    expandedIconDark (1,:) char = matlabx.internal.Paths.icons('ExpandedWhite.png')
-    collapsedIconDark (1,:) char = matlabx.internal.Paths.icons('CollapsedWhite.png')
+    expandedIconLight (1,:) char = matlabx.internal.Paths.icons('ExpandedWhite.png')
+    collapsedIconLight (1,:) char = matlabx.internal.Paths.icons('CollapsedWhite.png')
+    expandedIconDark (1,:) char = matlabx.internal.Paths.icons('ExpandedBlack.png')
+    collapsedIconDark (1,:) char = matlabx.internal.Paths.icons('CollapsedBlack.png')
 end
 
 %% Fonts
