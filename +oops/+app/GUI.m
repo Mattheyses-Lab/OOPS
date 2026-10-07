@@ -27,6 +27,8 @@ classdef GUI < handle
         ObjectViewers cell = {}
         OrientationFields cell = {}
         OrientationFieldTools cell = {}
+        PolygonTools cell = {}
+        ObjectBoundaryTools cell = {}
         ScatterRenderer matlabx.ui.axes.plot.ScatterRenderer
         SwarmRenderer matlabx.ui.axes.plot.ViolinRenderer
         ViewerPanels
@@ -265,6 +267,20 @@ classdef GUI < handle
                 % Application tools unregister their toolbar/menu contributions
                 % while the ImageAxes graphics hierarchy is still alive.
                 for tool = obj(k).OrientationFieldTools
+                    if ~isempty(tool{1}) && isvalid(tool{1})
+                        delete(tool{1});
+                    end
+                end
+
+                % Object-facing facades release callbacks before their borrowed
+                % headless Polygon controllers are destroyed.
+                for tool = obj(k).ObjectBoundaryTools
+                    if ~isempty(tool{1}) && isvalid(tool{1})
+                        delete(tool{1});
+                    end
+                end
+
+                for tool = obj(k).PolygonTools
                     if ~isempty(tool{1}) && isvalid(tool{1})
                         delete(tool{1});
                     end
@@ -1101,12 +1117,26 @@ classdef GUI < handle
 
                 % Persistent ImageAxes created for the current panel.
                 viewer = matlabx.ui.axes.ImageAxes(grid,'Name',char(side+"Viewer"), ...
-                    'CData',[],'Tools',{'Zoom','Mask','Overlays','Polygon','RectangleSelect','Colorbar'},'Colormap',gray(256), ...
+                    'CData',[],'Tools',{'Zoom','Mask','Overlays','RectangleSelect','Colorbar'},'Colormap',gray(256), ...
                     'CLim',[0 1],'FontSize',12);
                 viewer.Tools.RectangleSelect.TargetTypes = "Polygon";
-                viewer.Tools.Polygon.PolygonActivatedFcn = @(~,d) obj.runCallback(@() obj.onPolygonActivated(d));
-                viewer.Tools.Polygon.PolygonSelectionChangedFcn = @(~,d) obj.runCallback(@() obj.onPolygonSelectionChanged(d));
-                viewer.Tools.Polygon.PolygonsDeleteRequestedFcn = @(~,d) obj.runCallback(@() obj.onPolygonsDeleteRequested(d));
+
+                % Generic polygon interaction remains installed without its
+                % MATLABX-facing toolbar or context-menu terminology.
+                polygonTool = matlabx.ui.axes.tools.Polygon(viewer);
+                polygonTool.ContributeToolbar = false;
+                polygonTool.ContributeContextMenu = false;
+                viewer.installTool(polygonTool);
+
+                % OOPS contributes the visible object-facing controls and
+                % delegates their behavior to the headless Polygon controller.
+                boundaryTool = oops.ui.axes.tools.ObjectBoundaries(viewer,polygonTool);
+                boundaryTool.ObjectActivatedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundaryActivated(d));
+                boundaryTool.ObjectSelectionChangedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundarySelectionChanged(d));
+                boundaryTool.ObjectsDeleteRequestedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundariesDeleteRequested(d));
+                viewer.installTool(boundaryTool);
+                obj.PolygonTools{k} = polygonTool;
+                obj.ObjectBoundaryTools{k} = boundaryTool;
 
                 % Passive axial field uses MATLABX's application-overlay layer.
                 field = oops.render.OrientationField();
@@ -2616,7 +2646,7 @@ classdef GUI < handle
                             overlay = viewer.Overlays.get(region.ID);
                             overlay.Vertices = geometry(key);
                         else
-                            overlay = viewer.Tools.Polygon.addPolygon( ...
+                            overlay = viewer.Tools.ObjectBoundaries.addBoundary( ...
                                 region.ID,geometry(key),'Label',region.Name);
                         end
 
@@ -2732,13 +2762,13 @@ classdef GUI < handle
                 end
 
                 % Model active-object ID, cleared when this viewer has no matching polygon.
-                current = axes.Tools.Polygon.getSelectedPolygonIDs();
+                current = axes.Tools.ObjectBoundaries.getSelectedObjectIDs();
                 % The manager's selection setter repaints even unchanged sets.
                 if ~isequal(current(:),ids(:))
-                    axes.Tools.Polygon.setSelectedPolygonIDs(ids);
+                    axes.Tools.ObjectBoundaries.setSelectedObjectIDs(ids);
                 end
 
-                axes.Tools.Polygon.setActivePolygonID(active);
+                axes.Tools.ObjectBoundaries.setActiveObjectID(active);
             end
 
         end
@@ -2749,8 +2779,8 @@ classdef GUI < handle
             obj.SyncingOverlays = false;
         end
 
-        function onPolygonActivated(obj,data)
-        %ONPOLYGONACTIVATED Store viewer activation independently of batch selection.
+        function onObjectBoundaryActivated(obj,data)
+        %ONOBJECTBOUNDARYACTIVATED Store activation independently of batch selection.
 
             if obj.SyncingOverlays || obj.Processing || obj.Closing
                 return;
@@ -2766,8 +2796,8 @@ classdef GUI < handle
             image.setActiveObject(data.ID);
         end
 
-        function onPolygonSelectionChanged(obj,data)
-        %ONPOLYGONSELECTIONCHANGED Store viewer selection and reflect it in tree checks.
+        function onObjectBoundarySelectionChanged(obj,data)
+        %ONOBJECTBOUNDARYSELECTIONCHANGED Store selection and update tree checks.
 
             if obj.SyncingOverlays || obj.Processing || obj.Closing
                 return;
@@ -2783,8 +2813,8 @@ classdef GUI < handle
             image.setSelectedObjects(data.IDs);
         end
 
-        function onPolygonsDeleteRequested(obj,data)
-        %ONPOLYGONSDELETEREQUESTED Commit the full tool request before changing overlays.
+        function onObjectBoundariesDeleteRequested(obj,data)
+        %ONOBJECTBOUNDARIESDELETEREQUESTED Commit one batch before changing overlays.
 
             if obj.SyncingOverlays || obj.Processing || obj.Closing
                 return;

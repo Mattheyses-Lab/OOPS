@@ -507,19 +507,30 @@ function testPolygonActivationAndSelectionStayIndependent(t)
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
 ui.Project.Settings.View.RightSource = "Average intensity";
 ids = oops.model.internal.ids(image.Objects);
-ui.LeftViewer.Tools.Polygon.setActivePolygonID(ids(2));
-ui.LeftViewer.Tools.Polygon.setSelectedPolygonIDs(ids(1));
+
+% Generic polygon interaction is installed headlessly. OOPS supplies the
+% visible object-facing toolbar and context-menu contributions.
+t.verifyEmpty(findall(ui.LeftViewer.getAxes().Toolbar, ...
+    'Tooltip','Polygon regions (help)'));
+t.verifyNumElements(findall(ui.LeftViewer.getAxes().Toolbar, ...
+    'Tooltip','Object boundaries (help)'),1);
+texts = string({ui.LeftViewer.ContextMenu.Children.Text});
+t.verifyFalse(any(texts == "Polygon"));
+t.verifyTrue(any(texts == "Object Boundaries"));
+
+ui.LeftViewer.Tools.ObjectBoundaries.setActiveObjectID(ids(2));
+ui.LeftViewer.Tools.ObjectBoundaries.setSelectedObjectIDs(ids(1));
 t.verifyEqual(image.ActiveObjectID,ids(2));
 t.verifyEqual(image.SelectedObjectIDs,ids(1));
 t.verifyEqual(ui.ObjectsTree.SelectedNodes.NodeData,ids(2));
 t.verifyEqual(ui.ObjectsTree.CheckedNodes.NodeData,ids(1));
 t.verifyEqual(ui.RightViewer.Overlays.getActiveID(Type="Polygon"),ids(2));
-selected = ui.RightViewer.Tools.Polygon.getSelectedPolygonIDs();
+selected = ui.RightViewer.Tools.ObjectBoundaries.getSelectedObjectIDs();
 t.verifyEqual(selected(:),ids(1));
 ui.ObjectsTree.CheckedNodes = ui.ObjectsTree.Children(2);
 ui.ObjectsTree.CheckedNodesChangedFcn(ui.ObjectsTree,[]);
 t.verifyEqual(image.SelectedObjectIDs,ids(2));
-selected = ui.LeftViewer.Tools.Polygon.getSelectedPolygonIDs();
+selected = ui.LeftViewer.Tools.ObjectBoundaries.getSelectedObjectIDs();
 t.verifyEqual(selected(:),ids(2));
 t.verifyEqual(image.ActiveObjectID,ids(2));
 end
@@ -531,7 +542,7 @@ ui.Project.Settings.View.RightSource = "Mask";
 removed = image.Objects(1); id = removed.ID; pixels = removed.PixelIdxList;
 survivor = image.Objects(2); mask = image.Mask; mask(pixels) = false;
 image.setActiveObject(removed); image.setSelectedObjects(image.Objects);
-ui.LeftViewer.Tools.Polygon.removePolygon(id);
+ui.LeftViewer.Tools.ObjectBoundaries.removeBoundary(id);
 t.verifyFalse(isvalid(removed));
 t.verifyEqual(image.Objects,survivor);
 t.verifyEqual(image.Mask,mask);
@@ -584,7 +595,7 @@ image.setActiveObject(survivor); image.setSelectedObjects(removed);
 image.setDisplayRange("Intensity",[.1 .9]);
 [events,listener] = observeObjectChanges(image);
 cleanup = onCleanup(@() delete(listener));
-ui.LeftViewer.Tools.Polygon.deleteSelectedPolygons();
+ui.LeftViewer.Tools.ObjectBoundaries.deleteSelected();
 t.verifyEqual(events(),1,'Batch deletion must emit one collection change.');
 t.verifyFalse(any(isvalid(removed)));
 t.verifyEqual(image.Objects,survivor);
