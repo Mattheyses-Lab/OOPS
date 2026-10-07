@@ -22,10 +22,10 @@ properties
     Title (1,1) string
 
     % expand/collapse indicator icons
-    expandedIconLight (1,:) char = matlabx.internal.Paths.icons('ChevronDownWhiteFGTransparentBG.svg')
-    collapsedIconLight (1,:) char = matlabx.internal.Paths.icons('ChevronRightWhiteFGTransparentBG.svg')
-    expandedIconDark (1,:) char = matlabx.internal.Paths.icons('ChevronDownBlackFGTransparentBG.svg')
-    collapsedIconDark (1,:) char = matlabx.internal.Paths.icons('ChevronRightBlackFGTransparentBG.svg')
+    expandedIconLight (1,:) char = matlabx.internal.Paths.icons('ExpandedBlack.png')
+    collapsedIconLight (1,:) char = matlabx.internal.Paths.icons('CollapsedBlack.png')
+    expandedIconDark (1,:) char = matlabx.internal.Paths.icons('ExpandedWhite.png')
+    collapsedIconDark (1,:) char = matlabx.internal.Paths.icons('CollapsedWhite.png')
 end
 
 %% Fonts
