@@ -724,8 +724,10 @@ Use the viewer methods to mount/unmount rather than calling lifecycle hooks
 directly. Failed attachment cleans up the relationship and rethrows the error.
 
 Mounted graphics sit above the image and below interactive overlays. They
-participate in `OverlaysVisible` without losing their own `mount.Visible`
-setting, but do not participate in selection, tools, or event routing.
+remain independent of `OverlaysVisible`, which controls only overlays registered
+with `ImageAxesOverlayManager`. Each application mount is controlled by its own
+`mount.Visible` setting and does not participate in selection, tools, or event
+routing.
 
 ## Transferable Plot Content
 
