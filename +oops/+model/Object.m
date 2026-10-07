@@ -212,6 +212,9 @@ classdef Object < handle
 
             try
                 validateattributes(coordinates,{'numeric'},{'2d','ncols',2,'real'});
+
+                % Normalize a failed trace's [] result to the declared 0-by-1 shape.
+                pixelTangents = pixelTangents(:);
                 validateattributes(pixelTangents,{'numeric'},{'column','real'});
 
                 if ~isempty(pixelTangents) && numel(pixelTangents) ~= numel(obj.PixelIdxList)

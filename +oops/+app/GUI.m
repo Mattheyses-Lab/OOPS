@@ -25,6 +25,7 @@ classdef GUI < handle
         ObjectNavigationGrid
         ObjectViewerPanels
         ObjectViewers cell = {}
+        OrientationFields cell = {}
         ScatterRenderer matlabx.ui.axes.plot.ScatterRenderer
         SwarmRenderer matlabx.ui.axes.plot.ViolinRenderer
         ViewerPanels
@@ -55,6 +56,7 @@ classdef GUI < handle
         Closing (1,1) logical = false
         ViewerKeys (1,2) string = ["",""]
         ObjectViewerKey (1,1) string = ""
+        OrientationMounts cell = {}
         LabelHotkeys (1,:) string = string.empty(1,0)
     end
 
@@ -258,6 +260,14 @@ classdef GUI < handle
 
                 if ~isempty(obj(k).SwarmRenderer) && isvalid(obj(k).SwarmRenderer)
                     delete(obj(k).SwarmRenderer);
+                end
+
+                % Application-owned overlay content removes its mount before
+                % the ImageAxes graphics hierarchy is destroyed.
+                for field = obj(k).OrientationFields
+                    if ~isempty(field{1}) && isvalid(field{1})
+                        delete(field{1});
+                    end
                 end
 
                 if ~isempty(obj(k).Logger) && isvalid(obj(k).Logger)
@@ -1091,6 +1101,13 @@ classdef GUI < handle
                 viewer.Tools.Polygon.PolygonSelectionChangedFcn = @(~,d) obj.runCallback(@() obj.onPolygonSelectionChanged(d));
                 viewer.Tools.Polygon.PolygonsDeleteRequestedFcn = @(~,d) obj.runCallback(@() obj.onPolygonsDeleteRequested(d));
 
+                % Passive axial field uses MATLABX's application-overlay layer.
+                field = oops.render.OrientationField();
+                mount = viewer.mountOverlay(field);
+                mount.Visible = 'off';
+                obj.OrientationFields{k} = field;
+                obj.OrientationMounts{k} = mount;
+
                 if k == 1
                     obj.LeftViewer = viewer;
                 else
@@ -1711,6 +1728,9 @@ classdef GUI < handle
             switch e.Domain
                 case {"View","Colormaps","Display"}
                     obj.refreshViewers(true);
+                case "AzimuthDisplay"
+                    obj.refreshOrientationFields([obj.Project.Settings.View.LeftSource, ...
+                        obj.Project.Settings.View.RightSource]);
                 case "ObjectSelection"
                     obj.refreshViewerRegions();
                 case "ObjectDisplay"
@@ -1973,6 +1993,7 @@ classdef GUI < handle
             end
 
             obj.refreshViewerRegions();
+            obj.refreshOrientationFields(names);
 
             if refreshControls
                 obj.refreshSegmentationControls();
@@ -2423,6 +2444,78 @@ classdef GUI < handle
                 end
 
             end
+        end
+
+        function refreshOrientationFields(obj,names)
+        %REFRESHORIENTATIONFIELDS Draw sampled axial segments over average intensity.
+
+            % Active image supplying order, azimuth, and optional object membership.
+            image = obj.Project.ActiveImage;
+
+            % Project-wide appearance and sampling preferences for this overlay.
+            settings = obj.Project.Settings.AzimuthDisplay;
+
+            for k = 1:2
+
+                % Application-owned content and its MATLABX-owned mount relationship.
+                field = obj.OrientationFields{k};
+                mount = obj.OrientationMounts{k};
+
+                % The first implementation is intentionally limited to the
+                % average-intensity source and requires completed FPM analysis.
+                available = names(k) == "Average intensity" && ...
+                    ~isempty(image) && ~isempty(image.Order) && ~isempty(image.Azimuth);
+
+                if ~available
+                    mount.Visible = 'off';
+                    field.clear();
+                    continue;
+                end
+
+                % Pixels eligible for display before applying spatial sampling.
+                mask = isfinite(image.Order) & isfinite(image.Azimuth);
+
+                if settings.ObjectMask
+
+                    if isempty(image.Mask)
+                        mask(:) = false;
+                    else
+                        mask = mask & image.Mask;
+                    end
+
+                end
+
+                % Regular sampling lattice limits the number of graphics segments.
+                spacing = settings.ScaleDownFactor;
+
+                if spacing > 1
+                    sampled = false(size(mask));
+                    sampled(1:spacing:end,1:spacing:end) = true;
+                    mask = mask & sampled;
+                end
+
+                % Parent-image pixel centers and their axial FPM results.
+                [y,x] = find(mask);
+                angle = image.Azimuth(mask);
+                magnitude = image.Order(mask);
+
+                % Direction uses the cyclic azimuth map; magnitude uses order.
+                if settings.ColorMode == "Magnitude"
+                    map = oops.render.colormap(obj.Project.Settings.Colormaps,"Order");
+                else
+                    map = oops.render.colormap(obj.Project.Settings.Colormaps,"Azimuth");
+                end
+
+                field.setStyle( ...
+                    ColorMode=settings.ColorMode, ...
+                    Colormap=map, ...
+                    LineWidth=settings.LineWidth, ...
+                    Alpha=settings.LineAlpha, ...
+                    Scale=settings.LineScale);
+                field.setData(x,y,angle,magnitude);
+                mount.Visible = 'on';
+            end
+
         end
 
         function refreshViewerRegions(obj)
