@@ -653,6 +653,37 @@ The overlay base class is intentionally small. Custom overlays inherit from
 `updateGeometry` and `updateAppearance`, and call `registerGraphics` for
 hit-test ownership and manager lookup.
 
+### Application-Owned Axes Tools
+
+Applications can contribute toolbar buttons, hotkeys, context menus, and routed
+interaction through an `AxesTool` subclass outside MATLABX's tool package:
+
+```matlab
+tool = myapp.ui.axes.tools.CustomTool(viewer);
+viewer.installTool(tool);
+viewer.uninstallTool(tool); % Removes UI/bindings; tool remains alive.
+viewer.installTool(tool);   % Reinstall the same object.
+```
+
+The tool must be a valid scalar `matlabx.ui.axes.AxesTool` constructed for that
+viewer. Its `Name` must be a MATLAB identifier unique among installed tools.
+Repeated installation of the same instance is a no-op; a different instance
+with the same installed name is rejected. Tools cannot transfer between hosts.
+`viewer.getInstalledTool("CustomTool")` returns the installed object or empty.
+Uninstallation also accepts the name.
+
+Use the existing `onInstall`, `onUninstall`, `onEnabled`, `onDisabled`, and
+`contributeContextMenu` hooks. Give menu contributions `Owner=tool` so MATLABX
+can remove them. Uninstallation disables the tool before removing its hotkeys,
+menus, and toolbar button, then calls `onUninstall`. Deleting the tool also
+unregisters it. Host teardown uninstalls tools while host graphics still exist;
+application-owned instances survive and should be deleted by their application.
+They remain bound to their original host.
+
+Built-in name-based loading and installation are unchanged. Built-ins created
+by `loadTools` remain manager-owned and are deleted when unloaded or when their
+host is destroyed. Supplied instances are never added to that owning registry.
+
 ### Passive Application Overlays
 
 Applications can mount derived graphics without adding interactive overlay types.

@@ -374,6 +374,9 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             % initialize overlay/tool lifecycle/hotkey managers
             obj.OverlayManager = matlabx.ui.axes.ImageAxesOverlayManager(obj);
             obj.ToolManager = matlabx.ui.axes.ImageAxesToolManager(obj);
+            % Uninstall borrowed tools before axes toolbar graphics disappear.
+            obj.ToolLifetimeListener = addlistener(obj.mainAxes, ...
+                'ObjectBeingDestroyed',@(~,~) obj.ToolManager.uninstallAll());
             obj.HotkeyRegistry = matlabx.ui.axes.ImageAxesHotkeyRegistry();
 
             % Hub registration (one hub per figure; this instance registers itself)
@@ -3272,11 +3275,14 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % install tool specified by name
         function installTool(obj,name)
+        %INSTALLTOOL Install a loaded built-in name or an application AxesTool.
+        %   Object inputs must belong to this host and remain application-owned.
             obj.ToolManager.install(name);
         end
 
         % uninstall tool specified by name
         function uninstallTool(obj,name)
+        %UNINSTALLTOOL Remove contributions by name or object without deletion.
             obj.ToolManager.uninstall(name);
         end
 
@@ -3961,6 +3967,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         ApplicationOverlayLayer = []
         ApplicationOverlayMounts = {}
         ApplicationOverlayLifetimeListener = []
+        ToolLifetimeListener = []
     end
 
     methods
@@ -4039,6 +4046,9 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         function delete(obj)
 
+            if ~isempty(obj.ToolManager) && isvalid(obj.ToolManager)
+                obj.ToolManager.uninstallAll();
+            end
             obj.detachApplicationOverlays();
 
             % remove listeners first
