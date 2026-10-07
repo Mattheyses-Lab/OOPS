@@ -251,48 +251,8 @@ classdef RectangleSelect < matlabx.ui.axes.AxesTool
         function applySelectionRectangle(obj)
         %APPLYSELECTIONRECTANGLE Mutate overlay selection from the current rect.
             rect = obj.currentRectangle();
-            ids = obj.Host.Overlays.idsInsideRectangle(rect, Type=obj.TargetTypes);
-
-            switch obj.SelectionMode
-                case "replace"
-                    obj.replaceSelection(ids);
-                case "toggle"
-                    for i = 1:numel(ids)
-                        obj.Host.Overlays.toggleSelected(ids(i));
-                    end
-                case "remove"
-                    for i = 1:numel(ids)
-                        obj.Host.Overlays.deselect(ids(i));
-                    end
-            end
-        end
-
-        function replaceSelection(obj, ids)
-        %REPLACESELECTION Replace selection while respecting TargetTypes.
-            targetTypes = string(obj.TargetTypes);
-            if isempty(targetTypes) || any(targetTypes == "") || any(strcmpi(targetTypes, "all"))
-                obj.Host.Overlays.setSelected(ids);
-                return
-            end
-
-            % Replace each target type independently so non-target overlay
-            % selections survive the operation.
-            for i = 1:numel(targetTypes)
-                typeIds = ids(obj.idsMatchType(ids, targetTypes(i)));
-                obj.Host.Overlays.setSelected(typeIds, Type=targetTypes(i));
-            end
-        end
-
-        function tf = idsMatchType(obj, ids, typeName)
-        %IDSMATCHTYPE True for IDs whose overlay Type matches typeName.
-            ids = string(ids);
-            tf = false(size(ids));
-
-            for i = 1:numel(ids)
-                overlay = obj.Host.Overlays.get(ids(i));
-                tf(i) = ~isempty(overlay) && isvalid(overlay) ...
-                    && strcmpi(overlay.Type, typeName);
-            end
+            obj.Host.Overlays.selectInsideRectangle(rect, ...
+                Mode=obj.SelectionMode, Type=obj.TargetTypes);
         end
 
         function rect = currentRectangle(obj)

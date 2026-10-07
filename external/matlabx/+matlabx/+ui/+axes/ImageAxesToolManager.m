@@ -68,9 +68,13 @@ classdef ImageAxesToolManager < handle
             obj.Tools.(char(tool.Name)) = tool;
             obj.InstalledTools(char(tool.Name)) = tool;
             try
-                obj.addToolbarButton(tool);
+                if tool.ContributeToolbar
+                    obj.addToolbarButton(tool);
+                end
                 obj.Host.registerToolHotkeys(tool);
-                obj.contributeContextMenu(tool);
+                if tool.ContributeContextMenu
+                    obj.contributeContextMenu(tool);
+                end
             catch exception
                 obj.unregister(tool);
                 rethrow(exception);

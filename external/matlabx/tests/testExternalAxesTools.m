@@ -143,3 +143,47 @@ function testInvalidInstances(t)
     delete(tool);
     t.verifyError(@() ax.installTool(tool),'matlabx:ui:InvalidTool');
 end
+
+function testIndependentContributionSettings(t)
+    ax = t.TestData.Host;
+    configurations = [true true; true false; false true; false false];
+
+    for k = 1:size(configurations,1)
+        tool = ExternalAxesTool(ax);
+        tool.ContributeToolbar = configurations(k,1);
+        tool.ContributeContextMenu = configurations(k,2);
+        ax.installTool(tool);
+
+        buttons = findall(ax.getAxes().Toolbar,'Tooltip','External test tool');
+        t.verifyEqual(~isempty(buttons),tool.ContributeToolbar);
+        t.verifyEqual(isLiveGraphic(tool.Menu),tool.ContributeContextMenu);
+        t.verifyTrue(tool.Installed);
+        t.verifyEqual(tool.Installs,1);
+
+        % Contributions are independent of controller state and hotkeys.
+        event = keyEvent(t);
+        ax.routeHotkey(event);
+        t.verifyTrue(tool.Enabled);
+        t.verifyTrue(event.StopPropagation);
+        t.verifyEqual(tool.Enables,1);
+
+        ax.uninstallTool(tool);
+        t.verifyTrue(isvalid(tool));
+        t.verifyFalse(tool.Installed);
+        t.verifyFalse(tool.Enabled);
+        t.verifyEmpty(findall(ax.getAxes().Toolbar, ...
+            'Tooltip','External test tool'));
+        t.verifyFalse(isLiveGraphic(tool.Menu));
+
+        % The same configuration must also clean up through tool deletion.
+        ax.installTool(tool);
+        delete(tool);
+        t.verifyEmpty(ax.getInstalledTool("ExternalTool"));
+        t.verifyEmpty(findall(ax.getAxes().Toolbar, ...
+            'Tooltip','External test tool'));
+    end
+end
+
+function tf = isLiveGraphic(value)
+    tf = ~isempty(value) && all(isgraphics(value));
+end
