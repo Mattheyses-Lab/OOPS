@@ -394,7 +394,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             % below interactive overlays, including content mounted later.
             obj.mainAxes.SortMethod = 'childorder';
             obj.ApplicationOverlayLayer = hggroup(obj.mainAxes, ...
-                'Tag','ApplicationOverlayLayer','Visible',obj.OverlaysVisible, ...
+                'Tag','ApplicationOverlayLayer', ...
                 'HitTest','off','PickableParts','none');
             % Detach before axes children are destroyed (ComponentContainer
             % teardown can precede the ImageAxes destructor).
@@ -2134,9 +2134,6 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         function set.OverlaysVisible(obj, value)
             previous = obj.OverlaysVisible_;
             obj.OverlaysVisible_ = value;
-            if isgraphics(obj.ApplicationOverlayLayer)
-                obj.ApplicationOverlayLayer.Visible = value;
-            end
             if ~isempty(obj.OverlayManager)
                 obj.OverlayManager.refreshVisibility();
             end
