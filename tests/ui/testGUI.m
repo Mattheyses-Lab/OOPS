@@ -529,10 +529,38 @@ ids = oops.model.internal.ids(image.Objects);
 t.verifyEmpty(findall(ui.LeftViewer.getAxes().Toolbar, ...
     'Tooltip','Polygon regions (help)'));
 t.verifyNumElements(findall(ui.LeftViewer.getAxes().Toolbar, ...
-    'Tooltip','Object boundaries (help)'),1);
+    'Tooltip','Show/Hide Objects'),1);
+t.verifyEmpty(findall(ui.LeftViewer.getAxes().Toolbar, ...
+    'Tooltip','Show/Hide Overlays'));
+t.verifyFalse(isfield(ui.LeftViewer.Tools,'Overlays'));
 texts = string({ui.LeftViewer.ContextMenu.Children.Text});
 t.verifyFalse(any(texts == "Polygon"));
-t.verifyTrue(any(texts == "Object Boundaries"));
+t.verifyTrue(any(texts == "Objects"));
+objectsMenu = ui.LeftViewer.ContextMenu.Children(texts == "Objects");
+showItem = objectsMenu.Children(string({objectsMenu.Children.Text}) == "Show");
+t.verifyNumElements(showItem,1);
+t.verifyEqual(string(showItem.Checked),"on");
+
+% The application tool toggles native object boundaries without changing
+% membership or the independent application-overlay layer.
+polygon = findobj(ui.LeftViewer.getAxes(),'Tag','OverlayPolygon');
+applicationLayer = findobj(ui.LeftViewer.getAxes(),'Tag','ApplicationOverlayLayer');
+t.verifyTrue(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
+t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"on");
+ui.LeftViewer.disableTool("ObjectBoundaries");
+t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"off");
+t.verifyTrue(all(string({polygon.Visible}) == "off"));
+t.verifyEqual(string(applicationLayer.Visible),"on");
+showItem.MenuSelectedFcn(showItem,[]);
+t.verifyTrue(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
+t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"on");
+ui.LeftViewer.enableTool("ObjectBoundaries");
+t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"on");
+t.verifyTrue(all(string({polygon.Visible}) == "on"));
+ui.LeftViewer.OverlaysVisible = 'off';
+t.verifyFalse(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
+ui.LeftViewer.OverlaysVisible = 'on';
+t.verifyTrue(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
 
 ui.LeftViewer.Tools.ObjectBoundaries.setActiveObjectID(ids(2));
 ui.LeftViewer.Tools.ObjectBoundaries.setSelectedObjectIDs(ids(1));

@@ -26,7 +26,9 @@ function testFourConnectedExteriorBoundaries(t)
 
 % Include border objects, a single pixel, a concave contour, and multiple
 % objects. These are deliberately ordinary four-connected, hole-free masks.
-masks = {true(5), true(1), logical([1 1 0; 1 0 0; 1 1 1])};
+masks = {true(5), true(1), ...
+    logical([1 1 0; 1 0 0; 1 1 1]), ...
+    logical([1 0 0; 1 1 0; 0 1 1])};
 mask = false(12,15);
 mask(1:3,1:4) = true;
 mask(5:8,7:9) = true;
@@ -64,8 +66,23 @@ for region = image.Objects'
     own(region.PixelIdxList) = true;
     tight = own(bounds(1,1):bounds(1,2),bounds(2,1):bounds(2,2));
     traced = bwboundaries(tight,8,'noholes','TraceStyle','pixeledge');
-    expectedVertices = traced{1} + [bounds(1,1)-1 bounds(2,1)-1];
+
+    % Strip the tracer's repeated starting edge before comparing with the
+    % patch-ready geometry returned by objectBoundary.
+    expectedVertices = traced{1};
+    repeatedStart = find(all(expectedVertices(2:end,:) == ...
+        expectedVertices(1,:),2),1,'first');
+
+    if ~isempty(repeatedStart)
+        expectedVertices = expectedVertices(1:repeatedStart,:);
+    end
+
+    expectedVertices = expectedVertices + [bounds(1,1)-1 bounds(2,1)-1];
     t.verifyEqual(vertices,expectedVertices(:,[2 1]));
+
+    % Patch input contains the starting coordinate exactly once. The patch
+    % itself closes the last edge back to this vertex.
+    t.verifyEqual(sum(all(vertices == vertices(1,:),2)),1);
 
     t.verifyWarningFree(@() polyshape(vertices));
     shape = polyshape(vertices);

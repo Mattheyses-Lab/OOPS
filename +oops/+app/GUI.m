@@ -1133,7 +1133,7 @@ classdef GUI < handle
 
                 % Persistent ImageAxes created for the current panel.
                 viewer = matlabx.ui.axes.ImageAxes(grid,'Name',char(side+"Viewer"), ...
-                    'CData',[],'Tools',{'Zoom','Mask','Overlays','RectangleSelect','Colorbar'},'Colormap',gray(256), ...
+                    'CData',[],'Tools',{'Zoom','Mask','RectangleSelect','Colorbar'},'Colormap',gray(256), ...
                     'CLim',[0 1],'FontSize',12);
                 viewer.Tools.RectangleSelect.TargetTypes = "Polygon";
 
@@ -1151,6 +1151,7 @@ classdef GUI < handle
                 boundaryTool.ObjectSelectionChangedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundarySelectionChanged(d));
                 boundaryTool.ObjectsDeleteRequestedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundariesDeleteRequested(d));
                 viewer.installTool(boundaryTool);
+                boundaryTool.enable();
                 obj.PolygonTools{k} = polygonTool;
                 obj.ObjectBoundaryTools{k} = boundaryTool;
 
@@ -1436,6 +1437,12 @@ classdef GUI < handle
 
             obj.refreshNavigation();
 
+            % An explicit object activation or an image switch reveals the
+            % remembered active object in the reused Objects tree.
+            if nargin < 2 || (e.Domain == "Image" && e.Name == "ActiveObjectID")
+                obj.scrollToActiveObject();
+            end
+
             if nargin > 1 && e.Domain == "Image" && ...
                     ismember(e.Name,["SelectedObjectIDs","ActiveObjectID"])
                 obj.syncOverlayState();
@@ -1632,6 +1639,31 @@ classdef GUI < handle
                     tree.CheckedNodes = [];
                 else
                     tree.CheckedNodes = checked(:)';
+                end
+
+            end
+
+        end
+
+        function scrollToActiveObject(obj)
+        %SCROLLTOACTIVEOBJECT Bring the highlighted active-object node into view.
+
+            % Active image supplying the ID bookmarked independently of selection.
+            image = obj.Project.ActiveImage;
+
+            if isempty(image) || image.ActiveObjectID == "" || ...
+                    isempty(obj.ObjectsTree) || ~isvalid(obj.ObjectsTree)
+                return;
+            end
+
+            % Reused object nodes retain their current order and scroll context.
+            nodes = obj.ObjectsTree.Children;
+
+            for k = 1:numel(nodes)
+
+                if string(nodes(k).NodeData) == image.ActiveObjectID
+                    scroll(obj.ObjectsTree,nodes(k));
+                    return;
                 end
 
             end

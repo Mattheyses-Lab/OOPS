@@ -46,8 +46,18 @@ try
     % First exterior contour, subsequently translated into parent coordinates.
     points = traced{1};
 
+    % Moore-neighbor tracing can repeat the starting edge after completing
+    % the loop, yielding A -> ... -> A -> B. A line plot tolerates that tail,
+    % but a patch closes B -> A again and can render a long miter spike.
+    % Keep one traversal and let the patch supply the closing edge itself.
+    repeatedStart = find(all(points(2:end,:) == points(1,:),2),1,'first');
+
+    if ~isempty(repeatedStart)
+        points = points(1:repeatedStart,:);
+    end
+
     % bwboundaries returns [row column]; overlays expect parent-image [x y].
-    % Keep the traced vertices as-is, just as the old patch display did.
+    % Translate the normalized exterior trace into parent-image coordinates.
     points = crop.toParent(points);
 
     % Parent-image boundary coordinates reordered to overlay [x y] convention.
