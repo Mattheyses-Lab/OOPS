@@ -11,7 +11,8 @@ classdef AzimuthDisplay < handle
         LineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
         LineScale_ (1,1) double {mustBeFinite,mustBePositive} = 25.0
         ScaleDownFactor_ (1,1) double {mustBeFinite,mustBeInteger,mustBePositive} = 1
-        ColorMode_ (1,1) string = "Direction"
+        ColorMode_ (1,1) string {mustBeMember(ColorMode_,["Direction","Magnitude","Mono"])} = "Direction"
+        Color_ (1,3) double {mustBeInRange(Color_,0,1)} = [1 1 1]
         ObjectMask_ (1,1) logical = true
     end
 
@@ -21,6 +22,7 @@ classdef AzimuthDisplay < handle
         LineScale
         ScaleDownFactor
         ColorMode
+        Color
         ObjectMask
     end
 
@@ -91,6 +93,18 @@ classdef AzimuthDisplay < handle
             obj.setValue("ColorMode",v);
         end
 
+        function v = get.Color(obj)
+        %GET.COLOR Return the stored monochrome line color.
+
+            v = obj.Color_;
+        end
+
+        function set.Color(obj,v)
+        %SET.COLOR Validate, store, and notify a AzimuthDisplay setting change.
+
+            obj.setValue("Color",v);
+        end
+
         function v = get.ObjectMask(obj)
         %GET.OBJECTMASK Return the stored ObjectMask setting.
 
@@ -112,6 +126,7 @@ classdef AzimuthDisplay < handle
                 'LineScale',obj.LineScale, ...
                 'ScaleDownFactor',obj.ScaleDownFactor, ...
                 'ColorMode',obj.ColorMode, ...
+                'Color',obj.Color, ...
                 'ObjectMask',obj.ObjectMask);
         end
 

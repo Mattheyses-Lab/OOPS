@@ -132,6 +132,16 @@ t.verifyTrue(tool.Enabled);
 t.verifyTrue(tool.Available);
 t.verifyEqual(string(field.Graphic.Parent.Visible),"on");
 
+% Accordion edits flow through project settings and repaint existing lines.
+ui.SettingsUI.AzimuthDisplay.ColorMode.Value = 'Mono';
+ui.SettingsUI.AzimuthDisplay.ColorMode.ValueChangedFcn( ...
+    ui.SettingsUI.AzimuthDisplay.ColorMode,[]);
+ui.SettingsUI.AzimuthDisplay.Color.Value = [0.2 0.4 0.8];
+ui.SettingsUI.AzimuthDisplay.Color.ValueChangedFcn( ...
+    ui.SettingsUI.AzimuthDisplay.Color,[]);
+t.verifyEqual(field.ColorMode,"Mono");
+t.verifyEqual(field.Color,[0.2 0.4 0.8]);
+
 % A user-disabled field stays hidden through appearance and source refreshes.
 ui.LeftViewer.disableTool("OrientationField");
 ui.Project.Settings.AzimuthDisplay.LineScale = 20;
@@ -219,6 +229,12 @@ t.verifyEqual(string(ui.SettingsUI.View.RightSource.Items), ...
     sources);
 t.verifyTrue(ui.SettingsAccordion.hasItem("Scatterplot"));
 t.verifyTrue(ui.SettingsAccordion.hasItem("Swarmplot"));
+t.verifyTrue(ui.SettingsAccordion.hasItem("Orientation Lines"));
+t.verifyClass(ui.SettingsUI.AzimuthDisplay.ColorMode,'matlab.ui.control.DropDown');
+t.verifyEqual(string(ui.SettingsUI.AzimuthDisplay.ColorMode.Items), ...
+    ["Direction" "Magnitude" "Mono"]);
+t.verifyClass(ui.SettingsUI.AzimuthDisplay.Color,'matlab.ui.control.ColorPicker');
+t.verifyClass(ui.SettingsUI.AzimuthDisplay.ObjectMask,'matlab.ui.control.CheckBox');
 t.verifyFalse(isprop(ui.Project.Settings,'Analysis'));
 t.verifyFalse(ui.SettingsAccordion.hasItem("Analysis"));
 t.verifyFalse(ui.SettingsAccordion.hasItem("Object Display"));
