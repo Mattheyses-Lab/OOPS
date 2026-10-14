@@ -28,7 +28,7 @@ t.verifyTrue(all(isnan(order),'all')); t.verifyTrue(all(isnan(azimuth),'all'));
 [order,azimuth] = oops.analysis.Analyzer.orderOrientation(ones(2,3,4));
 t.verifyEqual(order,zeros(2,3)); t.verifyTrue(all(isnan(azimuth),'all'));
 end
-function testSharedCalibrationRecoversPolarizationAndClearsStaleOutputs(t)
+function testSharedCalibrationRecoversPolarizationAndPreservesStaleObjects(t)
 p = oops.model.Project(); cleaner = onCleanup(@() delete(p));
 calStack = repmat(reshape([2 4 3 1],1,1,4),40,50,1);
 truth = repmat(reshape(100*(1+.6*cosd(2*([0 45 90 135]-25))),1,1,4),40,50,1);
@@ -36,15 +36,21 @@ a = p.addGroup("A"); b = p.addGroup("B");
 for g = [a b]
     im = g.addImage(input(truth.*calStack));
     mask = false(40,50); mask(12:16,12:18) = true;
-    im.setMask(mask,oops.analysis.segment.objectsFromMask(mask));
+    provenance = oops.model.MaskProvenance.segmented(im.CorrectionProvenance);
+    im.setMask(mask,oops.analysis.segment.objectsFromMask(mask), ...
+        oops.analysis.segment.Parameters.empty(0,1),provenance);
     im.setResults(struct('Order',ones(40,50)));
 end
+objectID = a.Images(1).Objects(1).ID;
 cal = p.addCalibration(input(calStack));
 oops.analysis.Analyzer.assignCalibrations(p,[a;b],cal.ID);
 t.verifyEqual(a.CalibrationIDs,b.CalibrationIDs); t.verifyEqual(numel(p.Calibrations),1);
 t.verifyEqual(a.Calibrations,cal); t.verifyEqual(b.Calibrations,cal);
 t.verifyEqual(oops.analysis.Analyzer.correctedStack(a.Images(1)),truth*4,'AbsTol',1e-10);
-t.verifyEmpty(a.Images(1).Order); t.verifyEmpty(a.Images(1).Mask);
+t.verifyEmpty(a.Images(1).Order);
+t.verifyEqual(a.Images(1).Mask,mask);
+t.verifyEqual(a.Images(1).Objects(1).ID,objectID);
+t.verifyFalse(a.Images(1).MaskProvenance.isCurrent(a.Images(1).CorrectionProvenance));
 [~,calibrationInfo] = oops.render.source(a.Images(1),"Calibration",p.Settings);
 t.verifyEqual(calibrationInfo.CLim,[0 1]);
 oops.analysis.Analyzer.analyzeImages([a.Images;b.Images],p.Settings);

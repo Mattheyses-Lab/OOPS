@@ -97,4 +97,23 @@ classdef Parameters
         end
 
     end
+
+    methods (Static)
+
+        function obj = fromStruct(S)
+        %FROMSTRUCT Restore a stored segmentation recipe without rerunning analysis.
+
+            obj = oops.analysis.segment.Parameters();
+
+            for name = ["Strategy","Common","Values","AutomaticParameters", ...
+                    "Mode","CandidateCount","RetainedCount","Ranking"]
+
+                if isfield(S,name)
+                    obj.(name) = S.(name);
+                end
+
+            end
+        end
+
+    end
 end

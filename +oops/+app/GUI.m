@@ -8,6 +8,7 @@ classdef GUI < handle
 
     properties (SetAccess=private)
         Project (:,1) oops.model.Project = oops.model.Project.empty(0,1)
+        Settings (:,1) oops.config.Settings = oops.config.Settings.empty(0,1)
         Fig (:,1) matlab.ui.Figure = matlab.ui.Figure.empty(0,1)
         SettingsAccordion
         GroupsTree
@@ -39,6 +40,7 @@ classdef GUI < handle
         SettingsUI struct = struct()
         SegmentationUI struct = struct()
         DisplayLimitUI struct = struct()
+        ImageInfoWindow
     end
 
     properties (Access=private)
@@ -79,11 +81,11 @@ classdef GUI < handle
                 end
 
                 if isempty(opts.Project)
-                    obj.Project = oops.model.Project("Untitled",oops.config.Settings.load());
-                    obj.OwnsProject = true;
+                    obj.Settings = oops.config.Settings.load();
                 else
                     validateattributes(opts.Project,{'oops.model.Project'},{'scalar'});
                     obj.Project = opts.Project;
+                    obj.Settings = opts.Project.Settings;
                 end
 
                 if opts.WriteLogFile
@@ -101,10 +103,14 @@ classdef GUI < handle
                 obj.buildObjectViewers();
                 obj.buildPlots();
                 obj.buildMenus();
-                obj.bindEvents();
-                obj.reconcileActive();
-                obj.refreshNavigation();
-                obj.refreshViewers(true);
+                if ~isempty(obj.Project)
+                    obj.bindEvents();
+                    obj.reconcileActive();
+                    obj.refreshNavigation();
+                    obj.refreshViewers(true);
+                else
+                    obj.refreshEmptyProject();
+                end
                 obj.Logger.setUISink(@(lines) obj.appendLog(lines));
                 obj.Fig.UserData = obj; % retains the controller when launch has no output
                 obj.Fig.Visible = opts.Visible;
@@ -168,6 +174,82 @@ classdef GUI < handle
                 obj.Project.setActiveImage(images(1));
             end
 
+        end
+
+        function newProject(obj,name)
+        %NEWPROJECT Close the current model and create an empty owned project.
+
+            arguments
+                obj
+                name (1,1) string = "Untitled"
+            end
+
+            settings = obj.Settings;
+
+            if ~isempty(obj.Project)
+                obj.closeProject();
+                settings = obj.Settings;
+            end
+
+            project = oops.model.Project(name,settings);
+            obj.attachProject(project,true);
+            oops.Log.INFO("Created project: " + name);
+        end
+
+        function closeProject(obj)
+        %CLOSEPROJECT Detach the current project while keeping the application open.
+
+            if isempty(obj.Project)
+                return;
+            end
+
+            project = obj.Project;
+            owned = obj.OwnsProject;
+
+            if owned
+                settings = obj.Settings;
+            else
+                settings = oops.config.Settings();
+                settings.fromStruct(obj.Settings.toStruct());
+            end
+
+            delete(obj.Listeners);
+            obj.Listeners = event.listener.empty();
+            obj.Project = oops.model.Project.empty(0,1);
+            obj.OwnsProject = false;
+            obj.Settings = settings;
+
+            if owned
+                delete(project);
+            end
+
+            obj.refreshEmptyProject();
+            oops.Log.INFO("Closed project.");
+        end
+
+        function saveProject(obj,file)
+        %SAVEPROJECT Write the current project to an explicitly chosen path.
+
+            if isempty(obj.Project)
+                error('oops:app:NoProject','Create or open a project before saving.');
+            end
+
+            oops.io.project.save(obj.Project,string(file));
+            obj.updateProjectUIState();
+        end
+
+        function resolution = openProject(obj,file,opts)
+        %OPENPROJECT Load a project and replace the current controller model.
+
+            arguments
+                obj
+                file (1,1) string
+                opts.SearchRoot (1,1) string = ""
+            end
+
+            [project,resolution] = oops.io.project.load( ...
+                file,SearchRoot=opts.SearchRoot);
+            obj.attachProject(project,true);
         end
 
         function calibrations = registerCalibrations(obj,files)
@@ -264,6 +346,10 @@ classdef GUI < handle
                     delete(obj(k).SwarmRenderer);
                 end
 
+                if ~isempty(obj(k).ImageInfoWindow) && isvalid(obj(k).ImageInfoWindow)
+                    delete(obj(k).ImageInfoWindow);
+                end
+
                 % Application tools unregister their toolbar/menu contributions
                 % while the ImageAxes graphics hierarchy is still alive.
                 for tool = obj(k).OrientationFieldTools
@@ -318,7 +404,13 @@ classdef GUI < handle
                 end
 
                 if obj(k).OwnsProject
+                    settings = obj(k).Settings;
                     delete(obj(k).Project);
+                    delete(settings);
+                end
+
+                if isempty(obj(k).Project) && ~isempty(obj(k).Settings)
+                    delete(obj(k).Settings);
                 end
 
             end
@@ -346,6 +438,218 @@ classdef GUI < handle
     end
 
     methods (Access=private)
+
+        function attachProject(obj,project,owned)
+        %ATTACHPROJECT Replace the model and rebuild its controller subscriptions.
+
+            oldProject = obj.Project;
+            oldSettings = obj.Settings;
+            oldOwned = obj.OwnsProject;
+            delete(obj.Listeners);
+            obj.Listeners = event.listener.empty();
+            obj.Project = project;
+            obj.Settings = project.Settings;
+            obj.OwnsProject = owned;
+
+            if oldOwned && ~isempty(oldProject)
+                delete(oldProject);
+                delete(oldSettings);
+            elseif isempty(oldProject) && ~isempty(oldSettings) && oldSettings ~= obj.Settings
+                delete(oldSettings);
+            end
+
+            obj.bindEvents();
+            obj.refreshSettingsControls();
+            obj.reconcileActive();
+            obj.refreshNavigation();
+            obj.refreshLabels();
+            obj.ViewerKeys(:) = "";
+            obj.ObjectViewerKey = "";
+            obj.refreshViewers(true);
+            obj.updateProjectUIState();
+        end
+
+        function refreshSettingsControls(obj)
+        %REFRESHSETTINGSCONTROLS Copy a newly attached settings tree into bound controls.
+
+            domains = string(fieldnames(obj.SettingsUI));
+
+            for domain = domains'
+
+                if ~isprop(obj.Settings,domain)
+                    continue;
+                end
+
+                names = string(fieldnames(obj.SettingsUI.(domain)));
+
+                for name = names'
+                    control = obj.SettingsUI.(domain).(name);
+
+                    if isvalid(control) && isprop(control,'Value') && ...
+                            isprop(obj.Settings.(domain),name)
+                        control.Value = obj.Settings.(domain).(name);
+                    end
+
+                end
+
+            end
+        end
+
+        function refreshEmptyProject(obj)
+        %REFRESHEMPTYPROJECT Clear model-backed controls for an empty application session.
+
+            obj.deleteTreeNodes(obj.GroupsTree.Children);
+            obj.deleteTreeNodes(obj.ImagesTree.Children);
+            obj.deleteTreeNodes(obj.ObjectsTree.Children);
+            obj.deleteTreeNodes(obj.LabelsTree.Children);
+
+            for key = obj.LabelHotkeys
+                obj.CommandRouter.removeHotkey(key);
+            end
+
+            obj.LabelHotkeys = string.empty(1,0);
+            obj.SummaryTable.Data = table();
+            obj.ViewerKeys(:) = "";
+            obj.ObjectViewerKey = "";
+
+            viewers = {obj.LeftViewer,obj.RightViewer};
+
+            for k = 1:numel(viewers)
+                viewers{k}.CData = [];
+                viewers{k}.ImageVisible = 'off';
+                viewers{k}.AxesVisible = 'off';
+            end
+
+            for k = 1:numel(obj.ViewerPanels)
+                obj.ViewerPanels(k).Title = 'No project';
+            end
+
+            obj.updateProjectUIState();
+        end
+
+        function updateProjectUIState(obj)
+        %UPDATEPROJECTUISTATE Synchronize command availability and window title.
+
+            hasProject = ~isempty(obj.Project);
+            state = matlab.lang.OnOffSwitchState(hasProject);
+
+            for name = ["Close","Save","SaveAs","LoadImages","Calibration", ...
+                    "Analysis","View"]
+
+                if isfield(obj.MenuUI,name)
+                    obj.MenuUI.(name).Enable = state;
+                end
+
+            end
+
+            if hasProject
+                marker = "";
+
+                if obj.Project.SourcePath ~= ""
+                    marker = " — " + obj.Project.SourcePath;
+                end
+
+                obj.Fig.Name = char("OOPS — " + obj.Project.Name + marker);
+            else
+                obj.Fig.Name = 'OOPS — No project';
+            end
+        end
+
+        function chooseProject(obj)
+        %CHOOSEPROJECT Prompt for a saved project and optionally locate moved sources.
+
+            [file,folder] = uigetfile({'*.oops.mat;*.mat','OOPS projects'}, ...
+                'Open OOPS project');
+            obj.focusWindow();
+
+            if isequal(file,0)
+                return;
+            end
+
+            path = string(fullfile(folder,file));
+
+            try
+                resolution = obj.openProject(path);
+                obj.notifyRelinkedSources(resolution);
+            catch ME
+
+                if ~strcmp(ME.identifier,'oops:project:MissingSources')
+                    rethrow(ME);
+                end
+
+                answer = uiconfirm(obj.Fig, ...
+                    string(ME.message) + newline + newline + ...
+                    "Choose a folder to search recursively for moved files?", ...
+                    'Missing project sources', ...
+                    'Options',{'Choose Folder','Cancel'}, ...
+                    'DefaultOption','Choose Folder','CancelOption','Cancel');
+
+                if ~strcmp(answer,'Choose Folder')
+                    return;
+                end
+
+                root = uigetdir(folder,'Locate project image files');
+                obj.focusWindow();
+
+                if isequal(root,0)
+                    return;
+                end
+
+                resolution = obj.openProject(path,SearchRoot=string(root));
+                obj.notifyRelinkedSources(resolution);
+            end
+        end
+
+        function notifyRelinkedSources(obj,resolution)
+        %NOTIFYRELINKEDSOURCES Report successful path changes and recommend saving.
+
+            if ~isfield(resolution,'Relinked') || isempty(resolution.Relinked)
+                return;
+            end
+
+            count = numel(resolution.Relinked);
+            message = string(count) + " project source";
+
+            if count ~= 1
+                message = message + "s were";
+            else
+                message = message + " was";
+            end
+
+            message = message + " relinked to new file locations." + ...
+                newline + newline + ...
+                "Save the project to preserve the updated source paths.";
+
+            if ~isempty(obj.Fig) && isvalid(obj.Fig) && strcmp(obj.Fig.Visible,'on')
+                uialert(obj.Fig,message,'Project sources relinked','Icon','warning');
+            end
+        end
+
+        function chooseProjectSave(obj,saveAs)
+        %CHOOSEPROJECTSAVE Always confirm the destination before writing a project.
+
+            if isempty(obj.Project)
+                return;
+            end
+
+            suggested = obj.Project.Name + ".oops.mat";
+
+            if ~saveAs && obj.Project.SourcePath ~= ""
+                suggested = obj.Project.SourcePath;
+            elseif obj.Project.SourcePath ~= ""
+                suggested = fullfile(fileparts(obj.Project.SourcePath),suggested);
+            end
+
+            [file,folder] = uiputfile({'*.oops.mat','OOPS project'}, ...
+                'Save OOPS project',char(suggested));
+            obj.focusWindow();
+
+            if isequal(file,0)
+                return;
+            end
+
+            obj.saveProject(string(fullfile(folder,file)));
+        end
 
         function buildWindow(obj)
         %BUILDWINDOW Use a fixed settings column and a non-scrolling viewer/log grid.
@@ -524,7 +828,7 @@ classdef GUI < handle
             text.Layout.Column = 1;
 
             control = uicolorpicker(pane, ...
-                'Value',obj.Project.Settings.(domain).(name), ...
+                'Value',obj.Settings.(domain).(name), ...
                 'ValueChangedFcn',@(src,~) obj.runCallback(@() obj.onSettingEdited(src)));
             control.Layout.Row = row;
             control.Layout.Column = 2;
@@ -564,7 +868,7 @@ classdef GUI < handle
 
             % Native color picker bound to the project-wide custom overlay color.
             control = uicolorpicker(pane, ...
-                'Value',obj.Project.Settings.ObjectSelection.Color, ...
+                'Value',obj.Settings.ObjectSelection.Color, ...
                 'ValueChangedFcn',@(src,~) obj.runCallback(@() obj.onSettingEdited(src)));
             control.Layout.Row = row;
             control.Layout.Column = 2;
@@ -668,7 +972,7 @@ classdef GUI < handle
             text.Layout.Column = 1;
 
             % Current setting value used to select and initialize the control type.
-            value = obj.Project.Settings.(domain).(name);
+            value = obj.Settings.(domain).(name);
 
             % Shared edit callback that resolves the control's stored binding.
             callback = @(src,~) obj.runCallback(@() obj.onSettingEdited(src));
@@ -791,7 +1095,7 @@ classdef GUI < handle
             image = obj.Project.ActiveImage;
 
             % Project strategy currently selected for new segmentation runs.
-            strategy = obj.Project.Settings.Segmentation.Strategy;
+            strategy = obj.Settings.Segmentation.Strategy;
 
             % Whether the active image has a committed recipe matching that strategy.
             ready = ~isempty(image) && ~isempty(image.SegmentationParameters) && ...
@@ -916,7 +1220,7 @@ classdef GUI < handle
                 preview = oops.analysis.segment.filter(candidate,image.Results.AverageIntensity,recipe);
 
                 % Left and right panel source names in viewer order.
-                names = [obj.Project.Settings.View.LeftSource,obj.Project.Settings.View.RightSource];
+                names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
 
                 % Left and right ImageAxes handles in panel order.
                 viewers = {obj.LeftViewer,obj.RightViewer};
@@ -954,11 +1258,11 @@ classdef GUI < handle
 
             % Cleanup guard restoring the temporary callback/processing state.
             guard = onCleanup(@() obj.restoreProcessing(previous));
-            oops.analysis.Analyzer.adjustSegmentation(image,name,value,obj.Project.Settings);
+            oops.analysis.Analyzer.adjustSegmentation(image,name,value,obj.Settings);
             obj.reconcileActive();
 
             % Left and right panel source names in viewer order.
-            names = [obj.Project.Settings.View.LeftSource,obj.Project.Settings.View.RightSource];
+            names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
             obj.ViewerKeys(names == "Mask") = "";
             clear guard;
 
@@ -1022,7 +1326,7 @@ classdef GUI < handle
                 if ready
 
                     % Effective display range and slider bounds resolved for this image/domain.
-                    [value,bounds] = oops.render.displayLimits(image,domain,obj.Project.Settings);
+                    [value,bounds] = oops.render.displayLimits(image,domain,obj.Settings);
                     control.Limits = bounds;
                     control.Value = value;
                 else
@@ -1061,13 +1365,13 @@ classdef GUI < handle
                 % Cleanup guard restoring the temporary callback/processing state.
                 guard = onCleanup(@() obj.endProcessing());
                 image.setDisplayRange(domain,value);
-                obj.Project.Settings.Display.("AutoScaleDisplay"+domain) = false;
+                obj.Settings.Display.("AutoScaleDisplay"+domain) = false;
                 obj.Processing = false;
                 obj.refreshViewers(true);
             else
 
                 % Left and right panel source names in viewer order.
-                names = [obj.Project.Settings.View.LeftSource,obj.Project.Settings.View.RightSource];
+                names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
 
                 % Left and right ImageAxes handles in panel order.
                 viewers = {obj.LeftViewer,obj.RightViewer};
@@ -1090,7 +1394,7 @@ classdef GUI < handle
                 end
 
                 % Object crops use the same parent-image display limits.
-                if obj.Project.Settings.View.RightSource == "Objects"
+                if obj.Settings.View.RightSource == "Objects"
 
                     if domain == "Intensity"
                         viewer = obj.ObjectViewers{1};
@@ -1260,8 +1564,8 @@ classdef GUI < handle
         function buildPlots(obj)
         %BUILDPLOTS Create stable panel hosts and transferable plot renderers.
 
-            scatterSettings = obj.Project.Settings.ScatterPlot;
-            swarmSettings = obj.Project.Settings.SwarmPlot;
+            scatterSettings = obj.Settings.ScatterPlot;
+            swarmSettings = obj.Settings.SwarmPlot;
 
             % PlotAxes remain attached to their panels for the life of the GUI.
             obj.LeftPlotAxes = matlabx.ui.axes.PlotAxes(obj.ViewerGrids{1}, ...
@@ -1284,16 +1588,29 @@ classdef GUI < handle
         end
 
         function buildMenus(obj)
-        %BUILDMENUS Build import, processing, and content presets with thin callbacks.
+        %BUILDMENUS Build project, import, processing, and view commands.
 
-            % File menu containing image/calibration import actions.
+            % File menu begins with project lifecycle commands.
             file = uimenu(obj.Fig,'Text','File');
-            uimenu(file,'Text','Load images...','MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseFiles()));
+            uimenu(file,'Text','New','MenuSelectedFcn', ...
+                @(~,~) obj.runCallback(@() obj.newProject()));
+            uimenu(file,'Text','Open...','MenuSelectedFcn', ...
+                @(~,~) obj.runCallback(@() obj.chooseProject()));
+            obj.MenuUI.Close = uimenu(file,'Text','Close','MenuSelectedFcn', ...
+                @(~,~) obj.runCallback(@() obj.closeProject()));
+            obj.MenuUI.Save = uimenu(file,'Text','Save...','Separator','on', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseProjectSave(false)));
+            obj.MenuUI.SaveAs = uimenu(file,'Text','Save As...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseProjectSave(true)));
+
+            obj.MenuUI.LoadImages = uimenu(file,'Text','Load images...','Separator','on', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseFiles()));
             obj.MenuUI.Calibration = uimenu(file,'Text','Register calibration stacks...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseCalibrationFiles()));
 
             % Analysis menu containing explicit segmentation and FPM actions.
             analysis = uimenu(obj.Fig,'Text','Analysis');
+            obj.MenuUI.Analysis = analysis;
             uimenu(analysis,'Text','Segment selected / active images','MenuSelectedFcn', ...
                 @(~,~) obj.runCallback(@() obj.runAnalysis("Segment")));
             uimenu(analysis,'Text','Order/orientation for selected / active images','MenuSelectedFcn', ...
@@ -1301,6 +1618,7 @@ classdef GUI < handle
 
             % View menu populated from the graphics-free preset catalog.
             view = uimenu(obj.Fig,'Text','View');
+            obj.MenuUI.View = view;
 
             % Create one menu entry for each catalog-defined view preset.
             for preset = oops.app.viewPresets()
@@ -1312,9 +1630,11 @@ classdef GUI < handle
             % Settings menu containing JSON save/load actions.
             settings = uimenu(obj.Fig,'Text','Settings');
             uimenu(settings,'Text','Save as app defaults','MenuSelectedFcn', ...
-                @(~,~) obj.runCallback(@() obj.Project.Settings.save()));
+                @(~,~) obj.runCallback(@() obj.Settings.save()));
             uimenu(settings,'Text','Load app defaults','MenuSelectedFcn', ...
                 @(~,~) obj.runCallback(@() obj.loadSettings()));
+
+            obj.updateProjectUIState();
         end
 
         function applyViewPreset(obj,preset)
@@ -1322,7 +1642,7 @@ classdef GUI < handle
         % Settings events still synchronize the accordion during the guarded update.
 
             % Settings object supplying the values for this operation.
-            settings = obj.Project.Settings.View;
+            settings = obj.Settings.View;
 
             % Processing-guard state saved for restoration after this operation.
             previous = obj.Processing;
@@ -1371,7 +1691,7 @@ classdef GUI < handle
                 @(~,~) obj.runCallback(@() obj.onLabelsChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'ActiveLabelChanged', ...
                 @(~,~) obj.runCallback(@() obj.syncActiveLabel()));
-            obj.Listeners(end+1) = addlistener(obj.Project.Settings,'Changed', ...
+            obj.Listeners(end+1) = addlistener(obj.Settings,'Changed', ...
                 @(~,e) obj.runCallback(@() obj.onSettingsChanged(e)));
         end
 
@@ -1422,8 +1742,8 @@ classdef GUI < handle
 
             obj.refreshNavigation();
 
-            if any(ismember([obj.Project.Settings.View.LeftSource, ...
-                    obj.Project.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
+            if any(ismember([obj.Settings.View.LeftSource, ...
+                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
                 obj.refreshPlots();
             end
         end
@@ -1448,7 +1768,7 @@ classdef GUI < handle
                 obj.syncOverlayState();
 
                 if e.Name == "ActiveObjectID" && ...
-                        obj.Project.Settings.View.RightSource == "Objects"
+                        obj.Settings.View.RightSource == "Objects"
                     obj.refreshObjectViewers(false);
                 end
 
@@ -1479,15 +1799,15 @@ classdef GUI < handle
             image = obj.Project.ActiveImage;
 
             if isempty(image) || image.ID ~= e.ImageID
-                if any(ismember([obj.Project.Settings.View.LeftSource, ...
-                        obj.Project.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
+                if any(ismember([obj.Settings.View.LeftSource, ...
+                        obj.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
                     obj.refreshPlots();
                 end
                 return;
             end
 
-            if any(ismember([obj.Project.Settings.View.LeftSource, ...
-                    obj.Project.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
+            if any(ismember([obj.Settings.View.LeftSource, ...
+                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
                 obj.refreshPlots();
             end
 
@@ -1496,7 +1816,7 @@ classdef GUI < handle
                 % receive the updated alpha mask and object membership below.
 
                 % Left and right panel source names in viewer order.
-                names = [obj.Project.Settings.View.LeftSource,obj.Project.Settings.View.RightSource];
+                names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
                 obj.ViewerKeys(names == "Mask") = "";
                 obj.ObjectViewerKey = "";
                 obj.refreshViewers(false);
@@ -1761,7 +2081,7 @@ classdef GUI < handle
             binding = control.UserData;
 
             % Settings object supplying the values for this operation.
-            settings = obj.Project.Settings.(binding.Domain);
+            settings = obj.Settings.(binding.Domain);
             try
 
                 if binding.Domain == "View"
@@ -1795,6 +2115,10 @@ classdef GUI < handle
                 control.Value = e.NewValue;
             end
 
+            if isempty(obj.Project)
+                return;
+            end
+
             if obj.Processing
                 return;
             end
@@ -1816,14 +2140,14 @@ classdef GUI < handle
                 case {"View","Colormaps","Display"}
                     obj.refreshViewers(true);
                 case "AzimuthDisplay"
-                    obj.refreshOrientationFields([obj.Project.Settings.View.LeftSource, ...
-                        obj.Project.Settings.View.RightSource]);
+                    obj.refreshOrientationFields([obj.Settings.View.LeftSource, ...
+                        obj.Settings.View.RightSource]);
                 case "ObjectSelection"
                     obj.refreshViewerRegions();
                 case "ObjectDisplay"
                     obj.ObjectViewerKey = "";
 
-                    if obj.Project.Settings.View.RightSource == "Objects"
+                    if obj.Settings.View.RightSource == "Objects"
                         obj.refreshObjectViewers(false);
                     end
                 case {"ScatterPlot","SwarmPlot","Palettes"}
@@ -1840,6 +2164,10 @@ classdef GUI < handle
             end
 
             obj.deleteTreeNodes(obj.LabelsTree.Children);
+
+            if isempty(obj.Project)
+                return;
+            end
 
             % Ordered project labels displayed with their assigned keyboard shortcuts.
             labels = obj.Project.Labels.labels();
@@ -1990,11 +2318,15 @@ classdef GUI < handle
                 return;
             end
 
+            if isempty(obj.Project)
+                return;
+            end
+
             % Active image supplying data and object membership for this operation.
             image = obj.Project.ActiveImage;
 
             % Settings object supplying the values for this operation.
-            settings = obj.Project.Settings;
+            settings = obj.Settings;
 
             % Left and right ImageAxes handles in panel order.
             viewers = {obj.LeftViewer,obj.RightViewer};
@@ -2151,7 +2483,7 @@ classdef GUI < handle
             end
 
             [sources,info,objectMask] = oops.render.objectSources( ...
-                region,obj.Project.Settings);
+                region,obj.Settings);
 
             for k = 1:numel(obj.ObjectViewers)
 
@@ -2244,8 +2576,8 @@ classdef GUI < handle
         function refreshPlots(obj)
         %REFRESHPLOTS Rebuild visible plot data from stored object measurements.
 
-            names = [obj.Project.Settings.View.LeftSource, ...
-                obj.Project.Settings.View.RightSource];
+            names = [obj.Settings.View.LeftSource, ...
+                obj.Settings.View.RightSource];
 
             if any(names == "Scatterplot")
                 obj.refreshScatterPlot();
@@ -2259,7 +2591,7 @@ classdef GUI < handle
         function refreshScatterPlot(obj)
         %REFRESHSCATTERPLOT Normalize model scalars for the scatter renderer.
 
-            settings = obj.Project.Settings.ScatterPlot;
+            settings = obj.Settings.ScatterPlot;
             [members,groupNames] = obj.plotPartitions(settings.GroupingType);
 
             if isempty(members)
@@ -2327,7 +2659,7 @@ classdef GUI < handle
         function refreshSwarmPlot(obj)
         %REFRESHSWARMPLOT Normalize model scalars for the violin renderer.
 
-            settings = obj.Project.Settings.SwarmPlot;
+            settings = obj.Settings.SwarmPlot;
             [members,groupNames] = obj.plotPartitions(settings.GroupingType);
 
             if isempty(members)
@@ -2540,7 +2872,7 @@ classdef GUI < handle
             image = obj.Project.ActiveImage;
 
             % Project-wide appearance and sampling preferences for this overlay.
-            settings = obj.Project.Settings.AzimuthDisplay;
+            settings = obj.Settings.AzimuthDisplay;
 
             for k = 1:2
 
@@ -2588,9 +2920,9 @@ classdef GUI < handle
 
                 % Direction uses the cyclic azimuth map; magnitude uses order.
                 if settings.ColorMode == "Magnitude"
-                    map = oops.render.colormap(obj.Project.Settings.Colormaps,"Order");
+                    map = oops.render.colormap(obj.Settings.Colormaps,"Order");
                 else
-                    map = oops.render.colormap(obj.Project.Settings.Colormaps,"Azimuth");
+                    map = oops.render.colormap(obj.Settings.Colormaps,"Azimuth");
                 end
 
                 field.setStyle( ...
@@ -2715,7 +3047,7 @@ classdef GUI < handle
         function geometry = objectOverlayGeometry(obj,region)
         %OBJECTOVERLAYGEOMETRY Resolve the configured boundary or bounding rectangle.
 
-            if obj.Project.Settings.ObjectSelection.BoxType == "Box"
+            if obj.Settings.ObjectSelection.BoxType == "Box"
                 box = region.BoundingBox;
                 x = box(1);
                 y = box(2);
@@ -2753,7 +3085,7 @@ classdef GUI < handle
         function applyOverlayAppearance(obj,overlay,region)
         %APPLYOVERLAYAPPEARANCE Apply config widths and custom/label color.
 
-            settings = obj.Project.Settings.ObjectSelection;
+            settings = obj.Settings.ObjectSelection;
             color = settings.Color;
 
             if settings.ColorMode == "Label"
@@ -2894,7 +3226,7 @@ classdef GUI < handle
             obj.reconcileActive();
 
             % Left and right panel source names in viewer order.
-            names = [obj.Project.Settings.View.LeftSource,obj.Project.Settings.View.RightSource];
+            names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
             obj.ViewerKeys(names == "Mask") = "";
             clear guard;
 
@@ -2945,7 +3277,7 @@ classdef GUI < handle
             % than wide and cause ImageAxes to letterbox the displayed image.
             desiredOuterHeight = panelWidth+viewerChrome+panelChrome;
 
-            if obj.Project.Settings.View.RightSource == "Objects"
+            if obj.Settings.View.RightSource == "Objects"
 
                 % Standard spacing is retained between all four object panels.
                 % Extra horizontal width becomes a control gutter after the
@@ -3037,7 +3369,7 @@ classdef GUI < handle
             domain = string(obj.ColormapDomain.Value);
 
             % Project-wide map/category assignments for all display domains.
-            maps = obj.Project.Settings.Colormaps;
+            maps = obj.Settings.Colormaps;
 
             % All category/map nodes inspected to restore the assigned map highlight.
             nodes = findall(obj.ColormapTree,'Type','uitreenode');
@@ -3079,7 +3411,7 @@ classdef GUI < handle
             domain = string(obj.ColormapDomain.Value);
 
             % Project colormap settings receiving the selected domain's assignment.
-            maps = obj.Project.Settings.Colormaps;
+            maps = obj.Settings.Colormaps;
             % Temporarily suspend view updates between category/name changes so
             % a name never resolves against the wrong category during a switch.
             obj.Processing = true;
@@ -3121,6 +3453,11 @@ classdef GUI < handle
                 singular = "group";
             elseif title == "Images"
                 singular = "image";
+
+                if id ~= ""
+                    uimenu(menu,'Text','Info...', ...
+                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.showImageInfo(id)));
+                end
             else
                 singular = "object";
             end
@@ -3140,6 +3477,41 @@ classdef GUI < handle
 
             uimenu(menu,'Text',char("Delete selected "+lower(title)),'MenuSelectedFcn', ...
                 @(~,~) obj.runCallback(@() obj.deleteNavigation(title,"")));
+        end
+
+        function showImageInfo(obj,id)
+        %SHOWIMAGEINFO Display compact model metadata for one context-clicked image.
+
+            group = obj.Project.ActiveGroup;
+
+            if isempty(group)
+                error('oops:app:UnknownImage','No active group contains this image.');
+            end
+
+            image = oops.model.internal.resolve(group.Images,id);
+
+            if isempty(image)
+                error('oops:app:UnknownImage','The selected image no longer exists.');
+            end
+
+            if ~isempty(obj.ImageInfoWindow) && isvalid(obj.ImageInfoWindow)
+                delete(obj.ImageInfoWindow);
+            end
+
+            lines = cellstr(matlabx.struct.prettyPrint( ...
+                image.infoStruct(),StringArrayStyle="lines"));
+            obj.ImageInfoWindow = matlabx.app.TextWindow( ...
+                'Title',char(image.Name + " Info"), ...
+                'Text',lines, ...
+                'WordWrap','off', ...
+                'Position',[0 0 700 700], ...
+                'ClosedFcn',@(~,~) obj.clearImageInfoWindow());
+        end
+
+        function clearImageInfoWindow(obj)
+        %CLEARIMAGEINFOWINDOW Release the controller reference after manual closure.
+
+            obj.ImageInfoWindow = [];
         end
 
         function changeTreeSelection(obj,title,operation)
@@ -3284,7 +3656,7 @@ classdef GUI < handle
 
             % Selected calibration filenames and directory, or zero on cancellation.
             [files,folder] = matlabx.image.io.uigetimagefile([], ...
-                'Select four-angle calibration stacks',char(obj.Project.Settings.IO.DefaultFolder),MultiSelect='on');
+                'Select four-angle calibration stacks',char(obj.Settings.IO.DefaultFolder),MultiSelect='on');
             % Native file dialogs can leave MATLAB behind other windows. Raise
             % this figure on return, including cancellation, and after loading.
             obj.focusWindow();
@@ -3296,7 +3668,7 @@ classdef GUI < handle
                 return;
             end
 
-            obj.Project.Settings.IO.DefaultFolder = string(folder);
+            obj.Settings.IO.DefaultFolder = string(folder);
 
             if groupID == ""
                 obj.registerCalibrations(fullfile(folder,string(files)));
@@ -3632,9 +4004,9 @@ classdef GUI < handle
             guard = onCleanup(@() obj.endProcessing());
 
             if stage == "Segment"
-                oops.analysis.Analyzer.segmentImages(images,obj.Project.Settings,Progress=progress);
+                oops.analysis.Analyzer.segmentImages(images,obj.Settings,Progress=progress);
             else
-                oops.analysis.Analyzer.analyzeImages(images,obj.Project.Settings,Progress=progress);
+                oops.analysis.Analyzer.analyzeImages(images,obj.Settings,Progress=progress);
             end
 
             oops.analysis.updateProgress(progress,"Updating viewers...",[]);
@@ -3890,7 +4262,7 @@ classdef GUI < handle
 
             % Selected input filenames and directory, or zero filenames on cancellation.
             [files,folder] = matlabx.image.io.uigetimagefile([], ...
-                'Select four-angle inputs',char(obj.Project.Settings.IO.DefaultFolder),MultiSelect='on');
+                'Select four-angle inputs',char(obj.Settings.IO.DefaultFolder),MultiSelect='on');
             % Native file dialogs can leave MATLAB behind other windows. Raise
             % this figure on return, including cancellation, and after loading.
             obj.focusWindow();
@@ -3902,7 +4274,7 @@ classdef GUI < handle
                 return;
             end
 
-            obj.Project.Settings.IO.DefaultFolder = string(folder);
+            obj.Settings.IO.DefaultFolder = string(folder);
             obj.addFiles(fullfile(folder,string(files)));
         end
 
@@ -3914,7 +4286,7 @@ classdef GUI < handle
 
             % Cleanup guard releasing the temporary refresh/processing state.
             cleaner = onCleanup(@() delete(loaded));
-            obj.Project.Settings.fromStruct(loaded.toStruct());
+            obj.Settings.fromStruct(loaded.toStruct());
         end
 
         function runCallback(obj,callback)

@@ -46,6 +46,19 @@ classdef Calibration < handle
 
         end
 
+        function S = toStruct(obj,projectFolder)
+        %TOSTRUCT Capture calibration identity and its external source reference.
+
+            S = struct('ID',obj.ID,'Name',obj.Name, ...
+                'Source',oops.io.project.sourceReference(obj.Input,projectFolder));
+        end
+
+        function restoreID(obj,id)
+        %RESTOREID Restore the stable registry identity used by group assignments.
+
+            obj.ID = string(id);
+        end
+
     end
 
 end

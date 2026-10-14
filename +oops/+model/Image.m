@@ -21,6 +21,10 @@ classdef Image < handle
         Mask (:,:) logical = false(0,0)
         Objects (:,1) oops.model.Object = oops.model.Object.empty(0,1)
         Results (1,1) struct = struct()
+        CorrectionProvenance (1,1) oops.model.CorrectionProvenance = ...
+            oops.model.CorrectionProvenance.raw()
+        MaskProvenance (1,1) oops.model.MaskProvenance = ...
+            oops.model.MaskProvenance.unknown()
         SegmentationParameters (:,1) oops.analysis.segment.Parameters = oops.analysis.segment.Parameters.empty(0,1)
         IntensityDisplayRange double = []
         OrderDisplayRange (1,2) double = [0 1]
@@ -95,6 +99,95 @@ classdef Image < handle
 
     %% Input access and memory residency
     methods
+
+        function S = toStruct(obj,projectFolder)
+        %TOSTRUCT Capture file identity and compact reproducible analysis state.
+
+            arguments
+                obj
+                projectFolder (1,1) string = ""
+            end
+
+            objectData = arrayfun(@(item) item.toStruct(),obj.Objects);
+            parameters = struct.empty(0,1);
+
+            if ~isempty(obj.SegmentationParameters)
+                parameters = obj.SegmentationParameters.toStruct();
+            end
+
+            S = struct( ...
+                'ID',obj.ID, ...
+                'Name',obj.Name, ...
+                'Source',oops.io.project.sourceReference(obj.Input,projectFolder), ...
+                'PixelSize',obj.PixelSize, ...
+                'FrameLocations',obj.FrameLocations, ...
+                'Objects',objectData, ...
+                'CorrectionProvenance',obj.CorrectionProvenance.toStruct(), ...
+                'MaskProvenance',obj.MaskProvenance.toStruct(), ...
+                'SegmentationParameters',parameters, ...
+                'IntensityDisplayRange',obj.IntensityDisplayRange, ...
+                'OrderDisplayRange',obj.OrderDisplayRange, ...
+                'ActiveObjectID',obj.ActiveObjectID, ...
+                'SelectedObjectIDs',obj.SelectedObjectIDs);
+        end
+
+        function restoreStruct(obj,S,assignedCalibrationIDs)
+        %RESTORESTRUCT Restore compact state after the source has been reopened.
+
+            if nargin < 3
+                assignedCalibrationIDs = strings(0,1);
+            end
+
+            obj.ID = string(S.ID);
+            obj.PixelSize = S.PixelSize;
+            obj.FrameLocations = double(S.FrameLocations);
+            obj.IntensityDisplayRange = double(S.IntensityDisplayRange);
+            obj.OrderDisplayRange = double(S.OrderDisplayRange);
+
+            if isfield(S,'CorrectionProvenance')
+                obj.CorrectionProvenance = ...
+                    oops.model.CorrectionProvenance.fromStruct(S.CorrectionProvenance);
+            else
+                % Projects saved before provenance tracking used the group's
+                % assigned calibration whenever corrected results were generated.
+                obj.CorrectionProvenance = ...
+                    oops.model.CorrectionProvenance.flatField(assignedCalibrationIDs);
+            end
+
+            if isfield(S,'MaskProvenance')
+                provenance = oops.model.MaskProvenance.fromStruct(S.MaskProvenance);
+            elseif ~isempty(S.Objects)
+                provenance = oops.model.MaskProvenance.segmented(obj.CorrectionProvenance);
+            else
+                provenance = oops.model.MaskProvenance.unknown();
+            end
+
+            if ~isempty(S.Objects)
+                lists = arrayfun(@(item) double(item.PixelIdxList(:)),S.Objects, ...
+                    'UniformOutput',false);
+                mask = false(obj.Input.SizeY,obj.Input.SizeX);
+
+                for k = 1:numel(lists)
+                    mask(lists{k}) = true;
+                end
+
+                parameters = oops.analysis.segment.Parameters.empty(0,1);
+
+                if ~isempty(S.SegmentationParameters)
+                    parameters = oops.analysis.segment.Parameters.fromStruct(S.SegmentationParameters);
+                end
+
+                obj.setMask(mask,lists,parameters,provenance);
+
+                for k = 1:numel(obj.Objects)
+                    obj.Objects(k).restoreStruct(S.Objects(k));
+                end
+
+            end
+
+            obj.setActiveObject(string(S.ActiveObjectID));
+            obj.setSelectedObjects(string(S.SelectedObjectIDs));
+        end
 
         function tf = get.IsLoaded(obj)
         %GET.ISLOADED Report whether the source has a resident full input buffer.
@@ -201,10 +294,11 @@ classdef Image < handle
 
             validateattributes(average,{'double'},{'real','size',[obj.Input.SizeY,obj.Input.SizeX]});
 
-            % A new correction invalidates downstream membership and measurements.
-            obj.clearSegmentation();
-            obj.setResults(struct('AverageIntensity',average, ...
-                'CalibrationIDs',string(calibrationIDs(:))));
+            % Correction state changes can make a generated mask stale, but
+            % object membership remains user-owned until explicitly replaced.
+            obj.CorrectionProvenance = ...
+                oops.model.CorrectionProvenance.flatField(calibrationIDs);
+            obj.setResults(struct('AverageIntensity',average));
         end
 
         function setResults(obj,results)
@@ -247,6 +341,7 @@ classdef Image < handle
             delete(obj.ObjectListeners);
             obj.ObjectListeners = event.listener.empty();
             obj.SegmentationParameters = oops.analysis.segment.Parameters.empty(0,1);
+            obj.MaskProvenance = oops.model.MaskProvenance.unknown();
             obj.Mask = false(0,0);
             obj.Objects = oops.model.Object.empty(0,1);
 
@@ -258,7 +353,7 @@ classdef Image < handle
             notify(obj,'DataChanged',oops.model.events.DataChanged(obj.ID,"Mask"));
         end
 
-        function setMask(obj,mask,pixelLists,parameters)
+        function setMask(obj,mask,pixelLists,parameters,provenance)
         %SETMASK Validate and replace mask membership and its owned object collection.
 
             % Analysis supplies the partition; the model only validates/stores it.
@@ -267,6 +362,7 @@ classdef Image < handle
                 mask (:,:) logical
                 pixelLists (1,:) cell
                 parameters (:,1) oops.analysis.segment.Parameters = oops.analysis.segment.Parameters.empty(0,1)
+                provenance (1,1) oops.model.MaskProvenance = oops.model.MaskProvenance.unknown()
             end
 
             try
@@ -345,6 +441,7 @@ classdef Image < handle
                 delete(obj.ObjectListeners);
                 obj.ObjectListeners = nextListeners;
                 obj.SegmentationParameters = parameters;
+                obj.MaskProvenance = provenance;
                 obj.Mask = mask;
                 obj.Objects = next;
                 obj.setActiveObject("");
@@ -617,6 +714,80 @@ classdef Image < handle
     %% Derived summaries
     methods
 
+        function info = infoStruct(obj)
+        %INFOSTRUCT Return compact diagnostic metadata without numerical image arrays.
+
+            % File-backed source identity used to reopen this image between sessions.
+            source = struct('FilePath',"",'SeriesIndex',NaN);
+
+            if ~isempty(obj.Input) && obj.Input.IsFileBacked
+                source.FilePath = string(obj.Input.Source.FilePath);
+                source.SeriesIndex = double(obj.Input.Source.SeriesIndex);
+            end
+
+            % Parent group assignment compared against the correction represented by results.
+            assignedCalibrationIDs = strings(0,1);
+            groupName = "";
+
+            if ~isempty(obj.Parent)
+                groupName = obj.Parent.Name;
+                assignedCalibrationIDs = obj.Parent.CalibrationIDs;
+            end
+
+            % Stored segmentation recipe, empty for imported/manual/unknown masks.
+            segmentation = struct();
+
+            if ~isempty(obj.SegmentationParameters)
+                segmentation = obj.SegmentationParameters.toStruct();
+            end
+
+            % Result field names communicate availability without copying raster values.
+            resultFields = string(fieldnames(obj.Results));
+            correctionMatches = obj.CorrectionProvenance.matchesAssignments( ...
+                assignedCalibrationIDs);
+            maskCurrent = ~isempty(obj.Mask) && ...
+                obj.MaskProvenance.isCurrent(obj.CorrectionProvenance);
+
+            info = struct( ...
+                'Identity',struct( ...
+                    'Name',obj.Name, ...
+                    'ID',obj.ID, ...
+                    'Group',groupName), ...
+                'Input',struct( ...
+                    'Source',source, ...
+                    'Dimensions',struct( ...
+                        'Y',obj.Input.SizeY, ...
+                        'X',obj.Input.SizeX, ...
+                        'Components',obj.Input.NumComponents, ...
+                        'Z',obj.Input.SizeZ, ...
+                        'T',obj.Input.SizeT), ...
+                    'ComponentClass',string(obj.Input.getComponentClass(1)), ...
+                    'PixelSize',obj.PixelSize, ...
+                    'FrameLocations',obj.FrameLocations, ...
+                    'Loaded',obj.IsLoaded), ...
+                'Correction',struct( ...
+                    'Provenance',obj.CorrectionProvenance.toStruct(), ...
+                    'AssignedCalibrationIDs',assignedCalibrationIDs, ...
+                    'MatchesAssignment',correctionMatches, ...
+                    'AverageIntensityAvailable',isfield(obj.Results,'AverageIntensity')), ...
+                'Mask',struct( ...
+                    'Provenance',obj.MaskProvenance.toStruct(), ...
+                    'CurrentAgainstCorrection',maskCurrent, ...
+                    'SegmentationParameters',segmentation, ...
+                    'ForegroundPixels',nnz(obj.Mask), ...
+                    'ObjectCount',numel(obj.Objects)), ...
+                'Analysis',struct( ...
+                    'ResultFields',resultFields, ...
+                    'OrderAvailable',isfield(obj.Results,'Order'), ...
+                    'AzimuthAvailable',isfield(obj.Results,'Azimuth')), ...
+                'Display',struct( ...
+                    'IntensityRange',obj.IntensityDisplayRange, ...
+                    'OrderRange',obj.OrderDisplayRange), ...
+                'Navigation',struct( ...
+                    'ActiveObjectID',obj.ActiveObjectID, ...
+                    'SelectedObjectCount',numel(obj.SelectedObjectIDs)));
+        end
+
         function T = get.SummaryTable(obj)
         %GET.SUMMARYTABLE Describe input metadata, stored segmentation, and results.
         % No input buffer is loaded and no analysis is performed for this table.
@@ -653,8 +824,8 @@ classdef Image < handle
 
                 % Append the committed value of each strategy-specific segmentation parameter.
                 for parameter = string(fieldnames(recipe.Values))'
-                    names(end+1) = "Mask " + parameter;
-                    values{end+1} = recipe.Values.(parameter);
+                    names(end+1) = "Mask " + parameter; %#ok<AGROW>
+                    values{end+1} = recipe.Values.(parameter); %#ok<AGROW>
                 end
 
                 names(end+1) = "Mask parameter mode";

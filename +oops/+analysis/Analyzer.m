@@ -237,7 +237,9 @@ classdef Analyzer
 
                     % Segmented mask, retained object pixel lists, and cached strategy diagnostics.
                     [mask,lists,diagnostics] = oops.analysis.Analyzer.segment(mean(stack,3),settings.Segmentation);
-                    image.setMask(mask,lists,diagnostics.Parameters);
+                    provenance = oops.model.MaskProvenance.segmented( ...
+                        image.CorrectionProvenance);
+                    image.setMask(mask,lists,diagnostics.Parameters,provenance);
 
                     % Copy of stored outputs updated with average intensity and segmentation cache.
                     results = image.Results;
@@ -291,7 +293,7 @@ classdef Analyzer
                 % Mask and object membership regenerated from cached enhancement.
                 [mask,lists,diagnostics] = oops.analysis.segment.adjust( ...
                     image.Results.AverageIntensity,image.Results.Segmentation,recipe);
-                image.setMask(mask,lists,diagnostics.Parameters);
+                image.setMask(mask,lists,diagnostics.Parameters,image.MaskProvenance);
 
                 % Copy of image outputs updated with the committed segmentation cache.
                 results = image.Results;
@@ -330,6 +332,14 @@ classdef Analyzer
 
                     % Current corrected stack, or raw input when no calibration is assigned.
                     stack = oops.analysis.Analyzer.workingStack(image);
+
+                    if ~isempty(image.Objects) && ...
+                            ~image.MaskProvenance.isCurrent(image.CorrectionProvenance)
+                        oops.Log.WARN("Objects in " + image.Name + ...
+                            " were defined from a different intensity correction; " + ...
+                            "preserving membership and updating measurements.");
+                    end
+
                     oops.Log.INFO("Computing order/orientation for " + image.Name + ".");
 
                     % Per-pixel modulation order and axial orientation in radians.
@@ -407,6 +417,10 @@ classdef Analyzer
 
                 % Numeric input used for analysis, selected from raw or current corrected data.
                 stack = oops.analysis.readStack(image.Input);
+
+                if ~image.CorrectionProvenance.matchesAssignments(strings(0,1))
+                    image.setCorrectionResults(mean(stack,3),strings(0,1));
+                end
             else
 
                 if ~oops.model.internal.hasCurrentCorrection(image)

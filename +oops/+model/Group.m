@@ -87,6 +87,29 @@ classdef Group < handle
     %% Image membership
     methods
 
+        function S = toStruct(obj,projectFolder)
+        %TOSTRUCT Capture group metadata, assignments, navigation, and images.
+
+            images = arrayfun(@(item) item.toStruct(projectFolder),obj.Images);
+            S = struct( ...
+                'ID',obj.ID, ...
+                'Name',obj.Name, ...
+                'Color',obj.Color, ...
+                'CalibrationIDs',obj.CalibrationIDs, ...
+                'ActiveImageID',obj.ActiveImageID, ...
+                'SelectedImageIDs',obj.SelectedImageIDs, ...
+                'Images',images);
+        end
+
+        function restoreIdentity(obj,S)
+        %RESTOREIDENTITY Restore durable IDs and navigation after members exist.
+
+            obj.ID = string(S.ID);
+            obj.setCalibrations(string(S.CalibrationIDs));
+            obj.setActiveImage(string(S.ActiveImageID));
+            obj.setSelectedImages(string(S.SelectedImageIDs));
+        end
+
         function image = addImage(obj,input,name)
         %ADDIMAGE Attach an independently owned four-angle Image5D source.
 

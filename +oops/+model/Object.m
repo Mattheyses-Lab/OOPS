@@ -207,6 +207,28 @@ classdef Object < handle
     %% Stored scalar measurements
     methods
 
+        function S = toStruct(obj)
+        %TOSTRUCT Capture durable identity, membership, geometry, and scalar results.
+
+            S = struct( ...
+                'ID',obj.ID, ...
+                'PixelIdxList',obj.PixelIdxList, ...
+                'LabelID',obj.LabelID, ...
+                'Midline',obj.Midline, ...
+                'PixelMidlineTangentList',obj.PixelMidlineTangentList, ...
+                'Measurements',obj.getMeasurements());
+        end
+
+        function restoreStruct(obj,S)
+        %RESTORESTRUCT Apply saved durable state to a newly reconstructed object.
+
+            obj.ID = string(S.ID);
+            obj.LabelID = string(S.LabelID);
+            obj.Midline = double(S.Midline);
+            obj.PixelMidlineTangentList = double(S.PixelMidlineTangentList(:));
+            obj.setMeasurements(S.Measurements);
+        end
+
         function setMidlineResult(obj,coordinates,pixelTangents,scalars)
         %SETMIDLINERESULT Store traced geometry and its scalar measurements.
 

@@ -7,6 +7,7 @@ classdef Project < handle
 
     properties
         Name (1,1) string = "Untitled"
+        SourcePath (1,1) string = ""
     end
 
     properties (SetAccess=private)
@@ -109,6 +110,96 @@ classdef Project < handle
                 delete(obj(i).Labels);
             end
 
+        end
+
+        function S = toStruct(obj,projectFolder)
+        %TOSTRUCT Capture compact project state without raster data or runtime caches.
+
+            arguments
+                obj
+                projectFolder (1,1) string = ""
+            end
+
+            groups = arrayfun(@(item) item.toStruct(projectFolder),obj.Groups);
+            calibrations = arrayfun( ...
+                @(item) item.toStruct(projectFolder),obj.Calibrations);
+            S = struct( ...
+                'Format',"OOPS Project", ...
+                'Version',obj.Version, ...
+                'SchemaVersion',obj.SchemaVersion, ...
+                'ID',obj.ID, ...
+                'Name',obj.Name, ...
+                'Settings',obj.Settings.toStruct(), ...
+                'Labels',obj.Labels.toStruct(), ...
+                'Calibrations',calibrations, ...
+                'Groups',groups, ...
+                'ActiveGroupID',obj.ActiveGroupID, ...
+                'SelectedGroupIDs',obj.SelectedGroupIDs);
+        end
+
+    end
+
+    methods (Static)
+
+        function [obj,resolution] = fromStruct(S,projectFolder,searchRoot)
+        %FROMSTRUCT Restore compact state and resolve each external image source.
+
+            arguments
+                S (1,1) struct
+                projectFolder (1,1) string = ""
+                searchRoot (1,1) string = ""
+            end
+
+            if ~isfield(S,'Format') || string(S.Format) ~= "OOPS Project"
+                error('oops:project:InvalidFile','The selected file is not an OOPS project.');
+            end
+
+            % Resolve every external source before allocating a partial model.
+            resolution = oops.io.project.resolveSources(S,projectFolder,searchRoot);
+            oops.Log.DEBUG("All project sources resolved; constructing project model.");
+
+            settings = oops.config.Settings();
+            settings.fromStruct(S.Settings);
+            obj = oops.model.Project(string(S.Name),settings);
+            obj.ID = string(S.ID);
+
+            delete(obj.LabelListeners);
+            delete(obj.Labels);
+            obj.Labels = oops.model.LabelRegistry.fromStruct(S.Labels);
+            obj.LabelListeners(1) = addlistener(obj.Labels,'LabelsChanged', ...
+                @(~,~) notify(obj,'LabelsChanged'));
+            obj.LabelListeners(2) = addlistener(obj.Labels,'ActiveChanged', ...
+                @(~,~) notify(obj,'ActiveLabelChanged'));
+
+            for k = 1:numel(S.Calibrations)
+                data = S.Calibrations(k);
+                path = resolution.Calibrations(k);
+
+                input = oops.io.readInput(path,SeriesIndex=data.Source.SeriesIndex);
+                calibration = obj.addCalibration(input,string(data.Name));
+                calibration.restoreID(data.ID);
+            end
+
+            for g = 1:numel(S.Groups)
+                data = S.Groups(g);
+                group = obj.addGroup(string(data.Name),double(data.Color));
+
+                for i = 1:numel(data.Images)
+                    imageData = data.Images(i);
+                    path = resolution.Images{g}(i);
+
+                    input = oops.io.readInput(path, ...
+                        SeriesIndex=imageData.Source.SeriesIndex);
+                    image = group.addImage(input,string(imageData.Name));
+                    image.restoreStruct(imageData,string(data.CalibrationIDs));
+                end
+
+                group.restoreIdentity(data);
+            end
+
+            obj.setActiveGroup(string(S.ActiveGroupID));
+            obj.setSelectedGroups(string(S.SelectedGroupIDs));
+            oops.Log.DEBUG("Project model construction completed: " + obj.Name);
         end
 
     end
