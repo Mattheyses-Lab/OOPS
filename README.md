@@ -690,6 +690,18 @@ Built-in name-based loading and installation are unchanged. Built-ins created
 by `loadTools` remain manager-owned and are deleted when unloaded or when their
 host is destroyed. Supplied instances are never added to that owning registry.
 
+`Viewport` is also a linkable ImageAxes state:
+
+```matlab
+viewer1.addLink(viewer2,{'C','Z','T','Viewport'});
+```
+
+It synchronizes the image-space viewport center, zoom factor, and
+`ZoomEnabled` atomically in both directions. When a linked viewer has an
+installed Zoom tool, its enabled state and toolbar value remain consistent with
+the displayed viewport. `FollowCursorEnabled` is part of the same linked state,
+so locking the view in one viewer also locks every linked peer at that region.
+
 ### Passive Application Overlays
 
 Applications can mount derived graphics without adding interactive overlay types.

@@ -45,10 +45,13 @@ classdef ImageAxesLinkManager
                 return
             end
 
+            props = unique(props,'stable');
+
             % The source axes is wired first and acts as the initial source of truth.
             source.linkedAxes = links;
             source.linkedProps = props;
-            source.LinkListener = addlistener(source, props, 'PostSet', @(src,evt) source.syncPeersToSelf(src,evt));
+            source.LinkListener = ...
+                matlabx.ui.axes.ImageAxesLinkManager.createLinkListeners(source,props);
             source.hasLinks = true;
 
             for i = 1:numel(links)
@@ -63,7 +66,8 @@ classdef ImageAxesLinkManager
                 peer = links(i);
                 peer.linkedAxes = peerLinks;
                 peer.linkedProps = props;
-                peer.LinkListener = addlistener(peer, props, 'PostSet', @(src,evt) peer.syncPeersToSelf(src,evt));
+                peer.LinkListener = ...
+                    matlabx.ui.axes.ImageAxesLinkManager.createLinkListeners(peer,props);
                 peer.hasLinks = true;
             end
 
@@ -97,7 +101,16 @@ classdef ImageAxesLinkManager
 
             % PostSet events identify the property that just changed.
             propName = evt.Source.Name;
+            matlabx.ui.axes.ImageAxesLinkManager.syncPeers(source,propName);
+        end
 
+        function syncViewportPeers(source)
+        %SYNCVIEWPORTPEERS Propagate one semantic viewport-state change.
+            matlabx.ui.axes.ImageAxesLinkManager.syncPeers(source,'Viewport');
+        end
+
+        function syncPeers(source,propName)
+        %SYNCPEERS Propagate one ordinary or semantic linked value.
             for i = 1:numel(source.linkedAxes)
                 target = source.linkedAxes(i);
                 if isempty(target) || ~isvalid(target)
@@ -112,10 +125,8 @@ classdef ImageAxesLinkManager
                 cleanupListener = onCleanup( ...
                     @() matlabx.ui.axes.ImageAxesLinkManager.restoreLinkListenerState(target, listenerWasEnabled));
 
-                % Component display properties need overlap-safe copying when linked
-                % axes have different component counts.
-                value = matlabx.ui.axes.ImageAxesLinkManager.getLinkedValue(source, propName, target);
-                target.(propName) = value;
+                matlabx.ui.axes.ImageAxesLinkManager.applyLinkedProperty( ...
+                    target,source,propName);
 
                 % Restore immediately on success; onCleanup still protects the error
                 % path.
@@ -159,8 +170,8 @@ classdef ImageAxesLinkManager
 
             for k = 1:numel(props)
                 propName = props{k};
-                value = matlabx.ui.axes.ImageAxesLinkManager.getLinkedValue(source, propName, target);
-                target.(propName) = value;
+                matlabx.ui.axes.ImageAxesLinkManager.applyLinkedProperty( ...
+                    target,source,propName);
             end
 
             delete(cleanupListener);
@@ -192,6 +203,34 @@ classdef ImageAxesLinkManager
     end
 
     methods (Static, Access=private)
+        function listeners = createLinkListeners(host,props)
+        %CREATELINKLISTENERS Wire ordinary properties and semantic Viewport.
+            listeners = event.listener.empty;
+            propertyProps = props(~strcmp(props,'Viewport'));
+            if ~isempty(propertyProps)
+                added = addlistener(host,propertyProps,'PostSet', ...
+                    @(src,evt) host.syncPeersToSelf(src,evt));
+                listeners = added(:);
+            end
+            if any(strcmp(props,'Viewport'))
+                viewportListener = addlistener(host,'ViewportChanged', ...
+                    @(~,~) matlabx.ui.axes.ImageAxesLinkManager.syncViewportPeers(host));
+                listeners(end+1,1) = viewportListener;
+            end
+        end
+
+        function applyLinkedProperty(target,source,propName)
+        %APPLYLINKEDPROPERTY Assign an ordinary property or atomic viewport.
+            if strcmp(propName,'Viewport')
+                target.applyLinkedViewportState(source.getLinkedViewportState());
+                return
+            end
+
+            value = matlabx.ui.axes.ImageAxesLinkManager.getLinkedValue( ...
+                source,propName,target);
+            target.(propName) = value;
+        end
+
         function clearHost(host)
         %CLEARHOST Remove link metadata and listeners from one axes.
             % Delete valid listeners before clearing metadata to avoid orphaned

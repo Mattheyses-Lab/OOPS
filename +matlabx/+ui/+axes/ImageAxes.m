@@ -230,6 +230,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         pendingSizeUpdate (1,1) logical = false
         LastResizeLayoutKey_ (1,5) double = NaN(1,5)
         inStartup (1,1) logical = true
+        SuppressViewportChanged_ (1,1) logical = false
     end
 
     %% Popup/temporary UI management
@@ -281,6 +282,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         RenderSourceChanged
         DisplayStateChanged
         ImageDataChanged
+        ViewportChanged
     end
 
     %% ComponentContainer lifecycle (setup/update)
@@ -945,6 +947,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             %   This is the final low-level sink for view changes. Public viewport
             %   setters normalize requests before they get here, so this method can
             %   stay small and simply push limits into the graphics objects.
+            oldXLim = obj.mainAxes.XLim;
+            oldYLim = obj.mainAxes.YLim;
             set(obj.mainAxes,...
                 'XLim',XLim,...
                 'YLim',YLim);
@@ -959,6 +963,12 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 "YData",YViewportBase + (YLim(1) - 0.5)*obj.ViewportBoxScale);
 
             obj.updateViewportBoxVisibility();
+
+            if ~obj.SuppressViewportChanged_ && ...
+                    (~isequaln(oldXLim,obj.mainAxes.XLim) || ...
+                     ~isequaln(oldYLim,obj.mainAxes.YLim))
+                notify(obj,'ViewportChanged');
+            end
         end
 
         function updateViewportBoxVisibility(obj)
@@ -1149,8 +1159,18 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         function set.ZoomEnabled(obj,tf)
             %ZOOMENABLED  Enable or disable zoom navigation.
-
-            if tf
+            % Route public assignments through the installed Zoom tool when
+            % available so controller state and toolbar presentation cannot
+            % disagree with the host's viewport mode. Zoom.onEnabled/onDisabled
+            % call enableZoom/disableZoom directly, so this does not recurse.
+            zoomTool = obj.getInstalledTool("Zoom");
+            if ~isempty(zoomTool) && isvalid(zoomTool)
+                if tf
+                    zoomTool.enable();
+                else
+                    zoomTool.disable();
+                end
+            elseif tf
                 obj.enableZoom();
             else
                 obj.disableZoom();
@@ -1431,10 +1451,10 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 return
             end
 
-            obj.Zoom_.Enabled = true;
-
             oldXLim = obj.mainAxes.XLim;
             oldYLim = obj.mainAxes.YLim;
+            obj.Zoom_.Enabled = true;
+
             targetFactor = obj.ZoomFactor;
 
             % Prefer the most recent image-space zoom anchor.
@@ -1470,6 +1490,14 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             if obj.FollowCursorEnabled
                 obj.calibrateFollowCursorAnchor(obj.cursorPositionStatic);
             end
+
+            % A mode change is part of linked Viewport state even when the
+            % current limits happen to remain at the full-image view.
+            if ~obj.SuppressViewportChanged_ && ...
+                    isequaln(oldXLim,obj.mainAxes.XLim) && ...
+                    isequaln(oldYLim,obj.mainAxes.YLim)
+                notify(obj,'ViewportChanged');
+            end
         end
 
         function disableZoom(obj)
@@ -1479,18 +1507,27 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 return
             end
 
+            oldXLim = obj.mainAxes.XLim;
+            oldYLim = obj.mainAxes.YLim;
             % Remember the current view center before restoring full-image limits.
             % Re-enabling zoom should return to the same region, not to wherever
             % the cursor happens to be when a toolbar button is clicked.
             obj.Zoom_.LastCursorXY = obj.currentViewCenter();
             obj.Zoom_.LastFactor = obj.ZoomFactor;
 
+            % Set the semantic mode before resetViewport emits the linked state.
+            obj.Zoom_.Enabled = false;
+
             % Restore full-image limits while preserving the stored zoom anchor.
             obj.resetViewport(PreserveZoomState=true);
 
             obj.clearFollowCursorAnchor();
 
-            obj.Zoom_.Enabled = false;
+            if ~obj.SuppressViewportChanged_ && ...
+                    isequaln(oldXLim,obj.mainAxes.XLim) && ...
+                    isequaln(oldYLim,obj.mainAxes.YLim)
+                notify(obj,'ViewportChanged');
+            end
         end
 
         function toggleZoomEnabled(obj)
@@ -1533,6 +1570,10 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             if obj.ZoomEnabled
                 obj.calibrateFollowCursorAnchor(obj.cursorPositionStatic);
             end
+
+            if ~obj.SuppressViewportChanged_
+                notify(obj,'ViewportChanged');
+            end
         end
 
         function disableFollowCursor(obj)
@@ -1548,6 +1589,10 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
             obj.FollowCursor_.Enabled = false;
             obj.clearFollowCursorAnchor();
+
+            if ~obj.SuppressViewportChanged_
+                notify(obj,'ViewportChanged');
+            end
         end
 
         function toggleFollowCursorEnabled(obj)
@@ -1581,8 +1626,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             %
             % The link is bidirectional: this axes listens for changes and pushes
             % them to every linked axes, and each linked axes does the same for the
-            % same property set. Properties should be SetObservable and safe to
-            % assign through their public setters.
+            % same property set. Ordinary entries are SetObservable properties;
+            % "Viewport" is a semantic state backed by ViewportChanged.
 
             arguments
                 obj     (1,1) matlabx.ui.axes.ImageAxes
@@ -1630,6 +1675,69 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     end
 
+    methods (Access=?matlabx.ui.axes.ImageAxesLinkManager)
+
+        function state = getLinkedViewportState(obj)
+        %GETLINKEDVIEWPORTSTATE Return the atomic state shared by Viewport links.
+            viewport = obj.getViewport();
+            state = struct( ...
+                'Center',viewport.Center, ...
+                'ZoomFactor',viewport.ZoomFactor, ...
+                'ZoomEnabled',obj.ZoomEnabled, ...
+                'FollowCursorEnabled',obj.FollowCursorEnabled);
+        end
+
+        function applyLinkedViewportState(obj,state)
+        %APPLYLINKEDVIEWPORTSTATE Apply view and Zoom controller state once.
+        %   Use an installed Zoom tool's ordinary lifecycle so its Enabled flag,
+        %   toolbar value, and viewport-box preference remain coherent.
+            oldViewport = obj.getViewport();
+            oldZoomEnabled = obj.ZoomEnabled;
+            oldFollowCursorEnabled = obj.FollowCursorEnabled;
+            obj.SuppressViewportChanged_ = true;
+            cleanup = onCleanup(@() obj.restoreViewportNotifications_()); %#ok<NASGU>
+
+            zoomTool = obj.getInstalledTool("Zoom");
+            if ~isempty(zoomTool) && isvalid(zoomTool)
+                if state.ZoomEnabled
+                    zoomTool.enable();
+                else
+                    zoomTool.disable();
+                end
+            else
+                obj.ZoomEnabled = state.ZoomEnabled;
+            end
+
+            if state.ZoomEnabled
+                obj.setViewportCenterAndZoomFactor( ...
+                    state.Center,state.ZoomFactor);
+            else
+                obj.resetViewport();
+            end
+
+            obj.FollowCursorEnabled = state.FollowCursorEnabled;
+            if obj.ZoomEnabled && obj.FollowCursorEnabled
+                % This peer is normally inactive while another linked viewer is
+                % producing movement. Its UIAxes CurrentPoint can therefore be the
+                % last position seen before the pointer left, and must not become a
+                % new anchor for the synchronized viewport. The entering viewer
+                % establishes a fresh absolute mapping in onEnter instead.
+                obj.clearFollowCursorAnchor();
+            end
+
+            newViewport = obj.getViewport();
+            changed = oldZoomEnabled ~= obj.ZoomEnabled || ...
+                oldFollowCursorEnabled ~= obj.FollowCursorEnabled || ...
+                ~isequaln(oldViewport.XLim,newViewport.XLim) || ...
+                ~isequaln(oldViewport.YLim,newViewport.YLim);
+            obj.SuppressViewportChanged_ = false;
+            if changed
+                notify(obj,'ViewportChanged');
+            end
+        end
+
+    end
+
 
 
 
@@ -1639,6 +1747,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     %% UI helpers
     methods (Access=private)
         %% --- UI refresh helpers ---
+
+        function restoreViewportNotifications_(obj)
+        %RESTOREVIEWPORTNOTIFICATIONS_ Recover suppression after errors.
+            if ~isempty(obj) && isvalid(obj)
+                obj.SuppressViewportChanged_ = false;
+            end
+        end
 
         function updateOnResize(obj)
             if ~isvalid(obj); return; end
@@ -3101,6 +3216,17 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         function onEnter(obj,E)
             obj.BottomLabel.Visible = "on";
+
+            if obj.ZoomEnabled && obj.FollowCursorEnabled
+                % Crossing between viewers starts a new follow interaction. Drop
+                % any anchor retained from this axes' previous active period, then
+                % map the newly entered cursor position directly. This lets entry
+                % from the left move a viewport that was linked at the right edge
+                % back toward the left immediately.
+                obj.clearFollowCursorAnchor();
+                obj.followCursor();
+            end
+
             obj.ToolManager.notifyHostEnter(E);
         end
 
@@ -3836,6 +3962,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 'C', ...
                 'Z', ...
                 'T', ...
+                'Viewport', ...
                 'ComponentColorMode', ...
                 'ComponentColormaps', ...
                 'ComponentColors', ...
@@ -3893,7 +4020,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             [viewer2,~] = matlabx.app.quickshow(I,"Title","Viewer 2","Location","east");
 
             viewer1.addLink(viewer2,{'C','Z','T',...
-                'ShowComposite','ComponentColors',...
+                'Viewport','ShowComposite','ComponentColors',...
                 'ComponentColormaps','ComponentCLims'});
         end
 
