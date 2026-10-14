@@ -2,8 +2,8 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-function [value,bounds] = displayLimits(image,domain,settings)
-%DISPLAYLIMITS Resolve shared display-only scaling without overwriting user limits.
+function [value,bounds,ranges] = displayLimits(image,domain,settings)
+%DISPLAYLIMITS Resolve display policies without overwriting image-local limits.
 % Intensity uses all four raw/corrected frames together, so both viewers share
 % one range. Order uses finite order values. NaNs never determine limits.
 
@@ -40,37 +40,79 @@ if bounds(2) <= bounds(1)
     bounds(2) = bounds(1)+max(1,eps(bounds(1)));
 end
 
-if domain == "Order"
+% One-shot ranges used by the Reset and Auto buttons.
+if domain == "Intensity"
+    ranges.Reset = bounds;
+    ranges.Auto = percentileRange(values,bounds);
+else
     bounds = [0 1];
+    ranges.Reset = [0 1];
+
+    switch settings.Display.OrderAutoScaleMethod
+        case "Contrast"
+            ranges.Auto = percentileRange(values,[0 1]);
+        case "Zero to max"
+            ranges.Auto = zeroToMaxRange(values,[0 1]);
+        case "Data range"
+            ranges.Auto = finiteRange(values,[0 1]);
+    end
 end
 
-if settings.Display.("AutoScaleDisplay"+domain)
+% Keep Auto has precedence over Lock, followed by the image-local range.
+if settings.Display.("KeepAutoDisplay"+domain)
+    value = ranges.Auto;
+elseif settings.Display.("LockDisplay"+domain)
+    value = settings.Display.("LockedDisplayRange"+domain);
 
-    if isempty(values)
-
-        % Effective display limits chosen by auto-scaling or the stored manual range.
-        value = [0 1];
-    else
-        value = prctile(values,[1 99]);
+    if isempty(value)
+        value = image.getDisplayRange(domain);
     end
-
-    if value(2) <= value(1)
-        value = [min(values,[],'all') max(values,[],'all')];
-
-        if value(2) <= value(1)
-            value = bounds;
-        end
-
-    end
-
-    if domain == "Order"
-        value = max(0,min(1,value));
-    end
-
 else
     value = image.getDisplayRange(domain);
 end
 
 % Expand UI slider bounds to keep user values accessible after recalibration.
 bounds = [min(bounds(1),value(1)) max(bounds(2),value(2))];
+end
+
+function value = zeroToMaxRange(values,fallback)
+%ZEROTOMAXRANGE Anchor order at zero and scale to the finite data maximum.
+
+if isempty(values)
+    value = fallback;
+else
+    value = [0 max(values)];
+end
+
+if value(2) <= value(1)
+    value = fallback;
+end
+end
+
+function value = percentileRange(values,fallback)
+%PERCENTILERANGE Return robust intensity limits with a valid fallback.
+
+if isempty(values)
+    value = fallback;
+else
+    value = prctile(values,[1 99]);
+end
+
+if value(2) <= value(1)
+    value = finiteRange(values,fallback);
+end
+end
+
+function value = finiteRange(values,fallback)
+%FINITERANGE Return finite data extrema while preserving a positive span.
+
+if isempty(values)
+    value = fallback;
+else
+    value = [min(values) max(values)];
+end
+
+if value(2) <= value(1)
+    value = fallback;
+end
 end

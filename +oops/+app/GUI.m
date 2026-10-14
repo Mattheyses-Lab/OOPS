@@ -153,7 +153,7 @@ classdef GUI < handle
 
                 % Filename stem used as the imported image's initial name.
                 [~,name] = fileparts(files(k));
-                oops.analysis.updateProgress(progress, ...
+                oops.runtime.updateProgress(progress, ...
                     sprintf('Image %d/%d: %s\nLoading four-angle input...',k,numel(files),name), ...
                     (k-1)/numel(files));
                 try
@@ -247,9 +247,13 @@ classdef GUI < handle
                 opts.SearchRoot (1,1) string = ""
             end
 
+            % Operation progress dialog retained through model attachment and UI refresh.
+            [progress,cleanupProgress] = obj.createProgressDialog("Reading project file..."); %#ok<ASGLU>
             [project,resolution] = oops.io.project.load( ...
-                file,SearchRoot=opts.SearchRoot);
+                file,SearchRoot=opts.SearchRoot,Progress=progress);
+            oops.runtime.updateProgress(progress,"Updating project interface...",.95);
             obj.attachProject(project,true);
+            oops.runtime.updateProgress(progress,"Project loaded",1);
         end
 
         function calibrations = registerCalibrations(obj,files)
@@ -290,7 +294,7 @@ classdef GUI < handle
             % Cleanup guard releasing the temporary refresh/processing state.
             cleaner = onCleanup(@() obj.endProcessing());
             oops.analysis.Analyzer.assignCalibrations(p,groups,oops.model.internal.ids(calibrations),Progress=progress);
-            oops.analysis.updateProgress(progress,"Updating viewers...",[]);
+            oops.runtime.updateProgress(progress,"Updating viewers...",[]);
             obj.Processing = false;
             obj.refreshNavigation();
             obj.refreshViewers(true);
@@ -677,10 +681,10 @@ classdef GUI < handle
                 'ItemSpacing',5,'BorderWidth',0,'BorderColor',[.18 .18 .18], ...
                 'Padding',0,'BackgroundColor',[.12 .12 .12]);
 
-            % Ordered item titles for navigation, summaries, and settings sections.
-            titles = ["Groups","Images","Objects","Labels","Summary", ...
-                "Object Selection","Orientation Lines","View","Mask","Scatterplot","Swarmplot", ...
-                "Colormap","Display Limits"];
+            % Ordered item titles for navigation and settings sections.
+            titles = ["Groups","Images","Objects","Labels", ...
+                "Display Limits","Colormap","View","Object Selection", ...
+                "Mask","Scatterplot","Swarmplot","Orientation Lines","Summary"];
 
             % Create the accordion items in their intended display order.
             for title = titles
@@ -1276,20 +1280,19 @@ classdef GUI < handle
         end
 
         function buildDisplayLimits(obj)
-        %BUILDDISPLAYLIMITS Give each domain its own project policy and image-local range.
+        %BUILDDISPLAYLIMITS Build one-shot and navigation policies for each domain.
 
-            % Create independent auto-scale and manual-range controls for each display domain.
+            % Create independent policy buttons and a manual range for each display domain.
             for domain = ["Intensity","Order"]
-                obj.addSetting("Display Limits","Auto "+lower(domain),"Display","AutoScaleDisplay"+domain);
 
                 % Accordion item grid that owns the controls being created or updated.
                 pane = obj.SettingsAccordion.getItem("Display Limits").Pane;
 
-                % Next grid row allocated for this control or label.
+                % Next grid row allocated to the manual range slider.
                 row = numel(pane.RowHeight)+1;
                 pane.RowHeight{row} = 'fit';
 
-                % Bound UI component being constructed or synchronized.
+                % Range slider used to preview and store an explicit image range.
                 control = matlabx.ui.control.Slider(pane,'Title',char(domain), ...
                     'ValueMode','range','Limits',[0 1],'Value',[0 1], ...
                     'ValueDisplayFormat','%.4g','FontColor',[.9 .9 .9], ...
@@ -1300,6 +1303,42 @@ classdef GUI < handle
                 control.Layout.Row = row;
                 control.Layout.Column = [1 2];
                 obj.DisplayLimitUI.(domain) = control;
+
+                % Next grid row allocated to the four evenly spaced policy buttons.
+                row = numel(pane.RowHeight)+1;
+                pane.RowHeight{row} = 'fit';
+
+                % One-row host keeping the four display-limit actions evenly spaced.
+                buttonGrid = uigridlayout(pane,[1 4], ...
+                    'ColumnWidth',{'1x','1x','1x','1x'}, ...
+                    'RowHeight',{'fit'},'ColumnSpacing',4, ...
+                    'Padding',[0 0 0 0],'BackgroundColor',[.18 .18 .18]);
+                buttonGrid.Layout.Row = row;
+                buttonGrid.Layout.Column = [1 2];
+
+                % Immediate actions calculate and store one range for the active image.
+                reset = uibutton(buttonGrid,'push','Text','Reset', ...
+                    'ButtonPushedFcn',@(~,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitAction(domain,"Reset")));
+                auto = uibutton(buttonGrid,'push','Text','Auto', ...
+                    'ButtonPushedFcn',@(~,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitAction(domain,"Auto")));
+
+                % Persistent navigation modes are exclusive and synchronized from settings.
+                keepAuto = uibutton(buttonGrid,'state','Text','Keep Auto', ...
+                    'ValueChangedFcn',@(src,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitModeChanged(domain,"KeepAuto",src.Value)));
+                lock = uibutton(buttonGrid,'state','Text','Lock', ...
+                    'ValueChangedFcn',@(src,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitModeChanged(domain,"Lock",src.Value)));
+
+                obj.DisplayLimitUI.Controls.(domain) = struct( ...
+                    'Reset',reset,'Auto',auto,'KeepAuto',keepAuto,'Lock',lock);
+
+                if domain == "Order"
+                    obj.addSetting("Display Limits","Scaling method","Display", ...
+                        "OrderAutoScaleMethod",["Contrast","Zero to max","Data range"]);
+                end
             end
 
         end
@@ -1316,12 +1355,22 @@ classdef GUI < handle
                 % Bound UI component being constructed or synchronized.
                 control = obj.DisplayLimitUI.(domain);
 
+                % Buttons controlling one-shot ranges and navigation behavior.
+                buttons = obj.DisplayLimitUI.Controls.(domain);
+
                 % Whether the active image has data for the current display-limit domain.
                 ready = ~isempty(image);
 
                 if isprop(control,'Enable')
                     control.Enable = matlab.lang.OnOffSwitchState(ready);
                 end
+
+                for name = ["Reset","Auto","KeepAuto","Lock"]
+                    buttons.(name).Enable = matlab.lang.OnOffSwitchState(ready);
+                end
+
+                buttons.KeepAuto.Value = obj.Settings.Display.("KeepAutoDisplay"+domain);
+                buttons.Lock.Value = obj.Settings.Display.("LockDisplay"+domain);
 
                 if ready
 
@@ -1360,14 +1409,23 @@ classdef GUI < handle
             end
 
             if commit
-                obj.Processing = true;
 
-                % Cleanup guard restoring the temporary callback/processing state.
-                guard = onCleanup(@() obj.endProcessing());
+                % Existing processing state restored after the atomic policy update.
+                previous = obj.Processing;
+                obj.Processing = true;
+                guard = onCleanup(@() obj.restoreProcessing(previous));
                 image.setDisplayRange(domain,value);
-                obj.Settings.Display.("AutoScaleDisplay"+domain) = false;
-                obj.Processing = false;
-                obj.refreshViewers(true);
+                obj.Settings.Display.("KeepAutoDisplay"+domain) = false;
+
+                if obj.Settings.Display.("LockDisplay"+domain)
+                    obj.Settings.Display.("LockedDisplayRange"+domain) = value;
+                end
+
+                clear guard;
+
+                if ~previous
+                    obj.refreshViewers(true);
+                end
             else
 
                 % Left and right panel source names in viewer order.
@@ -1409,6 +1467,69 @@ classdef GUI < handle
 
                 end
 
+            end
+
+        end
+
+        function onDisplayLimitAction(obj,domain,action)
+        %ONDISPLAYLIMITACTION Apply a one-shot Reset or Auto range to the active image.
+
+            % Active image receiving the newly calculated stored display range.
+            image = obj.Project.ActiveImage;
+
+            if isempty(image)
+                return;
+            end
+
+            % Reset and Auto ranges calculated from the current image and domain.
+            [~,~,ranges] = oops.render.displayLimits(image,domain,obj.Settings);
+            value = ranges.(action);
+
+            % Existing processing state restored after the atomic policy update.
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
+            image.setDisplayRange(domain,value);
+            obj.Settings.Display.("KeepAutoDisplay"+domain) = false;
+
+            if obj.Settings.Display.("LockDisplay"+domain)
+                obj.Settings.Display.("LockedDisplayRange"+domain) = value;
+            end
+
+            clear guard;
+
+            if ~previous
+                obj.refreshViewers(true);
+            end
+
+        end
+
+        function onDisplayLimitModeChanged(obj,domain,mode,value)
+        %ONDISPLAYLIMITMODECHANGED Enable an exclusive navigation scaling policy.
+
+            % Active image supplies the effective range captured when Lock is enabled.
+            image = obj.Project.ActiveImage;
+
+            if isempty(image)
+                obj.refreshDisplayLimits();
+                return;
+            end
+
+            % Existing processing state restored after the atomic policy update.
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
+
+            if mode == "Lock" && value
+                current = oops.render.displayLimits(image,domain,obj.Settings);
+                obj.Settings.Display.("LockedDisplayRange"+domain) = current;
+            end
+
+            obj.Settings.Display.(mode+"Display"+domain) = logical(value);
+            clear guard;
+
+            if ~previous
+                obj.refreshViewers(true);
             end
 
         end
@@ -2123,6 +2244,13 @@ classdef GUI < handle
                 return;
             end
 
+            % Choosing a future Order Auto method does not alter a manual or
+            % locked display. Keep Auto applies the new method immediately.
+            if e.Domain == "Display" && e.Name == "OrderAutoScaleMethod" && ...
+                    ~obj.Settings.Display.KeepAutoDisplayOrder
+                return;
+            end
+
             if e.Domain == "Colormaps"
                 obj.refreshColormapControls();
             end
@@ -2385,7 +2513,7 @@ classdef GUI < handle
                     if ~isempty(info.CLim)
                         viewer.CLimMode = 'manual';
                         viewer.ComponentCLims = repmat({info.CLim},1,data.NumComponents);
-                    elseif settings.Display.AutoScaleDisplayIntensity
+                    elseif settings.Display.KeepAutoDisplayIntensity
                         viewer.CLimMode = 'auto';
                     else
                         viewer.CLimMode = 'manual';
@@ -3699,7 +3827,7 @@ classdef GUI < handle
 
                 % Filename stem used as the registered calibration's initial name.
                 [~,name] = fileparts(files(k));
-                oops.analysis.updateProgress(progress, ...
+                oops.runtime.updateProgress(progress, ...
                     sprintf('Calibration %d/%d: %s\nOpening four-angle stack...',k,numel(files),name), ...
                     (k-1)/numel(files));
 
@@ -3874,7 +4002,7 @@ classdef GUI < handle
             % Cleanup guard restores UI state if validation or correction fails.
             cleaner = onCleanup(@() obj.endProcessing());
             oops.analysis.Analyzer.assignCalibrations(obj.Project,group,ids,Progress=progress);
-            oops.analysis.updateProgress(progress,"Updating viewers...",[]);
+            oops.runtime.updateProgress(progress,"Updating viewers...",[]);
             obj.Processing = false;
             obj.refreshNavigation();
             obj.refreshSummary();
@@ -3915,7 +4043,7 @@ classdef GUI < handle
             % Operation progress dialog and its exception-safe cleanup guard.
             [progress,cleanupProgress] = obj.createProgressDialog("Performing flat-field correction..."); %#ok<ASGLU>
             oops.analysis.Analyzer.correctGroup(group,Progress=progress);
-            oops.analysis.updateProgress(progress,"Updating viewers...",[]);
+            oops.runtime.updateProgress(progress,"Updating viewers...",[]);
             obj.Processing = false;
             obj.refreshNavigation();
             obj.refreshViewers(true);
@@ -4009,7 +4137,7 @@ classdef GUI < handle
                 oops.analysis.Analyzer.analyzeImages(images,obj.Settings,Progress=progress);
             end
 
-            oops.analysis.updateProgress(progress,"Updating viewers...",[]);
+            oops.runtime.updateProgress(progress,"Updating viewers...",[]);
             obj.Processing = false;
             obj.reconcileActive();
             obj.refreshNavigation();

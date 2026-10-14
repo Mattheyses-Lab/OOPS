@@ -68,7 +68,7 @@ classdef Analyzer
 
                 % Registered calibration source resolved from the current ID.
                 item = oops.model.internal.resolve(project.Calibrations,ids(k));
-                oops.analysis.Analyzer.updateProgress(opts.Progress, ...
+                oops.runtime.updateProgress(opts.Progress, ...
                     sprintf('Calibration %d/%d: %s\nReading flat-field input...',k,numel(ids),item.Name),[]);
                 stacks{k} = oops.analysis.readStack(item.Input);
 
@@ -78,7 +78,7 @@ classdef Analyzer
 
             end
 
-            oops.analysis.Analyzer.updateProgress(opts.Progress,"Computing flat field...",[]);
+            oops.runtime.updateProgress(opts.Progress,"Computing flat field...",[]);
             flat = oops.analysis.normalizeCalibration(stacks);
             project.AnalysisCache.putCalibration(ids,flat);
             oops.Log.INFO("Flat-field computation complete.");
@@ -140,13 +140,13 @@ classdef Analyzer
 
             % Correct each owned image while reporting its group/name and batch position.
             for k = 1:numel(group.Images)
-                oops.analysis.Analyzer.updateProgress(opts.Progress, ...
+                oops.runtime.updateProgress(opts.Progress, ...
                     sprintf('Group: %s\nImage %d/%d: %s\nPerforming flat-field correction...', ...
                         group.Name,k,numel(group.Images),group.Images(k).Name),(k-1)/max(1,numel(group.Images)));
                 oops.analysis.Analyzer.correctImage(group.Images(k),Calibration=flat);
             end
 
-            oops.analysis.Analyzer.updateProgress(opts.Progress,"Correction complete",1);
+            oops.runtime.updateProgress(opts.Progress,"Correction complete",1);
         end
 
         function correctImage(image,opts)
@@ -228,7 +228,7 @@ classdef Analyzer
 
                     % Batch progress fraction before processing the current image.
                     fraction = (k-1)/numel(images);
-                    oops.analysis.Analyzer.updateProgress(opts.Progress, ...
+                    oops.runtime.updateProgress(opts.Progress, ...
                         prefix + "Segmenting image and detecting objects...",fraction);
                     oops.Log.INFO("Segmenting " + image.Name + " using " + settings.Segmentation.Strategy + ".");
 
@@ -246,12 +246,12 @@ classdef Analyzer
                     results.AverageIntensity = mean(stack,3);
                     results.Segmentation = rmfield(diagnostics,'Parameters');
                     image.setResults(results);
-                    oops.analysis.Analyzer.updateProgress(opts.Progress, ...
+                    oops.runtime.updateProgress(opts.Progress, ...
                         prefix + "Measuring objects and local S/B...",fraction);
                     oops.analysis.Analyzer.measureObjects(image,settings);
                 end
 
-                oops.analysis.Analyzer.updateProgress(opts.Progress,"Segmentation complete",1);
+                oops.runtime.updateProgress(opts.Progress,"Segmentation complete",1);
             catch ME
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
@@ -327,7 +327,7 @@ classdef Analyzer
 
                     % Batch progress fraction before processing the current image.
                     fraction = (k-1)/numel(images);
-                    oops.analysis.Analyzer.updateProgress(opts.Progress, ...
+                    oops.runtime.updateProgress(opts.Progress, ...
                         prefix + "Calculating order and orientation statistics...",fraction);
 
                     % Current corrected stack, or raw input when no calibration is assigned.
@@ -351,23 +351,17 @@ classdef Analyzer
                     results.Azimuth = azimuth;
                     results.AverageIntensity = mean(stack,3);
                     image.setResults(results);
-                    oops.analysis.Analyzer.updateProgress(opts.Progress, ...
+                    oops.runtime.updateProgress(opts.Progress, ...
                         prefix + "Measuring objects and local S/B...",fraction);
                     oops.analysis.Analyzer.measureObjects(image,settings);
                     oops.Log.INFO("Order/orientation analysis complete for " + image.Name + ".");
                 end
 
-                oops.analysis.Analyzer.updateProgress(opts.Progress,"Order/orientation analysis complete",1);
+                oops.runtime.updateProgress(opts.Progress,"Order/orientation analysis complete",1);
             catch ME
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
             end
-        end
-
-        function updateProgress(sink,message,value)
-        %UPDATEPROGRESS Route progress to an optional dialog or headless callback.
-
-            oops.analysis.updateProgress(sink,message,value);
         end
 
     end

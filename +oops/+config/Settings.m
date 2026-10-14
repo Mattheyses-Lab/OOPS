@@ -397,6 +397,23 @@ classdef Settings < handle
 
             end
 
+            % Early 2.0 snapshots used one persistent auto-scale flag per
+            % domain. Preserve those choices as the new Keep Auto policy.
+            for domain = ["Intensity","Order"]
+
+                oldName = "AutoScaleDisplay"+domain;
+                newName = "KeepAutoDisplay"+domain;
+
+                if isfield(S.Display,oldName) && ~isfield(S.Display,newName)
+                    S.Display.(newName) = S.Display.(oldName);
+                end
+
+                if isfield(S.Display,oldName)
+                    S.Display = rmfield(S.Display,oldName);
+                end
+
+            end
+
             % Domains currently contain scalar structs of settings fields. Add
             % newly introduced fields, including independent order auto-scaling.
 

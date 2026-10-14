@@ -158,9 +158,9 @@ t.verifyTrue(isinf(corrected(1,1,1)));
 [order,azimuth] = oops.analysis.Analyzer.orderOrientation(corrected);
 t.verifyTrue(isnan(order(1,1))); t.verifyTrue(isnan(azimuth(1,1)));
 state = containers.Map('KeyType','char','ValueType','any');
-oops.analysis.Analyzer.updateProgress(@(message,value) record(state,message,value),"done",1);
+oops.runtime.updateProgress(@(message,value) record(state,message,value),"done",1);
 t.verifyEqual(state('message'),"done"); t.verifyEqual(state('value'),1);
-oops.analysis.Analyzer.updateProgress(@(~,~) error('test:Sink','Broken progress sink'),"ignored",.5);
+oops.runtime.updateProgress(@(~,~) error('test:Sink','Broken progress sink'),"ignored",.5);
 end
 function testPipelineProgressIdentifiesImagesAndMeasurementSteps(t)
 %TESTPIPELINEPROGRESSIDENTIFIESIMAGESANDMEASUREMENTSTEPS Support UI and headless sinks.

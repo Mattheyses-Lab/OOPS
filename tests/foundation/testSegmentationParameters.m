@@ -91,6 +91,29 @@ S = p.Settings.toStruct(); copy = oops.config.Settings(); copy.fromStruct(S);
 t.verifyFalse(copy.Display.AutoScaleDisplayOrder); t.verifyFalse(copy.Display.AutoScaleDisplayIntensity);
 end
 
+function testOrderAutoScalingMethods(t)
+%TESTORDERAUTOSCALINGMETHODS Resolve contrast, zero-anchored, and data ranges.
+
+p = oops.model.Project(); cleaner = onCleanup(@() delete(p));
+g = p.addGroup("A");
+I = ones(10);
+im = g.addImage(matlabx.image.Image5D.fromComponents({I,I,I,I}));
+order = reshape(linspace(.2,.8,100),10,10);
+im.setResults(struct('AverageIntensity',I,'Order',order));
+
+p.Settings.Display.OrderAutoScaleMethod = "Contrast";
+[~,~,ranges] = oops.render.displayLimits(im,"Order",p.Settings);
+t.verifyEqual(ranges.Auto,prctile(order(:),[1 99]),'AbsTol',eps);
+
+p.Settings.Display.OrderAutoScaleMethod = "Zero to max";
+[~,~,ranges] = oops.render.displayLimits(im,"Order",p.Settings);
+t.verifyEqual(ranges.Auto,[0 .8],'AbsTol',eps);
+
+p.Settings.Display.OrderAutoScaleMethod = "Data range";
+[~,~,ranges] = oops.render.displayLimits(im,"Order",p.Settings);
+t.verifyEqual(ranges.Auto,[.2 .8],'AbsTol',eps);
+end
+
 function testPendingCalibrationInvalidatesAnOldManualRecipe(t)
 p = oops.model.Project(); cleaner = onCleanup(@() delete(p)); g = p.addGroup("A");
 I = zeros(60); I(20:24,20:24) = 100;

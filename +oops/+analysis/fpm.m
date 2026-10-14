@@ -16,32 +16,29 @@ if size(stack,3) ~= 4
     error('oops:analysis:InvalidStack','FPM requires four polarization planes.');
 end
 
-% Half the total intensity across the four polarization frames.
-halfTotal = sum(stack,3)/2;
+% Total-intensity Stokes parameter derived from the four analyzer angles.
+s0 = sum(stack,3)/2;
+
+% Linear-polarization Stokes parameters for the two orthogonal angle pairs.
+s1 = stack(:,:,1)-stack(:,:,3);
+s2 = stack(:,:,2)-stack(:,:,4);
 
 % Pixels with four finite intensities and a positive total signal.
-valid = all(isfinite(stack),3) & halfTotal > 0;
+valid = all(isfinite(stack),3) & s0 > 0;
 
-% Normalized 0°/90° difference, initially NaN where analysis is undefined.
-a = nan(size(halfTotal));
+% Normalized linear Stokes components, initially NaN where analysis is undefined.
+normalizedS1 = nan(size(s0));
+normalizedS2 = normalizedS1;
 
-% Normalized 45°/135° difference, initially NaN where analysis is undefined.
-b = a;
-
-% Intensity difference between the 0° and 90° frames.
-x = stack(:,:,1)-stack(:,:,3);
-
-% Intensity difference between the 45° and 135° frames.
-y = stack(:,:,2)-stack(:,:,4);
-a(valid) = x(valid)./halfTotal(valid);
-b(valid) = y(valid)./halfTotal(valid);
+normalizedS1(valid) = s1(valid)./s0(valid);
+normalizedS2(valid) = s2(valid)./s0(valid);
 
 % Modulation magnitude, constrained to the supported [0,1] order range.
-order = min(max(hypot(a,b),0),1);
+order = min(max(hypot(normalizedS1,normalizedS2),0),1);
 % Restore NaN at undefined pixels after min/max clamps the order magnitude.
 order(~valid) = NaN;
 
 % Axial angle in radians, obtained by halving the modulation phase.
-azimuth = .5*atan2(b,a);
+azimuth = .5*atan2(normalizedS2,normalizedS1);
 azimuth(order == 0) = NaN;
 end

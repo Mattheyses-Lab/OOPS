@@ -399,14 +399,33 @@ p.Settings.View.LeftSource = "Average intensity";
 p.Settings.View.RightSource = "Input";
 slider = ui.DisplayLimitUI.Intensity; slider.Value = [.2 .8];
 slider.ValueChangingFcn(slider,[]);
-t.verifyEmpty(image.IntensityDisplayRange); t.verifyTrue(p.Settings.Display.AutoScaleDisplayIntensity);
+t.verifyEmpty(image.IntensityDisplayRange); t.verifyTrue(p.Settings.Display.KeepAutoDisplayIntensity);
 slider.ValueChangedFcn(slider,[]);
 t.verifyEqual(image.IntensityDisplayRange,[.2 .8]);
-t.verifyFalse(p.Settings.Display.AutoScaleDisplayIntensity); t.verifyTrue(p.Settings.Display.AutoScaleDisplayOrder);
+t.verifyFalse(p.Settings.Display.KeepAutoDisplayIntensity);
+t.verifyTrue(p.Settings.Display.KeepAutoDisplayOrder);
 t.verifyEqual(ui.LeftViewer.CLim,[.2 .8]); t.verifyEqual(ui.RightViewer.CLim,[.2 .8]);
 ui.LeftViewer.C = 3; t.verifyEqual(ui.LeftViewer.CLim,[.2 .8]);
-p.Settings.Display.AutoScaleDisplayIntensity = true;
+p.Settings.Display.KeepAutoDisplayIntensity = true;
 t.verifyEqual(image.IntensityDisplayRange,[.2 .8]);
+
+lock = ui.DisplayLimitUI.Controls.Intensity.Lock;
+lock.Value = true; lock.ValueChangedFcn(lock,[]);
+t.verifyTrue(p.Settings.Display.LockDisplayIntensity);
+t.verifyFalse(p.Settings.Display.KeepAutoDisplayIntensity);
+t.verifyEqual(p.Settings.Display.LockedDisplayRangeIntensity,ui.DisplayLimitUI.Intensity.Value);
+
+slider.Value = [.1 .9]; slider.ValueChangedFcn(slider,[]);
+t.verifyTrue(p.Settings.Display.LockDisplayIntensity);
+t.verifyEqual(p.Settings.Display.LockedDisplayRangeIntensity,[.1 .9]);
+p.ActiveGroup.setActiveImage(p.ActiveGroup.Images(2));
+t.verifyEqual(ui.LeftViewer.CLim,[.1 .9]);
+t.verifyEqual(ui.RightViewer.CLim,[.1 .9]);
+
+keepAuto = ui.DisplayLimitUI.Controls.Intensity.KeepAuto;
+keepAuto.Value = true; keepAuto.ValueChangedFcn(keepAuto,[]);
+t.verifyTrue(p.Settings.Display.KeepAutoDisplayIntensity);
+t.verifyFalse(p.Settings.Display.LockDisplayIntensity);
 end
 
 

@@ -40,15 +40,15 @@ cleanup = onCleanup(@() delete(s));
 [generic,l1] = capture(s,'Changed');
 [domain,l2] = capture(s,'DisplayChanged');
 listeners = onCleanup(@() delete([l1,l2]));
-s.Display.AutoScaleDisplayIntensity = false;
+s.Display.KeepAutoDisplayIntensity = false;
 e = generic('last');
 t.verifyEqual(generic('count'),1);
 t.verifyEqual(domain('count'),1);
 t.verifyEqual(e.Domain,"Display");
-t.verifyEqual(e.Name,"AutoScaleDisplayIntensity");
+t.verifyEqual(e.Name,"KeepAutoDisplayIntensity");
 t.verifyEqual(e.OldValue,true);
 t.verifyEqual(e.NewValue,false);
-s.Display.AutoScaleDisplayIntensity = false;
+s.Display.KeepAutoDisplayIntensity = false;
 t.verifyEqual(generic('count'),1,'Unchanged values must not emit another event.');
 end
 
@@ -56,13 +56,13 @@ function testSettingsPersistence(t)
 file = fullfile(t.TestData.Folder,'settings.json');
 s = oops.config.Settings.load(file);
 s.IO.DefaultFolder = "images/μ";
-s.Display.AutoScaleDisplayIntensity = false;
+s.Display.KeepAutoDisplayIntensity = false;
 s.save(file);
 loaded = oops.config.Settings.load(file);
 t.verifyEqual(loaded.toStruct(),s.toStruct());
 oops.config.Settings.restore(file);
 restored = oops.config.Settings.load(file);
-t.verifyTrue(restored.Display.AutoScaleDisplayIntensity);
+t.verifyTrue(restored.Display.KeepAutoDisplayIntensity);
 end
 
 function testInvalidSettingsDoNotChangeState(t)

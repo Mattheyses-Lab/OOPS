@@ -45,12 +45,12 @@ S = oldSnapshot(); S = rmfield(S,'View');
 S.Display = rmfield(S.Display,'AutoScaleDisplayOrder');
 [S,migrated] = oops.config.Settings.migrate(S);
 t.verifyTrue(migrated); t.verifyEqual(S.Segmentation.MinimumArea,42);
-t.verifyFalse(S.Display.AutoScaleDisplayIntensity); t.verifyTrue(S.Display.AutoScaleDisplayOrder);
+t.verifyFalse(S.Display.KeepAutoDisplayIntensity); t.verifyTrue(S.Display.KeepAutoDisplayOrder);
 t.verifyEqual(string(S.SettingsSchemaVersion),oops.Info.SettingsSchemaVersion);
 t.verifyEqual(string(S.FactoryDefaultsVersion),"0.3.0");
 t.verifyEqual(string(S.View.LeftSource),"Input");
 s = oops.config.Settings(); cleaner = onCleanup(@() delete(s)); s.fromStruct(S);
-t.verifyEqual(s.Segmentation.MinimumArea,42); t.verifyFalse(s.Display.AutoScaleDisplayIntensity);
+t.verifyEqual(s.Segmentation.MinimumArea,42); t.verifyFalse(s.Display.KeepAutoDisplayIntensity);
 end
 function testMissingVersionFieldsAndOldColormapCategory(t)
 S = struct('Colormaps',struct('Intensity','gray','Order','parula','Azimuth','hsv','Category','MATLAB'));
@@ -66,7 +66,7 @@ S = oldSnapshot(); [schema,~] = oops.config.Settings.migrate(S);
 defaults = oops.config.Settings(); cleaner = onCleanup(@() delete(defaults));
 t.verifyTrue(migrated); t.verifyEqual(schema.Segmentation.MinimumArea,42);
 t.verifyEqual(factory.Segmentation.MinimumArea,defaults.Segmentation.MinimumArea);
-t.verifyTrue(factory.Display.AutoScaleDisplayIntensity);
+t.verifyTrue(factory.Display.KeepAutoDisplayIntensity);
 t.verifyEqual(string(factory.IO.DefaultFolder),"images/μ");
 t.verifyEqual(string(factory.FactoryDefaultsVersion),oops.Info.FactoryDefaultsVersion);
 [again,changed] = oops.config.Settings.migrate(factory,ApplyFactoryDefaults=true);
@@ -104,8 +104,13 @@ s.fromStruct(S); t.verifyEqual(s.Segmentation.MinimumArea,S.Segmentation.Minimum
 end
 function S = oldSnapshot()
 s = oops.config.Settings(); cleaner = onCleanup(@() delete(s));
-s.Segmentation.MinimumArea = 42; s.Display.AutoScaleDisplayIntensity = false;
+s.Segmentation.MinimumArea = 42; s.Display.KeepAutoDisplayIntensity = false;
 s.IO.DefaultFolder = "images/μ"; S = s.toStruct();
+S.Display.AutoScaleDisplayIntensity = S.Display.KeepAutoDisplayIntensity;
+S.Display.AutoScaleDisplayOrder = S.Display.KeepAutoDisplayOrder;
+S.Display = rmfield(S.Display,{'KeepAutoDisplayIntensity','KeepAutoDisplayOrder', ...
+    'LockDisplayIntensity','LockDisplayOrder', ...
+    'LockedDisplayRangeIntensity','LockedDisplayRangeOrder'});
 S.Version = '0.3.0'; S.SettingsSchemaVersion = '0.3.0'; S.FactoryDefaultsVersion = '0.3.0';
 end
 function write(file,contents)

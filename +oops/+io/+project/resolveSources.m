@@ -1,10 +1,11 @@
-function resolved = resolveSources(snapshot,projectFolder,searchRoot)
+function resolved = resolveSources(snapshot,projectFolder,searchRoot,opts)
 %RESOLVESOURCES Preflight every project source before constructing the model.
 
     arguments
         snapshot (1,1) struct
         projectFolder (1,1) string = ""
         searchRoot (1,1) string = ""
+        opts.Progress = []
     end
 
     resolved = struct( ...
@@ -21,12 +22,15 @@ function resolved = resolveSources(snapshot,projectFolder,searchRoot)
     end
 
     sourceCount = numel(snapshot.Calibrations) + imageCount;
+    sourceIndex = 0;
     oops.Log.DEBUG(sprintf( ...
         "Preflighting %d project sources (%d calibrations, %d images).", ...
         sourceCount,numel(snapshot.Calibrations),imageCount));
 
     if searchRoot ~= "" && isfolder(searchRoot)
         oops.Log.DEBUG("Indexing relocation search folder recursively: " + searchRoot);
+        oops.runtime.updateProgress(opts.Progress, ...
+            "Indexing relocation search folder...",[]);
         searchIndex = dir(fullfile(searchRoot,"**","*"));
         searchIndex = searchIndex(~[searchIndex.isdir]);
         oops.Log.DEBUG(sprintf( ...
@@ -36,6 +40,8 @@ function resolved = resolveSources(snapshot,projectFolder,searchRoot)
     end
 
     for k = 1:numel(snapshot.Calibrations)
+        sourceIndex = sourceIndex+1;
+        reportResolutionProgress(opts.Progress,"calibration",sourceIndex,sourceCount);
         reference = snapshot.Calibrations(k).Source;
         [path,status,candidates] = oops.io.project.resolveSource( ...
             reference,projectFolder,searchRoot,searchIndex);
@@ -55,6 +61,8 @@ function resolved = resolveSources(snapshot,projectFolder,searchRoot)
         resolved.Images{g} = strings(numel(images),1);
 
         for k = 1:numel(images)
+            sourceIndex = sourceIndex+1;
+            reportResolutionProgress(opts.Progress,"image",sourceIndex,sourceCount);
             reference = images(k).Source;
             [path,status,candidates] = oops.io.project.resolveSource( ...
                 reference,projectFolder,searchRoot,searchIndex);
@@ -94,6 +102,20 @@ function resolved = resolveSources(snapshot,projectFolder,searchRoot)
         oops.Log.INFO(sprintf( ...
             "Relinked %d project sources to new locations.",numel(resolved.Relinked)));
     end
+end
+
+function reportResolutionProgress(progress,kind,index,count)
+%REPORTRESOLUTIONPROGRESS Report source preflight without exposing path details.
+
+if count == 0
+    value = .4;
+else
+    value = .1+.3*(index/count);
+end
+
+message = "Checking " + kind + " source " + string(index) + ...
+    " of " + string(count) + "...";
+oops.runtime.updateProgress(progress,message,value);
 end
 
 function item = relinkedSource(kind,originalPath,resolvedPath)

@@ -141,13 +141,14 @@ classdef Project < handle
 
     methods (Static)
 
-        function [obj,resolution] = fromStruct(S,projectFolder,searchRoot)
+        function [obj,resolution] = fromStruct(S,projectFolder,searchRoot,opts)
         %FROMSTRUCT Restore compact state and resolve each external image source.
 
             arguments
                 S (1,1) struct
                 projectFolder (1,1) string = ""
                 searchRoot (1,1) string = ""
+                opts.Progress = []
             end
 
             if ~isfield(S,'Format') || string(S.Format) ~= "OOPS Project"
@@ -155,9 +156,11 @@ classdef Project < handle
             end
 
             % Resolve every external source before allocating a partial model.
-            resolution = oops.io.project.resolveSources(S,projectFolder,searchRoot);
+            resolution = oops.io.project.resolveSources( ...
+                S,projectFolder,searchRoot,Progress=opts.Progress);
             oops.Log.DEBUG("All project sources resolved; constructing project model.");
 
+            oops.runtime.updateProgress(opts.Progress,"Restoring project settings...",.45);
             settings = oops.config.Settings();
             settings.fromStruct(S.Settings);
             obj = oops.model.Project(string(S.Name),settings);
@@ -171,9 +174,18 @@ classdef Project < handle
             obj.LabelListeners(2) = addlistener(obj.Labels,'ActiveChanged', ...
                 @(~,~) notify(obj,'ActiveLabelChanged'));
 
+            % Total file-backed members used to report reconstruction progress.
+            imageCount = sum(arrayfun(@(group) numel(group.Images),S.Groups));
+            sourceCount = numel(S.Calibrations)+imageCount;
+            sourceIndex = 0;
+
             for k = 1:numel(S.Calibrations)
                 data = S.Calibrations(k);
                 path = resolution.Calibrations(k);
+
+                sourceIndex = sourceIndex+1;
+                reportSourceProgress(opts.Progress,"Loading calibration", ...
+                    data.Name,sourceIndex,sourceCount);
 
                 input = oops.io.readInput(path,SeriesIndex=data.Source.SeriesIndex);
                 calibration = obj.addCalibration(input,string(data.Name));
@@ -188,6 +200,10 @@ classdef Project < handle
                     imageData = data.Images(i);
                     path = resolution.Images{g}(i);
 
+                    sourceIndex = sourceIndex+1;
+                    reportSourceProgress(opts.Progress,"Loading image", ...
+                        imageData.Name,sourceIndex,sourceCount);
+
                     input = oops.io.readInput(path, ...
                         SeriesIndex=imageData.Source.SeriesIndex);
                     image = group.addImage(input,string(imageData.Name));
@@ -197,6 +213,7 @@ classdef Project < handle
                 group.restoreIdentity(data);
             end
 
+            oops.runtime.updateProgress(opts.Progress,"Restoring project navigation...",.92);
             obj.setActiveGroup(string(S.ActiveGroupID));
             obj.setSelectedGroups(string(S.SelectedGroupIDs));
             oops.Log.DEBUG("Project model construction completed: " + obj.Name);
@@ -696,4 +713,18 @@ classdef Project < handle
 
     end
 
+end
+
+function reportSourceProgress(progress,operation,name,index,count)
+%REPORTSOURCEPROGRESS Describe model reconstruction for one file-backed member.
+
+if count == 0
+    value = .9;
+else
+    value = .5+.4*(index/count);
+end
+
+message = operation + " " + string(index) + " of " + string(count) + ...
+    ": " + string(name);
+oops.runtime.updateProgress(progress,message,value);
 end
