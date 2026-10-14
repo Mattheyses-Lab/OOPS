@@ -105,8 +105,10 @@ try
             domain = name;
 
             if name == "Azimuth"
-                values = mod(rad2deg(values),180);
-                info.CLim = [0 180];
+                % Preserve the analytical axial convention for inspection:
+                % one-half atan2 spans signed orientations from -90 to 90 degrees.
+                values = rad2deg(values);
+                info.CLim = [-90 90];
                 info.Title = info.Title + " (degrees)";
             else
                 info.CLim = oops.render.displayLimits(image,"Order",settings);
@@ -140,7 +142,11 @@ try
         info.Domain = "Order";
     end
 
-    info.Colormap = oops.render.colormap(settings.Colormaps,domain);
+    if domain == "Azimuth"
+        info.Colormap = oops.render.azimuthImageColormap(settings.Colormaps);
+    else
+        info.Colormap = oops.render.colormap(settings.Colormaps,domain);
+    end
     info.Available = true;
     info.Reason = "";
 catch ME

@@ -103,7 +103,7 @@ image = p.Groups(1).Images(1);
 avg = reshape(1:120,10,12); azimuth = -pi/4*ones(10,12);
 image.setResults(struct('AverageIntensity',avg,'Order',.7*ones(10,12),'Azimuth',azimuth));
 [data,info] = oops.render.source(image,"Azimuth",p.Settings);
-t.verifyEqual(data.getPlane(1,1,1),mod(rad2deg(azimuth),180)); t.verifyEqual(info.CLim,[0 180]);
+t.verifyEqual(data.getPlane(1,1,1),rad2deg(azimuth)); t.verifyEqual(info.CLim,[-90 90]);
 t.verifyEqual(image.Results.Azimuth,azimuth);
 [data,info] = oops.render.source(image,"Mask",p.Settings);
 t.verifyEqual(data.getPlane(1,1,1),image.Mask); t.verifyEqual(info.CLim,[0 1]);

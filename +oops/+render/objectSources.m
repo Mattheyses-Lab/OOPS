@@ -62,15 +62,15 @@ end
 sources{3} = matlabx.image.Image5D.fromComponents(objectMask,Names="Mask");
 info(3) = sourceInfo("Mask",true,"",gray(256),[0 1]);
 
-% Azimuth is temporarily displayed in [0,180] degrees; model radians are untouched.
+% Preserve signed analytical azimuths in degrees for display and inspection.
 if isempty(image.Azimuth)
     info(4) = sourceInfo("Azimuth",false,"Azimuth has not been produced", ...
-        oops.render.colormap(settings.Colormaps,"Azimuth"),[]);
+        oops.render.azimuthImageColormap(settings.Colormaps),[]);
 else
-    azimuth = geometry.extract(mod(rad2deg(image.Azimuth),180),FillValue=0);
+    azimuth = geometry.extract(rad2deg(image.Azimuth),FillValue=0);
     sources{4} = matlabx.image.Image5D.fromComponents(azimuth,Names="Azimuth");
     info(4) = sourceInfo("Azimuth (degrees)",true,"", ...
-        oops.render.colormap(settings.Colormaps,"Azimuth"),[0 180]);
+        oops.render.azimuthImageColormap(settings.Colormaps),[-90 90]);
 end
 end
 

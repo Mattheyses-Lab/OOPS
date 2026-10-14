@@ -215,9 +215,12 @@ function testCircularRenderingKeepsAnglesNumerical(t)
 p = oops.model.Project(); cleaner = onCleanup(@() delete(p)); g = p.addGroup("A");
 im = g.addImage(input(ones(5,7,4))); im.setResults(struct('Azimuth',-pi/4*ones(5,7)));
 [data,info] = oops.render.source(im,"Azimuth",p.Settings);
-t.verifyEqual(data.getPlane(1,1,1),135*ones(5,7)); t.verifyEqual(info.CLim,[0 180]);
+t.verifyEqual(data.getPlane(1,1,1),-45*ones(5,7)); t.verifyEqual(info.CLim,[-90 90]);
 t.verifyEqual(im.Azimuth,-pi/4*ones(5,7));
 map = info.Colormap; t.verifyLessThan(norm(map(1,:)-map(end,:)),.05);
+lineMap = oops.render.colormap(p.Settings.Colormaps,"Azimuth");
+zeroIndex = floor(size(map,1)/2)+1;
+t.verifyEqual(map(zeroIndex,:),lineMap(1,:),'AbsTol',1e-12);
 end
 function data = input(stack)
 frames = arrayfun(@(k) stack(:,:,k),1:4,'UniformOutput',false);
