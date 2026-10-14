@@ -9,7 +9,7 @@ classdef SwarmPlot < handle
     properties (Access=private)
         GroupingType_ (1,1) string = "Group"
         ColorMode_ (1,1) string = "Group"
-        YVariable_ (1,1) string = "OrderAvg"
+        YVariable_ (1,1) string = "OrderMean"
         BackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor_,0,1)} = [1.0 1.0 1.0]
         ForegroundColor_ (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor_,0,1)} = [0.0 0.0 0.0]
         MarkerFaceAlpha_ (1,1) double {mustBeFinite,mustBeInRange(MarkerFaceAlpha_,0,1)} = 1.0

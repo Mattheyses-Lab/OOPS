@@ -35,7 +35,7 @@ result = struct( ...
     'PixelTangents',pixelTangents, ...
     'Length',lengthValue, ...
     'Tortuosity',tortuosity, ...
-    'Orientation',orientation);
+    'OrientationMean',orientation);
 
 end
 
@@ -49,7 +49,7 @@ if isempty(angles)
 end
 
 % Doubled-angle resultant converts axial data into circular data. This is
-% intentionally the same expression used by legacy getAzimuthAverage.
+% intentionally the same doubled-angle expression used by legacy OOPS.
 value = rad2deg(0.5*angle(mean(exp(2i*angles))));
 
 end

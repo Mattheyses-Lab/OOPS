@@ -7,8 +7,8 @@ classdef ScatterPlot < handle
 % Events carry Domain, Name, OldValue, and NewValue like DesmoSTORM.
 
     properties (Access=private)
-        XVariable_ (1,1) string = "SBRatio"
-        YVariable_ (1,1) string = "OrderAvg"
+        XVariable_ (1,1) string = "SignalToBackgroundRatio"
+        YVariable_ (1,1) string = "OrderMean"
         BackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor_,0,1)} = [1.0 1.0 1.0]
         ForegroundColor_ (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor_,0,1)} = [0.0 0.0 0.0]
         LegendVisible_ (1,1) logical = false

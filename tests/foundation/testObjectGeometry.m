@@ -39,19 +39,35 @@ im = t.TestData.Image;
 mask = false(10,12); mask(3:4,4:6) = true;
 im.setMask(mask,oops.analysis.segment.objectsFromMask(mask));
 obj = im.Objects(1);
-t.verifyTrue(isnan(obj.Area) && isnan(obj.OrderAvg) && isnan(obj.AzimuthStd));
+t.verifyTrue(isnan(obj.Area) && isnan(obj.OrderMean) && isnan(obj.AzimuthCircularStandardDeviation));
 t.verifyFalse(isprop(obj,'ReferenceAverage'));
-obj.setMeasurements(struct('Area',6,'OrderAvg',0.75,'CentroidX',5,'CentroidY',3.5));
+obj.setMeasurements(struct('Area',6,'OrderMean',0.75,'CentroidX',5,'CentroidY',3.5));
 t.verifyEqual(obj.Area,6);
-t.verifyEqual(obj.OrderAvg,0.75);
+t.verifyEqual(obj.OrderMean,0.75);
 t.verifyEqual(obj.CentroidX,5);
 t.verifyTrue(isnan(obj.Perimeter));
 values = obj.getMeasurements();
-t.verifyEqual(values.OrderAvg,0.75);
+t.verifyEqual(values.OrderMean,0.75);
 t.verifyEqual(obj.BoundingBox,[3.5 2.5 3 2]);
 t.verifyEqual(obj.Name,"Object 1");
 t.verifyEqual(obj.ImageName,"Replicate");
 t.verifyEqual(obj.GroupName,"Condition");
+end
+
+function testMeasurementNamesHaveHumanReadableLabels(t)
+names = ["OrderStandardDeviation" ...
+    "SignalToBackgroundRatio" ...
+    "EquivDiameter" ...
+    "CentroidX"];
+
+expected = ["Order standard deviation" ...
+    "Signal/background ratio" ...
+    "Equivalent diameter" ...
+    "Centroid X"];
+
+t.verifyEqual(oops.model.ObjectMeasurements.labels(names),expected);
+t.verifyEqual(oops.model.Object.measurementNames(), ...
+    oops.model.ObjectMeasurements.names());
 end
 
 function testMeasurementUpdatesAreAtomicAndForwarded(t)
@@ -62,7 +78,7 @@ obj = im.Objects(1);
 sink = containers.Map('KeyType','char','ValueType','any');
 listener = addlistener(t.TestData.Project,'DataChanged',@(~,e) saveEvent(sink,e));
 cleanup = onCleanup(@() delete(listener));
-obj.setMeasurements(struct('Area',6,'AzimuthStd',Inf));
+obj.setMeasurements(struct('Area',6,'AzimuthCircularStandardDeviation',Inf));
 t.verifyEqual(sink('event').ObjectID,obj.ID);
 t.verifyEqual(sink('event').ImageID,im.ID);
 t.verifyEqual(sink('event').Name,"ObjectMeasurements");
@@ -78,9 +94,9 @@ im = t.TestData.Image;
 mask = false(10,12); mask(3:4,4:6) = true;
 im.setMask(mask,{find(mask)});
 obj = im.Objects(1);
-obj.setMeasurements(struct('Area',6,'OrderAvg',0.75,'SBRatio',2,'MidlineLength',3));
+obj.setMeasurements(struct('Area',6,'OrderMean',0.75,'SignalToBackgroundRatio',2,'MidlineLength',3));
 im.setResults(struct('Order',zeros(10,12)));
-t.verifyTrue(isnan(obj.OrderAvg) && isnan(obj.SBRatio));
+t.verifyTrue(isnan(obj.OrderMean) && isnan(obj.SignalToBackgroundRatio));
 t.verifyEqual(obj.Area,6);
 t.verifyEqual(obj.MidlineLength,3);
 obj.resetMeasurements();

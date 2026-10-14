@@ -28,7 +28,7 @@ im = g.addImage(input,"Summary image");
 mask = false(10); mask(2:4,3:5) = true;
 im.setMask(mask,oops.analysis.segment.objectsFromMask(mask));
 region = im.Objects(1);
-region.setMeasurements(struct('Area',9,'OrderAvg',.4,'AzimuthAverage',30));
+region.setMeasurements(struct('Area',9,'OrderMean',.4,'AzimuthMean',30));
 
 for member = {p,g,im,region}
     T = member{1}.SummaryTable;

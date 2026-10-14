@@ -87,12 +87,12 @@ for k = 1:numel(pixelLists)
 
     % Average-intensity data extracted into the same local crop.
     localAverage = average(rows,cols);
-    s.SignalAverage = mean(average(pixelLists{k}),'omitnan');
-    s.BGAverage = mean(localAverage(ring),'omitnan');
-    s.SBRatio = NaN;
+    s.SignalMean = mean(average(pixelLists{k}),'omitnan');
+    s.BackgroundMean = mean(localAverage(ring),'omitnan');
+    s.SignalToBackgroundRatio = NaN;
 
-    if s.BGAverage > 0
-        s.SBRatio = s.SignalAverage/s.BGAverage;
+    if s.BackgroundMean > 0
+        s.SignalToBackgroundRatio = s.SignalMean/s.BackgroundMean;
     end
 
     if ~isempty(order)
@@ -102,10 +102,10 @@ for k = 1:numel(pixelLists)
         data = data(isfinite(data));
 
         if ~isempty(data)
-            s.OrderAvg = mean(data);
-            s.OrderStd = std(data);
-            s.OrderMin = min(data);
-            s.OrderMax = max(data);
+            s.OrderMean = mean(data);
+            s.OrderStandardDeviation = std(data);
+            s.OrderMinimum = min(data);
+            s.OrderMaximum = max(data);
         end
 
     end
@@ -124,13 +124,13 @@ for k = 1:numel(pixelLists)
             r = min(1,abs(resultant));
 
             if r > eps
-                s.AzimuthAverage = rad2deg(.5*angle(resultant));
+                s.AzimuthMean = rad2deg(.5*angle(resultant));
             else
-                s.AzimuthAverage = NaN;
+                s.AzimuthMean = NaN;
             end
 
-            s.AzimuthStd = rad2deg(.5*sqrt(-2*log(r)));
-            s.AzimuthAngularDeviation = rad2deg(.5*sqrt(2*(1-r)));
+            s.AzimuthCircularStandardDeviation = rad2deg(.5*sqrt(-2*log(r)));
+            s.AzimuthCircularAngularDeviation = rad2deg(.5*sqrt(2*(1-r)));
 
             % Per-pixel midline tangent values computed from immutable geometry.
             tangents = pixelTangents{k};
@@ -152,8 +152,8 @@ for k = 1:numel(pixelLists)
                     normalDifference = angle(exp(2i*objectAzimuth)./exp(2i*normals))*0.5;
 
                     % Legacy doubled-angle means, converted to degrees.
-                    s.MidlineRelativeAzimuth = rad2deg(angle(mean(exp(2i*tangentDifference)))*0.5);
-                    s.NormalRelativeAzimuth = rad2deg(angle(mean(exp(2i*normalDifference)))*0.5);
+                    s.MidlineRelativeAzimuthMean = rad2deg(angle(mean(exp(2i*tangentDifference)))*0.5);
+                    s.NormalRelativeAzimuthMean = rad2deg(angle(mean(exp(2i*normalDifference)))*0.5);
                 end
 
             end

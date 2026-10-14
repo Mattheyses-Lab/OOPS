@@ -80,7 +80,7 @@ leftData = ui.LeftViewer.ImageData;
 
 profile clear; profile on;
 cleanupProfile = onCleanup(@() profile('off'));
-region.setMeasurements(struct('OrderAvg',.75));
+region.setMeasurements(struct('OrderMean',.75));
 profile off;
 info = profile('info');
 names = string({info.FunctionTable.FunctionName});
@@ -435,12 +435,18 @@ function testPlotPresetAndSingletonSourceMovement(t)
 ui = t.TestData.GUI;
 p = ui.Project;
 
+% Dropdowns display readable labels while settings retain model property names.
+xVariables = ui.SettingsUI.ScatterPlot.XVariable;
+orderIndex = find(string(xVariables.ItemsData) == "OrderMean",1);
+t.assertNotEmpty(orderIndex);
+t.verifyEqual(string(xVariables.Items{orderIndex}),"Order mean");
+
 % Supply finite stored measurements so both copied components receive real data.
 for group = p.Groups'
     for image = group.Images'
         for k = 1:numel(image.Objects)
             image.Objects(k).setMeasurements(struct( ...
-                'SBRatio',double(k),'OrderAvg',double(k)/numel(image.Objects)));
+                'SignalToBackgroundRatio',double(k),'OrderMean',double(k)/numel(image.Objects)));
         end
     end
 end
@@ -457,6 +463,10 @@ t.verifyEqual(ui.LeftPlotAxes.Content,ui.ScatterRenderer);
 t.verifyEqual(ui.RightPlotAxes.Content,ui.SwarmRenderer);
 t.verifyEqual(numel(ui.ScatterRenderer.Data.XData),numel(p.Groups));
 t.verifyEqual(numel(ui.SwarmRenderer.Data.Values),numel(p.Groups));
+t.verifyEqual(string(ui.LeftPlotAxes.Axes.XLabel.String), ...
+    oops.model.ObjectMeasurements.label(p.Settings.ScatterPlot.XVariable));
+t.verifyEqual(string(ui.RightPlotAxes.Axes.YLabel.String), ...
+    oops.model.ObjectMeasurements.label(p.Settings.SwarmPlot.YVariable));
 
 markerSize = ui.SettingsUI.ScatterPlot.MarkerSize;
 markerSize.Value = 31;

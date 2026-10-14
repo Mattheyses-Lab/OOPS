@@ -17,7 +17,7 @@ classdef PolarHistogram < handle
         GridlinesLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
         CircleBackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(CircleBackgroundColor_,0,1)} = [1.0 1.0 1.0]
         BackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor_,0,1)} = [1.0 1.0 1.0]
-        Variable_ (1,1) string = "MidlineRelativeAzimuth"
+        Variable_ (1,1) string = "MidlineRelativeAzimuthMean"
         WedgeEdgeColorMode_ (1,1) string = "flat"
         WedgeEdgeColor_ (1,3) double {mustBeFinite,mustBeInRange(WedgeEdgeColor_,0,1)} = [0.0 0.0 0.0]
     end

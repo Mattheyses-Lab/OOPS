@@ -109,7 +109,7 @@ t.verifyTrue(all(ismember(expected,s.domains())));
 s.Segmentation.Strategy = "Filaments";
 s.Display.BackgroundColor = [0.1 0.2 0.3];
 s.ObjectDisplay.CropMargin = 8;
-s.Clustering.VariableList = ["Area","OrderAvg"];
+s.Clustering.VariableList = ["Area","OrderMean"];
 snapshot = s.toStruct();
 loaded = oops.config.Settings();
 loaded.fromStruct(jsondecode(jsonencode(snapshot)));
