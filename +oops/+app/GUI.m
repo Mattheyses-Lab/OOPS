@@ -30,6 +30,7 @@ classdef GUI < handle
         OrientationFieldTools cell = {}
         PolygonTools cell = {}
         ObjectBoundaryTools cell = {}
+        AuxiliaryCompositeTools cell = {}
         ScatterRenderer matlabx.ui.axes.plot.ScatterRenderer
         SwarmRenderer matlabx.ui.axes.plot.ViolinRenderer
         ViewerPanels
@@ -62,6 +63,8 @@ classdef GUI < handle
         ViewerKeys (1,2) string = ["",""]
         ObjectViewerKey (1,1) string = ""
         LabelHotkeys (1,:) string = string.empty(1,0)
+        ViewerListeners event.listener = event.listener.empty()
+        SyncingViewerDisplay (1,1) logical = false
     end
 
     methods
@@ -332,6 +335,7 @@ classdef GUI < handle
 
                 obj(k).Closing = true;
                 delete(obj(k).Listeners);
+                delete(obj(k).ViewerListeners);
 
                 % Detach renderers before deleting their independently owned graphics.
                 if ~isempty(obj(k).LeftPlotAxes) && isvalid(obj(k).LeftPlotAxes)
@@ -365,6 +369,12 @@ classdef GUI < handle
                 % Object-facing facades release callbacks before their borrowed
                 % headless Polygon controllers are destroyed.
                 for tool = obj(k).ObjectBoundaryTools
+                    if ~isempty(tool{1}) && isvalid(tool{1})
+                        delete(tool{1});
+                    end
+                end
+
+                for tool = obj(k).AuxiliaryCompositeTools
                     if ~isempty(tool{1}) && isvalid(tool{1})
                         delete(tool{1});
                     end
@@ -538,7 +548,7 @@ classdef GUI < handle
             state = matlab.lang.OnOffSwitchState(hasProject);
 
             for name = ["Close","Save","SaveAs","LoadImages","Calibration", ...
-                    "Analysis","View"]
+                    "AuxiliaryChannels","Analysis","View"]
 
                 if isfield(obj.MenuUI,name)
                     obj.MenuUI.(name).Enable = state;
@@ -1438,45 +1448,7 @@ classdef GUI < handle
                     obj.refreshViewers(true);
                 end
             else
-
-                % Left and right panel source names in viewer order.
-                names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
-
-                % Left and right ImageAxes handles in panel order.
-                viewers = {obj.LeftViewer,obj.RightViewer};
-
-                if domain == "Intensity"
-
-                    % Panel flags identifying sources that use the edited display domain.
-                    affected = ismember(names,["Input","Corrected","Average intensity"]);
-                else
-                    affected = names == "Order";
-                end
-
-                % Apply edited limits only to viewers currently displaying the matching domain.
-                for k = find(affected)
-
-                    % ImageAxes for the current left/right panel.
-                    viewer = viewers{k};
-                    viewer.CLimMode = 'manual';
-                    viewer.ComponentCLims = repmat({value},1,viewer.NumComponents);
-                end
-
-                % Object crops use the same parent-image display limits.
-                if obj.Settings.View.RightSource == "Objects"
-
-                    if domain == "Intensity"
-                        viewer = obj.ObjectViewers{1};
-                    else
-                        viewer = obj.ObjectViewers{2};
-                    end
-
-                    if viewer.ImageVisible == "on"
-                        viewer.CLimMode = 'manual';
-                        viewer.ComponentCLims = repmat({value},1,viewer.NumComponents);
-                    end
-
-                end
+                obj.applyDisplayRangeToViewers(domain,value);
 
             end
 
@@ -1569,7 +1541,7 @@ classdef GUI < handle
 
                 % Persistent ImageAxes created for the current panel.
                 viewer = matlabx.ui.axes.ImageAxes(grid,'Name',char(side+"Viewer"), ...
-                    'CData',[],'Tools',{'Zoom','Mask','RectangleSelect','Colorbar'},'Colormap',gray(256), ...
+                    'CData',[],'Tools',{'Zoom','Mask','RectangleSelect','Colorbar','DisplayLimits'},'Colormap',gray(256), ...
                     'CLim',[0 1],'FontSize',12);
                 viewer.Tools.RectangleSelect.TargetTypes = "Polygon";
 
@@ -1600,11 +1572,19 @@ classdef GUI < handle
                 obj.OrientationFields{k} = field;
                 obj.OrientationFieldTools{k} = tool;
 
+                % Context-only application tool exposes merged auxiliary channels.
+                compositeTool = oops.ui.axes.tools.AuxiliaryComposite(viewer);
+                viewer.installTool(compositeTool);
+                obj.AuxiliaryCompositeTools{k} = compositeTool;
+
                 if k == 1
                     obj.LeftViewer = viewer;
                 else
                     obj.RightViewer = viewer;
                 end
+
+                obj.ViewerListeners(end+1) = addlistener(viewer,'DisplayStateChanged', ...
+                    @(src,e) obj.runCallback(@() obj.onViewerDisplayStateChanged(src,e)));
 
             end
 
@@ -1739,6 +1719,9 @@ classdef GUI < handle
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseFiles()));
             obj.MenuUI.Calibration = uimenu(file,'Text','Register calibration stacks...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseCalibrationFiles()));
+            obj.MenuUI.AuxiliaryChannels = uimenu(file, ...
+                'Text','Import auxiliary channels...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseAuxiliaryChannels()));
 
             % Analysis menu containing explicit segmentation and FPM actions.
             analysis = uimenu(obj.Fig,'Text','Analysis');
@@ -2461,6 +2444,9 @@ classdef GUI < handle
                 return;
             end
 
+            obj.SyncingViewerDisplay = true;
+            displayGuard = onCleanup(@() obj.endViewerDisplaySync());
+
             % Active image supplying data and object membership for this operation.
             image = obj.Project.ActiveImage;
 
@@ -2476,6 +2462,16 @@ classdef GUI < handle
             % Reparent the two singleton plot sources and expose one content type per panel.
             obj.syncPanelContent(names);
             obj.resizeViewers();
+
+            % Whether both main panels currently expose their persistent ImageAxes.
+            linkViewports = obj.LeftViewer.Visible == "on" && ...
+                obj.RightViewer.Visible == "on";
+
+            % Disconnect before source replacement so a hidden viewer cannot push
+            % stale viewport state into the viewer that remains on screen.
+            if ~linkViewports
+                obj.setLargeViewerViewportLink(false);
+            end
 
             % Resolve and update each panel only when forced or its source key changes.
             for k = 1:2
@@ -2501,7 +2497,6 @@ classdef GUI < handle
 
                 % ImageAxes for the current left/right panel.
                 viewer = viewers{k};
-                obj.ViewerPanels(k).Title = char(info.Title);
 
                 if info.Available
 
@@ -2518,10 +2513,20 @@ classdef GUI < handle
                         viewer.T = min(indices(3),data.SizeT);
                     end
 
-                    viewer.ShowComposite = 'off';
-                    viewer.ComponentColormaps = repmat({info.Colormap},1,data.NumComponents);
+                    if names(k) ~= "Channels" || ~sameSource
+                        viewer.ShowComposite = 'off';
+                    end
 
-                    if ~isempty(info.CLim)
+                    if isempty(info.ComponentColormaps)
+                        viewer.ComponentColormaps = repmat({info.Colormap},1,data.NumComponents);
+                    else
+                        viewer.ComponentColormaps = info.ComponentColormaps;
+                    end
+
+                    if ~isempty(info.ComponentCLims)
+                        viewer.CLimMode = 'manual';
+                        viewer.ComponentCLims = info.ComponentCLims;
+                    elseif ~isempty(info.CLim)
                         viewer.CLimMode = 'manual';
                         viewer.ComponentCLims = repmat({info.CLim},1,data.NumComponents);
                     elseif settings.Display.KeepAutoDisplayIntensity
@@ -2536,10 +2541,23 @@ classdef GUI < handle
                     viewer.CData = [];
                     viewer.ImageVisible = 'off';
                     viewer.AxesVisible = 'off';
-                    obj.ViewerPanels(k).Title = char(info.Title + " — " + info.Reason);
+                    obj.ViewerPanels(k).Title = char(names(k) + " — " + info.Reason);
                 end
 
                 obj.ViewerKeys(k) = key;
+            end
+
+            % Link after both sources are ready, using the left viewer as the
+            % initial viewport when a new pair becomes visible.
+            if linkViewports
+                obj.setLargeViewerViewportLink(true);
+            end
+
+            % Composite commands are available only for the registry-backed source.
+            for k = 1:2
+                obj.AuxiliaryCompositeTools{k}.setAvailable( ...
+                    names(k) == "Channels" && viewers{k}.ImageVisible == "on" && ...
+                    viewers{k}.CanMergeComponents);
             end
 
             if any(ismember(names,["Scatterplot","Swarmplot"]))
@@ -2558,6 +2576,149 @@ classdef GUI < handle
                 obj.refreshDisplayLimits();
             end
 
+            clear displayGuard;
+
+        end
+
+        function onViewerDisplayStateChanged(obj,viewer,event)
+        %ONVIEWERDISPLAYSTATECHANGED Persist contrast changed with ImageAxes tools.
+
+            if obj.SyncingViewerDisplay || isempty(obj.Project) || ...
+                    event.Property ~= "ComponentCLims"
+                return;
+            end
+
+            source = "";
+
+            if viewer == obj.LeftViewer
+                source = obj.Settings.View.LeftSource;
+            elseif viewer == obj.RightViewer
+                source = obj.Settings.View.RightSource;
+            end
+
+            if ismember(source,["Input","Corrected","Average intensity"])
+                domain = "Intensity";
+            elseif source == "Order"
+                domain = "Order";
+            elseif source == "Channels"
+                obj.persistAuxiliaryDisplayRanges(viewer,event);
+                return;
+            else
+                return;
+            end
+
+            image = obj.Project.ActiveImage;
+
+            if isempty(image)
+                return;
+            end
+
+            % ImageAxes reports the effective limits of its active component.
+            % Intensity frames share one model range, so the selected range is
+            % propagated to every visible source in the same display domain.
+            value = viewer.CLim;
+
+            % Ignore incomplete or unsupported values before entering model setters.
+            if numel(value) ~= 2 || any(~isfinite(value)) || value(1) >= value(2)
+                return;
+            end
+
+            % Order is physically constrained to [0,1], whereas intensity
+            % limits follow the source data and detector display convention.
+            if domain == "Order" && (value(1) < 0 || value(2) > 1)
+                return;
+            end
+
+            % Model/config events emitted below must not trigger a full viewer
+            % refresh while the existing ImageAxes content is still valid.
+            previous = obj.Processing;
+            obj.Processing = true;
+            processingGuard = onCleanup(@() obj.restoreProcessing(previous));
+
+            image.setDisplayRange(domain,value);
+            obj.Settings.Display.("KeepAutoDisplay"+domain) = false;
+
+            if obj.Settings.Display.("LockDisplay"+domain)
+                obj.Settings.Display.("LockedDisplayRange"+domain) = value;
+            end
+
+            obj.applyDisplayRangeToViewers(domain,value);
+            obj.refreshDisplayLimits();
+            clear processingGuard;
+        end
+
+        function persistAuxiliaryDisplayRanges(obj,viewer,event)
+        %PERSISTAUXILIARYDISPLAYRANGES Store per-channel auxiliary contrast.
+
+            image = obj.Project.ActiveImage;
+
+            if isempty(image)
+                return;
+            end
+
+            definitions = obj.Project.AuxiliaryChannels.Channels;
+            indices = event.ComponentIdx;
+
+            if isempty(indices)
+                indices = 1:min(numel(definitions),viewer.NumComponents);
+            end
+
+            limits = viewer.ComponentCLims;
+
+            for index = reshape(indices,1,[])
+
+                if index > numel(definitions) || index > numel(limits)
+                    continue;
+                end
+
+                assignment = image.getAuxiliaryChannel(definitions(index).ID);
+
+                if ~isempty(assignment)
+                    assignment.setDisplayRange(limits{index});
+                end
+            end
+        end
+
+        function applyDisplayRangeToViewers(obj,domain,value)
+        %APPLYDISPLAYRANGETOVIEWERS Synchronize visible sources without rebuilding them.
+
+            obj.SyncingViewerDisplay = true;
+            displayGuard = onCleanup(@() obj.endViewerDisplaySync());
+
+            % Main sources whose pixels use the shared image display domain.
+            names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
+            viewers = {obj.LeftViewer,obj.RightViewer};
+
+            if domain == "Intensity"
+                affected = ismember(names,["Input","Corrected","Average intensity"]);
+            else
+                affected = names == "Order";
+            end
+
+            for k = find(affected)
+                currentViewer = viewers{k};
+                currentViewer.CLimMode = 'manual';
+                currentViewer.ComponentCLims = ...
+                    repmat({value},1,currentViewer.NumComponents);
+            end
+
+            % Object crops share their parent image's intensity and order limits.
+            if obj.Settings.View.RightSource == "Objects"
+
+                if domain == "Intensity"
+                    objectViewer = obj.ObjectViewers{1};
+                else
+                    objectViewer = obj.ObjectViewers{2};
+                end
+
+                if objectViewer.ImageVisible == "on"
+                    objectViewer.CLimMode = 'manual';
+                    objectViewer.ComponentCLims = ...
+                        repmat({value},1,objectViewer.NumComponents);
+                end
+            end
+
+            clear displayGuard;
         end
 
         function syncPanelContent(obj,names)
@@ -2601,6 +2762,37 @@ classdef GUI < handle
                         viewers{k}.Visible = 'on';
                 end
             end
+        end
+
+        function setLargeViewerViewportLink(obj,enabled)
+        %SETLARGEVIEWERVIEWPORTLINK Synchronize navigation between main viewers.
+
+            % The large viewers own no other link groups, so removing a link from
+            % either participant safely disconnects the complete pair.
+            if ~enabled
+
+                if obj.LeftViewer.hasLinks
+                    obj.LeftViewer.removeLinks();
+                elseif obj.RightViewer.hasLinks
+                    obj.RightViewer.removeLinks();
+                end
+
+                return
+            end
+
+            % An established pair already propagates viewport changes in both directions.
+            if obj.LeftViewer.hasLinks && obj.RightViewer.hasLinks
+                return
+            end
+
+            % Recover a partial link state before constructing the expected pair.
+            if obj.LeftViewer.hasLinks
+                obj.LeftViewer.removeLinks();
+            elseif obj.RightViewer.hasLinks
+                obj.RightViewer.removeLinks();
+            end
+
+            obj.LeftViewer.addLink(obj.RightViewer,{'Viewport'});
         end
 
         function refreshObjectViewers(obj,force)
@@ -3791,6 +3983,99 @@ classdef GUI < handle
             obj.refreshViewers(false);
         end
 
+        function chooseAuxiliaryChannels(obj)
+        %CHOOSEAUXILIARYCHANNELS Stage batch file pairing and semantic mappings.
+
+            group = obj.Project.ActiveGroup;
+
+            if isempty(group)
+                uialert(obj.Fig,'Select a group containing target images first.', ...
+                    'Import auxiliary channels','Icon','info');
+                return;
+            end
+
+            % Checked images are batch targets; the active image is the fallback.
+            ids = group.SelectedImageIDs;
+
+            if isempty(ids) && ~isempty(group.ActiveImage)
+                ids = group.ActiveImage.ID;
+            end
+
+            images = oops.model.Image.empty(0,1);
+
+            for id = reshape(ids,1,[])
+                image = oops.model.internal.resolve(group.Images,id);
+
+                if ~isempty(image)
+                    images(end+1,1) = image; %#ok<AGROW>
+                end
+            end
+
+            if isempty(images)
+                uialert(obj.Fig,'Check one or more images, or activate one image.', ...
+                    'Import auxiliary channels','Icon','info');
+                return;
+            end
+
+            [files,folder] = matlabx.image.io.uigetimagefile([], ...
+                sprintf('Select %d auxiliary image file(s)',numel(images)), ...
+                char(obj.Settings.IO.DefaultFolder),MultiSelect='on');
+            obj.focusWindow();
+            cleanupFocus = onCleanup(@() obj.focusWindow()); %#ok<NASGU>
+
+            if isequal(files,0)
+                return;
+            end
+
+            files = fullfile(string(folder),string(files));
+            files = files(:);
+
+            if numel(files) ~= numel(images)
+                uialert(obj.Fig, ...
+                    sprintf('Select exactly %d file(s), one for each target image.',numel(images)), ...
+                    'File count mismatch','Icon','warning');
+                return;
+            end
+
+            obj.Settings.IO.DefaultFolder = string(folder);
+            plan = oops.app.auxiliaryChannelImportDialog( ...
+                obj.Fig,images,files,obj.Project.AuxiliaryChannels);
+
+            if isempty(plan)
+                return;
+            end
+
+            obj.commitAuxiliaryChannelImport(plan);
+        end
+
+        function commitAuxiliaryChannelImport(obj,plan)
+        %COMMITAUXILIARYCHANNELIMPORT Apply a validated dialog plan to the model.
+
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
+            importedImageIDs = strings(numel(plan),1);
+
+            for k = 1:numel(plan)
+                definition = obj.Project.AuxiliaryChannels.findOrAdd( ...
+                    plan(k).ChannelName,plan(k).ChannelColor);
+                plan(k).Image.addAuxiliaryChannel( ...
+                    definition.ID,plan(k).Input,plan(k).ComponentIndex);
+                importedImageIDs(k) = plan(k).Image.ID;
+            end
+
+            % Show the first imported image and its stable registry-ordered stack.
+            obj.Project.setActiveImage(plan(1).Image);
+            obj.Settings.View.LeftSource = "Average intensity";
+            obj.Settings.View.RightSource = "Channels";
+            clear guard;
+            obj.ViewerKeys(:) = "";
+            obj.refreshViewers(true);
+            oops.Log.INFO(sprintf( ...
+                'Imported %d auxiliary channel assignment(s) for %d image(s).', ...
+                numel(plan),numel(unique(importedImageIDs))));
+        end
+
         function chooseCalibrationFiles(obj,groupID)
         %CHOOSECALIBRATIONFILES Register files, optionally assigning a clicked group.
 
@@ -4462,6 +4747,12 @@ classdef GUI < handle
         %ENDRESIZE Release the resize guard even after a layout error.
 
             obj.Resizing = false;
+        end
+
+        function endViewerDisplaySync(obj)
+        %ENDVIEWERDISPLAYSYNC Re-enable persistence after programmatic viewer updates.
+
+            obj.SyncingViewerDisplay = false;
         end
 
     end

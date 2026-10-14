@@ -28,6 +28,8 @@ classdef Image < handle
         SegmentationParameters (:,1) oops.analysis.segment.Parameters = oops.analysis.segment.Parameters.empty(0,1)
         IntensityDisplayRange double = []
         OrderDisplayRange (1,2) double = [0 1]
+        AuxiliaryChannels (:,1) oops.model.AuxiliaryChannelAssignment = ...
+            oops.model.AuxiliaryChannelAssignment.empty(0,1)
     end
 
     properties (Constant)
@@ -91,6 +93,7 @@ classdef Image < handle
                 end
 
                 delete(obj(k).Objects);
+                delete(obj(k).AuxiliaryChannels);
             end
 
         end
@@ -115,12 +118,16 @@ classdef Image < handle
                 parameters = obj.SegmentationParameters.toStruct();
             end
 
+            auxiliaryChannels = arrayfun( ...
+                @(item) item.toStruct(projectFolder),obj.AuxiliaryChannels);
+
             S = struct( ...
                 'ID',obj.ID, ...
                 'Name',obj.Name, ...
                 'Source',oops.io.project.sourceReference(obj.Input,projectFolder), ...
                 'PixelSize',obj.PixelSize, ...
                 'FrameLocations',obj.FrameLocations, ...
+                'AuxiliaryChannels',auxiliaryChannels, ...
                 'Objects',objectData, ...
                 'CorrectionProvenance',obj.CorrectionProvenance.toStruct(), ...
                 'MaskProvenance',obj.MaskProvenance.toStruct(), ...
@@ -187,6 +194,61 @@ classdef Image < handle
 
             obj.setActiveObject(string(S.ActiveObjectID));
             obj.setSelectedObjects(string(S.SelectedObjectIDs));
+        end
+
+        function assignment = addAuxiliaryChannel(obj,channelID,input,componentIndex,displayRange)
+        %ADDAUXILIARYCHANNEL Assign one single-plane source component by semantic ID.
+
+            arguments
+                obj
+                channelID (1,1) string
+                input (1,1) matlabx.image.Image5D
+                componentIndex (1,1) double {mustBeInteger,mustBePositive}
+                displayRange double = []
+            end
+
+            if isempty(obj.Parent) || isempty(obj.Parent.Parent) || ...
+                    isempty(obj.Parent.Parent.AuxiliaryChannels.findByID(channelID))
+                error('oops:model:UnknownAuxiliaryChannel', ...
+                    'The auxiliary channel ID is not registered with this project.');
+            end
+
+            component = input.getComponent(componentIndex);
+
+            if component.SizeY ~= obj.Input.SizeY || component.SizeX ~= obj.Input.SizeX
+                error('oops:model:AuxiliarySizeMismatch', ...
+                    'Auxiliary channel size [%d %d] does not match image size [%d %d].', ...
+                    component.SizeY,component.SizeX,obj.Input.SizeY,obj.Input.SizeX);
+            end
+
+            assignment = oops.model.AuxiliaryChannelAssignment( ...
+                channelID,input,componentIndex,displayRange);
+            channelIDs = string({obj.AuxiliaryChannels.ChannelID});
+            existing = find(channelIDs == channelID,1);
+
+            if isempty(existing)
+                obj.AuxiliaryChannels(end+1,1) = assignment;
+            else
+                old = obj.AuxiliaryChannels(existing);
+                obj.AuxiliaryChannels(existing) = assignment;
+                delete(old);
+            end
+
+            notify(obj,'DataChanged', ...
+                oops.model.events.DataChanged(obj.ID,"AuxiliaryChannels"));
+        end
+
+        function assignment = getAuxiliaryChannel(obj,channelID)
+        %GETAUXILIARYCHANNEL Resolve this image's assignment for a semantic ID.
+
+            channelIDs = string({obj.AuxiliaryChannels.ChannelID});
+            index = find(channelIDs == string(channelID),1);
+
+            if isempty(index)
+                assignment = oops.model.AuxiliaryChannelAssignment.empty(0,1);
+            else
+                assignment = obj.AuxiliaryChannels(index);
+            end
         end
 
         function tf = get.IsLoaded(obj)
@@ -748,6 +810,38 @@ classdef Image < handle
             maskCurrent = ~isempty(obj.Mask) && ...
                 obj.MaskProvenance.isCurrent(obj.CorrectionProvenance);
 
+            % Semantic assignments summarized without reading their source planes.
+            auxiliary = struct('ChannelID',{},'ChannelName',{},'SourceChannel',{}, ...
+                'ComponentIndex',{},'FilePath',{},'DisplayRange',{});
+
+            for k = 1:numel(obj.AuxiliaryChannels)
+                assignment = obj.AuxiliaryChannels(k);
+                definition = oops.model.AuxiliaryChannelDefinition.empty(0,1);
+                channelName = "Unknown";
+
+                if ~isempty(obj.Parent) && ~isempty(obj.Parent.Parent)
+                    definition = obj.Parent.Parent.AuxiliaryChannels.findByID(assignment.ChannelID);
+                end
+
+                if ~isempty(definition)
+                    channelName = definition.Name;
+                end
+
+                filePath = "In-memory source";
+
+                if assignment.Input.IsFileBacked
+                    filePath = string(assignment.Input.Source.FilePath);
+                end
+
+                auxiliary(end+1) = struct( ... %#ok<AGROW>
+                    'ChannelID',assignment.ChannelID, ...
+                    'ChannelName',channelName, ...
+                    'SourceChannel',assignment.Input.getComponentName(assignment.ComponentIndex), ...
+                    'ComponentIndex',assignment.ComponentIndex, ...
+                    'FilePath',filePath, ...
+                    'DisplayRange',assignment.DisplayRange);
+            end
+
             info = struct( ...
                 'Identity',struct( ...
                     'Name',obj.Name, ...
@@ -765,6 +859,7 @@ classdef Image < handle
                     'PixelSize',obj.PixelSize, ...
                     'FrameLocations',obj.FrameLocations, ...
                     'Loaded',obj.IsLoaded), ...
+                'AuxiliaryChannels',auxiliary, ...
                 'Correction',struct( ...
                     'Provenance',obj.CorrectionProvenance.toStruct(), ...
                     'AssignedCalibrationIDs',assignedCalibrationIDs, ...

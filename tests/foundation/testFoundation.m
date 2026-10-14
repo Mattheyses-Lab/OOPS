@@ -251,6 +251,54 @@ t.verifyFalse(im.IsLoaded);
 t.verifyEqual(im.getFrame(4),uint16(reshape(1:120,10,12)+400));
 end
 
+function testAuxiliaryChannelsKeepSemanticOrderAndMissingSlots(t)
+%TESTAUXILIARYCHANNELSKEEPSEMANTICORDERANDMISSINGSLOTS Decouple meaning from files.
+
+p = oops.model.Project();
+cleanup = onCleanup(@() delete(p));
+g = p.addGroup('Group');
+im = g.addImage(memoryInput(),'Image');
+dapi = p.AuxiliaryChannels.add('DAPI',[0.2 0.4 1]);
+actin = p.AuxiliaryChannels.add('Actin',[1 0.2 0.2]);
+auxiliary = matlabx.image.Image5D.fromComponents( ...
+    {uint16(11*ones(10,12)),uint16(22*ones(10,12))}, ...
+    Names=["Actin","DAPI"]);
+
+% File component order does not determine the project-wide semantic order.
+im.addAuxiliaryChannel(actin.ID,auxiliary,1);
+[data,info] = oops.render.source(im,"Channels",p.Settings);
+t.verifyTrue(info.Available);
+t.verifyEqual(data.NumComponents,2);
+t.verifyEqual([data.Components.Name],["DAPI" "Actin"]);
+t.verifyEqual(data.getPlane(1),zeros(10,12,'single'));
+t.verifyEqual(data.getPlane(2),single(11*ones(10,12)));
+t.verifyEqual(info.ComponentColors,{dapi.Color,actin.Color});
+end
+
+function testAuxiliaryChannelAssignmentsPersistAsFileReferences(t)
+%TESTAUXILIARYCHANNELASSIGNMENTSPERSISTASFILEREFERENCES Restore without pixels.
+
+auxiliaryFile = fullfile(t.TestData.Folder,'auxiliary.tif');
+imwrite(uint16(77*ones(10,12)),auxiliaryFile);
+p = oops.model.Project('Auxiliary persistence');
+cleanup = onCleanup(@() delete(p));
+g = p.addGroup('Group');
+im = g.addImage(oops.io.readInput(t.TestData.File),'Image');
+definition = p.AuxiliaryChannels.add('Brightfield',[1 1 1]);
+source = matlabx.image.Image5D.fromFile(auxiliaryFile);
+im.addAuxiliaryChannel(definition.ID,source,1,[5 100]);
+projectFile = fullfile(t.TestData.Folder,'auxiliary.oops.mat');
+oops.io.project.save(p,projectFile);
+
+loaded = oops.io.project.load(projectFile);
+loadedCleanup = onCleanup(@() delete(loaded));
+restoredDefinition = loaded.AuxiliaryChannels.findByName('Brightfield');
+restored = loaded.Groups(1).Images(1).getAuxiliaryChannel(restoredDefinition.ID);
+t.verifyEqual(restored.ComponentIndex,1);
+t.verifyEqual(restored.DisplayRange,[5 100]);
+t.verifyEqual(restored.getPlane(),uint16(77*ones(10,12)));
+end
+
 function testActivePlusPreviousCacheAcrossGroups(t)
 p = oops.model.Project();
 cleanup = onCleanup(@() delete(p));

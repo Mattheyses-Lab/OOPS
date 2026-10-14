@@ -46,6 +46,22 @@ t.verifyEqual(ui.ImagesTree.SelectedNodes.NodeData,g.Images(3).ID);
 t.verifyEqual(numel(ui.ImagesTree.CheckedNodes),2);
 end
 
+function testImageNavigationPreservesContentPanelTitles(t)
+%TESTIMAGENAVIGATIONPRESERVESCONTENTPANELTITLES Keep source-only titles.
+
+ui = t.TestData.GUI;
+ui.Project.Settings.View.LeftSource = "Average intensity";
+ui.Project.Settings.View.RightSource = "Mask";
+
+% Use the same tree callback path as an interactive image activation.
+node = ui.ImagesTree.Children(2);
+ui.ImagesTree.SelectedNodes = node;
+ui.ImagesTree.SelectionChangedFcn(ui.ImagesTree,[]);
+
+t.verifyEqual(string(ui.ViewerPanels(1).Title),"Average intensity");
+t.verifyEqual(string(ui.ViewerPanels(2).Title),"Mask");
+end
+
 function testGroupSwatchesAndBulkTreeSelection(t)
 %TESTGROUPSWATCHESANDBULKTREESELECTION Reflect colors and batch commands.
 
@@ -110,6 +126,75 @@ p.ActiveGroup.setSelectedImages(p.ActiveGroup.Images(2));
 t.verifyEqual(left.C,3,'Batch selection must preserve the viewer frame.');
 oops.Log.INFO("UI sink verification"); oops.Log.flush();
 t.verifyTrue(any(contains(string(ui.LogTextArea.Value),"UI sink verification")));
+end
+
+function testLargeViewerViewportsLinkOnlyWhileBothAreVisible(t)
+%TESTLARGEVIEWERVIEWPORTSLINKONLYWHILEBOTHAREVISIBLE Follow main panel content.
+
+ui = t.TestData.GUI;
+settings = ui.Project.Settings.View;
+
+% Two image sources form one bidirectional viewport link group.
+settings.LeftSource = "Input";
+settings.RightSource = "Average intensity";
+t.verifyTrue(ui.LeftViewer.hasLinks);
+t.verifyTrue(ui.RightViewer.hasLinks);
+
+ui.LeftViewer.enableTool("Zoom");
+ui.LeftViewer.setViewportCenterAndZoomFactor([12 8],2);
+leftViewport = ui.LeftViewer.getViewport();
+rightViewport = ui.RightViewer.getViewport();
+t.verifyEqual(rightViewport.XLim,leftViewport.XLim,'AbsTol',1e-10);
+t.verifyEqual(rightViewport.YLim,leftViewport.YLim,'AbsTol',1e-10);
+
+% Replacing either main viewer with another content type removes the pair.
+settings.RightSource = "Scatterplot";
+t.verifyFalse(ui.LeftViewer.hasLinks);
+t.verifyFalse(ui.RightViewer.hasLinks);
+end
+
+function testAuxiliaryChannelViewerUsesProjectSemanticOrder(t)
+%TESTAUXILIARYCHANNELVIEWERUSESPROJECTSEMANTICORDER Display stable missing slots.
+
+ui = t.TestData.GUI;
+p = ui.Project;
+image = p.ActiveImage;
+dapi = p.AuxiliaryChannels.add('DAPI',[0.2 0.4 1]);
+actin = p.AuxiliaryChannels.add('Actin',[1 0.2 0.2]);
+source = matlabx.image.Image5D.fromComponents( ...
+    {uint16(9*ones(20,30)),uint16(17*ones(20,30))}, ...
+    Names=["Actin","DAPI"]);
+image.addAuxiliaryChannel(actin.ID,source,1);
+p.Settings.View.RightSource = "Channels";
+
+t.verifyEqual(ui.RightViewer.ImageData.NumComponents,2);
+t.verifyEqual([ui.RightViewer.ImageData.Components.Name],["DAPI" "Actin"]);
+t.verifyEqual(ui.RightViewer.ImageData.getPlane(1),zeros(20,30,'single'));
+t.verifyEqual(ui.RightViewer.ImageData.getPlane(2),single(9*ones(20,30)));
+t.verifyEqual(ui.RightViewer.ImageData.Components(1).Color,dapi.Color);
+t.verifyEqual(ui.RightViewer.ImageData.Components(2).Color,actin.Color);
+t.verifyTrue(ui.RightViewer.CanMergeComponents);
+
+compositeTool = ui.AuxiliaryCompositeTools{2};
+t.verifyTrue(compositeTool.Available);
+compositeMenu = ui.RightViewer.ContextMenu.Children( ...
+    string({ui.RightViewer.ContextMenu.Children.Text}) == "Show channel composite");
+t.verifyNumElements(compositeMenu,1);
+compositeMenu.MenuSelectedFcn(compositeMenu,[]);
+t.verifyTrue(compositeTool.Enabled);
+t.verifyEqual(ui.RightViewer.ShowComposite,matlab.lang.OnOffSwitchState.on);
+
+% ImageAxes contrast edits persist against the semantic assignment.
+ui.RightViewer.C = 2;
+ui.RightViewer.CLim = [2 8];
+t.verifyEqual(image.getAuxiliaryChannel(actin.ID).DisplayRange,[2 8]);
+p.ActiveGroup.setActiveImage(p.ActiveGroup.Images(2));
+p.ActiveGroup.setActiveImage(image);
+t.verifyEqual(ui.RightViewer.ComponentCLims{2},[2 8]);
+
+fileMenu = findall(ui.Fig,'Type','uimenu','Text','File');
+importMenu = findall(fileMenu,'Type','uimenu','Text','Import auxiliary channels...');
+t.verifyNumElements(importMenu,1);
 end
 
 function testOrientationFieldToolKeepsIndependentVisibility(t)
@@ -426,6 +511,22 @@ keepAuto = ui.DisplayLimitUI.Controls.Intensity.KeepAuto;
 keepAuto.Value = true; keepAuto.ValueChangedFcn(keepAuto,[]);
 t.verifyTrue(p.Settings.Display.KeepAutoDisplayIntensity);
 t.verifyFalse(p.Settings.Display.LockDisplayIntensity);
+
+% ImageAxes display-limit edits follow the same model and accordion path.
+image = p.ActiveImage;
+ui.LeftViewer.CLim = [.25 .75];
+t.verifyEqual(image.IntensityDisplayRange,[.25 .75]);
+t.verifyFalse(p.Settings.Display.KeepAutoDisplayIntensity);
+t.verifyEqual(ui.DisplayLimitUI.Intensity.Value,[.25 .75]);
+t.verifyEqual(ui.RightViewer.ComponentCLims, ...
+    repmat({[.25 .75]},1,ui.RightViewer.NumComponents));
+
+image.setResults(struct('Order',reshape(linspace(0,1,600),20,30)));
+p.Settings.View.LeftSource = "Order";
+ui.LeftViewer.CLim = [.1 .6];
+t.verifyEqual(image.OrderDisplayRange,[.1 .6]);
+t.verifyFalse(p.Settings.Display.KeepAutoDisplayOrder);
+t.verifyEqual(ui.DisplayLimitUI.Order.Value,[.1 .6]);
 end
 
 

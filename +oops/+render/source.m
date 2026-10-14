@@ -17,7 +17,8 @@ data = matlabx.image.Image5D.empty(0,1);
 
 % Source title, availability, colormap, and display-limit metadata for the caller.
 info = struct('Title',name,'Available',false,'Reason',"No active image", ...
-    'Colormap',gray(256),'CLim',[],'Domain',"");
+    'Colormap',gray(256),'CLim',[],'Domain',"", ...
+    'ComponentCLims',{{}},'ComponentColors',{{}},'ComponentColormaps',{{}});
 try
 
     if isempty(image)
@@ -71,6 +72,18 @@ try
             % Quantize only the display copy; the durable analytical average remains double.
             values = detectorDisplayValues(image,values);
             data = matlabx.image.Image5D.fromComponents(values,Names="Average intensity");
+        case "Channels"
+            [data,channelInfo] = auxiliaryChannels(image);
+
+            if isempty(data)
+                info.Reason = channelInfo.Reason;
+                return;
+            end
+
+            info.ComponentCLims = channelInfo.ComponentCLims;
+            info.ComponentColors = channelInfo.ComponentColors;
+            info.ComponentColormaps = channelInfo.ComponentColormaps;
+            info.Title = image.Name + " — Auxiliary channels";
         case "Mask"
 
             if isempty(image.Mask)
@@ -134,6 +147,76 @@ catch ME
     oops.Log.EXCEPTION(ME);
     rethrow(ME);
 end
+end
+
+function [data,info] = auxiliaryChannels(image)
+%AUXILIARYCHANNELS Build a registry-ordered display stack with missing placeholders.
+
+    data = matlabx.image.Image5D.empty(0,1);
+    info = struct('Reason',"No auxiliary channels are registered", ...
+        'ComponentCLims',{{}},'ComponentColors',{{}},'ComponentColormaps',{{}});
+
+    definitions = image.Parent.Parent.AuxiliaryChannels.Channels;
+
+    if isempty(definitions)
+        return;
+    end
+
+    % Registry order defines stable component positions across every image.
+    planes = cell(1,numel(definitions));
+    names = strings(1,numel(definitions));
+    limits = cell(1,numel(definitions));
+    colors = cell(1,numel(definitions));
+    colormaps = repmat({gray(256)},1,numel(definitions));
+    available = false(1,numel(definitions));
+
+    for k = 1:numel(definitions)
+        definition = definitions(k);
+        assignment = image.getAuxiliaryChannel(definition.ID);
+        names(k) = definition.Name;
+        colors{k} = definition.Color;
+
+        if isempty(assignment)
+            planes{k} = zeros(image.Input.SizeY,image.Input.SizeX,'single');
+            limits{k} = [0 1];
+            continue;
+        end
+
+        % Single precision is a render-only common class that preserves uint16 counts
+        % exactly and permits composites across heterogeneous detector classes.
+        values = single(assignment.getPlane());
+        planes{k} = values;
+        available(k) = true;
+
+        if isempty(assignment.DisplayRange)
+            range = double([min(values(:)) max(values(:))]);
+
+            if range(2) <= range(1)
+                range(2) = range(1)+max(1,eps(range(1)));
+            end
+
+            limits{k} = range;
+        else
+            limits{k} = assignment.DisplayRange;
+        end
+    end
+
+    if ~any(available)
+        info.Reason = "No auxiliary channels are assigned to this image";
+        return;
+    end
+
+    data = matlabx.image.Image5D.fromComponents(planes,Names=names);
+
+    % ImageAxes initializes exact composite colors from component metadata.
+    for k = 1:numel(definitions)
+        data.Components(k).Color = colors{k};
+    end
+
+    info.Reason = "";
+    info.ComponentCLims = limits;
+    info.ComponentColors = colors;
+    info.ComponentColormaps = colormaps;
 end
 
 function values = detectorDisplayValues(image,values)

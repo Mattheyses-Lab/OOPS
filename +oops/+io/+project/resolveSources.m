@@ -11,21 +11,32 @@ function resolved = resolveSources(snapshot,projectFolder,searchRoot,opts)
     resolved = struct( ...
         'Calibrations',strings(numel(snapshot.Calibrations),1), ...
         'Images',{cell(numel(snapshot.Groups),1)}, ...
+        'AuxiliaryChannels',{cell(numel(snapshot.Groups),1)}, ...
         'Relinked',struct('Kind',{},'OriginalPath',{},'ResolvedPath',{}));
     problems = strings(0,1);
     searchIndex = struct.empty(0,1);
 
     imageCount = 0;
+    auxiliaryCount = 0;
 
     for g = 1:numel(snapshot.Groups)
         imageCount = imageCount + numel(snapshot.Groups(g).Images);
+
+        for i = 1:numel(snapshot.Groups(g).Images)
+
+            if isfield(snapshot.Groups(g).Images(i),'AuxiliaryChannels')
+                auxiliaryCount = auxiliaryCount + ...
+                    numel(snapshot.Groups(g).Images(i).AuxiliaryChannels);
+            end
+
+        end
     end
 
-    sourceCount = numel(snapshot.Calibrations) + imageCount;
+    sourceCount = numel(snapshot.Calibrations) + imageCount + auxiliaryCount;
     sourceIndex = 0;
     oops.Log.DEBUG(sprintf( ...
-        "Preflighting %d project sources (%d calibrations, %d images).", ...
-        sourceCount,numel(snapshot.Calibrations),imageCount));
+        "Preflighting %d project sources (%d calibrations, %d images, %d auxiliary channels).", ...
+        sourceCount,numel(snapshot.Calibrations),imageCount,auxiliaryCount));
 
     if searchRoot ~= "" && isfolder(searchRoot)
         oops.Log.DEBUG("Indexing relocation search folder recursively: " + searchRoot);
@@ -59,6 +70,7 @@ function resolved = resolveSources(snapshot,projectFolder,searchRoot,opts)
     for g = 1:numel(snapshot.Groups)
         images = snapshot.Groups(g).Images;
         resolved.Images{g} = strings(numel(images),1);
+        resolved.AuxiliaryChannels{g} = cell(numel(images),1);
 
         for k = 1:numel(images)
             sourceIndex = sourceIndex+1;
@@ -73,6 +85,31 @@ function resolved = resolveSources(snapshot,projectFolder,searchRoot,opts)
             elseif path ~= string(reference.AbsolutePath)
                 resolved.Relinked(end+1) = relinkedSource( ...
                     "Image",reference.AbsolutePath,path); %#ok<AGROW>
+            end
+
+            assignments = struct.empty(0,1);
+
+            if isfield(images(k),'AuxiliaryChannels')
+                assignments = images(k).AuxiliaryChannels;
+            end
+
+            resolved.AuxiliaryChannels{g}{k} = strings(numel(assignments),1);
+
+            for a = 1:numel(assignments)
+                sourceIndex = sourceIndex+1;
+                reportResolutionProgress(opts.Progress,"auxiliary channel",sourceIndex,sourceCount);
+                reference = assignments(a).Source;
+                [path,status,candidates] = oops.io.project.resolveSource( ...
+                    reference,projectFolder,searchRoot,searchIndex);
+                resolved.AuxiliaryChannels{g}{k}(a) = path;
+
+                if status ~= "Resolved"
+                    problems(end+1,1) = describeProblem( ...
+                        "Auxiliary channel",reference,status,candidates); %#ok<AGROW>
+                elseif path ~= string(reference.AbsolutePath)
+                    resolved.Relinked(end+1) = relinkedSource( ...
+                        "Auxiliary channel",reference.AbsolutePath,path); %#ok<AGROW>
+                end
             end
 
         end

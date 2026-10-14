@@ -16,6 +16,7 @@ classdef Project < handle
         SchemaVersion (1,1) string = oops.Info.ProjectSchemaVersion
         Groups (:,1) oops.model.Group = oops.model.Group.empty(0,1)
         Calibrations (:,1) oops.model.Calibration = oops.model.Calibration.empty(0,1)
+        AuxiliaryChannels (1,1) oops.model.AuxiliaryChannelRegistry
         Settings oops.config.Settings
         Labels oops.model.LabelRegistry
         ActiveGroupID (1,1) string = ""
@@ -82,6 +83,7 @@ classdef Project < handle
                 obj.Settings = settings;
                 obj.AnalysisCache = oops.runtime.AnalysisCache();
                 obj.Labels = oops.model.LabelRegistry.default();
+                obj.AuxiliaryChannels = oops.model.AuxiliaryChannelRegistry();
                 obj.LabelListeners(1) = addlistener(obj.Labels,'LabelsChanged', ...
                     @(~,~) notify(obj,'LabelsChanged'));
                 obj.LabelListeners(2) = addlistener(obj.Labels,'ActiveChanged', ...
@@ -105,6 +107,7 @@ classdef Project < handle
 
                 delete(obj(i).Groups);
                 delete(obj(i).Calibrations);
+                delete(obj(i).AuxiliaryChannels);
                 delete(obj(i).AnalysisCache);
                 delete(obj(i).LabelListeners);
                 delete(obj(i).Labels);
@@ -131,6 +134,7 @@ classdef Project < handle
                 'Name',obj.Name, ...
                 'Settings',obj.Settings.toStruct(), ...
                 'Labels',obj.Labels.toStruct(), ...
+                'AuxiliaryChannels',obj.AuxiliaryChannels.toStruct(), ...
                 'Calibrations',calibrations, ...
                 'Groups',groups, ...
                 'ActiveGroupID',obj.ActiveGroupID, ...
@@ -166,6 +170,15 @@ classdef Project < handle
             obj = oops.model.Project(string(S.Name),settings);
             obj.ID = string(S.ID);
 
+            delete(obj.AuxiliaryChannels);
+
+            if isfield(S,'AuxiliaryChannels')
+                obj.AuxiliaryChannels = ...
+                    oops.model.AuxiliaryChannelRegistry.fromStruct(S.AuxiliaryChannels);
+            else
+                obj.AuxiliaryChannels = oops.model.AuxiliaryChannelRegistry();
+            end
+
             delete(obj.LabelListeners);
             delete(obj.Labels);
             obj.Labels = oops.model.LabelRegistry.fromStruct(S.Labels);
@@ -176,7 +189,21 @@ classdef Project < handle
 
             % Total file-backed members used to report reconstruction progress.
             imageCount = sum(arrayfun(@(group) numel(group.Images),S.Groups));
-            sourceCount = numel(S.Calibrations)+imageCount;
+            auxiliaryCount = 0;
+
+            for g = 1:numel(S.Groups)
+
+                for i = 1:numel(S.Groups(g).Images)
+
+                    if isfield(S.Groups(g).Images(i),'AuxiliaryChannels')
+                        auxiliaryCount = auxiliaryCount + ...
+                            numel(S.Groups(g).Images(i).AuxiliaryChannels);
+                    end
+
+                end
+            end
+
+            sourceCount = numel(S.Calibrations)+imageCount+auxiliaryCount;
             sourceIndex = 0;
 
             for k = 1:numel(S.Calibrations)
@@ -208,6 +235,28 @@ classdef Project < handle
                         SeriesIndex=imageData.Source.SeriesIndex);
                     image = group.addImage(input,string(imageData.Name));
                     image.restoreStruct(imageData,string(data.CalibrationIDs));
+
+                    if isfield(imageData,'AuxiliaryChannels')
+
+                        for a = 1:numel(imageData.AuxiliaryChannels)
+                            assignmentData = imageData.AuxiliaryChannels(a);
+                            auxiliaryPath = resolution.AuxiliaryChannels{g}{i}(a);
+
+                            sourceIndex = sourceIndex+1;
+                            reportSourceProgress(opts.Progress,"Loading auxiliary channel", ...
+                                assignmentData.ChannelID,sourceIndex,sourceCount);
+
+                            auxiliaryInput = matlabx.image.Image5D.fromFile( ...
+                                auxiliaryPath, ...
+                                SeriesIndex=assignmentData.Source.SeriesIndex);
+                            image.addAuxiliaryChannel( ...
+                                string(assignmentData.ChannelID), ...
+                                auxiliaryInput, ...
+                                double(assignmentData.ComponentIndex), ...
+                                double(assignmentData.DisplayRange));
+                        end
+
+                    end
                 end
 
                 group.restoreIdentity(data);
