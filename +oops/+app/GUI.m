@@ -33,6 +33,7 @@ classdef GUI < handle
         AuxiliaryCompositeTools cell = {}
         ScatterRenderer matlabx.ui.axes.plot.ScatterRenderer
         SwarmRenderer matlabx.ui.axes.plot.ViolinRenderer
+        PolarHistogramRenderer oops.plot.PolarHistogramRenderer
         ViewerPanels
         LogTextArea
         ColormapTree
@@ -352,6 +353,10 @@ classdef GUI < handle
 
                 if ~isempty(obj(k).SwarmRenderer) && isvalid(obj(k).SwarmRenderer)
                     delete(obj(k).SwarmRenderer);
+                end
+
+                if ~isempty(obj(k).PolarHistogramRenderer) && isvalid(obj(k).PolarHistogramRenderer)
+                    delete(obj(k).PolarHistogramRenderer);
                 end
 
                 if ~isempty(obj(k).ImageInfoWindow) && isvalid(obj(k).ImageInfoWindow)
@@ -694,7 +699,8 @@ classdef GUI < handle
             % Ordered item titles for navigation and settings sections.
             titles = ["Groups","Images","Objects","Labels", ...
                 "Display Limits","Colormap","View","Object Selection", ...
-                "Mask","Scatterplot","Swarmplot","Orientation Lines","Summary"];
+                "Mask","Scatterplot","Swarmplot","Polar histogram", ...
+                "Orientation Lines","Summary"];
 
             % Create the accordion items in their intended display order.
             for title = titles
@@ -754,6 +760,7 @@ classdef GUI < handle
             obj.addSetting("Mask","Border width","Segmentation","BorderWidth");
             obj.buildScatterPlotControls();
             obj.buildSwarmPlotControls();
+            obj.buildPolarHistogramControls();
             obj.buildColormapControls();
             obj.buildDisplayLimits();
 
@@ -833,6 +840,32 @@ classdef GUI < handle
             obj.addColorSetting("Swarmplot","Violin face","SwarmPlot","ViolinFaceColor");
             obj.addColorSetting("Swarmplot","Violin edge","SwarmPlot","ViolinEdgeColor");
             obj.addColorSetting("Swarmplot","Error bars","SwarmPlot","ErrorBarsColor");
+        end
+
+        function buildPolarHistogramControls(obj)
+        %BUILDPOLARHISTOGRAMCONTROLS Bind scope, angular data, and appearance.
+
+            item = "Polar histogram";
+            domain = "PolarHistogram";
+            variables = ["AzimuthMean","MidlineRelativeAzimuthMean", ...
+                "NormalRelativeAzimuthMean","MidlineOrientationMean"];
+
+            obj.addSetting(item,"Data",domain,"DataSource",["Group","Image"]);
+            obj.addSetting(item,"Variable",domain,"Variable",variables);
+            obj.SettingsUI.PolarHistogram.Variable.Items = cellstr( ...
+                oops.model.ObjectMeasurements.labels(variables));
+            obj.addSetting(item,"Number of bins",domain,"BinCount",[12 24 48 96]);
+            obj.addSetting(item,"Face alpha",domain,"WedgeFaceAlpha");
+            obj.addSetting(item,"Face color mode",domain,"WedgeFaceColorMode",["flat","interp"]);
+            obj.addSetting(item,"Edge color mode",domain,"WedgeEdgeColorMode",["flat","interp"]);
+            obj.addSetting(item,"Wedge line width",domain,"WedgeLineWidth");
+            obj.addSetting(item,"Gridline width",domain,"GridlinesLineWidth");
+            obj.addColorSetting(item,"Wedge edge",domain,"WedgeEdgeColor");
+            obj.addColorSetting(item,"Gridlines",domain,"GridlinesColor");
+            obj.addColorSetting(item,"Labels",domain,"LabelsColor");
+            obj.addColorSetting(item,"Circle background",domain,"CircleBackgroundColor");
+            obj.addColorSetting(item,"Circle edge",domain,"CircleColor");
+            obj.addColorSetting(item,"Background",domain,"BackgroundColor");
         end
 
         function addColorSetting(obj,title,label,domain,name)
@@ -1227,6 +1260,10 @@ classdef GUI < handle
             else
                 % Current puncta thresholding is cheap on the cached enhanced image.
                 % Future adjustable algorithms may provide their own preview path.
+
+                % Saved projects omit reconstructible enhancement arrays. Load the
+                % source and rebuild that cache once before the first live preview.
+                oops.analysis.Analyzer.ensureSegmentationCache(image);
 
                 % Image-local segmentation snapshot used for parameter display or adjustment.
                 recipe = image.SegmentationParameters.withParameter(binding.Name,control.Value);
@@ -1697,6 +1734,7 @@ classdef GUI < handle
             % Renderers own primitive graphics and may transfer between hosts.
             obj.ScatterRenderer = matlabx.ui.axes.plot.ScatterRenderer();
             obj.SwarmRenderer = matlabx.ui.axes.plot.ViolinRenderer();
+            obj.PolarHistogramRenderer = oops.plot.PolarHistogramRenderer();
         end
 
         function buildMenus(obj)
@@ -1858,7 +1896,7 @@ classdef GUI < handle
             obj.refreshNavigation();
 
             if any(ismember([obj.Settings.View.LeftSource, ...
-                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
+                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot","Polar histogram"]))
                 obj.refreshPlots();
             end
         end
@@ -1915,14 +1953,14 @@ classdef GUI < handle
 
             if isempty(image) || image.ID ~= e.ImageID
                 if any(ismember([obj.Settings.View.LeftSource, ...
-                        obj.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
+                        obj.Settings.View.RightSource],["Scatterplot","Swarmplot","Polar histogram"]))
                     obj.refreshPlots();
                 end
                 return;
             end
 
             if any(ismember([obj.Settings.View.LeftSource, ...
-                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot"]))
+                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot","Polar histogram"]))
                 obj.refreshPlots();
             end
 
@@ -2272,7 +2310,7 @@ classdef GUI < handle
                     if obj.Settings.View.RightSource == "Objects"
                         obj.refreshObjectViewers(false);
                     end
-                case {"ScatterPlot","SwarmPlot","Palettes"}
+                case {"ScatterPlot","SwarmPlot","PolarHistogram","Palettes"}
                     obj.refreshPlots();
             end
 
@@ -2476,7 +2514,7 @@ classdef GUI < handle
             % Resolve and update each panel only when forced or its source key changes.
             for k = 1:2
 
-                if ismember(names(k),["Empty","Scatterplot","Swarmplot","Objects"])
+                if ismember(names(k),["Empty","Scatterplot","Swarmplot","Polar histogram","Objects"])
                     obj.ViewerKeys(k) = names(k);
                     continue;
                 end
@@ -2560,7 +2598,7 @@ classdef GUI < handle
                     viewers{k}.CanMergeComponents);
             end
 
-            if any(ismember(names,["Scatterplot","Swarmplot"]))
+            if any(ismember(names,["Scatterplot","Swarmplot","Polar histogram"]))
                 obj.refreshPlots();
             end
 
@@ -2746,6 +2784,11 @@ classdef GUI < handle
                         plotAxes{k}.Visible = 'on';
                         plotAxes{k}.mount(obj.SwarmRenderer);
 
+                    case "Polar histogram"
+                        viewers{k}.Visible = 'off';
+                        plotAxes{k}.Visible = 'on';
+                        plotAxes{k}.mount(obj.PolarHistogramRenderer);
+
                     case "Empty"
                         viewers{k}.Visible = 'off';
                         plotAxes{k}.clear();
@@ -2917,6 +2960,56 @@ classdef GUI < handle
             if any(names == "Swarmplot")
                 obj.refreshSwarmPlot();
             end
+
+            if any(names == "Polar histogram")
+                obj.refreshPolarHistogram();
+            end
+        end
+
+        function refreshPolarHistogram(obj)
+        %REFRESHPOLARHISTOGRAM Build one image- or group-scoped axial histogram.
+
+            settings = obj.Settings.PolarHistogram;
+            members = oops.model.Object.empty(0,1);
+
+            if settings.DataSource == "Group"
+                group = obj.Project.ActiveGroup;
+
+                if ~isempty(group)
+                    members = obj.groupObjects(group);
+                end
+            else
+                image = obj.Project.ActiveImage;
+
+                if ~isempty(image)
+                    members = image.Objects;
+                end
+            end
+
+            % Model angles are stored in degrees; the renderer consumes axial radians.
+            angles = deg2rad(obj.objectValues(members,settings.Variable));
+            data = oops.plot.PolarHistogramData(Angles=angles);
+
+            % Use the unshifted circular azimuth map, matching orientation-line colors.
+            map = oops.render.colormap(obj.Settings.Colormaps,"Azimuth");
+            variableLabel = oops.model.ObjectMeasurements.label(settings.Variable);
+            style = oops.plot.PolarHistogramStyle( ...
+                Title=settings.DataSource + " - Object " + variableLabel, ...
+                BinCount=settings.BinCount, ...
+                Colormap=map, ...
+                WedgeFaceAlpha=settings.WedgeFaceAlpha, ...
+                WedgeFaceColorMode=settings.WedgeFaceColorMode, ...
+                WedgeEdgeColorMode=settings.WedgeEdgeColorMode, ...
+                WedgeEdgeColor=settings.WedgeEdgeColor, ...
+                WedgeLineWidth=settings.WedgeLineWidth, ...
+                GridlinesColor=settings.GridlinesColor, ...
+                LabelsColor=settings.LabelsColor, ...
+                GridlinesLineWidth=settings.GridlinesLineWidth, ...
+                CircleBackgroundColor=settings.CircleBackgroundColor, ...
+                CircleColor=settings.CircleColor, ...
+                BackgroundColor=settings.BackgroundColor);
+
+            obj.PolarHistogramRenderer.update(data,style);
         end
 
         function refreshScatterPlot(obj)

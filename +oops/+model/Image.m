@@ -387,6 +387,23 @@ classdef Image < handle
             end
         end
 
+        function setSegmentationCache(obj,average,cache)
+        %SETSEGMENTATIONCACHE Store reconstructible threshold-adjustment inputs.
+        % This cache does not change the committed mask, object membership, or
+        % scalar measurements, so restoring it does not publish a model event.
+
+            arguments
+                obj
+                average (:,:) double
+                cache (1,1) struct
+            end
+
+            validateattributes(average,{'double'}, ...
+                {'real','size',[obj.Input.SizeY,obj.Input.SizeX]});
+            obj.Results.AverageIntensity = average;
+            obj.Results.Segmentation = cache;
+        end
+
     end
 
     %% Mask and object membership

@@ -7,8 +7,8 @@ classdef View < handle
 % Events carry Domain, Name, OldValue, and NewValue like DesmoSTORM.
 
     properties (Access=private)
-        LeftSource_ (1,1) string {mustBeMember(LeftSource_,["Empty","Input","Calibration","Corrected","Average intensity","Channels","Mask","Order","Azimuth","Scatterplot","Swarmplot"])} = "Input"
-        RightSource_ (1,1) string {mustBeMember(RightSource_,["Empty","Input","Calibration","Corrected","Average intensity","Channels","Mask","Order","Azimuth","Scatterplot","Swarmplot","Objects"])} = "Corrected"
+        LeftSource_ (1,1) string {mustBeMember(LeftSource_,["Empty","Input","Calibration","Corrected","Average intensity","Channels","Mask","Order","Azimuth","Scatterplot","Swarmplot","Polar histogram"])} = "Input"
+        RightSource_ (1,1) string {mustBeMember(RightSource_,["Empty","Input","Calibration","Corrected","Average intensity","Channels","Mask","Order","Azimuth","Scatterplot","Swarmplot","Polar histogram","Objects"])} = "Corrected"
     end
 
     properties (Dependent)
@@ -134,7 +134,7 @@ classdef View < handle
 
             values = ["Empty","Input","Calibration","Corrected", ...
                 "Average intensity","Channels","Mask","Order","Azimuth", ...
-                "Scatterplot","Swarmplot","Objects"];
+                "Scatterplot","Swarmplot","Polar histogram","Objects"];
         end
 
     end

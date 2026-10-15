@@ -278,17 +278,15 @@ classdef Analyzer
                     error('oops:analysis:NoSegmentation','Segment this image before adjusting it.');
                 end
 
+                % Saved projects retain the recipe and mask but omit the large,
+                % reconstructible enhancement image. Restore it on first use.
+                oops.analysis.Analyzer.ensureSegmentationCache(image);
+
                 if string(name) == "Automatic"
                     recipe = recipe.automatic();
                 else
                     recipe = recipe.withParameter(name,value);
                 end
-
-                if ~isfield(image.Results,'Segmentation') || ~isfield(image.Results,'AverageIntensity')
-                    error('oops:analysis:InvalidSegmentationCache','Run segmentation again before adjusting parameters.');
-                end
-
-                oops.Log.INFO("Adjusting segmentation for " + image.Name + " using cached enhancement.");
 
                 % Mask and object membership regenerated from cached enhancement.
                 [mask,lists,diagnostics] = oops.analysis.segment.adjust( ...
@@ -304,6 +302,46 @@ classdef Analyzer
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
             end
+        end
+
+        function ensureSegmentationCache(image)
+        %ENSURESEGMENTATIONCACHE Rebuild omitted enhancement data on first use.
+
+            arguments
+                image (1,1) oops.model.Image
+            end
+
+            recipe = image.SegmentationParameters;
+
+            if isempty(recipe)
+                error('oops:analysis:NoSegmentation', ...
+                    'Segment this image before adjusting it.');
+            end
+
+            hasAverage = isfield(image.Results,'AverageIntensity') && ...
+                isequal(size(image.Results.AverageIntensity), ...
+                [image.Input.SizeY,image.Input.SizeX]);
+            hasEnhancement = isfield(image.Results,'Segmentation') && ...
+                isfield(image.Results.Segmentation,'Strategy') && ...
+                string(image.Results.Segmentation.Strategy) == recipe.Strategy && ...
+                isfield(image.Results.Segmentation,'Enhanced') && ...
+                isequal(size(image.Results.Segmentation.Enhanced), ...
+                [image.Input.SizeY,image.Input.SizeX]);
+
+            if hasAverage && hasEnhancement
+                return;
+            end
+
+            % Current corrected stack, or raw input when no calibration is assigned.
+            stack = oops.analysis.Analyzer.workingStack(image);
+            average = mean(stack,3);
+
+            % Run the stored strategy only to recover its disposable enhancement.
+            % The returned mask and membership are intentionally not committed.
+            [~,~,diagnostics] = oops.analysis.Analyzer.segment(average,recipe);
+            image.setSegmentationCache(average,rmfield(diagnostics,'Parameters'));
+            oops.Log.INFO("Rebuilt segmentation adjustment cache for " + ...
+                image.Name + ".");
         end
 
         function analyzeImages(images,settings,opts)
