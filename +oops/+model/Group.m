@@ -302,13 +302,6 @@ classdef Group < handle
                     return;
                 end
 
-                % Image resolved from the validated ID, whose input may need loading.
-                next = oops.model.internal.resolve(obj.Images,id);
-
-                if ~isempty(next) && ~isempty(obj.Parent) && obj.Parent.ActiveGroupID == obj.ID
-                    next.loadInput(); % validate residency before publishing the bookmark
-                end
-
                 obj.ActiveImageID = id;
                 notify(obj,'NavigationChanged',oops.model.events.NavigationChanged( ...
                     "Group",obj.ID,"ActiveImageID",old,id));

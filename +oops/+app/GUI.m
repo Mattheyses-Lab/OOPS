@@ -43,6 +43,7 @@ classdef GUI < handle
         SegmentationUI struct = struct()
         DisplayLimitUI struct = struct()
         ImageInfoWindow
+        RuntimeStatusWindow
     end
 
     properties (Access=private)
@@ -363,6 +364,10 @@ classdef GUI < handle
                     delete(obj(k).ImageInfoWindow);
                 end
 
+                if ~isempty(obj(k).RuntimeStatusWindow) && isvalid(obj(k).RuntimeStatusWindow)
+                    delete(obj(k).RuntimeStatusWindow);
+                end
+
                 % Application tools unregister their toolbar/menu contributions
                 % while the ImageAxes graphics hierarchy is still alive.
                 for tool = obj(k).OrientationFieldTools
@@ -553,7 +558,7 @@ classdef GUI < handle
             state = matlab.lang.OnOffSwitchState(hasProject);
 
             for name = ["Close","Save","SaveAs","LoadImages","Calibration", ...
-                    "AuxiliaryChannels","Analysis","View"]
+                    "AuxiliaryChannels","Analysis","View","RuntimeStatus"]
 
                 if isfield(obj.MenuUI,name)
                     obj.MenuUI.(name).Enable = state;
@@ -1787,6 +1792,11 @@ classdef GUI < handle
             uimenu(settings,'Text','Load app defaults','MenuSelectedFcn', ...
                 @(~,~) obj.runCallback(@() obj.loadSettings()));
 
+            % Help menu exposes runtime diagnostics without coupling them to a view.
+            help = uimenu(obj.Fig,'Text','Help');
+            obj.MenuUI.RuntimeStatus = uimenu(help,'Text','Runtime status...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.showRuntimeStatus()));
+
             obj.updateProjectUIState();
         end
 
@@ -1796,6 +1806,9 @@ classdef GUI < handle
 
             % Settings object supplying the values for this operation.
             settings = obj.Settings.View;
+            started = tic;
+            oops.Log.DEBUG("Applying view preset: " + preset.Name + ...
+                " [left=" + preset.Left.Source + ", right=" + preset.Right.Source + "].");
 
             % Processing-guard state saved for restoration after this operation.
             previous = obj.Processing;
@@ -1810,6 +1823,9 @@ classdef GUI < handle
             if ~previous
                 obj.refreshViewers(false);
             end
+
+            oops.Log.DEBUG(sprintf('Applied view preset %s in %.3f s.', ...
+                preset.Name,toc(started)));
 
         end
 
@@ -1908,7 +1924,18 @@ classdef GUI < handle
                 return;
             end
 
+            started = tic;
+
+            if nargin > 1
+                oops.Log.DEBUG("Handling navigation change: domain=" + e.Domain + ...
+                    ", owner=" + e.OwnerID + ", property=" + e.Name + ".");
+            else
+                oops.Log.DEBUG("Handling navigation refresh without event metadata.");
+            end
+
+            stage = tic;
             obj.refreshNavigation();
+            oops.Log.DEBUG(sprintf('Refreshed navigation controls in %.3f s.',toc(stage)));
 
             % An explicit object activation or an image switch reveals the
             % remembered active object in the reused Objects tree.
@@ -1922,17 +1949,28 @@ classdef GUI < handle
 
                 if e.Name == "ActiveObjectID" && ...
                         obj.Settings.View.RightSource == "Objects"
+                    stage = tic;
                     obj.refreshObjectViewers(false);
+                    oops.Log.DEBUG(sprintf( ...
+                        'Refreshed active-object viewers in %.3f s.',toc(stage)));
                 end
 
+                oops.Log.DEBUG(sprintf( ...
+                    'Completed object navigation response in %.3f s.',toc(started)));
                 return;
             end
 
             if nargin > 1 && startsWith(e.Name,"Selected")
+                oops.Log.DEBUG(sprintf( ...
+                    'Completed batch-selection navigation response in %.3f s.',toc(started)));
                 return;
             end
 
+            stage = tic;
             obj.refreshViewers(false);
+            oops.Log.DEBUG(sprintf( ...
+                'Refreshed viewers after navigation in %.3f s; total response %.3f s.', ...
+                toc(stage),toc(started)));
         end
 
         function onDataChanged(obj,e)
@@ -2482,6 +2520,19 @@ classdef GUI < handle
                 return;
             end
 
+            started = tic;
+            imageName = "none";
+
+            if ~isempty(obj.Project.ActiveImage)
+                imageName = obj.Project.ActiveImage.Name;
+            end
+
+            oops.Log.DEBUG(sprintf( ...
+                'Refreshing main viewers: image=%s, force=%s, controls=%s.', ...
+                imageName,yesNo(force),yesNo(refreshControls)));
+            refreshTrace = onCleanup(@() logDebugElapsed( ...
+                "Completed main viewer refresh",started)); %#ok<NASGU>
+
             obj.SyncingViewerDisplay = true;
             displayGuard = onCleanup(@() obj.endViewerDisplaySync());
 
@@ -2498,8 +2549,11 @@ classdef GUI < handle
             names = [settings.View.LeftSource,settings.View.RightSource];
 
             % Reparent the two singleton plot sources and expose one content type per panel.
+            stage = tic;
             obj.syncPanelContent(names);
             obj.resizeViewers();
+            oops.Log.DEBUG(sprintf( ...
+                'Synchronized panel content and layout in %.3f s.',toc(stage)));
 
             % Whether both main panels currently expose their persistent ImageAxes.
             linkViewports = obj.LeftViewer.Visible == "on" && ...
@@ -2515,6 +2569,9 @@ classdef GUI < handle
             for k = 1:2
 
                 if ismember(names(k),["Empty","Scatterplot","Swarmplot","Polar histogram","Objects"])
+                    oops.Log.DEBUG(sprintf( ...
+                        'Panel %d uses non-image source %s; skipping ImageAxes update.', ...
+                        k,names(k)));
                     obj.ViewerKeys(k) = names(k);
                     continue;
                 end
@@ -2527,11 +2584,18 @@ classdef GUI < handle
                 end
 
                 if ~force && obj.ViewerKeys(k) == key
+                    oops.Log.DEBUG(sprintf( ...
+                        'Panel %d source unchanged (%s); reusing current ImageAxes data.', ...
+                        k,key));
                     continue;
                 end
 
                 % Display-ready Image5D source and its title/scaling/availability metadata.
+                stage = tic;
                 [data,info] = oops.render.source(image,names(k),settings);
+                oops.Log.DEBUG(sprintf( ...
+                    'Resolved panel %d source %s in %.3f s; available=%s.', ...
+                    k,names(k),toc(stage),yesNo(info.Available)));
 
                 % ImageAxes for the current left/right panel.
                 viewer = viewers{k};
@@ -2543,7 +2607,10 @@ classdef GUI < handle
 
                     % Current component/Z/T indices retained when refreshing the same source.
                     indices = [viewer.C viewer.Z viewer.T];
+                    stage = tic;
                     viewer.ImageData = data;
+                    oops.Log.DEBUG(sprintf( ...
+                        'Assigned panel %d ImageAxes data in %.3f s.',k,toc(stage)));
 
                     if sameSource
                         viewer.C = min(indices(1),data.NumComponents);
@@ -2599,19 +2666,29 @@ classdef GUI < handle
             end
 
             if any(ismember(names,["Scatterplot","Swarmplot","Polar histogram"]))
+                stage = tic;
                 obj.refreshPlots();
+                oops.Log.DEBUG(sprintf('Refreshed plots in %.3f s.',toc(stage)));
             end
 
             if names(2) == "Objects"
+                stage = tic;
                 obj.refreshObjectViewers(force);
+                oops.Log.DEBUG(sprintf('Refreshed object viewers in %.3f s.',toc(stage)));
             end
 
+            stage = tic;
             obj.refreshViewerRegions();
             obj.refreshOrientationFields(names);
+            oops.Log.DEBUG(sprintf( ...
+                'Refreshed overlays and orientation fields in %.3f s.',toc(stage)));
 
             if refreshControls
+                stage = tic;
                 obj.refreshSegmentationControls();
                 obj.refreshDisplayLimits();
+                oops.Log.DEBUG(sprintf( ...
+                    'Refreshed viewer-related controls in %.3f s.',toc(stage)));
             end
 
             clear displayGuard;
@@ -3943,6 +4020,36 @@ classdef GUI < handle
             obj.ImageInfoWindow = [];
         end
 
+        function showRuntimeStatus(obj)
+        %SHOWRUNTIMESTATUS Display disposable caches and resident analysis arrays.
+
+            if isempty(obj.Project)
+                return;
+            end
+
+            if ~isempty(obj.RuntimeStatusWindow) && isvalid(obj.RuntimeStatusWindow)
+                delete(obj.RuntimeStatusWindow);
+            end
+
+            % The headless report remains programmatically accessible; this
+            % controller only converts its tables into stable plain text.
+            status = oops.runtime.cacheStatus(obj.Project);
+            lines = runtimeStatusLines(status);
+
+            obj.RuntimeStatusWindow = matlabx.app.TextWindow( ...
+                'Title','OOPS Runtime Status', ...
+                'Text',cellstr(lines), ...
+                'WordWrap','off', ...
+                'Position',[0 0 1100 700], ...
+                'ClosedFcn',@(~,~) obj.clearRuntimeStatusWindow());
+        end
+
+        function clearRuntimeStatusWindow(obj)
+        %CLEARRUNTIMESTATUSWINDOW Release the closed diagnostic window handle.
+
+            obj.RuntimeStatusWindow = [];
+        end
+
         function changeTreeSelection(obj,title,operation)
         %CHANGETREESELECTION Apply a bulk checkbox operation to one navigation domain.
 
@@ -4444,12 +4551,12 @@ classdef GUI < handle
         end
 
         function onImageAdded(obj,e)
-        %ONIMAGEADDED Apply the parent's existing calibration to newly imported inputs.
+        %ONIMAGEADDED Cache the durable average using raw or calibrated input.
 
             % Active/target group supplying its owned images and bookmarks.
             group = oops.model.internal.resolve(obj.Project.Groups,e.GroupID);
 
-            if isempty(group) || isempty(group.CalibrationIDs)
+            if isempty(group)
                 return;
             end
 
@@ -4849,6 +4956,86 @@ classdef GUI < handle
         end
 
     end
+end
+
+function lines = runtimeStatusLines(status)
+%RUNTIMESTATUSLINES Format cache diagnostics without rich table markup.
+
+cache = status.Cache;
+lines = [ ...
+    "CACHE BUDGETS AND OCCUPANCY"
+    cacheLine("Raw input",cache.RawInputMiB,cache.RawInputLimitMiB)
+    cacheLine("Corrected stacks",cache.CorrectedStackMiB,cache.CorrectedStackLimitMiB)
+    cacheLine("Normalized calibrations",cache.CalibrationMiB,cache.CalibrationLimitMiB)
+    cacheLine("Auxiliary sources",0,cache.AuxiliaryLimitMiB)
+    ""
+    "IMAGE RESIDENCY"];
+
+images = status.Images;
+
+if isempty(images)
+    lines(end+1,1) = "No images.";
+else
+
+    for k = 1:height(images)
+        lines(end+1,1) = ""; %#ok<AGROW>
+        lines(end+1,1) = "[" + images.Group(k) + "] " + images.Image(k); %#ok<AGROW>
+        lines(end+1,1) = sprintf( ...
+            '  Disposable: raw loaded=%s (%.3f MiB); corrected cached=%s (%.3f MiB)', ...
+            yesNo(images.RawLoaded(k)),images.RawMiB(k), ...
+            yesNo(images.CorrectedCached(k)),images.CorrectedMiB(k)); %#ok<AGROW>
+        lines(end+1,1) = sprintf( ...
+            ['  Model outputs: average=%.3f; enhanced=%.3f; mask=%.3f; ' ...
+            'order=%.3f; azimuth=%.3f MiB'], ...
+            images.AverageMiB(k),images.EnhancedMiB(k),images.MaskMiB(k), ...
+            images.OrderMiB(k),images.AzimuthMiB(k)); %#ok<AGROW>
+        lines(end+1,1) = sprintf( ...
+            '  Auxiliary: %d loaded source(s), %.3f MiB; total resident=%.3f MiB', ...
+            images.AuxiliarySourcesLoaded(k),images.AuxiliaryMiB(k), ...
+            images.TotalMiB(k)); %#ok<AGROW>
+    end
+end
+
+lines(end+1:end+2,1) = ["";"NORMALIZED CALIBRATIONS"];
+calibrations = status.Calibrations;
+
+if isempty(calibrations)
+    lines(end+1,1) = "No normalized calibration responses are cached.";
+else
+
+    for k = 1:height(calibrations)
+        lines(end+1,1) = sprintf('  %.3f MiB  %s', ...
+            calibrations.MiB(k),calibrations.Key(k)); %#ok<AGROW>
+    end
+end
+end
+
+function line = cacheLine(name,used,limit)
+%CACHELINE Format one current-occupancy and configured-limit pair.
+
+if isinf(limit)
+    limitText = "unlimited";
+else
+    limitText = sprintf('%.3f MiB',limit);
+end
+
+line = sprintf('  %-24s %9.3f MiB / %s',name,used,limitText);
+end
+
+function value = yesNo(tf)
+%YESNO Format one scalar logical for compact diagnostic text.
+
+if tf
+    value = 'yes';
+else
+    value = 'no';
+end
+end
+
+function logDebugElapsed(operation,started)
+%LOGDEBUGELAPSED Report completion time from an exception-safe cleanup.
+
+oops.Log.DEBUG(sprintf('%s in %.3f s.',operation,toc(started)));
 end
 
 function closeProgressDialog(progress)

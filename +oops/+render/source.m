@@ -12,6 +12,17 @@ arguments
     settings (1,1) oops.config.Settings
 end
 
+% Render-source timing includes cache lookup, file reads, conversion, and wrapping.
+started = tic;
+imageLabel = "none";
+
+if ~isempty(image)
+    imageLabel = image.Name;
+end
+
+oops.Log.DEBUG("Resolving display source '" + name + "' for image '" + imageLabel + "'.");
+traceGuard = onCleanup(@() logSourceTiming(name,imageLabel,started)); %#ok<NASGU>
+
 % Empty display source until the requested image data are available.
 data = matlabx.image.Image5D.empty(0,1);
 
@@ -60,14 +71,8 @@ try
                 arrayfun(@(k) values(:,:,k),1:4,'UniformOutput',false), ...
                 Names=["0 deg","45 deg","90 deg","135 deg"]);
         case "Average intensity"
-            % Reuse the durable average when it matches the current calibration.
-            if isempty(image.Parent.CalibrationIDs) && isfield(image.Results,'AverageIntensity')
-                values = image.Results.AverageIntensity;
-            elseif oops.model.internal.hasCurrentCorrection(image)
-                values = image.Results.AverageIntensity;
-            else
-                values = mean(oops.analysis.Analyzer.correctedStack(image),3);
-            end
+            % Reconstruct an omitted durable average once, then reuse it.
+            values = oops.analysis.Analyzer.ensureAverageIntensity(image);
 
             % Quantize only the display copy; the durable analytical average remains double.
             values = detectorDisplayValues(image,values);
@@ -153,6 +158,14 @@ catch ME
     oops.Log.EXCEPTION(ME);
     rethrow(ME);
 end
+end
+
+function logSourceTiming(name,imageName,started)
+%LOGSOURCETIMING Report total display-source construction time on every exit.
+
+oops.Log.DEBUG(sprintf( ...
+    'Resolved display source %s for %s in %.3f s.', ...
+    name,imageName,toc(started)));
 end
 
 function [data,info] = auxiliaryChannels(image)

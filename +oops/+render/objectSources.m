@@ -18,7 +18,7 @@ image = region.Parent;
 % Display settings defining the common square crop around this object.
 display = settings.ObjectDisplay;
 
-% Corrected stack is retrieved from the bounded project cache or computed once.
+% Corrected stack is retrieved from the project runtime cache or computed on demand.
 corrected = oops.analysis.Analyzer.correctedStack(image);
 
 % Shared crop geometry and object-only mask produced with the intensity crop.

@@ -62,7 +62,14 @@ classdef AuxiliaryChannelAssignment < handle
         function values = getPlane(obj)
         %GETPLANE Read the assigned source component without retaining a full stack.
 
+            started = tic;
+            oops.Log.DEBUG(sprintf( ...
+                'Reading auxiliary plane: channel=%s, component=%d, resident=%s.', ...
+                obj.ChannelID,obj.ComponentIndex,string(obj.Input.IsLoaded)));
             values = obj.Input.getPlane(obj.ComponentIndex,1,1);
+            oops.Log.DEBUG(sprintf( ...
+                'Read auxiliary plane: channel=%s, class=%s, size=%dx%d, elapsed=%.3f s.', ...
+                obj.ChannelID,class(values),size(values,1),size(values,2),toc(started)));
         end
 
         function setDisplayRange(obj,value)

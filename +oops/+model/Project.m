@@ -24,7 +24,7 @@ classdef Project < handle
     end
 
     properties (SetAccess=private, Transient)
-        AnalysisCache oops.runtime.AnalysisCache
+        CacheManager oops.runtime.CacheManager
     end
 
     properties (Dependent, SetAccess=private)
@@ -39,11 +39,6 @@ classdef Project < handle
         GroupListeners cell = {}
         LabelListeners event.listener = event.listener.empty()
         LastActiveImageID (1,1) string = ""
-        RecentImageIDs (:,1) string = strings(0,1)
-    end
-
-    properties (Constant)
-        ImageDataCacheSize = 2 % active image plus one previously active image
     end
 
     %% Model events
@@ -81,7 +76,7 @@ classdef Project < handle
 
                 validateattributes(settings,{'oops.config.Settings'},{'scalar'});
                 obj.Settings = settings;
-                obj.AnalysisCache = oops.runtime.AnalysisCache();
+                obj.CacheManager = oops.runtime.CacheManager();
                 obj.Labels = oops.model.LabelRegistry.default();
                 obj.AuxiliaryChannels = oops.model.AuxiliaryChannelRegistry();
                 obj.LabelListeners(1) = addlistener(obj.Labels,'LabelsChanged', ...
@@ -108,7 +103,7 @@ classdef Project < handle
                 delete(obj(i).Groups);
                 delete(obj(i).Calibrations);
                 delete(obj(i).AuxiliaryChannels);
-                delete(obj(i).AnalysisCache);
+                delete(obj(i).CacheManager);
                 delete(obj(i).LabelListeners);
                 delete(obj(i).Labels);
             end
@@ -210,6 +205,9 @@ classdef Project < handle
             % result arrays are regenerated after every model member is restored.
             fpmImages = oops.model.Image.empty(0,1);
 
+            % All restored images receive a durable average-intensity result.
+            restoredImages = oops.model.Image.empty(0,1);
+
             for k = 1:numel(S.Calibrations)
                 data = S.Calibrations(k);
                 path = resolution.Calibrations(k);
@@ -239,6 +237,7 @@ classdef Project < handle
                         SeriesIndex=imageData.Source.SeriesIndex);
                     image = group.addImage(input,string(imageData.Name));
                     image.restoreStruct(imageData,string(data.CalibrationIDs));
+                    restoredImages(end+1,1) = image; %#ok<AGROW>
 
                     if isfield(imageData,'FPMCalculated') && ...
                             logical(imageData.FPMCalculated)
@@ -269,6 +268,20 @@ classdef Project < handle
                 end
 
                 group.restoreIdentity(data);
+            end
+
+            % FPM reconstruction also writes the average. Initialize the
+            % remaining images without retaining their corrected stacks.
+            fpmIDs = oops.model.internal.ids(fpmImages);
+            averageImages = restoredImages(~ismember( ...
+                oops.model.internal.ids(restoredImages),fpmIDs));
+
+            for k = 1:numel(averageImages)
+                oops.runtime.updateProgress(opts.Progress,sprintf( ...
+                    'Restoring average intensity %d of %d: %s', ...
+                    k,numel(averageImages),averageImages(k).Name), ...
+                    .9+.05*(k-1)/max(1,numel(averageImages)));
+                oops.analysis.Analyzer.ensureAverageIntensity(averageImages(k));
             end
 
             if ~isempty(fpmImages)
@@ -564,15 +577,6 @@ classdef Project < handle
                 % Validated ID of the member to activate, or an empty active bookmark.
                 id = oops.model.internal.validateIDs(group,obj.Groups,'oops:model:UnknownGroup',true);
 
-                % Group resolved from the validated ID, including its remembered image.
-                next = oops.model.internal.resolve(obj.Groups,id);
-
-                if ~isempty(next) && ~isempty(next.ActiveImage)
-                    next.ActiveImage.loadInput();
-                end
-
-                % Publish the bookmark only after its remembered input loads.
-
                 % Previous active group ID, retained for the navigation event.
                 old = obj.ActiveGroupID;
                 obj.ActiveGroupID = id;
@@ -590,7 +594,7 @@ classdef Project < handle
         end
 
         function setActiveImage(obj,image)
-        %SETACTIVEIMAGE Activate an owned image, retaining active plus previous inputs.
+        %SETACTIVEIMAGE Activate an owned image and apply project cache policy.
         % This convenience also switches groups; bookmarks in other groups survive.
 
             try
@@ -619,7 +623,6 @@ classdef Project < handle
                     end
 
                 else
-                    next.loadInput(); % failure must leave all navigation unchanged
                     next.Parent.setActiveImage(next.ID);
                     obj.setActiveGroup(next.Parent.ID);
                 end
@@ -703,7 +706,7 @@ classdef Project < handle
         end
 
         function syncActiveImage(obj)
-        %SYNCACTIVEIMAGE Maintain the shared input cache and publish global activation.
+        %SYNCACTIVEIMAGE Apply input residency policy and publish global activation.
 
             % Image resolved from the current group/image bookmarks.
             image = obj.ActiveImage;
@@ -712,31 +715,12 @@ classdef Project < handle
             id = "";
 
             if ~isempty(image)
-                image.loadInput();
                 id = image.ID;
-                obj.RecentImageIDs(obj.RecentImageIDs == id) = [];
-                obj.RecentImageIDs = [id;obj.RecentImageIDs];
-                obj.RecentImageIDs = obj.RecentImageIDs(1:min(end,obj.ImageDataCacheSize));
             end
 
-            % Retain only recent inputs; numeric analysis outputs are unaffected.
-
-            % Visit every group to check image residency against the shared cache.
-            for g = 1:numel(obj.Groups)
-
-                % Unload each image whose ID is no longer in the recent-input cache.
-                for i = 1:numel(obj.Groups(g).Images)
-
-                    % Image being checked against the recently used input-cache IDs.
-                    candidate = obj.Groups(g).Images(i);
-
-                    if ~ismember(candidate.ID,obj.RecentImageIDs)
-                        candidate.unloadInput();
-                    end
-
-                end
-
-            end
+            % The cache manager decides whether navigation should retain a full
+            % raw buffer. With the default zero-byte budget, Image5D remains lazy.
+            obj.CacheManager.activateInput(image,obj.allImages());
 
             % Notify observers after the residency policy reaches its final state.
 
@@ -754,8 +738,7 @@ classdef Project < handle
         %FORWARD Bubble child events and maintain the global active-image cache.
 
             if name == "ImageRemoved"
-                obj.RecentImageIDs(obj.RecentImageIDs == e.ImageID) = [];
-                obj.AnalysisCache.removeImage(e.ImageID);
+                obj.CacheManager.removeImage(e.ImageID);
                 obj.syncActiveImage();
             elseif name == "CalibrationChanged"
 
@@ -766,7 +749,7 @@ classdef Project < handle
 
                     % Release every cached correction owned by the changed group.
                     for image = reshape(group.Images,1,[])
-                        obj.AnalysisCache.removeImage(image.ID);
+                        obj.CacheManager.removeImage(image.ID);
                     end
 
                 end
@@ -777,6 +760,16 @@ classdef Project < handle
             end
 
             notify(obj,char(name),e);
+        end
+
+        function images = allImages(obj)
+        %ALLIMAGES Flatten project image membership for runtime cache policy.
+
+            images = oops.model.Image.empty(0,1);
+
+            for group = reshape(obj.Groups,1,[])
+                images = [images;group.Images]; %#ok<AGROW>
+            end
         end
 
     end
@@ -803,7 +796,7 @@ function reportAnalysisProgress(progress,message,value)
 if isempty(value)
     mapped = [];
 else
-    mapped = .9 + .09*value;
+    mapped = .95 + .04*value;
 end
 
 oops.runtime.updateProgress(progress,message,mapped);

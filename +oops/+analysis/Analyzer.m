@@ -52,7 +52,7 @@ classdef Analyzer
             end
 
             % Previously computed response shared by every matching group assignment.
-            [flat,cached] = project.AnalysisCache.getCalibration(ids);
+            [flat,cached] = project.CacheManager.getCalibration(ids);
 
             if cached
                 return;
@@ -80,7 +80,7 @@ classdef Analyzer
 
             oops.runtime.updateProgress(opts.Progress,"Computing flat field...",[]);
             flat = oops.analysis.normalizeCalibration(stacks);
-            project.AnalysisCache.putCalibration(ids,flat);
+            project.CacheManager.putCalibration(ids,flat);
             oops.Log.INFO("Flat-field computation complete.");
         end
 
@@ -159,12 +159,34 @@ classdef Analyzer
 
             oops.Log.INFO("Applying flat-field correction to " + image.Name + ".");
 
-            % Disposable corrected stack retained only by the bounded runtime cache.
+            % Disposable corrected stack retained only when its runtime byte
+            % budget permits; the default zero-byte budget discards it.
             corrected = oops.analysis.Analyzer.correctedStack(image,Calibration=opts.Calibration);
 
             % Only downstream analysis products and provenance remain on the model.
             image.setCorrectionResults(mean(corrected,3),image.Parent.CalibrationIDs);
             oops.Log.INFO("Correction complete for " + image.Name + ".");
+        end
+
+        function average = ensureAverageIntensity(image)
+        %ENSUREAVERAGEINTENSITY Return or reconstruct the durable average cache.
+
+            if isfield(image.Results,'AverageIntensity') && ...
+                    image.CorrectionProvenance.matchesAssignments( ...
+                    image.Parent.CalibrationIDs)
+                average = image.Results.AverageIntensity;
+                return;
+            end
+
+            corrected = oops.analysis.Analyzer.correctedStack(image);
+            average = mean(corrected,3);
+            ids = image.Parent.CalibrationIDs;
+
+            if image.CorrectionProvenance.matchesAssignments(ids)
+                image.setAverageIntensity(average);
+            else
+                image.setCorrectionResults(average,ids);
+            end
         end
 
         function corrected = correctedStack(image,opts)
@@ -183,8 +205,8 @@ classdef Analyzer
                 return;
             end
 
-            % Previously corrected stack, retained for only a small number of images.
-            [corrected,cached] = image.Parent.Parent.AnalysisCache.getCorrected(image.ID,ids);
+            % Previously corrected stack retained by the configured byte budget.
+            [corrected,cached] = image.Parent.Parent.CacheManager.getCorrected(image.ID,ids);
 
             if cached
                 return;
@@ -203,7 +225,7 @@ classdef Analyzer
             stack = oops.analysis.readStack(image.Input);
             corrected = oops.analysis.Analyzer.flatField(stack,flat);
             oops.analysis.Analyzer.warnOutsideDetectorRange(image,corrected);
-            image.Parent.Parent.AnalysisCache.putCorrected(image.ID,ids,corrected);
+            image.Parent.Parent.CacheManager.putCorrected(image.ID,ids,corrected);
         end
 
         function segmentImages(images,settings,opts)

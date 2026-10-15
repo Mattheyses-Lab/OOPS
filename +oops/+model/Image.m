@@ -364,6 +364,18 @@ classdef Image < handle
             obj.setResults(struct('AverageIntensity',average));
         end
 
+        function setAverageIntensity(obj,average)
+        %SETAVERAGEINTENSITY Cache a current average without resetting objects.
+        % This path restores an omitted raster cache whose correction provenance
+        % already matches the source assignment represented by the project.
+
+            validateattributes(average,{'double'}, ...
+                {'real','size',[obj.Input.SizeY,obj.Input.SizeX]});
+            obj.Results.AverageIntensity = average;
+            notify(obj,'DataChanged',oops.model.events.DataChanged( ...
+                obj.ID,"AverageIntensity"));
+        end
+
         function setResults(obj,results)
         %SETRESULTS Store image-level analysis outputs and notify listeners.
 

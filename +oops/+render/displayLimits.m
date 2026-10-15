@@ -4,8 +4,9 @@
 
 function [value,bounds,ranges] = displayLimits(image,domain,settings)
 %DISPLAYLIMITS Resolve display policies without overwriting image-local limits.
-% Intensity uses all four raw/corrected frames together, so both viewers share
-% one range. Order uses finite order values. NaNs never determine limits.
+% Intensity uses the durable average image as one stable reference shared by
+% raw, corrected, and average viewers. Order uses finite order values. NaNs
+% never determine limits.
 
 arguments
     image (1,1) oops.model.Image
@@ -13,15 +14,15 @@ arguments
     settings (1,1) oops.config.Settings
 end
 
+started = tic;
+oops.Log.DEBUG("Resolving " + domain + " display limits for " + image.Name + ".");
+
 if domain == "Intensity"
 
-    % Raw/corrected intensity pixels or order pixels used to find display bounds.
-    values = oops.analysis.readStack(image.Input);
-
-    if ~isempty(image.Parent.CalibrationIDs)
-        corrected = oops.analysis.Analyzer.correctedStack(image);
-        values = [values(:);corrected(:)];
-    end
+    % Average intensity is resident during normal GUI use. The lazy fallback
+    % supports images created programmatically without rereading on later calls.
+    average = oops.analysis.Analyzer.ensureAverageIntensity(image);
+    values = average(:);
 else
     values = image.Order(:);
 end
@@ -73,6 +74,9 @@ end
 
 % Expand UI slider bounds to keep user values accessible after recalibration.
 bounds = [min(bounds(1),value(1)) max(bounds(2),value(2))];
+oops.Log.DEBUG(sprintf( ...
+    'Resolved %s display limits for %s in %.3f s: value=[%.6g %.6g], bounds=[%.6g %.6g].', ...
+    domain,image.Name,toc(started),value(1),value(2),bounds(1),bounds(2)));
 end
 
 function value = zeroToMaxRange(values,fallback)

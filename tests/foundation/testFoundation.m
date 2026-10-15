@@ -330,7 +330,9 @@ t.verifyEqual(restored.Azimuth,expectedAzimuth,'AbsTol',eps);
 t.verifyEqual(status{3},'1 / 1 images');
 end
 
-function testActivePlusPreviousCacheAcrossGroups(t)
+function testNavigationKeepsRawInputsLazyByDefault(t)
+%TESTNAVIGATIONKEEPSRAWINPUTSLAZYBYDEFAULT Avoid retaining full source stacks.
+
 p = oops.model.Project();
 cleanup = onCleanup(@() delete(p));
 g1 = p.addGroup('One');
@@ -342,16 +344,14 @@ c = g1.addImage(oops.io.readInput(t.TestData.File),'C');
 listener = onCleanup(@() delete(l));
 p.setActiveImage(a);
 p.setActiveImage(b);
-t.verifyTrue(a.IsLoaded && b.IsLoaded);
+t.verifyFalse(a.IsLoaded || b.IsLoaded);
 p.setActiveImage(c);
-t.verifyFalse(a.IsLoaded);
-t.verifyTrue(b.IsLoaded && c.IsLoaded);
+t.verifyFalse(a.IsLoaded || b.IsLoaded || c.IsLoaded);
 t.verifyEqual(state('last').NewID,c.ID);
 t.verifyEqual(state('last').OldID,b.ID);
-p.setActiveImage(b); % update recency, even for an already-loaded source
+p.setActiveImage(b);
 p.setActiveImage(a);
-t.verifyFalse(c.IsLoaded);
-t.verifyTrue(a.IsLoaded && b.IsLoaded);
+t.verifyFalse(a.IsLoaded || b.IsLoaded || c.IsLoaded);
 p.setActiveImage(a);
 t.verifyEqual(state('count'),5);
 end

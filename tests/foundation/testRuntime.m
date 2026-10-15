@@ -45,10 +45,10 @@ t.verifyTrue(info.Explicit(info.Name == "DeveloperMode"));
 oops.Preferences.remove("DeveloperMode"); t.verifyFalse(oops.runtime.isDeveloperMode());
 end
 
-function testAnalysisCacheSharesCalibrationsAndBoundsCorrections(t)
-%TESTANALYSISCACHESHARESCALIBRATIONSANDBOUNDSCORRECTIONS Verify cache policy.
+function testCacheManagerSharesCalibrationsAndBoundsCorrections(t)
+%TESTCACHEMANAGERSHARESCALIBRATIONSANDBOUNDSCORRECTIONS Verify byte policy.
 
-cache = oops.runtime.AnalysisCache();
+cache = oops.runtime.CacheManager(CorrectedStackLimitMiB=.0004);
 ids = ["cal-a";"cal-b"];
 flat = reshape(1:24,2,3,4);
 cache.putCalibration(ids,flat);
