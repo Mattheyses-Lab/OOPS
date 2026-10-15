@@ -77,7 +77,7 @@ try
             % Quantize only the display copy; the durable analytical average remains double.
             values = detectorDisplayValues(image,values);
             data = matlabx.image.Image5D.fromComponents(values,Names="Average intensity");
-        case "Channels"
+        case "Auxiliary channels"
             [data,channelInfo] = auxiliaryChannels(image);
 
             if isempty(data)

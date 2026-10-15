@@ -165,7 +165,7 @@ source = matlabx.image.Image5D.fromComponents( ...
     {uint16(9*ones(20,30)),uint16(17*ones(20,30))}, ...
     Names=["Actin","DAPI"]);
 image.addAuxiliaryChannel(actin.ID,source,1);
-p.Settings.View.RightSource = "Channels";
+p.Settings.View.RightSource = "Auxiliary channels";
 
 t.verifyEqual(ui.RightViewer.ImageData.NumComponents,2);
 t.verifyEqual([ui.RightViewer.ImageData.Components.Name],["DAPI" "Actin"]);

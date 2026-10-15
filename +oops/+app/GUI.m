@@ -2618,7 +2618,7 @@ classdef GUI < handle
                         viewer.T = min(indices(3),data.SizeT);
                     end
 
-                    if names(k) ~= "Channels" || ~sameSource
+                    if names(k) ~= "Auxiliary channels" || ~sameSource
                         viewer.ShowComposite = 'off';
                     end
 
@@ -2661,7 +2661,7 @@ classdef GUI < handle
             % Composite commands are available only for the registry-backed source.
             for k = 1:2
                 obj.AuxiliaryCompositeTools{k}.setAvailable( ...
-                    names(k) == "Channels" && viewers{k}.ImageVisible == "on" && ...
+                    names(k) == "Auxiliary channels" && viewers{k}.ImageVisible == "on" && ...
                     viewers{k}.CanMergeComponents);
             end
 
@@ -2715,7 +2715,7 @@ classdef GUI < handle
                 domain = "Intensity";
             elseif source == "Order"
                 domain = "Order";
-            elseif source == "Channels"
+            elseif source == "Auxiliary channels"
                 obj.persistAuxiliaryDisplayRanges(viewer,event);
                 return;
             else
@@ -4267,7 +4267,7 @@ classdef GUI < handle
             % Show the first imported image and its stable registry-ordered stack.
             obj.Project.setActiveImage(plan(1).Image);
             obj.Settings.View.LeftSource = "Average intensity";
-            obj.Settings.View.RightSource = "Channels";
+            obj.Settings.View.RightSource = "Auxiliary channels";
             clear guard;
             obj.ViewerKeys(:) = "";
             obj.refreshViewers(true);
