@@ -270,9 +270,16 @@ im.addAuxiliaryChannel(actin.ID,auxiliary,1);
 t.verifyTrue(info.Available);
 t.verifyEqual(data.NumComponents,2);
 t.verifyEqual([data.Components.Name],["DAPI" "Actin"]);
-t.verifyEqual(data.getPlane(1),zeros(10,12,'single'));
-t.verifyEqual(data.getPlane(2),single(11*ones(10,12)));
+t.verifyEqual(data.getPlane(1),zeros(10,12,'uint16'));
+t.verifyEqual(data.getPlane(2),uint16(11*ones(10,12)));
 t.verifyEqual(info.ComponentColors,{dapi.Color,actin.Color});
+
+% Heterogeneous source classes use one single-precision display stack.
+dapiSource = matlabx.image.Image5D.fromComponents(uint8(7*ones(10,12)));
+im.addAuxiliaryChannel(dapi.ID,dapiSource,1);
+mixed = oops.render.source(im,"Channels",p.Settings);
+t.verifyEqual(mixed.getPlane(1),single(7*ones(10,12)));
+t.verifyEqual(mixed.getPlane(2),single(11*ones(10,12)));
 end
 
 function testAuxiliaryChannelAssignmentsPersistAsFileReferences(t)
@@ -297,6 +304,30 @@ restored = loaded.Groups(1).Images(1).getAuxiliaryChannel(restoredDefinition.ID)
 t.verifyEqual(restored.ComponentIndex,1);
 t.verifyEqual(restored.DisplayRange,[5 100]);
 t.verifyEqual(restored.getPlane(),uint16(77*ones(10,12)));
+end
+
+function testFPMCompletionRecomputesResultsOnProjectLoad(t)
+%TESTFPMCOMPLETIONRECOMPUTESRESULTSONPROJECTLOAD Restore omitted raster results.
+
+p = oops.model.Project('FPM persistence');
+cleanup = onCleanup(@() delete(p));
+g = p.addGroup('Group');
+image = g.addImage(oops.io.readInput(t.TestData.File),'Image');
+oops.analysis.Analyzer.analyzeImages(image,p.Settings);
+expectedOrder = image.Order;
+expectedAzimuth = image.Azimuth;
+
+projectFile = fullfile(t.TestData.Folder,'fpm.oops.mat');
+oops.io.project.save(p,projectFile);
+
+loaded = oops.io.project.load(projectFile);
+loadedCleanup = onCleanup(@() delete(loaded));
+restored = loaded.Groups(1).Images(1);
+t.verifyEqual(restored.Order,expectedOrder,'AbsTol',eps);
+t.verifyEqual(restored.Azimuth,expectedAzimuth,'AbsTol',eps);
+
+[~,status] = oops.model.internal.processingSummary(restored);
+t.verifyEqual(status{3},'1 / 1 images');
 end
 
 function testActivePlusPreviousCacheAcrossGroups(t)

@@ -255,7 +255,7 @@ classdef GUI < handle
             [progress,cleanupProgress] = obj.createProgressDialog("Reading project file..."); %#ok<ASGLU>
             [project,resolution] = oops.io.project.load( ...
                 file,SearchRoot=opts.SearchRoot,Progress=progress);
-            oops.runtime.updateProgress(progress,"Updating project interface...",.95);
+            oops.runtime.updateProgress(progress,"Updating project interface...",.995);
             obj.attachProject(project,true);
             oops.runtime.updateProgress(progress,"Project loaded",1);
         end

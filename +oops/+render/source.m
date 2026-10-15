@@ -175,7 +175,10 @@ function [data,info] = auxiliaryChannels(image)
     colors = cell(1,numel(definitions));
     colormaps = repmat({gray(256)},1,numel(definitions));
     available = false(1,numel(definitions));
+    sourceClasses = strings(1,numel(definitions));
 
+    % Read assigned planes in their native classes. The common display class
+    % cannot be selected until every available source has been inspected.
     for k = 1:numel(definitions)
         definition = definitions(k);
         assignment = image.getAuxiliaryChannel(definition.ID);
@@ -183,16 +186,14 @@ function [data,info] = auxiliaryChannels(image)
         colors{k} = definition.Color;
 
         if isempty(assignment)
-            planes{k} = zeros(image.Input.SizeY,image.Input.SizeX,'single');
-            limits{k} = [0 1];
             continue;
         end
 
-        % Single precision is a render-only common class that preserves uint16 counts
-        % exactly and permits composites across heterogeneous detector classes.
-        values = single(assignment.getPlane());
+        % Preserve native detector values until the stack class is resolved.
+        values = assignment.getPlane();
         planes{k} = values;
         available(k) = true;
+        sourceClasses(k) = string(class(values));
 
         if isempty(assignment.DisplayRange)
             range = double([min(values(:)) max(values(:))]);
@@ -210,6 +211,34 @@ function [data,info] = auxiliaryChannels(image)
     if ~any(available)
         info.Reason = "No auxiliary channels are assigned to this image";
         return;
+    end
+
+    % Preserve the source class when every assigned channel agrees. Mixed
+    % source classes use single precision so Image5D receives homogeneous
+    % planes without promoting integer detector data to double precision.
+    availableClasses = unique(sourceClasses(available));
+
+    if isscalar(availableClasses)
+        displayClass = availableClasses;
+    else
+        displayClass = "single";
+    end
+
+    % Fill absent semantic channels using the selected display class, and
+    % convert available planes only when heterogeneous sources require it.
+    for k = 1:numel(definitions)
+
+        if available(k)
+
+            if sourceClasses(k) ~= displayClass
+                planes{k} = cast(planes{k},displayClass);
+            end
+
+        else
+            planes{k} = zeros(image.Input.SizeY,image.Input.SizeX,displayClass);
+            limits{k} = [0 1];
+        end
+
     end
 
     data = matlabx.image.Image5D.fromComponents(planes,Names=names);

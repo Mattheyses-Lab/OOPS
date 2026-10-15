@@ -206,6 +206,10 @@ classdef Project < handle
             sourceCount = numel(S.Calibrations)+imageCount+auxiliaryCount;
             sourceIndex = 0;
 
+            % Images whose saved state included per-pixel FPM results. The large
+            % result arrays are regenerated after every model member is restored.
+            fpmImages = oops.model.Image.empty(0,1);
+
             for k = 1:numel(S.Calibrations)
                 data = S.Calibrations(k);
                 path = resolution.Calibrations(k);
@@ -236,6 +240,11 @@ classdef Project < handle
                     image = group.addImage(input,string(imageData.Name));
                     image.restoreStruct(imageData,string(data.CalibrationIDs));
 
+                    if isfield(imageData,'FPMCalculated') && ...
+                            logical(imageData.FPMCalculated)
+                        fpmImages(end+1,1) = image; %#ok<AGROW>
+                    end
+
                     if isfield(imageData,'AuxiliaryChannels')
 
                         for a = 1:numel(imageData.AuxiliaryChannels)
@@ -262,7 +271,17 @@ classdef Project < handle
                 group.restoreIdentity(data);
             end
 
-            oops.runtime.updateProgress(opts.Progress,"Restoring project navigation...",.92);
+            if ~isempty(fpmImages)
+                oops.Log.INFO(sprintf( ...
+                    'Recomputing FPM results for %d saved project images.', ...
+                    numel(fpmImages)));
+                analysisProgress = @(message,value) reportAnalysisProgress( ...
+                    opts.Progress,message,value);
+                oops.analysis.Analyzer.analyzeImages( ...
+                    fpmImages,obj.Settings,Progress=analysisProgress);
+            end
+
+            oops.runtime.updateProgress(opts.Progress,"Restoring project navigation...",.99);
             obj.setActiveGroup(string(S.ActiveGroupID));
             obj.setSelectedGroups(string(S.SelectedGroupIDs));
             oops.Log.DEBUG("Project model construction completed: " + obj.Name);
@@ -776,4 +795,16 @@ end
 message = operation + " " + string(index) + " of " + string(count) + ...
     ": " + string(name);
 oops.runtime.updateProgress(progress,message,value);
+end
+
+function reportAnalysisProgress(progress,message,value)
+%REPORTANALYSISPROGRESS Map analyzer progress into the project-load interval.
+
+if isempty(value)
+    mapped = [];
+else
+    mapped = .9 + .09*value;
+end
+
+oops.runtime.updateProgress(progress,message,mapped);
 end
