@@ -1,3 +1,12 @@
+function out = niceLimitsAndTicks(dataLim,opts)
+%NICELIMITSANDTICKS Compute readable axes limits/ticks with optional headroom.
+%
+% out = matlabx.ui.niceLimitsAndTicks(dataLim)
+% out = matlabx.ui.niceLimitsAndTicks(dataLim,Name=Value)
+%
+% Returns clean tick limits around dataLim, plus optional display limits that
+% reserve extra space above the final tick without adding misleading ticks.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,15 +22,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function out = niceLimitsAndTicks(dataLim,opts)
-%NICELIMITSANDTICKS Compute readable axes limits/ticks with optional headroom.
-%
-% out = matlabx.ui.niceLimitsAndTicks(dataLim)
-% out = matlabx.ui.niceLimitsAndTicks(dataLim,Name=Value)
-%
-% Returns clean tick limits around dataLim, plus optional display limits that
-% reserve extra space above the final tick without adding misleading ticks.
 
 arguments
     dataLim (1,2) double

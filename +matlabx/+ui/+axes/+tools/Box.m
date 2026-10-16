@@ -1,3 +1,11 @@
+classdef Box < matlabx.ui.axes.AxesTool
+%BOX Optimistic box-region interaction tool for ImageAxes.
+%
+%   The Box tool is an interaction controller. It interprets mouse gestures,
+%   creates overlays.Box instances through the host OverlayManager, manages drag
+%   mode, and emits Box-specific compatibility callbacks. Overlay lifetime and
+%   active/hover/selection state are owned by ImageAxesOverlayManager.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Box < matlabx.ui.axes.AxesTool
-%BOX Optimistic box-region interaction tool for ImageAxes.
-%
-%   The Box tool is an interaction controller. It interprets mouse gestures,
-%   creates overlays.Box instances through the host OverlayManager, manages drag
-%   mode, and emits Box-specific compatibility callbacks. Overlay lifetime and
-%   active/hover/selection state are owned by ImageAxesOverlayManager.
 
     %% Draggable box management
 

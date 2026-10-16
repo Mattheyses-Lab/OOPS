@@ -1,3 +1,8 @@
+classdef ImageComponent < handle
+    %IMAGECOMPONENT One logical image component.
+    %
+    % Dimension order convention: [Y X C Z T]
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,11 +18,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef ImageComponent < handle
-    %IMAGECOMPONENT One logical image component.
-    %
-    % Dimension order convention: [Y X C Z T]
 
     properties
         Data = []

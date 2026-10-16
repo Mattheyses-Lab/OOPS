@@ -1,3 +1,11 @@
+classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
+%POLYGON One closed loop drawn directly from application-supplied coordinates.
+%
+%   Vertices is a finite N-by-2 [x y] array in boundary order. The patch closes
+%   the loop automatically; repeating the first vertex at the end is also OK.
+%   Coordinates are stored unchanged. The app owns geometry correctness; this
+%   overlay does not simplify, normalize, or repair contours or support holes.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
-%POLYGON One closed loop drawn directly from application-supplied coordinates.
-%
-%   Vertices is a finite N-by-2 [x y] array in boundary order. The patch closes
-%   the loop automatically; repeating the first vertex at the end is also OK.
-%   Coordinates are stored unchanged. The app owns geometry correctness; this
-%   overlay does not simplify, normalize, or repair contours or support holes.
 
     properties (Dependent, SetObservable, AbortSet)
         Vertices

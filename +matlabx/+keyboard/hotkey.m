@@ -1,3 +1,10 @@
+function hk = hotkey(key, opts)
+%HOTKEY Build a normalized hotkey string for declarations.
+%
+%   hk = matlabx.keyboard.hotkey("z", "Modifiers", ["shift","meta"])
+%   returns "shift+meta+z". Use this helper when declaring tool hotkeys so
+%   callers do not need to remember the exact normalized string format.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +20,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function hk = hotkey(key, opts)
-%HOTKEY Build a normalized hotkey string for declarations.
-%
-%   hk = matlabx.keyboard.hotkey("z", "Modifiers", ["shift","meta"])
-%   returns "shift+meta+z". Use this helper when declaring tool hotkeys so
-%   callers do not need to remember the exact normalized string format.
 
     arguments
         key (1,1) string

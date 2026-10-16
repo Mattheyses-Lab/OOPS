@@ -1,3 +1,11 @@
+classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
+%ACCORDION Arrange collapsible items in a component container.
+% custom class for expandable accordion container with scrollable content
+% Notes:
+%   for most predictable behavior, the accordion should be
+%   placed in its own 1x1 uigridlayout() container with
+%   RowHeight={'fit'} and ColumnWidth={'1x'}
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,13 +22,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
-% custom class for expandable accordion container with scrollable content
-% Notes:
-%   for most predictable behavior, the accordion should be 
-%   placed in its own 1x1 uigridlayout() container with 
-%   RowHeight={'fit'} and ColumnWidth={'1x'} 
-
     properties
         ItemSpacing (1,1) double = 5;
         BorderWidth (1,1) double = 1;
@@ -28,7 +29,7 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
         Padding (1,1) double = 5;
         BorderColor (1,3) double = [0.7 0.7 0.7];
     end
-    
+
     %% Items/Item management
     properties(SetAccess = private)
         Items (:,1) matlabx.ui.container.AccordionItem
@@ -44,7 +45,7 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
         % dictionary to access items by name
         ItemsDict dictionary = dictionary(string.empty(1,0), matlabx.ui.container.AccordionItem.empty(1,0))
     end
-    
+
     %% Derived properties
     properties(Dependent,Access=private)
         ParentFig
@@ -56,7 +57,7 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
         ItemPadding (1,4) double
         BorderPadding (1,4) double
     end
-        
+
     %% Private UI/graphics
     properties(Access = private,Transient,NonCopyable)
         % outermost grid for the entire component
@@ -73,7 +74,7 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
 
     %% ComponentContainer lifecycle
     methods(Access = protected)
-    
+
         function setup(obj)
             % grid layout manager to enclose all the components
             obj.containerGrid = uigridlayout(obj,...
@@ -99,10 +100,10 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
                 'Priority', 10, ...
                 'CaptureDuringDrag', false);
         end
-    
+
         function update(obj)
             obj.Items = obj.Items(isvalid(obj.Items));
-    
+
             if obj.nItems==0
                 obj.itemGrid.RowHeight = {'fit'};
             else
@@ -113,7 +114,7 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
                 % set the grid row heights
                 obj.itemGrid.RowHeight = repmat({'fit'},1,obj.nItems);
             end
-    
+
             set(obj.itemGrid,...
                 'BackgroundColor',obj.BackgroundColor,...
                 'RowSpacing',obj.ItemSpacing,...
@@ -123,9 +124,9 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
                 'BackgroundColor',obj.BorderColor,...
                 'Padding',obj.BorderPadding);
         end
-    
+
     end
-    
+
 
     %% Hub-facing event handlers (matches / onDown / onMove / onUp / onScroll / onEnter / onLeave) (and helpers)
     methods
@@ -163,7 +164,7 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
         function onScroll(~, ~),    end
         function onKeyPress(~, ~),       end
         function onKeyRelease(~, ~),     end
-        
+
         function onEnter(obj,E)
             ID = obj.getTargetID(E.Target);
             obj.updateHover(obj.idxOfID(ID));
@@ -200,11 +201,11 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
 
     %% Derived getters
     methods
-    
+
         function Contents = get.Contents(obj)
             Contents = cat(1,obj.Items(:).Contents);
         end
-    
+
         function nItems = get.nItems(obj)
             nItems = numel(obj.Items);
         end
@@ -265,7 +266,7 @@ classdef Accordion < matlab.ui.componentcontainer.ComponentContainer
             % add to dictionary
             obj.ItemsDict(newItem.Title) = newItem;
         end
-    
+
         function deleteItem(obj,titleOrIdx)
             % if titleOrIdx > obj.nItems || titleOrIdx < 1
             %     error('Accordion:InvalidIndex',...

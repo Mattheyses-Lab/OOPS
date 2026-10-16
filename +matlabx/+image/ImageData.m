@@ -1,3 +1,19 @@
+classdef ImageData < handle
+%IMAGEDATA Normalized multi-channel image container.
+%
+%   img = matlabx.image.ImageData(cdata)
+%   img = matlabx.image.ImageData(cdata, ChannelNames=["Ch1","Ch2"])
+%
+%   Supported inputs:
+%   - MxN grayscale image
+%   - MxNx3 RGB image
+%   - 1xN or Nx1 cell array of grayscale and/or RGB images
+%
+%   This class stores normalized per-channel raw image data plus structural
+%   metadata. It does not store viewer state such as active channel,
+%   composite mode, display LUT, or current CLim.
+%
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,22 +29,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef ImageData < handle
-%%IMAGEDATA  Normalized multi-channel image container
-%
-%   img = matlabx.image.ImageData(cdata)
-%   img = matlabx.image.ImageData(cdata, ChannelNames=["Ch1","Ch2"])
-%
-%   Supported inputs:
-%   - MxN grayscale image
-%   - MxNx3 RGB image
-%   - 1xN or Nx1 cell array of grayscale and/or RGB images
-%
-%   This class stores normalized per-channel raw image data plus structural
-%   metadata. It does not store viewer state such as active channel,
-%   composite mode, display LUT, or current CLim.
-%
 
     properties (Access=private)
         Channels_ (1,:) struct = struct( ...

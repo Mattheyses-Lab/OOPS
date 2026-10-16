@@ -1,3 +1,10 @@
+classdef SliderGroupDialog < handle
+    %SLIDERGROUPDIALOG Small figure containing a mutable vertical slider group.
+    %
+    %   SliderGroupDialog owns one figure and a stack of matlabx.ui.control.Slider
+    %   controls. The slider group can be updated dynamically, including a
+    %   change in slider count, without replacing the figure window.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +20,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef SliderGroupDialog < handle
-    %SLIDERGROUPDIALOG Small figure containing a mutable vertical slider group.
-    %
-    %   SliderGroupDialog owns one figure and a stack of matlabx.ui.control.Slider
-    %   controls. The slider group can be updated dynamically, including a
-    %   change in slider count, without replacing the figure window.
 
     properties
         Title                   (:,1) char = 'Slider group dialog'

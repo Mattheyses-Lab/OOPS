@@ -1,3 +1,13 @@
+function szChar = size2char(A)
+%SIZE2CHAR Return size of array as a character vector
+%   szChar = SIZE2CHAR(A) returns a character vector like:
+%       '5x7'
+%       '5x7x3'
+%       '5x7x1x4'
+%
+%   It always includes the first two dimensions, and includes any
+%   additional dimensions up to the last dimension whose size is > 1.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,16 +23,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function szChar = size2char(A)
-%SIZE2CHAR Return size of array as a character vector
-%   szChar = SIZE2CHAR(A) returns a character vector like:
-%       '5x7'
-%       '5x7x3'
-%       '5x7x1x4'
-%
-%   It always includes the first two dimensions, and includes any
-%   additional dimensions up to the last dimension whose size is > 1.
 
     sz = size(A);
 

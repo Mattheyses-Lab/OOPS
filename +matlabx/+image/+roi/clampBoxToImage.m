@@ -1,3 +1,33 @@
+function Cc = clampBoxToImage(C, boxSize, imageSize)
+%CLAMPBOXTOIMAGE Constrain box centers so boxes remain inside an image.
+%clampBoxToImage Clamp box centers so boxes stay fully inside an image.
+%
+%   Cc = clampBoxToImage(C, boxSize, imageSize)
+%
+% Inputs
+% ------
+% C : Nx2 double
+%     Centers [x y] in pixel-center coordinates.
+%
+% boxSize : scalar or 1x2 double
+%     Box size in pixels: scalar => [s s], or [w h].
+%
+% imageSize : 1x2 double
+%     Image size [W H] (width, height).
+%
+% Output
+% ------
+% Cc : Nx2 double
+%     Clamped centers. Guaranteed:
+%       - box stays inside image bounds
+%       - x is integer for odd w, ends in .5 for even w
+%       - y is integer for odd h, ends in .5 for even h
+%
+% Convention
+% ----------
+% Uses MATLAB bbox convention with top-left pixel coordinate x,y and size w,h.
+% Center is:  cx = x + (w-1)/2, cy = y + (h-1)/2.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -49,13 +79,13 @@
 % %       * even box height -> y ends in .5
 % %
 % % - Errors if the box does not fit inside the image.
-% 
+%
 % arguments
 %     C (:,2) double
 %     boxSize (1,:) double {mustBePositive}
 %     imageSize (1,2) double {mustBePositive}
 % end
-% 
+%
 % % Normalize box size
 % if isscalar(boxSize)
 %     w = boxSize;
@@ -64,59 +94,32 @@
 %     w = boxSize(1);
 %     h = boxSize(2);
 % end
-% 
+%
 % W = imageSize(1);
 % H = imageSize(2);
-% 
+%
 % % Sanity check: box must fit in image
 % if w > W || h > H
 %     error("clampBoxToImage:BoxTooLarge", ...
 %         "Box size [%g %g] does not fit inside image [%g %g].", w, h, W, H);
 % end
-% 
+%
 % % Compute top-left corners from centers
 % x0 = C(:,1) - w/2;
 % y0 = C(:,2) - h/2;
-% 
+%
 % % Clamp top-left so box stays inside image
 % x0 = max(1, min(x0, W - w + 1));
 % y0 = max(1, min(y0, H - h + 1));
-% 
+%
 % % Convert back to centers
 % Cx = x0 + w/2;
 % Cy = y0 + h/2;
-% 
+%
 % Cc = [Cx Cy];
 % end
 
-function Cc = clampBoxToImage(C, boxSize, imageSize)
-%clampBoxToImage Clamp box centers so boxes stay fully inside an image.
-%
-%   Cc = clampBoxToImage(C, boxSize, imageSize)
-%
-% Inputs
-% ------
-% C : Nx2 double
-%     Centers [x y] in pixel-center coordinates.
-%
-% boxSize : scalar or 1x2 double
-%     Box size in pixels: scalar => [s s], or [w h].
-%
-% imageSize : 1x2 double
-%     Image size [W H] (width, height).
-%
-% Output
-% ------
-% Cc : Nx2 double
-%     Clamped centers. Guaranteed:
-%       - box stays inside image bounds
-%       - x is integer for odd w, ends in .5 for even w
-%       - y is integer for odd h, ends in .5 for even h
-%
-% Convention
-% ----------
-% Uses MATLAB bbox convention with top-left pixel coordinate x,y and size w,h.
-% Center is:  cx = x + (w-1)/2, cy = y + (h-1)/2.
+
 
 arguments
     C (:,2) double

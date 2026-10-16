@@ -1,3 +1,13 @@
+function R = differenceOfGaussians(I,opts)
+%DIFFERENCEOFGAUSSIANS Enhance blobs by subtracting two Gaussian smooths.
+%
+%   R = matlabx.image.process.differenceOfGaussians(I) returns a bright
+%   blob response image computed as Gaussian(I,Sigma1) -
+%   Gaussian(I,Sigma2), where Sigma2 is larger than Sigma1.
+%
+%   DoG is a fast, simple approximation to LoG and is often convenient for
+%   puncta-like features when the expected spot size is only approximate.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,16 +23,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function R = differenceOfGaussians(I,opts)
-%DIFFERENCEOFGAUSSIANS Enhance blobs by subtracting two Gaussian smooths.
-%
-%   R = matlabx.image.process.differenceOfGaussians(I) returns a bright
-%   blob response image computed as Gaussian(I,Sigma1) -
-%   Gaussian(I,Sigma2), where Sigma2 is larger than Sigma1.
-%
-%   DoG is a fast, simple approximation to LoG and is often convenient for
-%   puncta-like features when the expected spot size is only approximate.
 
     arguments
         % Image to filter.

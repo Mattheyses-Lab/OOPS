@@ -1,3 +1,18 @@
+function IRGB = vecind2rgb(I,cmap)
+%VECIND2RGB Convert indexed vector data to RGB values.
+%
+%   I must be uint8 in the range [0 255]
+%
+%   cmap must by 256x3 array of RGB triplets
+%
+%   Steps
+%
+%       I is converted to a column vector
+%       Vectorized I is converted to double and incremented by 1 to act as an index into cmap
+%       Output colors are then reshaped into a truecolor image array
+%
+%----------------------------------------------------------------------------------------------------------------------------
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,21 +28,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function IRGB = vecind2rgb(I,cmap)
-%%VECIND2RGB  Vectorized version of ind2rgb, faster when ind2rgb() is called frequently within a loop or callback
-%
-%   I must be uint8 in the range [0 255]
-%   
-%   cmap must by 256x3 array of RGB triplets
-%
-%   Steps
-%       
-%       I is converted to a column vector
-%       Vectorized I is converted to double and incremented by 1 to act as an index into cmap
-%       Output colors are then reshaped into a truecolor image array
-%
-%----------------------------------------------------------------------------------------------------------------------------
 
 IRGB = reshape(cmap(double(I(:))+1,:),[size(I),3]);
 

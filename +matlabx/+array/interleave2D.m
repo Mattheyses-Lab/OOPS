@@ -1,3 +1,6 @@
+function OutputArray = interleave2D(A,B,mode)
+%INTERLEAVE2D Given 2 input arrays of equal size, A and B, return a new array by interleaving rows or columns of the inputs
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function OutputArray = interleave2D(A,B,mode)
-%INTERLEAVE2D Given 2 input arrays of equal size, A and B, return a new array by interleaving rows or columns of the inputs
 
     arguments
         A (:,:)

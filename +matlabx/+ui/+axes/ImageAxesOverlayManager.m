@@ -1,3 +1,10 @@
+classdef ImageAxesOverlayManager < handle
+%IMAGEAXESOVERLAYMANAGER Registry and state manager for ImageAxes overlays.
+%
+%   The manager owns overlay lifetime and cross-overlay state such as active,
+%   hovered, and selected IDs. Tools remain controllers: they decide when to
+%   create, drag, select, activate, or delete overlays.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +20,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef ImageAxesOverlayManager < handle
-%IMAGEAXESOVERLAYMANAGER Registry and state manager for ImageAxes overlays.
-%
-%   The manager owns overlay lifetime and cross-overlay state such as active,
-%   hovered, and selected IDs. Tools remain controllers: they decide when to
-%   create, drag, select, activate, or delete overlays.
 
     properties (SetAccess=private)
         Host matlabx.ui.axes.ImageAxes

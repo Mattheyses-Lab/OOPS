@@ -1,3 +1,6 @@
+classdef PassiveOverlayContent < matlabx.ui.axes.ImageAxesOverlayContent
+%PASSIVEOVERLAYCONTENT Test content for application overlay mounting.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,7 +17,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef PassiveOverlayContent < matlabx.ui.axes.ImageAxesOverlayContent
     properties
         Graphic = []
         AttachCount = 0

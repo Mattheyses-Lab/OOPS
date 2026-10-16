@@ -1,3 +1,16 @@
+classdef (Abstract) ImageAxesOverlayContent < handle
+%IMAGEAXESOVERLAYCONTENT Application-owned passive graphics for ImageAxes.
+%   Implement attach(parent,context) and detach(). Parent is a dedicated
+%   hggroup; context.Host is the ImageAxes. Create non-pickable primitives
+%   (HitTest='off', PickableParts='none') beneath parent. Query current image
+%   dimensions from context.Host rather than retaining a size snapshot.
+%
+%   detach must tolerate repeated calls and partially completed attach calls.
+%   Delete primitives or set their Parent=[] to preserve them for reuse.
+%   The host deletes its group after detach, but never deletes this object.
+%   Call host.mountOverlay/unmountOverlay to manage the relationship; calling
+%   lifecycle methods directly does not update the host's bookkeeping.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,19 +26,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef (Abstract) ImageAxesOverlayContent < handle
-%IMAGEAXESOVERLAYCONTENT Application-owned passive graphics for ImageAxes.
-%   Implement attach(parent,context) and detach(). Parent is a dedicated
-%   hggroup; context.Host is the ImageAxes. Create non-pickable primitives
-%   (HitTest='off', PickableParts='none') beneath parent. Query current image
-%   dimensions from context.Host rather than retaining a size snapshot.
-%
-%   detach must tolerate repeated calls and partially completed attach calls.
-%   Delete primitives or set their Parent=[] to preserve them for reuse.
-%   The host deletes its group after detach, but never deletes this object.
-%   Call host.mountOverlay/unmountOverlay to manage the relationship; calling
-%   lifecycle methods directly does not update the host's bookkeeping.
 
     properties (Access={?matlabx.ui.axes.ImageAxes, ?matlabx.ui.axes.ImageAxesOverlayMount})
         Mount = []

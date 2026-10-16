@@ -1,3 +1,11 @@
+classdef Colormap < handle
+%COLORMAP Store a named colormap and its category.
+    % Represents a single colormap source with lazy-loaded data.
+    %
+    % Path is either a MAT-file path or a virtual builtin path of the form
+    % "builtin:<name>". Builtin paths are evaluated at runtime by calling the
+    % corresponding MATLAB colormap function.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,12 +22,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef Colormap < handle
-    % Represents a single colormap source with lazy-loaded data.
-    %
-    % Path is either a MAT-file path or a virtual builtin path of the form
-    % "builtin:<name>". Builtin paths are evaluated at runtime by calling the
-    % corresponding MATLAB colormap function.
     properties (SetAccess=immutable)
         Name     string
         Category string

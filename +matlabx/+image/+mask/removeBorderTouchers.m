@@ -1,3 +1,9 @@
+function BWout = removeBorderTouchers(BW, N)
+%REMOVEBORDERTOUCHERS Remove mask components that touch the image border.
+% Remove 4-connected components that touch N or more image borders
+% BW : logical (binary mask)
+% N  : scalar integer (e.g., 1 removes anything touching >=1 border)
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,11 +19,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function BWout = removeBorderTouchers(BW, N)
-% Remove 4-connected components that touch N or more image borders
-% BW : logical (binary mask)
-% N  : scalar integer (e.g., 1 removes anything touching >=1 border)
 
 BW = logical(BW);
 [h,w] = size(BW);

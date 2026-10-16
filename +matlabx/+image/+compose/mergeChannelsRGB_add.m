@@ -1,3 +1,6 @@
+function RGB = mergeChannelsRGB_add(Icell, clim, colors)
+%MERGECHANNELSRGB_ADD  Additive merge of grayscale channels into RGB using distinct colors per channel.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function RGB = mergeChannelsRGB_add(Icell, clim, colors)
-%MERGECHANNELSRGB_ADD  Additive merge of grayscale channels into RGB using distinct colors per channel.
 
     N = numel(Icell);
     assert(size(clim,1) == N && size(clim,2) == 2, 'clim must be Nx2.');

@@ -1,3 +1,10 @@
+classdef (ConstructOnLoad) ImageDataChangedEventData < event.EventData
+    %IMAGEDATACHANGEDEVENTDATA Payload for ImageAxes ImageData changes.
+    %
+    %   The payload is deliberately compact for now. It gives listeners a
+    %   cheap way to detect image-shape/component-count changes while still
+    %   leaving room for richer metadata later.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +20,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef (ConstructOnLoad) ImageDataChangedEventData < event.EventData
-    %IMAGEDATACHANGEDEVENTDATA Payload for ImageAxes ImageData changes.
-    %
-    %   The payload is deliberately compact for now. It gives listeners a
-    %   cheap way to detect image-shape/component-count changes while still
-    %   leaving room for richer metadata later.
 
     properties
         PreviousNumComponents double = []

@@ -1,3 +1,14 @@
+classdef BioFormatsImageSource < matlabx.image.ImageSource
+    %BIOFORMATSIMAGESOURCE File-backed source using Bio-Formats.
+    %
+    % Notes:
+    %   - First-pass implementation assumes scalar channels from a single series.
+    %   - Uses Bio-Formats to infer Z/C/T sizes.
+    %   - On load(), reads all planes into memory as ImageComponent objects.
+    %   - unload() clears component Data but keeps metadata.
+    %
+    % Requires Bio-Formats MATLAB toolbox on path.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,17 +24,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef BioFormatsImageSource < matlabx.image.ImageSource
-    %BIOFORMATSIMAGESOURCE File-backed source using Bio-Formats.
-    %
-    % Notes:
-    %   - First-pass implementation assumes scalar channels from a single series.
-    %   - Uses Bio-Formats to infer Z/C/T sizes.
-    %   - On load(), reads all planes into memory as ImageComponent objects.
-    %   - unload() clears component Data but keeps metadata.
-    %
-    % Requires Bio-Formats MATLAB toolbox on path.
 
     properties
         FilePath (1,1) string

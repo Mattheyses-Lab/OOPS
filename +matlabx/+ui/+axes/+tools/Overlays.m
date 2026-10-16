@@ -1,3 +1,6 @@
+classdef Overlays < matlabx.ui.axes.AxesTool
+%OVERLAYS Toolbar toggle for ImageAxes.OverlaysVisible.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Overlays < matlabx.ui.axes.AxesTool
-%OVERLAYS Toolbar toggle for ImageAxes.OverlaysVisible.
 
     properties (Access=private, Transient, NonCopyable)
         StateListener event.listener = event.listener.empty()

@@ -1,3 +1,12 @@
+classdef Image5D < handle
+    %IMAGE5D General multi-component image container with pluggable source.
+    %
+    % First-pass design:
+    %   - Public-facing image object
+    %   - Backed by an ImageSource
+    %   - Components are the primary abstraction
+    %   - Channel-style wrappers are available when ComponentsAreChannels is true
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,15 +22,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Image5D < handle
-    %IMAGE5D General multi-component image container with pluggable source.
-    %
-    % First-pass design:
-    %   - Public-facing image object
-    %   - Backed by an ImageSource
-    %   - Components are the primary abstraction
-    %   - Channel-style wrappers are available when ComponentsAreChannels is true
 
     properties (Access = private)
         Source_

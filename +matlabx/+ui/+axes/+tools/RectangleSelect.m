@@ -1,3 +1,15 @@
+classdef RectangleSelect < matlabx.ui.axes.AxesTool
+%RECTANGLESELECT Select overlays by dragging a temporary rectangle.
+%
+%   RectangleSelect is a transient selection tool. It does not create
+%   persistent overlays; it previews a desktop-style marquee rectangle while
+%   dragging, then asks ImageAxesOverlayManager which overlays fall inside.
+%
+%   Selection policy:
+%       click-drag          replace selection for TargetTypes
+%       shift-drag          toggle enclosed overlays in the selection
+%       alt-drag            remove enclosed overlays from selection
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,18 +25,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef RectangleSelect < matlabx.ui.axes.AxesTool
-%RECTANGLESELECT Select overlays by dragging a temporary rectangle.
-%
-%   RectangleSelect is a transient selection tool. It does not create
-%   persistent overlays; it previews a desktop-style marquee rectangle while
-%   dragging, then asks ImageAxesOverlayManager which overlays fall inside.
-%
-%   Selection policy:
-%       click-drag          replace selection for TargetTypes
-%       shift-drag          toggle enclosed overlays in the selection
-%       alt-drag            remove enclosed overlays from selection
 
     properties
         TargetTypes (1,:) string = "all"

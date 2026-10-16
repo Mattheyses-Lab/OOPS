@@ -1,3 +1,11 @@
+classdef Point < matlabx.ui.axes.ImageAxesOverlay
+%POINT Single point overlay for ImageAxes image-space annotations.
+%
+%   overlays.Point owns one marker at one [x y] image coordinate. It is the
+%   interactive counterpart to overlays.PointSet: PointSet is useful for
+%   passive detection previews, while Point is useful when tools need
+%   per-point identity, hover, active, and selection state.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Point < matlabx.ui.axes.ImageAxesOverlay
-%POINT Single point overlay for ImageAxes image-space annotations.
-%
-%   overlays.Point owns one marker at one [x y] image coordinate. It is the
-%   interactive counterpart to overlays.PointSet: PointSet is useful for
-%   passive detection previews, while Point is useful when tools need
-%   per-point identity, hover, active, and selection state.
 
     properties (SetObservable, AbortSet)
         Position (1,2) double = [NaN NaN]

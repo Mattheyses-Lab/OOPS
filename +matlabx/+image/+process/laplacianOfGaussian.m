@@ -1,3 +1,15 @@
+function [R,kernel] = laplacianOfGaussian(I,opts)
+%LAPLACIANOFGAUSSIAN Enhance bright blob-like structures with a LoG filter.
+%
+%   R = matlabx.image.process.laplacianOfGaussian(I) filters image I with a
+%   Laplacian-of-Gaussian kernel and returns a positive response image for
+%   bright blobs on a darker background.
+%
+%   [R,K] = matlabx.image.process.laplacianOfGaussian(...) also returns the
+%   filter kernel. Positive blob responses are produced by negating the LoG
+%   filtered image. If NormalizeScale is true, responses are multiplied by
+%   Sigma^2 so values are more comparable across scales.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,18 +25,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function [R,kernel] = laplacianOfGaussian(I,opts)
-%LAPLACIANOFGAUSSIAN Enhance bright blob-like structures with a LoG filter.
-%
-%   R = matlabx.image.process.laplacianOfGaussian(I) filters image I with a
-%   Laplacian-of-Gaussian kernel and returns a positive response image for
-%   bright blobs on a darker background.
-%
-%   [R,K] = matlabx.image.process.laplacianOfGaussian(...) also returns the
-%   filter kernel. Positive blob responses are produced by negating the LoG
-%   filtered image. If NormalizeScale is true, responses are multiplied by
-%   Sigma^2 so values are more comparable across scales.
 
     arguments
         % Image to filter.

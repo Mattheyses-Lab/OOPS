@@ -1,3 +1,8 @@
+function [ax,fig] = quickshow(I,opts)
+%QUICKSHOW  Shortcut for matlabx.app.quickshow
+%
+%   See also MATLABX.APP.QUICKSHOW
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,11 +18,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function [ax,fig] = quickshow(I,opts)
-%QUICKSHOW  Shortcut for matlabx.app.quickshow
-%
-%   See also MATLABX.APP.QUICKSHOW
 
     arguments
         I

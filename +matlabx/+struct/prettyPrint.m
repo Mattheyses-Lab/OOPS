@@ -1,3 +1,15 @@
+function txt = prettyPrint(S, opts)
+%PRETTYPRINT Format scalar struct contents as readable text.
+%   txt = PRETTYPRINT(S) returns formatted text for scalar struct S.
+%
+%   PRETTYPRINT(S) with no output prints to the command window.
+%
+%   Options:
+%       OutputType       - "char" (default) or "string"
+%       NameAlign        - "left" (default) or "right"
+%       IndentSize       - spaces per nesting level (default 4)
+%       StringArrayStyle - "inline" (default) or "lines"
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,18 +25,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function txt = prettyPrint(S, opts)
-%PRETTYPRINT Format scalar struct contents as readable text.
-%   txt = PRETTYPRINT(S) returns formatted text for scalar struct S.
-%
-%   PRETTYPRINT(S) with no output prints to the command window.
-%
-%   Options:
-%       OutputType       - "char" (default) or "string"
-%       NameAlign        - "left" (default) or "right"
-%       IndentSize       - spaces per nesting level (default 4)
-%       StringArrayStyle - "inline" (default) or "lines"
 
     arguments
         S (1,1) struct

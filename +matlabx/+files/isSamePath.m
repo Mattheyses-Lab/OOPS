@@ -1,3 +1,18 @@
+function tf = isSamePath(pathA, pathB)
+%ISSAMEPATH  Determine whether two paths refer to the same location
+%
+%   tf = matlabx.files.isSamePath(pathA,pathB) compares canonical forms of
+%   the supplied paths using platform-appropriate case sensitivity.
+%
+%   Either input may be a string array when the other input is scalar.
+%
+%   Inputs
+%       pathA - First file or folder path
+%       pathB - Second file or folder path
+%
+%   Output
+%       tf    - Logical comparison result
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,21 +28,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function tf = isSamePath(pathA, pathB)
-%ISSAMEPATH  Determine whether two paths refer to the same location
-%
-%   tf = matlabx.files.isSamePath(pathA,pathB) compares canonical forms of
-%   the supplied paths using platform-appropriate case sensitivity.
-%
-%   Either input may be a string array when the other input is scalar.
-%
-%   Inputs
-%       pathA - First file or folder path
-%       pathB - Second file or folder path
-%
-%   Output
-%       tf    - Logical comparison result
 
     pathA = matlabx.files.canonicalizePaths(pathA);
     pathB = matlabx.files.canonicalizePaths(pathB);

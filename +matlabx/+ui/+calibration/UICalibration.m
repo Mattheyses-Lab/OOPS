@@ -1,3 +1,18 @@
+classdef UICalibration < handle
+%UICALIBRATION  Small per-machine UI calibration cache for uifigure UIs
+%
+% Typical use:
+%   UIcal = matlabx.ui.calibration.UICalibration();
+%   UIcal.calibrate();  % call once on startup (after UI created is fine)
+%
+% Query:
+%   dH = UIcal.uipanelTopChromeHeightPx(14); % innerW - innerH for a square, titled uipanel
+%   px = UIcal.pt2px(12);
+%   pt = UIcal.px2pt(16);
+%
+% Notes:
+%   In active development, plan to add more calibrations
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,21 +28,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef UICalibration < handle
-%UICALIBRATION  Small per-machine UI calibration cache for uifigure UIs
-%
-% Typical use:
-%   UIcal = matlabx.ui.calibration.UICalibration();
-%   UIcal.calibrate();  % call once on startup (after UI created is fine)
-%
-% Query:
-%   dH = UIcal.uipanelTopChromeHeightPx(14); % innerW - innerH for a square, titled uipanel
-%   px = UIcal.pt2px(12);
-%   pt = UIcal.px2pt(16);
-%
-% Notes:
-%   In active development, plan to add more calibrations
 
     properties (SetAccess=private)
         % Core display scaling

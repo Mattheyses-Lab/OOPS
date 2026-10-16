@@ -1,3 +1,16 @@
+classdef Zoom < matlabx.ui.axes.AxesTool
+%ZOOM Zoom/cursor-follow navigation tool for matlabx.ui.axes.ImageAxes.
+%
+%   When enabled:
+%       meta-click           increase zoom
+%       meta-contextclick    decrease zoom
+%       space                toggle cursor-follow navigation
+%       scroll wheel    increase/decrease zoom
+%
+%   Zoom is intentionally non-exclusive so it can coexist with interaction
+%   tools such as Box or DrawRectangle. Its toggle hotkey is contributed to
+%   the host hotkey registry when the tool is installed.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,19 +26,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Zoom < matlabx.ui.axes.AxesTool
-%ZOOM Zoom/cursor-follow navigation tool for matlabx.ui.axes.ImageAxes.
-%
-%   When enabled:
-%       meta-click           increase zoom
-%       meta-contextclick    decrease zoom
-%       space                toggle cursor-follow navigation
-%       scroll wheel    increase/decrease zoom
-%
-%   Zoom is intentionally non-exclusive so it can coexist with interaction
-%   tools such as Box or DrawRectangle. Its toggle hotkey is contributed to
-%   the host hotkey registry when the tool is installed.
 
     properties
         ScrollEventsPerZoomStep (1,1) double {mustBeInteger, mustBePositive} = 1

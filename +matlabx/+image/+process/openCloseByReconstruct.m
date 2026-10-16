@@ -1,3 +1,6 @@
+function Iout = openCloseByReconstruct(I,se)
+%OPENCLOSEBYRECONSTRUCT Perform opening and closing by morphological reconstruction.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,8 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function Iout = openCloseByReconstruct(I,se)
 
     Ie = imerode(I,se);
     Iobr = imreconstruct(Ie,I);

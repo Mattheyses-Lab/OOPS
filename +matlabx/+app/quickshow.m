@@ -1,3 +1,6 @@
+function [ax,fig] = quickshow(I,opts)
+%QUICKSHOW Display image data in a new ImageAxes figure.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,7 +17,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-function [ax,fig] = quickshow(I,opts)
     arguments
         I
         opts.Colormap (256,3) double

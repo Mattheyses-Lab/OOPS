@@ -1,3 +1,7 @@
+function txt = formatKeyValueText(keys, values)
+%FORMATKEYVALUETEXT Formats two cell arrays of char vectors as a text table for display
+    % maximum length of the left column of text
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,9 +18,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-function txt = formatKeyValueText(keys, values)
-%FORMATKEYVALUETEXT Formats two cell arrays of char vectors as a text table for display
-    % maximum length of the left column of text
     maxLen = max(cellfun(@numel, keys));
     % add each line of the table to separate cell
     lines = cellfun(@(k,v) ...

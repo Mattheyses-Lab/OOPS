@@ -1,3 +1,14 @@
+function [points,info] = detectExtendedMaximaPuncta(I,opts)
+%DETECTEXTENDEDMAXIMAPUNCTA Detect puncta with extended regional maxima.
+%
+%   P = matlabx.image.measure.detectExtendedMaximaPuncta(I) suppresses
+%   shallow local maxima with imextendedmax and returns component centroids
+%   as N-by-2 [x y] coordinates.
+%
+%   Extended maxima are useful when ordinary regional maxima over-detect
+%   noisy plateaus. The H parameter is a contrast-like depth threshold:
+%   larger values retain only more prominent maxima.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,17 +24,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function [points,info] = detectExtendedMaximaPuncta(I,opts)
-%DETECTEXTENDEDMAXIMAPUNCTA Detect puncta with extended regional maxima.
-%
-%   P = matlabx.image.measure.detectExtendedMaximaPuncta(I) suppresses
-%   shallow local maxima with imextendedmax and returns component centroids
-%   as N-by-2 [x y] coordinates.
-%
-%   Extended maxima are useful when ordinary regional maxima over-detect
-%   noisy plateaus. The H parameter is a contrast-like depth threshold:
-%   larger values retain only more prominent maxima.
 
     arguments
         % Image to search for puncta candidates.

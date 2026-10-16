@@ -1,3 +1,33 @@
+classdef PlotAxes < matlab.ui.componentcontainer.ComponentContainer
+%PLOTAXES Stable axes host for transferable plot-content renderers.
+%
+% PlotAxes mirrors the host/content boundary used by ImageAxes without yet
+% reproducing its complete event and tool systems. The host owns the axes,
+% layout, and presentation state. A PlotContent object owns plot primitives
+% and can move between PlotAxes hosts without reparenting this container.
+%
+% PlotAxes registers once with FigureEventHub and forwards normalized events
+% to its mounted content. Keeping the axes stable gives the hub one durable
+% registrant per panel, independent of the currently mounted renderer.
+%
+% Create a host, prepare renderer data and style, then mount the renderer:
+%
+%   fig = uifigure;
+%   host = matlabx.ui.axes.PlotAxes(fig);
+%   renderer = matlabx.ui.axes.plot.ScatterRenderer;
+%   data = matlabx.ui.axes.plot.ScatterData( ...
+%       XData={[1 2 3]}, YData={[2 1 4]}, SeriesNames="Samples", ...
+%       CData={[0.2 0.5 0.8]});
+%   renderer.update(data,matlabx.ui.axes.plot.ScatterStyle(Title="Example"));
+%   host.mount(renderer);
+%
+% Content remains application-owned and reusable. clear detaches it without
+% deleting it, and mounting the same content in another PlotAxes transfers it.
+%
+% See also matlabx.ui.axes.PlotContent,
+% matlabx.ui.axes.plot.ScatterRenderer,
+% matlabx.ui.axes.plot.ViolinRenderer
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,37 +44,43 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef PlotAxes < matlab.ui.componentcontainer.ComponentContainer
-%PLOTAXES Stable axes host for transferable plot-content renderers.
-%
-% PlotAxes mirrors the host/content boundary used by ImageAxes without yet
-% reproducing its complete event and tool systems. The host owns the axes,
-% layout, and presentation state. A PlotContent object owns plot primitives
-% and can move between PlotAxes hosts without reparenting this container.
-%
-% Event routing and pluggable tools should attach here in the future. Keeping
-% the axes stable gives FigureEventHub one durable registrant per panel and
-% gives tools a host identity independent of the currently mounted renderer.
-
+    % Public host identity and appearance applied to the stable UIAxes.
     properties (AbortSet)
+        % Identifier assigned to the underlying axes Tag.
         Name (1,1) string = ""
+        % Foreground color used for rulers, labels, title, and subtitle.
         ForegroundColor (1,3) double = [0 0 0]
+        % Font size applied to the underlying axes.
         FontSize (1,1) double {mustBePositive} = 12
     end
 
+    % Read-only access to the mounted renderer and stable UIAxes.
     properties (Dependent, SetAccess=private)
+        % Application-owned PlotContent currently mounted in this host.
         Content
+        % Stable UIAxes used by renderers and future tools.
         Axes
     end
 
+    % Graphics, listener, and content references owned by the host lifecycle.
     properties (Access=private, Transient, NonCopyable)
+        % Grid containing the stable axes.
         Grid matlab.ui.container.GridLayout
+        % UIAxes retained while renderer content changes.
         MainAxes matlab.ui.control.UIAxes
+        % Listener that detaches content before axes graphics are destroyed.
         AxesLifetimeListener event.listener = event.listener.empty()
+        % Backing reference for the currently mounted content.
         Content_ (:,1) matlabx.ui.axes.PlotContent = matlabx.ui.axes.PlotContent.empty(0,1)
+        % Shared figure event router used by this stable host.
+        Hub matlabx.ui.interaction.FigureEventHub
+        % Registration identifier assigned by FigureEventHub.
+        RouterId double = NaN
     end
 
+    % Notifications emitted when the mounted content relationship changes.
     events
+        % Emitted after content is mounted, transferred, or cleared.
         ContentChanged
     end
 
@@ -116,13 +152,73 @@ classdef PlotAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function routeEvent(obj,kind,event)
-        %ROUTEEVENT Forward a normalized future hub event to mounted content.
-        % FigureEventHub registration is intentionally deferred. This method is
-        % the stable routing seam that PlotAxes tools and content can share.
+        %ROUTEEVENT Forward a normalized hub event to mounted content.
 
             if ~isempty(obj.Content_)
                 obj.Content_.handleEvent(string(kind),event);
             end
+        end
+
+        function tf = matches(obj,event)
+        %MATCHES Return whether a routed event belongs to the stable UIAxes.
+            tf = false;
+            target = event.Target;
+            if isempty(target)
+                return;
+            end
+
+            % Data-tip interaction can make hittest return internal opaque
+            % graphics objects. They support neither isvalid nor every normal
+            % handle operation, so keep the entire ancestry query guarded.
+            try
+                if isequal(target,obj.MainAxes)
+                    tf = true;
+                    return;
+                end
+                axes = ancestor(target,'matlab.ui.control.UIAxes');
+                tf = ~isempty(axes) && isequal(axes,obj.MainAxes);
+            catch
+            end
+        end
+
+        function onDown(obj,event)
+        %ONDOWN Forward a routed pointer-down event to mounted content.
+            obj.routeEvent("Down",event);
+        end
+
+        function onMove(obj,event)
+        %ONMOVE Forward a routed pointer-move event to mounted content.
+            obj.routeEvent("Move",event);
+        end
+
+        function onUp(obj,event)
+        %ONUP Forward a routed pointer-up event to mounted content.
+            obj.routeEvent("Up",event);
+        end
+
+        function onScroll(obj,event)
+        %ONSCROLL Forward a routed scroll event to mounted content.
+            obj.routeEvent("Scroll",event);
+        end
+
+        function onKeyPress(obj,event)
+        %ONKEYPRESS Forward a routed key-press event to mounted content.
+            obj.routeEvent("KeyPress",event);
+        end
+
+        function onKeyRelease(obj,event)
+        %ONKEYRELEASE Forward a routed key-release event to mounted content.
+            obj.routeEvent("KeyRelease",event);
+        end
+
+        function onEnter(obj,event)
+        %ONENTER Forward a routed pointer-enter event to mounted content.
+            obj.routeEvent("Enter",event);
+        end
+
+        function onLeave(obj,event)
+        %ONLEAVE Forward a routed pointer-leave event to mounted content.
+            obj.routeEvent("Leave",event);
         end
 
         function resetAxes(obj)
@@ -163,6 +259,9 @@ classdef PlotAxes < matlab.ui.componentcontainer.ComponentContainer
             axes.XTickLabelMode = 'auto';
             axes.YTickLabelMode = 'auto';
             axes.ZTickLabelMode = 'auto';
+            axes.XAxis.Visible = 'on';
+            axes.YAxis.Visible = 'on';
+            axes.ZAxis.Visible = 'off';
 
             % Restore general layout properties that plot types commonly alter.
             axes.DataAspectRatioMode = 'auto';
@@ -183,12 +282,23 @@ classdef PlotAxes < matlab.ui.componentcontainer.ComponentContainer
             axes.TickDir = 'in';
             axes.View = [0 90];
             axes.NextPlot = 'add';
+            axes.ColorOrderIndex = 1;
+
+            obj.applyHostAppearance();
         end
 
         function delete(obj)
-        %DELETE Detach content before MATLAB destroys the host axes.
+        %DELETE Unregister event routing and detach content before teardown.
 
             for k = 1:numel(obj)
+
+                try
+                    if ~isempty(obj(k).Hub) && isvalid(obj(k).Hub) && ...
+                            ~isnan(obj(k).RouterId)
+                        obj(k).Hub.unregister(obj(k).RouterId);
+                    end
+                catch
+                end
 
                 if ~isempty(obj(k).Content_)
                     obj(k).clear();
@@ -227,6 +337,7 @@ classdef PlotAxes < matlab.ui.componentcontainer.ComponentContainer
                 matlabx.ui.axes.plot.ViolinStyle(Title="Distributions",YLabel="Value"));
             hosts.First.mount(renderers.Scatter);
             hosts.Second.mount(renderers.Violin);
+            movegui(fig,"center");
             fig.Visible = opts.Visible;
         end
 
@@ -251,6 +362,10 @@ classdef PlotAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.MainAxes.Toolbar = axtoolbar(obj.MainAxes,{});
             obj.MainAxes.Tag = char(obj.Name);
 
+            fig = ancestor(obj.Parent,'figure');
+            obj.Hub = matlabx.ui.interaction.FigureEventHub.ensure(fig);
+            obj.RouterId = obj.Hub.register(obj,'Priority',10);
+
             % ComponentContainer can destroy children before the subclass delete
             % method runs. Detach at the axes destruction event while its owned
             % primitives can still be moved out of the graphics hierarchy.
@@ -265,15 +380,32 @@ classdef PlotAxes < matlab.ui.componentcontainer.ComponentContainer
                 return;
             end
 
+            obj.applyHostAppearance();
+            obj.MainAxes.Tag = char(obj.Name);
+        end
+
+    end
+
+    methods (Access=private)
+
+        function applyHostAppearance(obj)
+        %APPLYHOSTAPPEARANCE Restore colors and typography owned by PlotAxes.
+            if isempty(obj.MainAxes) || ~isvalid(obj.MainAxes) || ...
+                    obj.MainAxes.BeingDeleted == "on"
+                return;
+            end
+
             obj.Grid.BackgroundColor = obj.BackgroundColor;
             obj.MainAxes.Color = obj.BackgroundColor;
             obj.MainAxes.XColor = obj.ForegroundColor;
             obj.MainAxes.YColor = obj.ForegroundColor;
+            obj.MainAxes.ZColor = obj.ForegroundColor;
             obj.MainAxes.XLabel.Color = obj.ForegroundColor;
             obj.MainAxes.YLabel.Color = obj.ForegroundColor;
+            obj.MainAxes.ZLabel.Color = obj.ForegroundColor;
             obj.MainAxes.Title.Color = obj.ForegroundColor;
+            obj.MainAxes.Subtitle.Color = obj.ForegroundColor;
             obj.MainAxes.FontSize = obj.FontSize;
-            obj.MainAxes.Tag = char(obj.Name);
         end
 
     end

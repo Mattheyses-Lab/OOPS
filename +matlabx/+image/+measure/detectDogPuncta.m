@@ -1,3 +1,10 @@
+function [points,info] = detectDogPuncta(I,opts)
+%DETECTDOGPUNCTA Detect puncta candidates with Difference-of-Gaussians peaks.
+%
+%   P = matlabx.image.measure.detectDogPuncta(I) enhances puncta-like
+%   bright blobs with a Difference-of-Gaussians response image and returns
+%   local maxima as N-by-2 [x y] point coordinates.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +20,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function [points,info] = detectDogPuncta(I,opts)
-%DETECTDOGPUNCTA Detect puncta candidates with Difference-of-Gaussians peaks.
-%
-%   P = matlabx.image.measure.detectDogPuncta(I) enhances puncta-like
-%   bright blobs with a Difference-of-Gaussians response image and returns
-%   local maxima as N-by-2 [x y] point coordinates.
 
     arguments
         % Image to search for puncta candidates.

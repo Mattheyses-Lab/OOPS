@@ -1,3 +1,11 @@
+function options = decode(name)
+%DECODE Recover rendering options from an encoded icon basename or path.
+%   options = matlabx.ui.icon.decode("v1-circle-0072BD-16.svg") returns
+%   Shape, Color (eight-bit RGB divided by 255), and Size. No file is read.
+%   Directory components are ignored, including Windows separators when
+%   decoding a path saved on another platform. Only canonical MATLABX names
+%   are accepted; arbitrary SVG filenames/content cannot be decoded.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function options = decode(name)
-%DECODE Recover rendering options from an encoded icon basename or path.
-%   options = matlabx.ui.icon.decode("v1-circle-0072BD-16.svg") returns
-%   Shape, Color (eight-bit RGB divided by 255), and Size. No file is read.
-%   Directory components are ignored, including Windows separators when
-%   decoding a path saved on another platform. Only canonical MATLABX names
-%   are accepted; arbitrary SVG filenames/content cannot be decoded.
 
     arguments
         name (1,1) string {mustBeNonzeroLengthText}

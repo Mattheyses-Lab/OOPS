@@ -1,3 +1,11 @@
+function matrix_out = checkerboard(sz,Spacing)
+%CHECKERBOARD makes evenly spaced 'checkerboard' style matrix
+%
+%   INPUTS:
+%       sz      | (1,2) double | positive integer       | width/height of the output (square)
+%       Spacing | (1,1) double | positive, even integer | spacing between neighboring True pixels
+%
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function matrix_out = checkerboard(sz,Spacing)
-%CHECKERBOARD makes evenly spaced 'checkerboard' style matrix
-%
-%   INPUTS:
-%       sz      | (1,2) double | positive integer       | width/height of the output (square)
-%       Spacing | (1,1) double | positive, even integer | spacing between neighboring True pixels
-%
 
     nrows = sz(1);
     ncols = sz(2);

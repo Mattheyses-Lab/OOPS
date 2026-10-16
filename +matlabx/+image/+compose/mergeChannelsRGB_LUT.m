@@ -1,19 +1,3 @@
-% matlabx - MATLAB utilities for app building, image display, and analysis.
-% Copyright (C) 2026 William Dean
-%
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the Free
-% Software Foundation; either version 2 of the License, or (at your option)
-% any later version.
-%
-% This program is distributed in the hope that it will be useful, but WITHOUT
-% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-% details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, see <https://www.gnu.org/licenses/>.
-
 function RGB = mergeChannelsRGB_LUT(Icell, clim, cmaps)
 %MERGECHANNELSRGB_ADDLUT  Additively merge grayscale channels using per-channel colormaps.
 %
@@ -35,6 +19,22 @@ function RGB = mergeChannelsRGB_LUT(Icell, clim, cmaps)
 %     RGB = mergeChannelsRGB_addLUT({ch1,ch2}, [100 800; 50 400], {hot(256), cool(256)});
 %
 %   See also VECIND2RGB, IM2UINT8, RESCALELINEAR, COLORMAP
+
+% matlabx - MATLAB utilities for app building, image display, and analysis.
+% Copyright (C) 2026 William Dean
+%
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the Free
+% Software Foundation; either version 2 of the License, or (at your option)
+% any later version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+% details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, see <https://www.gnu.org/licenses/>.
 
     N = numel(Icell);
     assert(size(clim,1) == N && size(clim,2) == 2, 'clim must be Nx2.');

@@ -1,3 +1,11 @@
+classdef Line < matlabx.ui.axes.AxesTool
+%LINE Draw and manipulate line overlays in ImageAxes.
+%
+%   The Line tool is an interaction controller for overlays.Line. It creates
+%   line overlays by click-dragging endpoint to endpoint, activates existing
+%   lines, toggles selection, translates active lines from the midpoint marker,
+%   and adjusts endpoints from endpoint markers.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Line < matlabx.ui.axes.AxesTool
-%LINE Draw and manipulate line overlays in ImageAxes.
-%
-%   The Line tool is an interaction controller for overlays.Line. It creates
-%   line overlays by click-dragging endpoint to endpoint, activates existing
-%   lines, toggles selection, translates active lines from the midpoint marker,
-%   and adjusts endpoints from endpoint markers.
 
     properties
         LineColor = [1 1 1]

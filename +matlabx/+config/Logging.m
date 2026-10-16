@@ -1,3 +1,13 @@
+classdef Logging < handle
+%LOGGING Declarative logging policy for matlabx logging.
+%
+%   Level is the primary modern filtering control and means "minimum emitted
+%   level." Sink-specific Level/Detail values may be left empty to inherit the
+%   global Level/Detail.
+%
+%   ShowDebugOutput is retained for older settings files and code paths. It is
+%   only used to infer Level when Level has not been explicitly supplied.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,16 +23,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Logging < handle
-%LOGGING Declarative logging policy for matlabx logging.
-%
-%   Level is the primary modern filtering control and means "minimum emitted
-%   level." Sink-specific Level/Detail values may be left empty to inherit the
-%   global Level/Detail.
-%
-%   ShowDebugOutput is retained for older settings files and code paths. It is
-%   only used to infer Level when Level has not been explicitly supplied.
 
     properties (Dependent)
         Level (1,1) string

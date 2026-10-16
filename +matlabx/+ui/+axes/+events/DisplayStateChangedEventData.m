@@ -1,3 +1,11 @@
+classdef (ConstructOnLoad) DisplayStateChangedEventData < event.EventData
+    %DISPLAYSTATECHANGEDEVENTDATA Payload for ImageAxes display-state changes.
+    %
+    %   This event data is intentionally small. It identifies which
+    %   display-facing property changed and, when known, which component
+    %   indices were affected. Listeners that need complete current state
+    %   should query the ImageAxes object when they receive the event.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef (ConstructOnLoad) DisplayStateChangedEventData < event.EventData
-    %DISPLAYSTATECHANGEDEVENTDATA Payload for ImageAxes display-state changes.
-    %
-    %   This event data is intentionally small. It identifies which
-    %   display-facing property changed and, when known, which component
-    %   indices were affected. Listeners that need complete current state
-    %   should query the ImageAxes object when they receive the event.
 
     properties
         Property string = ""

@@ -1,3 +1,6 @@
+function snapAndRefresh(roi, ds)
+%SNAPANDREFRESH Snap a rectangle ROI and refresh its graphics.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function snapAndRefresh(roi, ds)
-%%SNAPANDREFRESH  Adjusts the Position of an images.roi.Rectangle such that width and height are multiples of ds
 
     % Current geometry
     pos   = roi.Position;               % [x y w h] in *unrotated* frame

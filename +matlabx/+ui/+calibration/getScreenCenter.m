@@ -1,3 +1,6 @@
+function sc = getScreenCenter(units)
+%GETSCREENCENTER Returns center (x,y) of usable area of screen in pixels
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function sc = getScreenCenter(units)
-%GETSCREENCENTER Returns center (x,y) of usable area of screen in pixels
 
     arguments
         units (1,:) char {mustBeMember(units,{'pixels','inches','points'})} = 'pixels'

@@ -1,3 +1,19 @@
+function write16BitTiff(I,filename,Options)
+%WRITE16BITTIFF Write image data as a 16-bit TIFF file.
+%   at the location specified by filename
+%
+%   INPUTS:
+%       I (:,:,:) double, single, uint8, uint16 - 2D or 3D image to write to 16-bit TIFF with 1 or more planes
+%       filename (1,:) char - full filename specifying the location of the TIFF
+%       mode (1,1) char - scalar specifying how the TIFF should be opened
+%           mode = 'w' | open file for writing, discard existing contents
+%           mode = 'a' | open or create file for writing, append
+%
+%   OUTPUTS:
+%       none
+%
+%   See also Tiff
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,22 +29,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function write16BitTiff(I,filename,Options)
-%%  write16BitTiff  Writes the 2D or 3D matrix, I, to a single channel 16-bit TIFF file
-%   at the location specified by filename
-%
-%   INPUTS:
-%       I (:,:,:) double, single, uint8, uint16 - 2D or 3D image to write to 16-bit TIFF with 1 or more planes
-%       filename (1,:) char - full filename specifying the location of the TIFF
-%       mode (1,1) char - scalar specifying how the TIFF should be opened
-%           mode = 'w' | open file for writing, discard existing contents
-%           mode = 'a' | open or create file for writing, append
-%
-%   OUTPUTS:
-%       none
-%
-%   See also Tiff
 
 arguments
     I (:,:,:) {mustBeNumeric(I)}
@@ -48,7 +48,7 @@ t = Tiff(filename, Options.mode);
 % set tags
 t.setTag('ImageLength',size(I, 1));
 t.setTag('ImageWidth',size(I, 2));
-t.setTag('Photometric',Tiff.Photometric.MinIsBlack);   
+t.setTag('Photometric',Tiff.Photometric.MinIsBlack);
 t.setTag('Compression',Tiff.Compression.None);
 t.setTag('SampleFormat',Tiff.SampleFormat.UInt);
 t.setTag('BitsPerSample',16);

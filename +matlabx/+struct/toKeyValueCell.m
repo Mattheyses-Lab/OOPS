@@ -1,3 +1,9 @@
+function kv = toKeyValueCell(S)
+%MATLABX.STRUCT.TOKEYVALUECELL  Convert a scalar struct to key-value pairs.
+%
+%   kv = matlabx.struct.toKeyValueCell(S) returns a 1-by-(2N) cell array containing
+%   alternating field names and values from the scalar struct S.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,12 +19,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function kv = toKeyValueCell(S)
-%MATLABX.STRUCT.TOKEYVALUECELL  Convert a scalar struct to key-value pairs.
-%
-%   kv = matlabx.struct.toKeyValueCell(S) returns a 1-by-(2N) cell array containing
-%   alternating field names and values from the scalar struct S.
 
     arguments
         S (1,1) struct

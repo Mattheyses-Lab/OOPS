@@ -1,3 +1,6 @@
+classdef SliderThumb < handle
+%SLIDERTHUMB Internal draggable thumb used by MATLABX sliders.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef SliderThumb < handle
-%%  SLIDERTHUMB draggable thumb used by uislidereditfield
 
     properties
         ID
@@ -119,7 +119,7 @@ classdef SliderThumb < handle
                 'MarkerFaceColor',obj.FaceColor,...
                 'MarkerEdgeColor',obj.EdgeColor,...
                 'LineWidth',obj.EdgeWidth);
-            
+
             if obj.isSelected
                 obj.thumb.MarkerSize = obj.Size2; % Increase size when selected
             else

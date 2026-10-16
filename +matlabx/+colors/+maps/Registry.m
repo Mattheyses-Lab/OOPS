@@ -1,3 +1,12 @@
+classdef Registry
+%REGISTRY Discover and retrieve registered MATLABX colormaps.
+    % Directory/runtime colormap registry.
+    %
+    % File-backed maps live in assets/colormaps/<Category>/*.mat. The MATLAB
+    % category is generated at runtime from MATLAB's built-in colormap
+    % functions so matlabx does not redistribute MathWorks colormap data.
+    % Values are matlabx.colors.maps.Colormap objects.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +22,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Registry
-    % Directory/runtime colormap registry.
-    %
-    % File-backed maps live in assets/colormaps/<Category>/*.mat. The MATLAB
-    % category is generated at runtime from MATLAB's built-in colormap
-    % functions so matlabx does not redistribute MathWorks colormap data.
-    % Values are matlabx.colors.maps.Colormap objects.
 
     methods (Static)
         function refresh()

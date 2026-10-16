@@ -1,3 +1,12 @@
+classdef Line < matlabx.ui.axes.ImageAxesOverlay
+%LINE Two-endpoint line overlay for ImageAxes image-space annotations.
+%
+%   overlays.Line owns a line segment plus an optional marker layer. Geometry is
+%   stored as two endpoints. Marker geometry is normalized as
+%   endpoint1 -> midpoint -> endpoint2 so tools can use the same overlay for
+%   endpoint handles, midpoint dragging, hover feedback, and active-state
+%   editing.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,15 +22,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Line < matlabx.ui.axes.ImageAxesOverlay
-%LINE Two-endpoint line overlay for ImageAxes image-space annotations.
-%
-%   overlays.Line owns a line segment plus an optional marker layer. Geometry is
-%   stored as two endpoints. Marker geometry is normalized as
-%   endpoint1 -> midpoint -> endpoint2 so tools can use the same overlay for
-%   endpoint handles, midpoint dragging, hover feedback, and active-state
-%   editing.
 
     properties (SetObservable, AbortSet)
         Endpoints (2,2) double = [NaN NaN; NaN NaN]

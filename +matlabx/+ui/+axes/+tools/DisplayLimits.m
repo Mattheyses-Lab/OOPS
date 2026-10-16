@@ -1,3 +1,10 @@
+classdef DisplayLimits < matlabx.ui.axes.AxesTool
+%DISPLAYLIMITS Open the ImageAxes display-limits adjustment window.
+%
+%   DisplayLimits is a push-style toolbar tool. It does not own the slider
+%   dialog or display-limit state; it simply asks its ImageAxes host to open
+%   the host-owned display-limits window.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +20,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef DisplayLimits < matlabx.ui.axes.AxesTool
-%DISPLAYLIMITS Open the ImageAxes display-limits adjustment window.
-%
-%   DisplayLimits is a push-style toolbar tool. It does not own the slider
-%   dialog or display-limit state; it simply asks its ImageAxes host to open
-%   the host-owned display-limits window.
 
     methods
         function obj = DisplayLimits(host)

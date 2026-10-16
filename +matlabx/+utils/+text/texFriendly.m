@@ -1,3 +1,6 @@
+function out = texFriendly(str)
+%TEXFRIENDLY Escape text for display with the TeX interpreter.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,8 +17,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-function out = texFriendly(str)
-%%TEXFRIENDLY  Converts underscore-containing strings to a format compatible with tex interpreter
     nameSplit = strsplit(str,'_');
     out = convertCharsToStrings(strjoin(nameSplit,"\_"));
 end
