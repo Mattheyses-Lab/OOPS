@@ -100,11 +100,20 @@ classdef ViolinRenderer < matlabx.ui.axes.PlotContent
                 plot.setData(ones(size(data.Values{k}))*ticks(k), ...
                     data.Values{k},data.CData{k});
                 plot.Name = char(data.SeriesNames(k));
-                group = categorical(repmat(data.SeriesNames(k), ...
-                    numel(data.Values{k}),1));
-                plot.DataTipCell = {{"Series","Value"}, ...
-                    {group,data.Values{k}}};
+                if isempty(data.DataTipCells{k})
+                    group = categorical(repmat(data.SeriesNames(k), ...
+                        numel(data.Values{k}),1));
+                    plot.DataTipCell = {{"Series","Value"}, ...
+                        {group,data.Values{k}}};
+                else
+                    plot.DataTipCell = data.DataTipCells{k};
+                end
                 plot.DataTipFormat = style.DataTipFormat;
+                if isempty(data.SummaryDataTipCells{k})
+                    plot.SummaryDataTipCell = {{},{}};
+                else
+                    plot.SummaryDataTipCell = data.SummaryDataTipCells{k};
+                end
                 plot.MarkerSize = style.MarkerSize;
                 plot.MarkerLineWidth = style.MarkerLineWidth;
                 if style.MarkerFaceColorMode == "CData"

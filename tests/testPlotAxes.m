@@ -232,6 +232,41 @@ function testRoutedDataTips(t)
     t.verifyFalse(host.matches(event));
 end
 
+function testDataOwnedDataTipTemplates(t)
+    host=t.TestData.A;
+    scatterRenderer=t.TestData.Scatter;
+    scatterRenderer.setData(matlabx.ui.axes.plot.ScatterData( ...
+        XData={1:4},YData={[2 4 3 5]},SeriesNames="Samples",CData={[1 0 0]}, ...
+        DataTipCells={{{"Point","Response"},{"P"+(1:4),[2 4 3 5]}}}));
+    host.mount(scatterRenderer);
+    points=findobj(host.Axes,'Type','scatter','Tag','');
+    labels=string({points.DataTipTemplate.DataTipRows.Label});
+    t.verifyEqual(labels,["Point","Response"]);
+
+    violinRenderer=t.TestData.Violin;
+    violinRenderer.setData(matlabx.ui.axes.plot.ViolinData( ...
+        Values={[1 2 3 4]},SeriesNames="Control",CData={[0 0 1]}, ...
+        DataTipCells={{{"Sample","Measurement"},{"S"+(1:4),[1 2 3 4]}}}, ...
+        SummaryDataTipCells={{{"Condition","Score"},{"Control",0.875}}}));
+    host.mount(violinRenderer);
+    points=findobj(host.Axes,'Type','scatter','Tag','');
+    summary=findobj(host.Axes,'Tag','ViolinCentralStatistic');
+    t.verifyEqual(string({points.DataTipTemplate.DataTipRows.Label}), ...
+        ["Sample","Measurement"]);
+    t.verifyEqual(string({summary.DataTipTemplate.DataTipRows.Label}), ...
+        ["Condition","Score"]);
+
+    % Empty template entries request renderer-generated defaults and must
+    % clear custom templates retained by reused low-level plot objects.
+    violinRenderer.setData(matlabx.ui.axes.plot.ViolinData( ...
+        Values={[5 6 7]},SeriesNames="Updated",CData={[0 1 0]}));
+    t.verifyEqual(string({points.DataTipTemplate.DataTipRows.Label}), ...
+        ["Series","Value"]);
+    summaryLabels=string({summary.DataTipTemplate.DataTipRows.Label});
+    t.verifyTrue(all(ismember(["Series","n","Mean","SD","Max","Min"], ...
+        summaryLabels)));
+end
+
 function testHoverDataTipsAreTemporaryAndClicksAreRetained(t)
     host=t.TestData.A;
     host.mount(t.TestData.Scatter);

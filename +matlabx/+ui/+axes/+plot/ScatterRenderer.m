@@ -98,10 +98,14 @@ classdef ScatterRenderer < matlabx.ui.axes.PlotContent
                 plot.HullVisible = 'off';
                 plot.setData(data.XData{k},data.YData{k},data.CData{k});
                 plot.Name = char(data.SeriesNames(k));
-                series = categorical(repmat(data.SeriesNames(k), ...
-                    numel(data.XData{k}),1));
-                plot.DataTipCell = {{"Series","X","Y"}, ...
-                    {series,data.XData{k},data.YData{k}}};
+                if isempty(data.DataTipCells{k})
+                    series = categorical(repmat(data.SeriesNames(k), ...
+                        numel(data.XData{k}),1));
+                    plot.DataTipCell = {{"Series","X","Y"}, ...
+                        {series,data.XData{k},data.YData{k}}};
+                else
+                    plot.DataTipCell = data.DataTipCells{k};
+                end
                 plot.DataTipFormat = style.DataTipFormat;
                 plot.MarkerSize = style.MarkerSize;
                 plot.MarkerLineWidth = style.MarkerLineWidth;

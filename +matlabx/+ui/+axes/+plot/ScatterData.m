@@ -10,7 +10,12 @@ classdef ScatterData
 %       CData={[0.2 0.5 0.8],[0.8 0.3 0.2]});
 %
 % CData entries may be one RGB triplet, one scalar per point, or one RGB
-% triplet per point.
+% triplet per point. DataTipCells optionally supplies one {labels,values}
+% template per group; an empty entry uses the renderer-generated default.
+%
+%   data = matlabx.ui.axes.plot.ScatterData( ...
+%       XData={x},YData={y},SeriesNames="Samples",CData={[0 0.45 0.74]}, ...
+%       DataTipCells={{{"Sample","Response"},{sampleIDs,y}}});
 %
 % See also matlabx.ui.axes.plot.ScatterRenderer,
 % matlabx.ui.axes.plot.ScatterStyle
@@ -41,6 +46,8 @@ classdef ScatterData
         SeriesNames (:,1) string = "No data"
         % Scalar or RGB color payload with one entry per group.
         CData (:,1) cell = {NaN}
+        % Optional {labels,values} data-tip template for each group.
+        DataTipCells (:,1) cell = {[]}
     end
 
     methods
@@ -53,12 +60,15 @@ classdef ScatterData
                 opts.YData cell = {NaN}
                 opts.SeriesNames string = "No data"
                 opts.CData cell = {NaN}
+                opts.DataTipCells cell = {}
             end
 
             obj.XData = normalizeNumericCells(opts.XData,"XData");
             obj.YData = normalizeNumericCells(opts.YData,"YData");
             obj.SeriesNames = string(opts.SeriesNames(:));
             obj.CData = normalizeColorCells(opts.CData);
+            obj.DataTipCells = normalizeDataTipCells( ...
+                opts.DataTipCells,numel(obj.XData));
             obj.validateAlignment();
         end
 
@@ -72,9 +82,11 @@ classdef ScatterData
             count = numel(obj.XData);
 
             if numel(obj.YData) ~= count || ...
-                    numel(obj.SeriesNames) ~= count || numel(obj.CData) ~= count
+                    numel(obj.SeriesNames) ~= count || numel(obj.CData) ~= count || ...
+                    numel(obj.DataTipCells) ~= count
                 error('matlabx:ui:axes:plot:ScatterDataGroupCountMismatch', ...
-                    'XData, YData, SeriesNames, and CData must have equal group counts.');
+                    ['XData, YData, SeriesNames, CData, and DataTipCells ' ...
+                    'must have equal group counts.']);
             end
 
             for k = 1:count
@@ -86,11 +98,44 @@ classdef ScatterData
                 end
 
                 validateColorCount(obj.CData{k},pointCount,k);
+                validateDataTipCell(obj.DataTipCells{k},pointCount,k);
             end
         end
 
     end
 
+end
+
+function templates = normalizeDataTipCells(templates,count)
+%NORMALIZEDATATIPCELLS Expand omitted templates to one empty entry per group.
+    if isempty(templates)
+        templates = repmat({[]},count,1);
+    else
+        templates = templates(:);
+    end
+end
+
+function validateDataTipCell(template,pointCount,index)
+%VALIDATEDATATIPCELL Validate one optional group-aligned point template.
+    if isempty(template)
+        return;
+    end
+    if ~iscell(template) || ~isequal(size(template),[1 2]) || ...
+            ~iscell(template{1}) || ~iscell(template{2}) || ...
+            isempty(template{1}) || numel(template{1}) ~= numel(template{2})
+        error('matlabx:ui:axes:plot:InvalidScatterDataTipCell', ...
+            'DataTipCells group %d must contain a nonempty {labels,values} template.',index);
+    end
+    for row = 1:numel(template{2})
+        value = template{2}{row};
+        if ischar(value) || isscalar(value) || isa(value,'function_handle')
+            continue;
+        end
+        if numel(value) ~= pointCount
+            error('matlabx:ui:axes:plot:ScatterDataTipCountMismatch', ...
+                'Data-tip row %d in group %d must be scalar or point-aligned.',row,index);
+        end
+    end
 end
 
 function values = normalizeNumericCells(values,name)
