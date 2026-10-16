@@ -29,7 +29,7 @@ classdef PolarHistogramRenderer < matlabx.ui.axes.PlotContent
             if isempty(obj.Plot) || ~isvalid(obj.Plot)
                 obj.Plot = oops.plot.PolarHistogram(obj.Host.Axes);
             else
-                obj.Plot.setParent(obj.Host.Axes);
+                obj.Plot.Parent = obj.Host.Axes;
             end
 
             obj.Host.BackgroundColor = obj.Style.BackgroundColor;
@@ -47,7 +47,7 @@ classdef PolarHistogramRenderer < matlabx.ui.axes.PlotContent
     methods (Access=protected)
         function attachGraphics(obj,axes)
         %ATTACHGRAPHICS Move the existing primitive collection to its new host.
-            if ~isempty(obj.Plot) && isvalid(obj.Plot), obj.Plot.setParent(axes); end
+            if ~isempty(obj.Plot) && isvalid(obj.Plot), obj.Plot.Parent = axes; end
         end
 
         function hideGraphics(obj)

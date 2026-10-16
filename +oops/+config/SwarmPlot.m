@@ -12,8 +12,13 @@ classdef SwarmPlot < handle
         YVariable_ (1,1) string = "OrderMean"
         BackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor_,0,1)} = [1.0 1.0 1.0]
         ForegroundColor_ (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor_,0,1)} = [0.0 0.0 0.0]
+        DataTipFormat_ (1,1) string = "%.2f"
         MarkerFaceAlpha_ (1,1) double {mustBeFinite,mustBeInRange(MarkerFaceAlpha_,0,1)} = 1.0
         MarkerSize_ (1,1) double {mustBeFinite,mustBePositive} = 50.0
+        MarkerLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 0.5
+        MarkerFaceColorMode_ (1,1) string = "CData"
+        MarkerFaceColor_ (1,3) double {mustBeFinite,mustBeInRange(MarkerFaceColor_,0,1)} = [0.0 0.4470 0.7410]
+        MarkerEdgeAlpha_ (1,1) double {mustBeFinite,mustBeInRange(MarkerEdgeAlpha_,0,1)} = 1.0
         ErrorBarsVisible_ (1,1) logical = true
         PointsVisible_ (1,1) logical = true
         MarkerEdgeColorMode_ (1,1) string = "Custom"
@@ -26,6 +31,12 @@ classdef SwarmPlot < handle
         ErrorBarsColor_ (1,3) double {mustBeFinite,mustBeInRange(ErrorBarsColor_,0,1)} = [0.0 0.0 0.0]
         ErrorBarsColorMode_ (1,1) string = "Custom"
         ViolinOutlinesVisible_ (1,1) logical = true
+        ViolinLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
+        ViolinEdgeAlpha_ (1,1) double {mustBeFinite,mustBeInRange(ViolinEdgeAlpha_,0,1)} = 1.0
+        CentralStatistic_ (1,1) string = "mean"
+        ErrorStatistic_ (1,1) string = "std"
+        ErrorBarsLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
+        CentralStatLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
     end
 
     properties (Dependent)
@@ -34,8 +45,13 @@ classdef SwarmPlot < handle
         YVariable
         BackgroundColor
         ForegroundColor
+        DataTipFormat
         MarkerFaceAlpha
         MarkerSize
+        MarkerLineWidth
+        MarkerFaceColorMode
+        MarkerFaceColor
+        MarkerEdgeAlpha
         ErrorBarsVisible
         PointsVisible
         MarkerEdgeColorMode
@@ -48,6 +64,12 @@ classdef SwarmPlot < handle
         ErrorBarsColor
         ErrorBarsColorMode
         ViolinOutlinesVisible
+        ViolinLineWidth
+        ViolinEdgeAlpha
+        CentralStatistic
+        ErrorStatistic
+        ErrorBarsLineWidth
+        CentralStatLineWidth
     end
 
     events
@@ -119,6 +141,18 @@ classdef SwarmPlot < handle
             obj.setValue("ForegroundColor",v);
         end
 
+        function v = get.DataTipFormat(obj)
+        %GET.DATATIPFORMAT Return the numeric data-tip display format.
+
+            v = obj.DataTipFormat_;
+        end
+
+        function set.DataTipFormat(obj,v)
+        %SET.DATATIPFORMAT Store and notify a data-tip format change.
+
+            obj.setValue("DataTipFormat",v);
+        end
+
         function v = get.MarkerFaceAlpha(obj)
         %GET.MARKERFACEALPHA Return the stored MarkerFaceAlpha setting.
 
@@ -141,6 +175,55 @@ classdef SwarmPlot < handle
         %SET.MARKERSIZE Validate, store, and notify a SwarmPlot setting change.
 
             obj.setValue("MarkerSize",v);
+        end
+
+        function v = get.MarkerLineWidth(obj)
+        %GET.MARKERLINEWIDTH Return the point marker edge width.
+
+            v = obj.MarkerLineWidth_;
+        end
+
+        function set.MarkerLineWidth(obj,v)
+        %SET.MARKERLINEWIDTH Store and notify a marker width change.
+
+            obj.setValue("MarkerLineWidth",v);
+        end
+
+        function v = get.MarkerFaceColorMode(obj)
+        %GET.MARKERFACECOLORMODE Return how point faces obtain their colors.
+
+            v = obj.MarkerFaceColorMode_;
+        end
+
+        function set.MarkerFaceColorMode(obj,v)
+        %SET.MARKERFACECOLORMODE Store and notify a marker face mode change.
+
+            obj.setValue("MarkerFaceColorMode",v);
+        end
+
+        function v = get.MarkerFaceColor(obj)
+        %GET.MARKERFACECOLOR Return the custom point face color.
+
+            v = obj.MarkerFaceColor_;
+        end
+
+        function set.MarkerFaceColor(obj,v)
+        %SET.MARKERFACECOLOR Store and notify a custom point face color change.
+
+            v = reshape(v,1,[]); % JSON decodes vector fields as columns.
+            obj.setValue("MarkerFaceColor",v);
+        end
+
+        function v = get.MarkerEdgeAlpha(obj)
+        %GET.MARKEREDGEALPHA Return the point marker edge opacity.
+
+            v = obj.MarkerEdgeAlpha_;
+        end
+
+        function set.MarkerEdgeAlpha(obj,v)
+        %SET.MARKEREDGEALPHA Store and notify a point edge opacity change.
+
+            obj.setValue("MarkerEdgeAlpha",v);
         end
 
         function v = get.ErrorBarsVisible(obj)
@@ -291,6 +374,78 @@ classdef SwarmPlot < handle
             obj.setValue("ViolinOutlinesVisible",v);
         end
 
+        function v = get.ViolinLineWidth(obj)
+        %GET.VIOLINLINEWIDTH Return the violin outline width.
+
+            v = obj.ViolinLineWidth_;
+        end
+
+        function set.ViolinLineWidth(obj,v)
+        %SET.VIOLINLINEWIDTH Store and notify a violin width change.
+
+            obj.setValue("ViolinLineWidth",v);
+        end
+
+        function v = get.ViolinEdgeAlpha(obj)
+        %GET.VIOLINEDGEALPHA Return the violin outline opacity.
+
+            v = obj.ViolinEdgeAlpha_;
+        end
+
+        function set.ViolinEdgeAlpha(obj,v)
+        %SET.VIOLINEDGEALPHA Store and notify a violin opacity change.
+
+            obj.setValue("ViolinEdgeAlpha",v);
+        end
+
+        function v = get.CentralStatistic(obj)
+        %GET.CENTRALSTATISTIC Return the central statistic shown for each series.
+
+            v = obj.CentralStatistic_;
+        end
+
+        function set.CentralStatistic(obj,v)
+        %SET.CENTRALSTATISTIC Store and notify a central statistic change.
+
+            obj.setValue("CentralStatistic",v);
+        end
+
+        function v = get.ErrorStatistic(obj)
+        %GET.ERRORSTATISTIC Return the interval statistic shown for each series.
+
+            v = obj.ErrorStatistic_;
+        end
+
+        function set.ErrorStatistic(obj,v)
+        %SET.ERRORSTATISTIC Store and notify an interval statistic change.
+
+            obj.setValue("ErrorStatistic",v);
+        end
+
+        function v = get.ErrorBarsLineWidth(obj)
+        %GET.ERRORBARSLINEWIDTH Return the summary interval line width.
+
+            v = obj.ErrorBarsLineWidth_;
+        end
+
+        function set.ErrorBarsLineWidth(obj,v)
+        %SET.ERRORBARSLINEWIDTH Store and notify an interval width change.
+
+            obj.setValue("ErrorBarsLineWidth",v);
+        end
+
+        function v = get.CentralStatLineWidth(obj)
+        %GET.CENTRALSTATLINEWIDTH Return the central statistic line width.
+
+            v = obj.CentralStatLineWidth_;
+        end
+
+        function set.CentralStatLineWidth(obj,v)
+        %SET.CENTRALSTATLINEWIDTH Store and notify a central line width change.
+
+            obj.setValue("CentralStatLineWidth",v);
+        end
+
         function S = toStruct(obj)
         %TOSTRUCT Serialize values without listeners or graphics objects.
 
@@ -300,8 +455,13 @@ classdef SwarmPlot < handle
                 'YVariable',obj.YVariable, ...
                 'BackgroundColor',obj.BackgroundColor, ...
                 'ForegroundColor',obj.ForegroundColor, ...
+                'DataTipFormat',obj.DataTipFormat, ...
                 'MarkerFaceAlpha',obj.MarkerFaceAlpha, ...
                 'MarkerSize',obj.MarkerSize, ...
+                'MarkerLineWidth',obj.MarkerLineWidth, ...
+                'MarkerFaceColorMode',obj.MarkerFaceColorMode, ...
+                'MarkerFaceColor',obj.MarkerFaceColor, ...
+                'MarkerEdgeAlpha',obj.MarkerEdgeAlpha, ...
                 'ErrorBarsVisible',obj.ErrorBarsVisible, ...
                 'PointsVisible',obj.PointsVisible, ...
                 'MarkerEdgeColorMode',obj.MarkerEdgeColorMode, ...
@@ -313,7 +473,13 @@ classdef SwarmPlot < handle
                 'ViolinFaceColor',obj.ViolinFaceColor, ...
                 'ErrorBarsColor',obj.ErrorBarsColor, ...
                 'ErrorBarsColorMode',obj.ErrorBarsColorMode, ...
-                'ViolinOutlinesVisible',obj.ViolinOutlinesVisible);
+                'ViolinOutlinesVisible',obj.ViolinOutlinesVisible, ...
+                'ViolinLineWidth',obj.ViolinLineWidth, ...
+                'ViolinEdgeAlpha',obj.ViolinEdgeAlpha, ...
+                'CentralStatistic',obj.CentralStatistic, ...
+                'ErrorStatistic',obj.ErrorStatistic, ...
+                'ErrorBarsLineWidth',obj.ErrorBarsLineWidth, ...
+                'CentralStatLineWidth',obj.CentralStatLineWidth);
         end
 
         function fromStruct(obj,S)

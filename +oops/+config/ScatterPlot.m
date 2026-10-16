@@ -12,7 +12,11 @@ classdef ScatterPlot < handle
         BackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor_,0,1)} = [1.0 1.0 1.0]
         ForegroundColor_ (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor_,0,1)} = [0.0 0.0 0.0]
         LegendVisible_ (1,1) logical = false
+        DataTipFormat_ (1,1) string = "%.2f"
         MarkerSize_ (1,1) double {mustBeFinite,mustBePositive} = 50.0
+        MarkerLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 0.5
+        MarkerFaceColorMode_ (1,1) string = "CData"
+        MarkerFaceColor_ (1,3) double {mustBeFinite,mustBeInRange(MarkerFaceColor_,0,1)} = [0.0 0.4470 0.7410]
         ColorMode_ (1,1) string = "Group"
         MarkerFaceAlpha_ (1,1) double {mustBeFinite,mustBeInRange(MarkerFaceAlpha_,0,1)} = 1.0
         HullLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
@@ -37,7 +41,11 @@ classdef ScatterPlot < handle
         BackgroundColor
         ForegroundColor
         LegendVisible
+        DataTipFormat
         MarkerSize
+        MarkerLineWidth
+        MarkerFaceColorMode
+        MarkerFaceColor
         ColorMode
         MarkerFaceAlpha
         HullLineWidth
@@ -125,6 +133,18 @@ classdef ScatterPlot < handle
             obj.setValue("LegendVisible",v);
         end
 
+        function v = get.DataTipFormat(obj)
+        %GET.DATATIPFORMAT Return the numeric data-tip display format.
+
+            v = obj.DataTipFormat_;
+        end
+
+        function set.DataTipFormat(obj,v)
+        %SET.DATATIPFORMAT Store and notify a data-tip format change.
+
+            obj.setValue("DataTipFormat",v);
+        end
+
         function v = get.MarkerSize(obj)
         %GET.MARKERSIZE Return the stored MarkerSize setting.
 
@@ -135,6 +155,43 @@ classdef ScatterPlot < handle
         %SET.MARKERSIZE Validate, store, and notify a ScatterPlot setting change.
 
             obj.setValue("MarkerSize",v);
+        end
+
+        function v = get.MarkerLineWidth(obj)
+        %GET.MARKERLINEWIDTH Return the scatter marker edge width.
+
+            v = obj.MarkerLineWidth_;
+        end
+
+        function set.MarkerLineWidth(obj,v)
+        %SET.MARKERLINEWIDTH Store and notify a marker width change.
+
+            obj.setValue("MarkerLineWidth",v);
+        end
+
+        function v = get.MarkerFaceColorMode(obj)
+        %GET.MARKERFACECOLORMODE Return how marker faces obtain their colors.
+
+            v = obj.MarkerFaceColorMode_;
+        end
+
+        function set.MarkerFaceColorMode(obj,v)
+        %SET.MARKERFACECOLORMODE Store and notify a marker face mode change.
+
+            obj.setValue("MarkerFaceColorMode",v);
+        end
+
+        function v = get.MarkerFaceColor(obj)
+        %GET.MARKERFACECOLOR Return the custom marker face color.
+
+            v = obj.MarkerFaceColor_;
+        end
+
+        function set.MarkerFaceColor(obj,v)
+        %SET.MARKERFACECOLOR Store and notify a custom marker face color change.
+
+            v = reshape(v,1,[]); % JSON decodes vector fields as columns.
+            obj.setValue("MarkerFaceColor",v);
         end
 
         function v = get.ColorMode(obj)
@@ -341,7 +398,11 @@ classdef ScatterPlot < handle
                 'BackgroundColor',obj.BackgroundColor, ...
                 'ForegroundColor',obj.ForegroundColor, ...
                 'LegendVisible',obj.LegendVisible, ...
+                'DataTipFormat',obj.DataTipFormat, ...
                 'MarkerSize',obj.MarkerSize, ...
+                'MarkerLineWidth',obj.MarkerLineWidth, ...
+                'MarkerFaceColorMode',obj.MarkerFaceColorMode, ...
+                'MarkerFaceColor',obj.MarkerFaceColor, ...
                 'ColorMode',obj.ColorMode, ...
                 'MarkerFaceAlpha',obj.MarkerFaceAlpha, ...
                 'HullLineWidth',obj.HullLineWidth, ...

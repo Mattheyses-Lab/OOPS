@@ -5,11 +5,12 @@
 classdef PolarHistogram < handle
 %POLARHISTOGRAM Own the Cartesian primitives for one polar histogram.
 
-    properties (SetAccess=private)
-        Parent matlab.graphics.axis.AbstractAxes = matlab.graphics.axis.AbstractAxes.empty()
+    properties (Dependent)
+        Parent
     end
 
     properties (Access=private)
+        Parent_ matlab.graphics.axis.AbstractAxes = matlab.graphics.axis.AbstractAxes.empty()
         Circle
         RadialGrid
         AngularGrid
@@ -20,21 +21,21 @@ classdef PolarHistogram < handle
     methods
         function obj = PolarHistogram(parent)
         %POLARHISTOGRAM Create the reusable primitive set on a Cartesian axes.
-            if nargin > 0, obj.setParent(parent); end
+            if nargin > 0, obj.Parent = parent; end
         end
 
-        function setParent(obj,parent)
-        %SETPARENT Create or transfer every renderer-owned graphics primitive.
+        function set.Parent(obj,parent)
+        %SET.PARENT Create or transfer every renderer-owned graphics primitive.
 
             if isempty(parent)
                 handles = [obj.Circle,obj.RadialGrid,obj.AngularGrid,obj.Wedges,obj.Labels(:).'];
                 set(handles(isvalid(handles)),'Parent',[]);
-                obj.Parent = matlab.graphics.axis.AbstractAxes.empty();
+                obj.Parent_ = matlab.graphics.axis.AbstractAxes.empty();
                 return;
             end
 
             validateattributes(parent,{'matlab.ui.control.UIAxes'},{'scalar'});
-            obj.Parent = parent;
+            obj.Parent_ = parent;
 
             if isempty(obj.Circle) || ~isvalid(obj.Circle)
                 obj.Circle = patch(parent,NaN,NaN,[1 1 1], ...
@@ -49,6 +50,12 @@ classdef PolarHistogram < handle
                 handles = [obj.Circle,obj.RadialGrid,obj.AngularGrid,obj.Wedges,obj.Labels(:).'];
                 set(handles(isvalid(handles)),'Parent',parent);
             end
+        end
+
+        function parent = get.Parent(obj)
+        %GET.PARENT Return the axes that currently own the plot primitives.
+
+            parent = obj.Parent_;
         end
 
         function render(obj,data,style)
