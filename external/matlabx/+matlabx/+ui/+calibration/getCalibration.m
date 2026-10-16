@@ -1,3 +1,6 @@
+function cal = getCalibration(opts)
+%GETCALIBRATION Measure or load MATLAB UI layout calibration values.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,8 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function cal = getCalibration(opts)
 
     arguments
         opts.ForceRecalibrate   (1,1) logical = false

@@ -1,3 +1,6 @@
+function folderNames = getFolderNames(queryPath)
+%GETFOLDERNAMES Return folder names from a directory.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function folderNames = getFolderNames(queryPath)
-%%GETFOLDERNAMES  Returns cell array of folder names at the specified path
 
 % make sure the queryPath points to a valid directory
 if ~isfolder(queryPath)

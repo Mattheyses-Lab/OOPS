@@ -1,3 +1,15 @@
+classdef ScatterStyle
+%SCATTERSTYLE Renderer-facing appearance for a grouped scatter plot.
+% This value class contains graphics presentation only. Application settings
+% remain responsible for persistence, UI binding, and change notification.
+%
+%   style = matlabx.ui.axes.plot.ScatterStyle( ...
+%       Title="Measurements", LegendVisible=true, ...
+%       MarkerSize=36, HullVisible=true, DataTipFormat="%.3g");
+%
+% See also matlabx.ui.axes.plot.ScatterData,
+% matlabx.ui.axes.plot.ScatterRenderer
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,34 +26,61 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef ScatterStyle
-%SCATTERSTYLE Renderer-facing appearance for a grouped scatter plot.
-% This value class contains graphics presentation only. Application settings
-% remain responsible for persistence, UI binding, and change notification.
-
+    % Axes, marker, legend, and hull presentation used by ScatterRenderer.
     properties
+        % Axes title text.
         Title (1,1) string = ""
+        % X-axis label text.
         XLabel (1,1) string = ""
+        % Y-axis label text.
         YLabel (1,1) string = ""
+        % PlotAxes and axes background color.
         BackgroundColor (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor,0,1)} = [1 1 1]
+        % Ruler, label, title, and automatic edge color.
         ForegroundColor (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor,0,1)} = [0 0 0]
+        % Colormap applied to scalar CData.
         Colormap (:,3) double {mustBeFinite,mustBeInRange(Colormap,0,1)} = parula(256)
+        % Color limits applied to scalar CData.
         CLim (1,2) double {mustBeFinite,mustBeIncreasingLimits} = [0 1]
+        % sprintf-style format applied to numeric data-tip values.
+        DataTipFormat (1,1) string = "%.2f"
+        % Whether to display a series legend.
         LegendVisible (1,1) logical = false
+        % Scatter marker area in points squared.
         MarkerSize (1,1) double {mustBeFinite,mustBePositive} = 50
+        % Marker edge line width.
+        MarkerLineWidth (1,1) double {mustBeFinite,mustBePositive} = 0.5
+        % Whether groups share one marker or cycle through marker shapes.
         MarkerMode (1,1) string {mustBeMember(MarkerMode,["single","multi","auto"])} = "single"
+        % Marker face opacity.
         MarkerFaceAlpha (1,1) double {mustBeFinite,mustBeInRange(MarkerFaceAlpha,0,1)} = 1
+        % Whether marker faces use CData, MarkerFaceColor, or the axes color order.
+        MarkerFaceColorMode (1,1) string {mustBeMember(MarkerFaceColorMode,["CData","Custom","auto"])} = "CData"
+        % Custom marker face color.
+        MarkerFaceColor (1,3) double {mustBeFinite,mustBeInRange(MarkerFaceColor,0,1)} = [0 0.4470 0.7410]
+        % Marker edge opacity.
         MarkerEdgeAlpha (1,1) double {mustBeFinite,mustBeInRange(MarkerEdgeAlpha,0,1)} = 1
-        MarkerEdgeColorMode (1,1) string {mustBeMember(MarkerEdgeColorMode,["Custom","auto"])} = "Custom"
+        % Whether marker edges use CData, MarkerEdgeColor, or the axes color order.
+        MarkerEdgeColorMode (1,1) string {mustBeMember(MarkerEdgeColorMode,["CData","Custom","auto"])} = "Custom"
+        % Custom marker edge color.
         MarkerEdgeColor (1,3) double {mustBeFinite,mustBeInRange(MarkerEdgeColor,0,1)} = [0 0 0]
+        % Whether to draw a hull around each scatter group.
         HullVisible (1,1) logical = false
+        % Algorithm used to construct group hulls.
         HullType (1,1) string {mustBeMember(HullType,["concave","convex"])} = "concave"
+        % Hull edge line width.
         HullLineWidth (1,1) double {mustBeFinite,mustBePositive} = 1
+        % Hull face opacity.
         HullFaceAlpha (1,1) double {mustBeFinite,mustBeInRange(HullFaceAlpha,0,1)} = 0.5
+        % Hull edge opacity.
         HullEdgeAlpha (1,1) double {mustBeFinite,mustBeInRange(HullEdgeAlpha,0,1)} = 1
+        % Whether hull faces use HullFaceColor or the axes color order.
         HullFaceColorMode (1,1) string {mustBeMember(HullFaceColorMode,["Custom","auto"])} = "auto"
+        % Custom hull face color.
         HullFaceColor (1,3) double {mustBeFinite,mustBeInRange(HullFaceColor,0,1)} = [1 1 1]
+        % Whether hull edges use HullEdgeColor or the axes color order.
         HullEdgeColorMode (1,1) string {mustBeMember(HullEdgeColorMode,["Custom","auto"])} = "auto"
+        % Custom hull edge color.
         HullEdgeColor (1,3) double {mustBeFinite,mustBeInRange(HullEdgeColor,0,1)} = [0 0 0]
     end
 

@@ -1,3 +1,16 @@
+function epsilon = chooseDbscanEpsilonKnee(X, minPts, opts)
+%CHOOSEDBSCANEPSILONKNEE Choose DBSCAN epsilon via k-distance knee.
+%
+% Inputs
+%   X      : NxD data
+%   minPts : DBSCAN MinPts
+%   opts (optional Name-Value arguments)
+%       MakePlot   (default true)
+%       SmoothFrac (default 0.01)   % fraction of points for movmedian smoothing
+%
+% Outputs:
+%   epsilon  : suggested optimal epsilon (in original distance units)
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,19 +26,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function epsilon = chooseDbscanEpsilonKnee(X, minPts, opts)
-%CHOOSEDBSCANEPSILONKNEE Choose DBSCAN epsilon via k-distance knee.
-%
-% Inputs
-%   X      : NxD data
-%   minPts : DBSCAN MinPts
-%   opts (optional Name-Value arguments)
-%       MakePlot   (default true)
-%       SmoothFrac (default 0.01)   % fraction of points for movmedian smoothing
-%
-% Outputs:
-%   epsilon  : suggested optimal epsilon (in original distance units)
 
     arguments
         X (:,:)

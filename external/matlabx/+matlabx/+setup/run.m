@@ -1,3 +1,6 @@
+function run()
+%RUN  Performs setup actions for a new installation of matlabx
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function run()
-%RUN  Performs setup actions for a new installation of matlabx
 
 matlabx.Log.INFO("Setting up matlabx...");
 

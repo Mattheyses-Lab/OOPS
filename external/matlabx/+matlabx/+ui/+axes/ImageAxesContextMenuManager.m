@@ -1,19 +1,3 @@
-% matlabx - MATLAB utilities for app building, image display, and analysis.
-% Copyright (C) 2026 William Dean
-%
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the Free
-% Software Foundation; either version 2 of the License, or (at your option)
-% any later version.
-%
-% This program is distributed in the hope that it will be useful, but WITHOUT
-% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-% details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, see <https://www.gnu.org/licenses/>.
-
 classdef ImageAxesContextMenuManager < handle
 %IMAGEAXESCONTEXTMENUMANAGER Context-menu helper for ImageAxes.
 %
@@ -34,6 +18,22 @@ classdef ImageAxesContextMenuManager < handle
 %   "Context menu manager" here means a collaborator object scoped to one
 %   ImageAxes host. It does not decide application policy; it only owns menu
 %   graphics and callback wiring.
+
+% matlabx - MATLAB utilities for app building, image display, and analysis.
+% Copyright (C) 2026 William Dean
+%
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the Free
+% Software Foundation; either version 2 of the License, or (at your option)
+% any later version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+% details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, see <https://www.gnu.org/licenses/>.
 
     properties (SetAccess=private)
         Host matlabx.ui.axes.ImageAxes
@@ -100,6 +100,10 @@ classdef ImageAxesContextMenuManager < handle
                         if ~obj.hasBuiltin("Display")
                             S = obj.buildViewportBoxMenu(S, obj.Menu);
                         end
+                    case "Toolbar"
+                        if ~obj.hasBuiltin("Display")
+                            S = obj.buildToolbarMenu(S, obj.Menu);
+                        end
                 end
             end
 
@@ -162,6 +166,10 @@ classdef ImageAxesContextMenuManager < handle
 
             if isfield(obj.BuiltinUI, "ViewportBox")
                 obj.BuiltinUI.ViewportBox.Checked = obj.Host.ViewportBoxVisible;
+            end
+
+            if isfield(obj.BuiltinUI, "Toolbar")
+                obj.BuiltinUI.Toolbar.Checked = obj.Host.ToolbarVisible;
             end
 
             obj.refreshItems();
@@ -414,6 +422,7 @@ classdef ImageAxesContextMenuManager < handle
         %BUILDDISPLAYMENU Add grouped image display-aid commands.
             S.Display = uimenu(obj.Menu, "Text", "Display");
             S = obj.buildViewportBoxMenu(S, S.Display);
+            S = obj.buildToolbarMenu(S, S.Display);
             S.Overlays = uimenu(S.Display, ...
                 "Text", "Show Overlays", ...
                 "MenuSelectedFcn", @(~,~) obj.Host.toggleOverlays(), ...
@@ -460,24 +469,11 @@ classdef ImageAxesContextMenuManager < handle
         end
 
         function S = buildColormapMenu(obj, S, parent)
-        %BUILDCOLORMAPMENU Add registry-backed colormap choices.
+        %BUILDCOLORMAPMENU Add the colormap-selection dialog command.
             S.Colormap = uimenu(parent, "Text", "Colormap...");
-
-            categories = matlabx.colors.maps.Registry.categories();
-            for i = 1:numel(categories)
-                category = categories(i);
-                categoryField = obj.colormapCategoryFieldName(category);
-                S.(categoryField) = uimenu(S.Colormap, "Text", char(category));
-
-                names = matlabx.colors.maps.Registry.names(category);
-                for j = 1:numel(names)
-                    name = names(j);
-                    mapField = obj.colormapFieldName(category, name);
-                    S.(mapField) = uimenu(S.(categoryField), ...
-                        "Text", char(name), ...
-                        "MenuSelectedFcn", @(~,~) obj.onColormapSelected(name, category));
-                end
-            end
+            S.ColormapChoose = uimenu(S.Colormap, ...
+                "Text", "Choose...", ...
+                "MenuSelectedFcn", @(~,~) obj.Host.chooseColormap());
         end
 
         function S = buildViewportBoxMenu(obj, S, parent)
@@ -486,6 +482,14 @@ classdef ImageAxesContextMenuManager < handle
                 "Text", "Viewport Box", ...
                 "MenuSelectedFcn", @(~,~) obj.Host.toggleViewportBoxVisible(), ...
                 "Checked", obj.Host.ViewportBoxVisible);
+        end
+
+        function S = buildToolbarMenu(obj, S, parent)
+        %BUILDTOOLBARMENU Add a toolbar visibility toggle.
+            S.Toolbar = uimenu(parent, ...
+                "Text", "Show Toolbar", ...
+                "MenuSelectedFcn", @(~,~) obj.Host.toggleToolbar(), ...
+                "Checked", obj.Host.ToolbarVisible);
         end
 
         function S = buildComponentColorMenu(obj, S, parent, separator)
@@ -510,12 +514,6 @@ classdef ImageAxesContextMenuManager < handle
                     "MenuSelectedFcn", @(~,~) obj.Host.setComponentColor(name), ...
                     "Checked", "off");
             end
-        end
-
-        function onColormapSelected(obj, name, category)
-        %ONCOLORMAPSELECTED Apply a registry colormap to the current component.
-            cmap = matlabx.colors.maps.Registry.map(name, category);
-            obj.Host.setComponentColormap(cmap);
         end
 
         function setItemProperty(obj, id, propertyName, value)
@@ -566,7 +564,8 @@ classdef ImageAxesContextMenuManager < handle
         function items = availableBuiltinItems()
         %AVAILABLEBUILTINITEMS Return valid ImageAxes built-in context item names.
             items = ["Status","ResetView","Image","ImageProperties","Metadata", ...
-                "ComponentColor","ColorMode","Colormap","Display","ViewportBox"];
+                "ComponentColor","ColorMode","Colormap","Display","ViewportBox", ...
+                "Toolbar"];
         end
 
         function items = validateBuiltinItems(items)
@@ -642,16 +641,6 @@ classdef ImageAxesContextMenuManager < handle
             fieldName = matlab.lang.makeValidName("ComponentColor_" + string(name));
         end
 
-        function fieldName = colormapCategoryFieldName(category)
-        %COLORMAPCATEGORYFIELDNAME Return the BuiltinUI field for a category.
-            fieldName = matlab.lang.makeValidName("Colormap_" + string(category));
-        end
-
-        function fieldName = colormapFieldName(category, name)
-        %COLORMAPFIELDNAME Return the BuiltinUI field for a registry map item.
-            fieldName = matlab.lang.makeValidName( ...
-                "Colormap_" + string(category) + "_" + string(name));
-        end
     end
 
 end

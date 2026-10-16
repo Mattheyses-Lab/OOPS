@@ -1,3 +1,15 @@
+function names = list()
+%LIST  Lists the available matlabx shortcut functions.
+%
+%   names = matlabx.shortcuts.list() returns the names of all MATLAB
+%   function files in the matlabx shortcuts directory.
+%
+%   Output
+%     names : Column string array containing shortcut function names
+%
+%   Example
+%     names = matlabx.shortcuts.list();
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,18 +25,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function names = list()
-%LIST  Lists the available matlabx shortcut functions.
-%
-%   names = matlabx.shortcuts.list() returns the names of all MATLAB
-%   function files in the matlabx shortcuts directory.
-%
-%   Output
-%     names : Column string array containing shortcut function names
-%
-%   Example
-%     names = matlabx.shortcuts.list();
 
     files = matlabx.files.listFiles(matlabx.internal.Paths.shortcuts());
 

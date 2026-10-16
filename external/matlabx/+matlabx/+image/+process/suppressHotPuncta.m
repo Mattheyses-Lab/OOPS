@@ -1,3 +1,8 @@
+function Iout = suppressHotPuncta(I, PercentileThreshold, DilateRadius)
+%SUPPRESSHOTPUNCTA Mask extreme bright puncta and replace locally.
+% PercentileThreshold: percentile defining "hot" (e.g. 99.95)
+% DilateRadius: in pixels (e.g. 2 to 4)
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,11 +18,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function Iout = suppressHotPuncta(I, PercentileThreshold, DilateRadius)
-%SUPPRESSHOTPUNCTA Mask extreme bright puncta and replace locally.
-% PercentileThreshold: percentile defining "hot" (e.g. 99.95)
-% DilateRadius: in pixels (e.g. 2 to 4)
 
     arguments
         I

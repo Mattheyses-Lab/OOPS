@@ -1,3 +1,6 @@
+function str = empty()
+%EMPTY Returns a 0x1 (empty) string
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,7 +17,5 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-function str = empty()
-%EMPTY Returns a 0x1 (empty) string
 str = strings(0, 1);
 end

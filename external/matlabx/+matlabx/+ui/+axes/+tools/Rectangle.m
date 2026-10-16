@@ -1,3 +1,11 @@
+classdef Rectangle < matlabx.ui.axes.AxesTool
+%RECTANGLE Draw and manipulate rectangle overlays in ImageAxes.
+%
+%   The Rectangle tool is an interaction controller for overlays.Rectangle.
+%   It creates axis-aligned rectangles by click-dragging in empty image space,
+%   activates existing rectangles, toggles selection, translates by dragging
+%   the rectangle body, and resizes from corner or edge handles.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Rectangle < matlabx.ui.axes.AxesTool
-%RECTANGLE Draw and manipulate rectangle overlays in ImageAxes.
-%
-%   The Rectangle tool is an interaction controller for overlays.Rectangle.
-%   It creates axis-aligned rectangles by click-dragging in empty image space,
-%   activates existing rectangles, toggles selection, translates by dragging
-%   the rectangle body, and resizes from corner or edge handles.
 
     properties
         EdgeColor = [1 1 1]

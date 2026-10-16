@@ -1,3 +1,7 @@
+function snapRectangleROISize(roi, ds)
+%SNAPRECTANGLEROISIZE Snap a rectangle ROI to a requested size.
+%snapRectangleROISize Snap roi width/height to multiples of ds (typically 1 px).
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +17,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function snapRectangleROISize(roi, ds)
-%snapRectangleROISize Snap roi width/height to multiples of ds (typically 1 px).
 
     p = roi.Position; % [x y w h]
     w0 = p(3); h0 = p(4);

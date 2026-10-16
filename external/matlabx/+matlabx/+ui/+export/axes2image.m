@@ -1,3 +1,6 @@
+function axes2image(ax,filename,opts)
+%AXES2IMAGE  Export axes content to image
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,8 +17,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-function axes2image(ax,filename,opts)
-%AXES2IMAGE  Export axes content to image
     arguments
         ax                          (1,1) matlab.ui.control.UIAxes
         filename                    (1,:) char

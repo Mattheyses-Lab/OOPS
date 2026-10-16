@@ -1,3 +1,8 @@
+classdef ImageAxesOverlayMount < handle
+%IMAGEAXESOVERLAYMOUNT Host-owned relationship with reusable overlay content.
+%   Obtain via ImageAxes.mountOverlay. remove/delete detaches the content,
+%   releases the host's group, and invalidates this mount, not the content.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,11 +18,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef ImageAxesOverlayMount < handle
-%IMAGEAXESOVERLAYMOUNT Host-owned relationship with reusable overlay content.
-%   Obtain via ImageAxes.mountOverlay. remove/delete detaches the content,
-%   releases the host's group, and invalidates this mount, not the content.
 
     properties (SetAccess=private)
         Content

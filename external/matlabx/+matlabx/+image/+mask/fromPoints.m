@@ -1,3 +1,15 @@
+function mask = fromPoints(points,sz)
+%FROMPOINTS Generate binary mask with size, sz, using the coordinates in points
+%
+% mask = matlabx.image.mask.fromPoints(points, sz)
+%
+% Inputs
+%   points  : Nx2 array of (x,y) coordinates
+%   sz      : size of the output
+%
+% Output
+%   mask    : logical mask containing pixels closest to pts
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,18 +25,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function mask = fromPoints(points,sz)
-%FROMPOINTS Generate binary mask with size, sz, using the coordinates in points
-%
-% mask = matlabx.image.mask.fromPoints(points, sz)
-%
-% Inputs
-%   points  : Nx2 array of (x,y) coordinates
-%   sz      : size of the output
-%
-% Output
-%   mask    : logical mask containing pixels closest to pts
 
 % preallocate mask
 mask = false(sz);

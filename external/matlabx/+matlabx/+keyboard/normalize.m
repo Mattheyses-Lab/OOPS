@@ -1,3 +1,8 @@
+function hk = normalize(key, character, modifier)
+%NORMALIZE Convert MATLAB key-event fields to a canonical hotkey string.
+% matlabx.keyboard.normalize
+% Normalize MATLAB key event fields into canonical hotkey string.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -23,34 +28,34 @@
 % %   "shift+a"
 % %   "ctrl+z"
 % %   "ctrl+alt+rightarrow"
-% 
+%
 %     % normalize inputs
 %     key = lower(string(key));
 %     character = lower(string(character));
 %     modifier = lower(string(modifier));
-% 
+%
 %     % MATLAB uses "control", normalize to "ctrl"
 %     modifier(modifier == "control") = "ctrl";
-% 
+%
 %     % canonical modifier order
 %     order = ["shift","ctrl","alt","meta"];
-% 
+%
 %     if ~isempty(modifier)
 %         modifier = intersect(order, modifier, 'stable');
 %     end
-% 
+%
 %     % determine base key
 %     base = key;
-% 
+%
 %     % sometimes key is empty but character exists
 %     if strlength(base) == 0 && strlength(character) > 0
 %         base = character;
 %     end
-% 
+%
 %     % build output
 %     parts = [modifier base];
 %     parts(parts=="") = [];
-% 
+%
 %     if isempty(parts)
 %         hk = "";
 %     else
@@ -58,9 +63,7 @@
 %     end
 % end
 
-function hk = normalize(key, character, modifier)
-% matlabx.keyboard.normalize
-% Normalize MATLAB key event fields into canonical hotkey string.
+
 
     % Normalize inputs
     key = lower(string(key));

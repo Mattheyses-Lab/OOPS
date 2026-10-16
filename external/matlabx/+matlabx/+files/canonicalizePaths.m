@@ -1,3 +1,17 @@
+function pathsOut = canonicalizePaths(pathsIn)
+%CANONICALIZEPATHS  Convert multiple paths to canonical form
+%
+%   pathsOut = matlabx.files.canonicalizePaths(pathsIn) converts each
+%   supplied file or folder path to its canonical absolute representation.
+%
+%   Input
+%       pathsIn  - Collection of file or folder paths
+%
+%   Output
+%       pathsOut - Canonical paths returned as a string array
+%
+%   See also matlabx.files.canonicalPath
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,20 +27,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function pathsOut = canonicalizePaths(pathsIn)
-%CANONICALIZEPATHS  Convert multiple paths to canonical form
-%
-%   pathsOut = matlabx.files.canonicalizePaths(pathsIn) converts each
-%   supplied file or folder path to its canonical absolute representation.
-%
-%   Input
-%       pathsIn  - Collection of file or folder paths
-%
-%   Output
-%       pathsOut - Canonical paths returned as a string array
-%
-%   See also matlabx.files.canonicalPath
 
     pathsOut = string(pathsIn);
 

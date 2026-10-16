@@ -1,3 +1,6 @@
+function accordion = accordionDemo()
+%ACCORDIONDEMO Create an interactive Accordion demonstration.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,8 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function accordion = accordionDemo()
 
     fH = uifigure(...
         "WindowStyle","alwaysontop",...
@@ -322,9 +323,7 @@ function accordion = accordionDemo()
     % expand the first accordion item
     accordion.Items(1).expand();
     % move gui to screen center
-    movegui(fH,'center')
-    % then shift 400 px to the left
-    fH.Position(1) = fH.Position(1)-400;
+    movegui(fH,"center")
     % make the figure visible
     fH.Visible = "on";
 

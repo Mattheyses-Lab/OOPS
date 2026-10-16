@@ -1,3 +1,6 @@
+function tf = isEnabled()
+%ISENABLED  Returns true if the matlabx shortcuts folder is on the search path.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function tf = isEnabled()
-%ISENABLED  Returns true if the matlabx shortcuts folder is on the search path.
 
     shortcutDir = matlabx.internal.Paths.shortcuts();
     pathEntries = strsplit(path, pathsep);

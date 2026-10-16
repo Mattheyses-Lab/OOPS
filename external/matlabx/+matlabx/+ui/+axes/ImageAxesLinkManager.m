@@ -1,19 +1,3 @@
-% matlabx - MATLAB utilities for app building, image display, and analysis.
-% Copyright (C) 2026 William Dean
-%
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the Free
-% Software Foundation; either version 2 of the License, or (at your option)
-% any later version.
-%
-% This program is distributed in the hope that it will be useful, but WITHOUT
-% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-% details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, see <https://www.gnu.org/licenses/>.
-
 classdef ImageAxesLinkManager
 %IMAGEAXESLINKMANAGER Link-group wiring and synchronization for ImageAxes.
 %
@@ -30,6 +14,22 @@ classdef ImageAxesLinkManager
 %   A "link group" is symmetric. Every axes stores all other axes in the group
 %   as linkedAxes, so any axes can originate a property change and push that
 %   value to the rest of the group.
+
+% matlabx - MATLAB utilities for app building, image display, and analysis.
+% Copyright (C) 2026 William Dean
+%
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the Free
+% Software Foundation; either version 2 of the License, or (at your option)
+% any later version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+% details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, see <https://www.gnu.org/licenses/>.
 
     methods (Static)
         function add(source, links, props)

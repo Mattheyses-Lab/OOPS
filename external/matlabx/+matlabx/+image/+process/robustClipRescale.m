@@ -1,3 +1,7 @@
+function Iout = robustClipRescale(I, pHigh)
+%ROBUSTCLIPRESCALE Clip outliers and rescale image intensity.
+% pHigh: e.g. 99.9, 99.95, 99.99
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,10 +17,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function Iout = robustClipRescale(I, pHigh)
-%%ROBUSTCLIPRESCALE  Clip extreme highs then rescale to [0,1]
-% pHigh: e.g. 99.9, 99.95, 99.99
 
     if nargin < 2 || isempty(pHigh), pHigh = 99.95; end
 

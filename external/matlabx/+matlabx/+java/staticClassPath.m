@@ -1,3 +1,9 @@
+function paths = staticClassPath()
+%STATICCLASSPATH  Return the static Java class path
+%
+%   paths = matlabx.java.staticClassPath() returns the static Java class
+%   path as a canonicalized string array.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,12 +19,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function paths = staticClassPath()
-%STATICCLASSPATH  Return the static Java class path
-%
-%   paths = matlabx.java.staticClassPath() returns the static Java class
-%   path as a canonicalized string array.
 
     paths = string(javaclasspath("-static"));
     paths = paths(:);

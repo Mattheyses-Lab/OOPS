@@ -1,19 +1,3 @@
-% matlabx - MATLAB utilities for app building, image display, and analysis.
-% Copyright (C) 2026 William Dean
-%
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the Free
-% Software Foundation; either version 2 of the License, or (at your option)
-% any later version.
-%
-% This program is distributed in the hope that it will be useful, but WITHOUT
-% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-% details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, see <https://www.gnu.org/licenses/>.
-
 function [file, location, indx] = uigetimagefile(filter, title, defname, opts)
 %UIGETIMAGE Open file selection dialog for image files.
 %
@@ -50,6 +34,22 @@ function [file, location, indx] = uigetimagefile(filter, title, defname, opts)
 %   file      - Selected file name(s), or 0 if canceled
 %   location  - Selected folder, or 0 if canceled
 %   indx      - Index of selected filter, or 0 if canceled
+
+% matlabx - MATLAB utilities for app building, image display, and analysis.
+% Copyright (C) 2026 William Dean
+%
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the Free
+% Software Foundation; either version 2 of the License, or (at your option)
+% any later version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+% details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, see <https://www.gnu.org/licenses/>.
 
     arguments
         filter = []

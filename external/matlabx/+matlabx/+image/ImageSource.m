@@ -1,3 +1,6 @@
+classdef (Abstract) ImageSource < handle
+    %IMAGESOURCE Abstract backing source for Image5D.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef (Abstract) ImageSource < handle
-    %IMAGESOURCE Abstract backing source for Image5D.
 
     methods (Abstract)
         comps = getComponents(obj)

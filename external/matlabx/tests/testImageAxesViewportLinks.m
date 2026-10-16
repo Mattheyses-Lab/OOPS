@@ -1,3 +1,6 @@
+function tests = testImageAxesViewportLinks
+%TESTIMAGEAXESVIEWPORTLINKS Atomic bidirectional viewport/Zoom synchronization.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,8 +17,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-function tests = testImageAxesViewportLinks
-%TESTIMAGEAXESVIEWPORTLINKS Atomic bidirectional viewport/Zoom synchronization.
     tests = functiontests(localfunctions);
 end
 

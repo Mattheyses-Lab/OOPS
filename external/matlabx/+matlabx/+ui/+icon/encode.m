@@ -1,3 +1,10 @@
+function name = encode(options)
+%ENCODE Describe an icon as a versioned basename, without accessing files.
+%   name = matlabx.ui.icon.encode(Color=rgb,Size=16) returns a name such as
+%   "v1-circle-0072BD-16.svg". RGB values are rounded to eight-bit channels.
+%   Decode returns those quantized values, not the original precision.
+%   The version identifies rendering semantics as well as filename syntax.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +20,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function name = encode(options)
-%ENCODE Describe an icon as a versioned basename, without accessing files.
-%   name = matlabx.ui.icon.encode(Color=rgb,Size=16) returns a name such as
-%   "v1-circle-0072BD-16.svg". RGB values are rounded to eight-bit channels.
-%   Decode returns those quantized values, not the original precision.
-%   The version identifies rendering semantics as well as filename syntax.
 
     arguments
         options.Shape (1,1) string {mustBeMember(options.Shape,"circle")} = "circle"

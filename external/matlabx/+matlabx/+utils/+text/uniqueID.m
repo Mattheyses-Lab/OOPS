@@ -1,3 +1,6 @@
+function UUID = uniqueID(ID_class)
+%UNIQUEID Generate a unique text identifier.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,8 +17,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-function UUID = uniqueID(ID_class)
-%%UNIQUEID  Returns a unique UUID ('string' or 'char')
 arguments
     ID_class (1,:) char {mustBeMember(ID_class,{'string','char'})} = 'string'
 end

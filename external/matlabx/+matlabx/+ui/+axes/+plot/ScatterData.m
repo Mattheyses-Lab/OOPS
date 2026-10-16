@@ -1,3 +1,20 @@
+classdef ScatterData
+%SCATTERDATA Normalized, validated data for grouped scatter rendering.
+% Each cell represents one logical scatter group. Numeric arrays are stored
+% as row vectors so low-level plot primitives receive a consistent shape.
+%
+%   data = matlabx.ui.axes.plot.ScatterData( ...
+%       XData={[1 2 3],[1 2]}, ...
+%       YData={[3 1 4],[2 5]}, ...
+%       SeriesNames=["A","B"], ...
+%       CData={[0.2 0.5 0.8],[0.8 0.3 0.2]});
+%
+% CData entries may be one RGB triplet, one scalar per point, or one RGB
+% triplet per point.
+%
+% See also matlabx.ui.axes.plot.ScatterRenderer,
+% matlabx.ui.axes.plot.ScatterStyle
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,15 +31,15 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef ScatterData
-%SCATTERDATA Normalized, validated data for grouped scatter rendering.
-% Each cell represents one logical scatter group. Numeric arrays are stored
-% as row vectors so low-level plot primitives receive a consistent shape.
-
+    % Normalized group-aligned payload consumed by ScatterRenderer.
     properties (SetAccess=private)
+        % X coordinates, stored as one row vector per group.
         XData (:,1) cell = {NaN}
+        % Y coordinates aligned with XData within each group.
         YData (:,1) cell = {NaN}
+        % Display names with one entry per scatter group.
         SeriesNames (:,1) string = "No data"
+        % Scalar or RGB color payload with one entry per group.
         CData (:,1) cell = {NaN}
     end
 

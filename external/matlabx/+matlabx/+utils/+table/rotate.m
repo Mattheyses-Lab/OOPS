@@ -1,3 +1,6 @@
+function T = rotate(T,opts)
+%ROTATETABLE  rotates a table such that variables and rows are swapped
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,9 +17,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-function T = rotate(T,opts)
-%ROTATETABLE  rotates a table such that variables and rows are swapped
-    
     arguments
         T (:,:) table
         opts.ColumnNames (:,1) cell = {} % optional

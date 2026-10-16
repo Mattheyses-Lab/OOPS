@@ -1,3 +1,6 @@
+classdef circularColorbar < handle
+%CIRCULARCOLORBAR Plots a circular colorbar in the uiaxes specified by 'Parent'
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,9 +16,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef circularColorbar < handle
-%CIRCULARCOLORBAR Plots a circular colorbar in the uiaxes specified by 'Parent'
 
     properties(Access=public, Dependent=true)
         % x coordinate of the center of the circular colorbar

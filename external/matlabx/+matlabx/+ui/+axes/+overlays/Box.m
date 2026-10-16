@@ -1,3 +1,10 @@
+classdef Box < matlabx.ui.axes.ImageAxesOverlay
+%BOX Square box overlay for ImageAxes image-space annotations.
+%
+%   overlays.Box owns a patch and optional text label. It knows its own
+%   center, size, ID, C/Z/T applicability, and visual state. Tools decide
+%   what user interactions mean.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +20,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Box < matlabx.ui.axes.ImageAxesOverlay
-%BOX Square box overlay for ImageAxes image-space annotations.
-%
-%   overlays.Box owns a patch and optional text label. It knows its own
-%   center, size, ID, C/Z/T applicability, and visual state. Tools decide
-%   what user interactions mean.
 
     properties (SetObservable, AbortSet)
         Center (1,2) double = [NaN NaN]

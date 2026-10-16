@@ -1,3 +1,9 @@
+classdef ChooseColormap < matlabx.ui.axes.AxesTool
+%CHOOSECOLORMAP Axes tool for choosing the current component colormap.
+% matlabx.ui.axes.tools.ChooseColormap
+% when button pushed:
+%   Open colormap selector and set colormap for current channel
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,11 +20,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef ChooseColormap < matlabx.ui.axes.AxesTool
-% matlabx.ui.axes.tools.ChooseColormap
-% when button pushed: 
-%   Open colormap selector and set colormap for current channel
-
     methods
 
         function obj = ChooseColormap(host)
@@ -32,10 +33,7 @@ classdef ChooseColormap < matlabx.ui.axes.AxesTool
 
         % Called when button is pushed
         function onPush(obj)
-            % open colormap selector
-            cmap = matlabx.app.ColormapSelector;
-            % Set the colormap for the current channel
-            obj.Host.Colormap = cmap;
+            obj.Host.chooseColormap();
         end
 
         % Called AFTER installed from Host, use for any extra required startup actions

@@ -1,3 +1,13 @@
+classdef Polygon < matlabx.ui.axes.AxesTool
+%POLYGON Inspect and manage existing polygon overlays without editing geometry.
+%
+%   This tool controls all Polygon overlays in the host registry. It keeps no
+%   duplicate overlay list. Removing the tool leaves the overlays intact.
+%   By default, PolygonDeletedFcn receives data.ID after each tool deletion.
+%   With PolygonsDeleteRequestedFcn installed, one data.IDs request is sent
+%   instead and the application owns deletion and overlay reconciliation.
+%   Activation and selection callbacks also reflect manager/rectangle selection.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,16 +23,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Polygon < matlabx.ui.axes.AxesTool
-%POLYGON Inspect and manage existing polygon overlays without editing geometry.
-%
-%   This tool controls all Polygon overlays in the host registry. It keeps no
-%   duplicate overlay list. Removing the tool leaves the overlays intact.
-%   By default, PolygonDeletedFcn receives data.ID after each tool deletion.
-%   With PolygonsDeleteRequestedFcn installed, one data.IDs request is sent
-%   instead and the application owns deletion and overlay reconciliation.
-%   Activation and selection callbacks also reflect manager/rectangle selection.
 
     properties
         % Optional application-owned deletion. Called once with data.IDs;

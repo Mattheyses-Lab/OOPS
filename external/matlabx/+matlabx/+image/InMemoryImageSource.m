@@ -1,3 +1,11 @@
+classdef InMemoryImageSource < matlabx.image.ImageSource
+    %INMEMORYIMAGESOURCE ImageSource implementation backed by MATLAB arrays.
+    %
+    %   This source normalizes one or more in-memory component arrays into
+    %   ImageComponent objects. It mirrors the role of BioFormatsImageSource
+    %   for file-backed images: the source owns source-specific setup, while
+    %   Image5D remains a small public wrapper around any ImageSource.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef InMemoryImageSource < matlabx.image.ImageSource
-    %INMEMORYIMAGESOURCE ImageSource implementation backed by MATLAB arrays.
-    %
-    %   This source normalizes one or more in-memory component arrays into
-    %   ImageComponent objects. It mirrors the role of BioFormatsImageSource
-    %   for file-backed images: the source owns source-specific setup, while
-    %   Image5D remains a small public wrapper around any ImageSource.
 
     properties (Access = private)
         Components_ (1,:) matlabx.image.ImageComponent = matlabx.image.ImageComponent.empty(1,0)

@@ -1,19 +1,3 @@
-% matlabx - MATLAB utilities for app building, image display, and analysis.
-% Copyright (C) 2026 William Dean
-%
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the Free
-% Software Foundation; either version 2 of the License, or (at your option)
-% any later version.
-%
-% This program is distributed in the hope that it will be useful, but WITHOUT
-% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-% details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, see <https://www.gnu.org/licenses/>.
-
 function file = get(varargin)
 %GET Return a cached SVG icon with transparent surroundings.
 %   file = matlabx.ui.icon.get(Shape="circle",Color=[0 0.4470 0.7410],Size=16)
@@ -30,6 +14,22 @@ function file = get(varargin)
 %   Files live beneath prefdir/matlabx/cache/icons and are disposable: a
 %   missing file is recreated on the next call. Store rendering options in
 %   application models, rather than persisting generated paths.
+
+% matlabx - MATLAB utilities for app building, image display, and analysis.
+% Copyright (C) 2026 William Dean
+%
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the Free
+% Software Foundation; either version 2 of the License, or (at your option)
+% any later version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+% details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, see <https://www.gnu.org/licenses/>.
 
     % One positional argument is an encoded name or path. Otherwise forward
     % name-value options to encode, the single source of option validation.

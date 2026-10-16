@@ -1,3 +1,7 @@
+classdef DrawRectangle < matlabx.ui.axes.AxesTool
+%DRAWRECTANGLE Axes tool for drawing a rectangle ROI.
+% matlabx.ui.axes.tools.DrawRectangle - draw a rectangle in the Host axes using images.roi.Rectangle
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,11 +17,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef DrawRectangle < matlabx.ui.axes.AxesTool
-% matlabx.ui.axes.tools.DrawRectangle - draw a rectangle in the Host axes using images.roi.Rectangle
-
-
 
     %% Private UI/Graphics
     properties (Access = private, Transient, NonCopyable)
@@ -168,7 +167,7 @@ classdef DrawRectangle < matlabx.ui.axes.AxesTool
             % set Position and String of annotation labels
             set(obj.AngleLabel,"Position",LabelXY,"String",obj.RotationAngleDisplay,"FontSize",obj.FontSize_);
             obj.applyAppearance();
-            
+
         end
 
         function applyAppearance(obj)
@@ -446,7 +445,7 @@ classdef DrawRectangle < matlabx.ui.axes.AxesTool
             if ~isempty(obj.XRay)
                 delete(obj.XRay(isvalid(obj.XRay)));
             end
-            obj.XRay = matlab.graphics.primitive.Line.empty();            
+            obj.XRay = matlab.graphics.primitive.Line.empty();
             if ~isempty(obj.ArcPolyline)
                 delete(obj.ArcPolyline(isvalid(obj.ArcPolyline)));
             end
@@ -562,10 +561,10 @@ classdef DrawRectangle < matlabx.ui.axes.AxesTool
             % get position for the RotationAngle label (positioned in approximate 'radial center' of arc)
             r_label    = 0.65 * r_arc;
             thetaLabel = theta / 2;
-            
+
             dxLab = r_label * cosd(thetaLabel);
             dyLab = -r_label * sind(thetaLabel);
-            
+
             % label position (x,y)
             LabelPosition = [cx + dxLab, cy + dyLab];
 

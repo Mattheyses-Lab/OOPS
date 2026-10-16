@@ -1,3 +1,15 @@
+function tf = isFolderOnPath(folder)
+%ISFOLDERONPATH  Determine whether a folder is on the MATLAB search path
+%
+%   tf = matlabx.files.isFolderOnPath(folder) returns true when the
+%   specified folder is present on the MATLAB search path.
+%
+%   Input
+%       folder - Folder path
+%
+%   Output
+%       tf     - True when the folder is on the MATLAB search path
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,18 +25,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function tf = isFolderOnPath(folder)
-%ISFOLDERONPATH  Determine whether a folder is on the MATLAB search path
-%
-%   tf = matlabx.files.isFolderOnPath(folder) returns true when the
-%   specified folder is present on the MATLAB search path.
-%
-%   Input
-%       folder - Folder path
-%
-%   Output
-%       tf     - True when the folder is on the MATLAB search path
 
     arguments
         folder {mustBeTextScalar}

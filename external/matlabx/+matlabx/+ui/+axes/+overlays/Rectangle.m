@@ -1,3 +1,11 @@
+classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
+%RECTANGLE Four-edge rectangle overlay for ImageAxes image-space annotations.
+%
+%   overlays.Rectangle owns an axis-aligned rectangle patch plus an optional
+%   handle layer. Geometry is stored as [x y width height], following MATLAB's
+%   rectangle-position convention. The tool layer decides what gestures mean;
+%   the overlay only owns geometry, graphics, identity, and state appearance.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
-%RECTANGLE Four-edge rectangle overlay for ImageAxes image-space annotations.
-%
-%   overlays.Rectangle owns an axis-aligned rectangle patch plus an optional
-%   handle layer. Geometry is stored as [x y width height], following MATLAB's
-%   rectangle-position convention. The tool layer decides what gestures mean;
-%   the overlay only owns geometry, graphics, identity, and state appearance.
 
     properties (SetObservable, AbortSet)
         Position (1,4) double = [NaN NaN NaN NaN]

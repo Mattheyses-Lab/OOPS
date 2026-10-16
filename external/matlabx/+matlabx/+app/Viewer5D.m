@@ -1,3 +1,7 @@
+classdef Viewer5D < handle
+%VIEWER5D Display and navigate multidimensional image data.
+% matlabx.app.Viewer5D - Image Visualizer App
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,9 +18,6 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef Viewer5D < handle
-% matlabx.app.Viewer5D - Image Visualizer App
-
     properties (Access=private,Transient,NonCopyable)
         % --- window and main grid ---
         Fig matlab.ui.Figure
@@ -29,7 +30,7 @@ classdef Viewer5D < handle
 
     % Priavte UI helpers
     properties (Access=private)
-        % status flag for SizeChangedFcn 
+        % status flag for SizeChangedFcn
         isResizingFigure (1,1) logical = false
         % One-shot timer used to fit tight/square windows after live resize settles.
         ResizeSettleTimer
@@ -276,9 +277,9 @@ classdef Viewer5D < handle
                 'MenuSelectedFcn',@(o,~) obj.onWindowShapeMenuSelected(o),'Checked','off');
             S.square = uimenu(obj.MenubarUI.Window,'Text','square','Tag','square',...
                 'MenuSelectedFcn',@(o,~) obj.onWindowShapeMenuSelected(o),'Checked','off');
-            obj.MenubarUI.Window_Shape = S;    
+            obj.MenubarUI.Window_Shape = S;
 
-        end 
+        end
 
         function setupGrids(obj)
             % Main Grid
@@ -753,7 +754,7 @@ classdef Viewer5D < handle
         end
 
         function onClose(obj)
-        %ONCLOSE Menubar callback for [File]->[Close]    
+        %ONCLOSE Menubar callback for [File]->[Close]
             % no image -> return
             if isempty(obj.Image), return; end
             % --- delete project, detach listeners, refresh UI ---

@@ -1,3 +1,11 @@
+function clampRectangleROIToImage(roi, imageSize)
+%CLAMPRECTANGLEROITOIMAGE Constrain a rectangle ROI to image bounds.
+%clampRectangleROIToImage Shift a rotated images.roi.Rectangle so all
+%vertices lie within the pixel-edge bounds of an image.
+%
+% roi       : images.roi.Rectangle (can be rotated)
+% imageSize : [H W] (same as size(I))
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,13 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function clampRectangleROIToImage(roi, imageSize)
-%clampRectangleROIToImage Shift a rotated images.roi.Rectangle so all
-%vertices lie within the pixel-edge bounds of an image.
-%
-% roi       : images.roi.Rectangle (can be rotated)
-% imageSize : [H W] (same as size(I))
 
     H = imageSize(1);
     W = imageSize(2);

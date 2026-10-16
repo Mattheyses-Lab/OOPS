@@ -1,19 +1,3 @@
-% matlabx - MATLAB utilities for app building, image display, and analysis.
-% Copyright (C) 2026 William Dean
-%
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the Free
-% Software Foundation; either version 2 of the License, or (at your option)
-% any later version.
-%
-% This program is distributed in the hope that it will be useful, but WITHOUT
-% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-% details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, see <https://www.gnu.org/licenses/>.
-
 classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 %IMAGEAXES Image5D-backed UI image display and interaction component.
 %
@@ -21,6 +5,29 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 %   composite from a matlabx.image.Image5D object. It also hosts
 %   AxesTool subclasses and receives figure-level mouse/key events
 %   through matlabx.ui.interaction.FigureEventHub.
+%
+%   Create an ImageAxes in a UI figure and assign a MATLAB image array:
+%
+%       fig = uifigure;
+%       ax = matlabx.ui.axes.ImageAxes(fig);
+%       ax.CData = imread("peppers.png");
+%
+%   For multidimensional or multicomponent data, assign an Image5D and select
+%   the displayed component, Z plane, and time point through C, Z, and T:
+%
+%       imageData = matlabx.image.Image5D.fromComponents({I1,I2});
+%       ax.ImageData = imageData;
+%       ax.C = 2;
+%       ax.Z = 1;
+%       ax.T = 1;
+%
+%   Properties can also be supplied during construction. Tools may be named
+%   built-ins or application-owned AxesTool instances installed afterward:
+%
+%       ax = matlabx.ui.axes.ImageAxes(fig, ...
+%           "CData", I, ...
+%           "Tools", ["Zoom","RectangleSelect"]);
+%       ax.installTool(myapp.ui.axes.CustomTool(ax));
 %
 %   Data terminology
 %   ----------------
@@ -67,10 +74,56 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 %
 %       ax.Tools = ["Zoom","Box","DrawRectangle"]
 %       ax.Tools.Box.BoxSize = 40
+%
+%   Context menus
+%   -------------
+%   ImageAxes owns the context menu assigned to its inherited ContextMenu
+%   property. Setting ContextMenu directly is not recommended because it
+%   bypasses the built-in menu, dynamic state refresh, and tool cleanup.
+%   Choose built-in entries with ContextMenuItems. Application tools can add
+%   entries by overriding AxesTool.contributeContextMenu and using the supplied
+%   ImageAxesContextMenuManager:
+%
+%       function contributeContextMenu(obj, menu)
+%           menu.addItem("MyTool.Action", "Run action", ...
+%               @(~,~) obj.runAction(), Owner=obj);
+%       end
+%
+%   Install the tool normally with installTool; its owner-scoped menu entries
+%   are then removed automatically when the tool is uninstalled.
+%
+%   See also matlabx.image.Image5D, matlabx.app.quickshow,
+%   matlabx.ui.axes.AxesTool, matlabx.ui.axes.ImageAxesToolManager,
+%   matlabx.ui.axes.ImageAxesHotkeyRegistry,
+%   matlabx.ui.axes.ImageAxesContextMenuManager,
+%   matlabx.ui.axes.ImageAxesOverlayManager,
+%   matlabx.ui.axes.ImageAxesOverlay, matlabx.ui.axes.ImageAxesOverlayContent,
+%   matlabx.ui.axes.ImageAxesOverlayMount,
+%   matlabx.ui.axes.ImageAxesDisplayRenderer,
+%   matlabx.ui.axes.ImageAxesComponentDisplayState,
+%   matlabx.ui.axes.ImageAxesViewState, matlabx.ui.axes.ImageAxesResizeLayout,
+%   matlabx.ui.axes.ImageAxesLinkManager,
+%   matlabx.ui.interaction.FigureEventHub, matlabx.ui.interaction.HubEvent
 
+% matlabx - MATLAB utilities for app building, image display, and analysis.
+% Copyright (C) 2026 William Dean
+%
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the Free
+% Software Foundation; either version 2 of the License, or (at your option)
+% any later version.
+%
+% This program is distributed in the hope that it will be useful, but WITHOUT
+% ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+% details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, see <https://www.gnu.org/licenses/>.
 
-    %% Tools
+    %% Tool and native overlay integration
 
+    % Public access to installed tools and the native overlay registry.
     properties (Dependent)
         % Assign names to install tools; read back installed tool objects.
         Tools
@@ -78,6 +131,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         Overlays
     end
 
+    % Collaborators used by the tool manager to register tools and hotkeys.
     properties (Access={?matlabx.ui.axes.ImageAxesToolManager})
         % manager for tool lifecycle, routing lookup, and installed tool objects
         ToolManager matlabx.ui.axes.ImageAxesToolManager
@@ -85,6 +139,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         HotkeyRegistry matlabx.ui.axes.ImageAxesHotkeyRegistry
     end
 
+    % Shared tool state accessible to AxesTool and ImageAxesToolManager.
     properties (Access={?matlabx.ui.axes.AxesTool, ?matlabx.ui.axes.ImageAxesToolManager})
         % the currently enabled tool with IsExclusive=true (if it exists)
         ActiveExclusiveTool
@@ -93,76 +148,116 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     end
 
     %% Public configuration
+    % Public host identity used by graphics and event routing.
     properties (AbortSet)
+        % Identifier used to tag hosted axes for event hit testing.
         Name (1,1) string = ""
     end
 
+    % Configurable host UI presentation properties.
     properties (Dependent, AbortSet)
         % ImageAxes built-in context menu items to show.
         ContextMenuItems
+        % Whether the viewport overview graphics are visible.
         ViewportBoxVisible (1,1) matlab.lang.OnOffSwitchState
+        % Whether the axes toolbar is visible.
+        ToolbarVisible (1,1) matlab.lang.OnOffSwitchState
     end
 
-    % Graphics passthroughs
+    % Passthrough properties for hosted MATLAB graphics.
     properties (Dependent)
+        % Visibility of the rendered image primitive.
         ImageVisible
+        % Visibility of the primary hosted UIAxes.
         AxesVisible
+        % Visibility of the hosted colorbar.
         ColorbarVisible
+        % Effective display map for the current component.
         Colormap (256,3) double
+        % Maximum rendered resolution passed to the image primitive.
         MaxRenderedResolution
     end
 
     %% Image model, render state, and display state
 
-    % Canonical image data and compatibility input.
+    % Canonical image input and raw-array compatibility input.
     properties (Dependent, AbortSet)
+        % Canonical multidimensional image model displayed by this component.
         ImageData           (1,1) matlabx.image.Image5D
+        % Raw-array compatibility input and current render-source output.
         CData               {mustBeA(CData,{'double','single','uint8','uint16','logical','cell'})}
     end
 
-    % Observable view/display controls.
+    % Observable view selection and image display controls.
     properties (Dependent, AbortSet, SetObservable)
+        % One-based component index currently selected for display.
         C (1,1) double
+        % One-based Z-plane index currently selected for display.
         Z (1,1) double
+        % One-based time-point index currently selected for display.
         T (1,1) double
         % Optional logical Y-by-X display mask; cleared when image data changes.
         Mask
+        % Whether the stored image mask affects rendering.
         MaskEnabled         (1,1) matlab.lang.OnOffSwitchState
+        % Global visibility switch for native managed overlays.
         OverlaysVisible     (1,1) matlab.lang.OnOffSwitchState
+        % Whether mergeable components are rendered as an RGB composite.
         ShowComposite       (1,1) matlab.lang.OnOffSwitchState
+        % Display limits for the current scalar component.
         CLim                (1,2) double
+        % Whether component display limits are automatic or manual.
         CLimMode            (1,:) char {mustBeMember(CLimMode,{'auto','manual'})}
+        % Stored display limits for every image component.
         ComponentCLims      (1,:) cell
+        % Stored display color for every image component.
         ComponentColors     (1,:) cell
+        % Stored colormap for every image component.
         ComponentColormaps  (1,:) cell
+        % Whether components use solid colors or colormap LUTs.
         ComponentColorMode  (1,:) char {mustBeMember(ComponentColorMode,{'colors','luts'})}
     end
 
-    % Read-only render/display information.
+    % Read-only information about the current rendered image state.
     properties (Dependent, SetAccess=private)
+        % Selected source plane or generated RGB composite before display mapping.
         RenderSource
+        % Whether RenderSource is scalar or RGB data.
         RenderSourceKind       (1,:) char {mustBeMember(RenderSourceKind,{'scalar','rgb'})}
+        % Spatial size of the current render source.
         RenderSourceSize       (1,:) double
+        % MATLAB numeric class of the current render source.
         RenderSourceClass      (1,:) char {mustBeMember(RenderSourceClass,{'double','single','uint8','uint16','logical',''})}
+        % Graphics-ready data assigned to the image primitive.
         DisplayCData
+        % Whether current components can form a composite image.
         CanMergeComponents  (1,1) logical
 
         % Compatibility aliases for RenderSource* metadata.
         CDataKind       (1,:) char {mustBeMember(CDataKind,{'scalar','rgb'})}
+        % Compatibility alias for RenderSourceSize.
         CDataSize       (1,:) double
+        % Compatibility alias for RenderSourceClass.
         CDataClass      (1,:) char {mustBeMember(CDataClass,{'double','single','uint8','uint16','logical',''})}
         
+        % Number of components in ImageData.
         NumComponents         (1,1) double
+        % Whether ImageData contains more than one component.
         MultiComponent        (1,1) matlab.lang.OnOffSwitchState
+        % Aggregate scalar/RGB kind of the image components.
         MultiComponentKind    (1,:) {mustBeMember(MultiComponentKind,{'scalar','rgb','mixed','none'})}
     end
 
+    % Private canonical image, view, mask, and component display state.
     properties (Access=private)
         % Current view coordinates and display modes.
         ViewState_ (1,1) matlabx.ui.axes.ImageAxesViewState = matlabx.ui.axes.ImageAxesViewState()
 
+        % Backing value for native overlay visibility.
         OverlaysVisible_ (1,1) matlab.lang.OnOffSwitchState = "on"
+        % Stored logical image mask.
         Mask_ = []
+        % Backing value for mask display state.
         MaskEnabled_ (1,1) matlab.lang.OnOffSwitchState = "off"
 
         % Canonical Image5D data model.
@@ -175,27 +270,39 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         ComponentDisplay_ (1,:) matlabx.ui.axes.ImageAxesComponentDisplayState = matlabx.ui.axes.ImageAxesComponentDisplayState.empty()
     end
 
-    %% UI/Graphics
+    %% Hosted graphics, layout, and UI collaborators
 
-    % private
+    % Transient graphics handles and general listener storage.
     properties (Access=private, Transient, NonCopyable)
         % UI components
         Grid matlab.ui.container.GridLayout
+        % Panel containing the primary and static axes.
         Panel matlab.ui.container.Panel
+        % Full-image coordinate axes used for labels and viewport graphics.
         staticAxes matlab.ui.control.UIAxes
+        % MATLAB image primitive displaying DisplayCData.
         hImage matlab.graphics.primitive.Image
+        % Cursor, pixel-value, and tool-status text graphic.
         BottomLabel (1,1) matlab.graphics.primitive.Text
+        % Colorbar associated with the primary image axes.
         Colorbar matlab.graphics.illustration.ColorBar
+        % Three-by-three grid used for aspect-preserving layout.
         sizingGrid matlab.ui.container.GridLayout
+        % Patch showing the full-image extent in the overview.
         ViewportBoxFull (1,1) matlab.graphics.primitive.Patch
+        % Patch showing the current visible viewport in the overview.
         ViewportBox (1,1) matlab.graphics.primitive.Patch
 
-
-        % listeners
+        % Internal listener that maintains the aspect-preserving layout.
+        ResizeListener event.listener = event.listener.empty
+        % One-shot listener used when toolbar buttons are created while hidden.
+        InitialToolbarFocusListener event.listener = event.listener.empty
+        % General listener storage retained for component-owned listeners.
         L event.listener
 
     end
 
+    % Host-owned managers exposed only to lifecycle collaborators.
     properties (Access={?matlabx.ui.axes.ImageAxesToolManager}, Transient, NonCopyable)
         % manager for the host-owned context menu
         ContextMenuManager matlabx.ui.axes.ImageAxesContextMenuManager
@@ -203,85 +310,127 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         OverlayManager matlabx.ui.axes.ImageAxesOverlayManager
     end
 
-    % tool-accessible
+    % Primary UIAxes shared with tools and the tool manager.
     properties (Access={?matlabx.ui.axes.AxesTool, ?matlabx.ui.axes.ImageAxesToolManager})
+        % Primary axes containing the image and overlay graphics.
         mainAxes matlab.ui.control.UIAxes
     end
 
+    % Cached UI calibration used by resize calculations.
     properties (Access=private)
         % uipanelOverheadPx_ (1,1) double = NaN
         UICal matlabx.ui.calibration.UICalibration
     end
 
+    % Public typography configuration.
     properties (Dependent, AbortSet)
+        % Font size used by the panel title and bottom label.
         FontSize (1,1) double
     end
 
+    % Backing values for dependent host UI properties.
     properties (Access=private, AbortSet)
+        % Backing value for FontSize.
         FontSize_ (1,1) double = 12
+        % Calibrated panel title/chrome height in pixels.
         uipanelOverheadPx_ (1,1) double = 19
+        % Backing value for ContextMenuItems.
         ContextMenuItems_ (1,:) string = ["Image","Display","ResetView","Status"]
+        % Backing value for ViewportBoxVisible.
         ViewportBoxVisible_ (1,1) matlab.lang.OnOffSwitchState = "off"
+        % Requested toolbar visibility, independent of temporary startup hiding.
+        ToolbarVisible_ (1,1) matlab.lang.OnOffSwitchState = "on"
     end
 
 
+    % Flags and cached keys used to coalesce host updates.
     properties (Access=private)
         % flags to help coalesce/manage updates
         pendingSizeUpdate (1,1) logical = false
+        % Input key for the most recently applied resize layout.
         LastResizeLayoutKey_ (1,5) double = NaN(1,5)
-        inStartup (1,1) logical = true
+        % Whether the ComponentContainer still has its first update pending.
+        FirstUpdatePending (1,1) logical = true
+        % Whether semantic viewport notifications are temporarily suppressed.
         SuppressViewportChanged_ (1,1) logical = false
     end
 
-    %% Popup/temporary UI management
+    %% Auxiliary windows
 
-    % popup windows
+    % Transient auxiliary windows owned by this ImageAxes.
     properties (Access=private, Transient, NonCopyable)
+        % Window used to edit component display limits.
         displayLimitsWindow (:,1) matlabx.ui.axes.ImageAxesDisplayLimitsWindow
+        % Window displaying source image metadata.
         metadataWindow matlabx.app.TextWindow
+        % Window displaying generated image properties.
         imagePropertiesWindow matlabx.app.TextWindow
+        % Window displaying ImageAxes operational status.
         statusWindow matlabx.app.TextWindow
+        % Window displaying help for an installed tool.
         toolHelpWindow matlabx.app.TextWindow
     end
 
+    % Open-state flags for auxiliary windows.
     properties (Access=private)
+        % Whether the metadata window is open.
         metadataWindowOpen (1,1) logical = false
+        % Whether the image-properties window is open.
         imagePropertiesWindowOpen (1,1) logical = false
+        % Whether the status window is open.
         statusWindowOpen (1,1) logical = false
+        % Whether the tool-help window is open.
         toolHelpWindowOpen (1,1) logical = false
     end
 
-    %% Derived properties (accessible to tools)
+    %% Tool-facing geometry and event-routing state
+    % Derived host geometry and cursor information exposed to tools.
     properties (Access=?matlabx.ui.axes.AxesTool, Dependent)
+        % Ancestor figure that owns this component.
         ParentFig
+        % Spatial size of the current render source.
         ImageSize
+        % Width of the current render source in pixels.
         ImageWidth
+        % Height of the current render source in pixels.
         ImageHeight
+        % Full-image X limits in pixel-centered coordinates.
         defaultXLim
+        % Full-image Y limits in pixel-centered coordinates.
         defaultYLim
+        % Current pointer position in mainAxes image coordinates.
         cursorPosition
+        % Current pointer position in staticAxes full-image coordinates.
         cursorPositionStatic
+        % Integer pixel currently under the pointer, or empty outside the image.
         activePixel
     end
 
-    %% Tool helper variables
+    % Optional tool-provided overrides for restored image limits.
     properties (Access=?matlabx.ui.axes.AxesTool)
         % control XLim and YLim of axes holding the image (if empty, lims will be set to default)
         XLim = []
+        % Optional Y-limit override used when restoring the view.
         YLim = []
     end
 
-    %% Hub registration
+    % FigureEventHub registration state.
     properties (Access=private)
+        % Figure-level event hub serving this component.
         Hub matlabx.ui.interaction.FigureEventHub
+        % Registration identifier assigned by FigureEventHub.
         RouterId double = NaN
     end
 
     %% Events
     events (NotifyAccess=protected)
+        % Emitted after the selected plane or generated composite changes.
         RenderSourceChanged
+        % Emitted after a display-facing property changes.
         DisplayStateChanged
+        % Emitted after the canonical ImageData object is replaced.
         ImageDataChanged
+        % Emitted after the visible region or viewport controller state changes.
         ViewportChanged
     end
 
@@ -289,9 +438,22 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods (Access=protected)
 
         function setup(obj)
+        %SETUP Construct graphics, managers, routing, and initial display state.
+            % Match the native UIAxes default; constructor values override it.
+            obj.Position = [10 10 400 300];
+
+            % Use the parent's initial color; do not track later changes.
+            parent = obj.Parent;
+            if isprop(parent, "BackgroundColor")
+                obj.BackgroundColor = parent.BackgroundColor;
+            elseif isprop(parent, "Color")
+                obj.BackgroundColor = parent.Color;
+            end
 
             % perform/retrieve calibration first
             obj.UICal = matlabx.UICal.get();
+            obj.uipanelOverheadPx_ = ...
+                obj.UICal.uipanelTopChromeHeightPx(obj.FontSize_);
 
             obj.Interruptible = 'off';
             obj.BusyAction = 'cancel';
@@ -408,8 +570,10 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.mainAxes.PlotBoxAspectRatio = [1 1 1];
             obj.mainAxes.DataAspectRatio    = [1 1 1];
 
-            % set SizeChangedFcn so we can force visual update upon resizing (AutoResizeChildren of parent must be Off)
-            obj.SizeChangedFcn = @(~,~) obj.updateOnResize();
+            % Keep internal layout handling independent of the public
+            % SizeChangedFcn so applications may assign their own callback.
+            obj.ResizeListener = addlistener(obj, ...
+                'SizeChanged',@(~,~) obj.updateOnResize());
 
             % label in bottom-left corner
             obj.BottomLabel = text('Parent',obj.staticAxes,...
@@ -459,11 +623,9 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function update(obj)
-            if obj.inStartup
-                obj.FontSize_ = obj.FontSize;
-                obj.uipanelOverheadPx_ = obj.UICal.uipanelTopChromeHeightPx(obj.FontSize_);
-                obj.inStartup = false;
-            end
+        %UPDATE Apply ComponentContainer property changes to hosted graphics.
+            isFirstUpdate = obj.FirstUpdatePending;
+            obj.FirstUpdatePending = false;
 
             % set the Tag property of the axes used for event routing
             obj.mainAxes.Tag = obj.Name;
@@ -477,9 +639,21 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
             obj.updateOnResize();
 
+            % Reveal constructor-specified buttons only after the host figure
+            % is visible, then immediately move focus away from the toolbar.
+            if isFirstUpdate
+                if isempty(fieldnames(obj.ToolbarButtons))
+                    obj.mainAxes.Toolbar.Visible = obj.ToolbarVisible_;
+                else
+                    obj.mainAxes.Toolbar.Visible = 'off';
+                    obj.showInitialToolbar();
+                end
+            end
+
         end
 
         function setupContextMenu(obj)
+        %SETUPCONTEXTMENU Create the host-owned context-menu manager.
             obj.ContextMenuManager = matlabx.ui.axes.ImageAxesContextMenuManager(obj, obj.ParentFig);
             obj.ContextMenuManager.setBuiltinItems(obj.ContextMenuItems_);
         end
@@ -512,6 +686,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     % Once an axis reaches a follow bound, that axis releases its anchor and
     % returns to the ordinary absolute cursor-follow mapping.
 
+    % Private zoom, cursor-follow, and viewport-box geometry state.
     properties (Access=private)
         % Zoom_ stores zoom interaction state. The visible viewport is the source
         % of truth for ZoomLevel/ZoomFactor; PresetFactors are only convenient
@@ -553,24 +728,37 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             'YViewportBase', [])
     end
 
+    % Public viewport navigation state.
     properties (Dependent)
+        % Whether zoomed viewport behavior is active.
         ZoomEnabled
+        % Visible fraction of the full image along each spatial dimension.
         ZoomLevel
+        % Magnification factor derived from the current viewport.
         ZoomFactor
 
+        % Whether pointer movement repositions the zoomed viewport.
         FollowCursorEnabled
+        % Normalized static-axes interval controlling cursor-follow travel.
         FollowCursorLims
     end
 
-    % ViewportBox appearance
+    % Viewport overview appearance and placement.
     properties
+        % Overview size relative to the full static axes.
         ViewportBoxScale = 0.1
+        % Edge color of viewport overview patches.
         ViewportBoxEdgeColor = [0 0 0]
+        % Face color of viewport overview patches.
         ViewportBoxFaceColor = [1 1 1]
+        % Face transparency of viewport overview patches.
         ViewportBoxFaceAlpha = 0.25
+        % Line width of viewport overview patches.
         ViewportBoxLineWidth = 1
 
+        % Normalized top inset of the viewport overview.
         ViewportBoxTop = 0.01
+        % Normalized left inset of the viewport overview.
         ViewportBoxLeft = 0.01
     end
 
@@ -1148,6 +1336,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods
 
         function z = get.ZoomEnabled(obj)
+        %GET.ZOOMENABLED Return whether zoom navigation is enabled.
             %ZOOMENABLED  True when mainAxes displays a zoomed viewport box.
             %
             %   Setting ZoomEnabled=true shows the miniature viewport boxes and applies
@@ -1158,6 +1347,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function set.ZoomEnabled(obj,tf)
+        %SET.ZOOMENABLED Enable or disable zoom navigation.
             %ZOOMENABLED  Enable or disable zoom navigation.
             % Route public assignments through the installed Zoom tool when
             % available so controller state and toolbar presentation cannot
@@ -1178,6 +1368,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function p = get.FollowCursorEnabled(obj)
+        %GET.FOLLOWCURSORENABLED Return whether cursor-follow navigation is enabled.
             %FOLLOWCURSORENABLED  True when the zoomed view follows cursor motion.
             %
             %   FollowCursor only affects motion while ZoomEnabled is true. When
@@ -1188,6 +1379,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function set.FollowCursorEnabled(obj,tf)
+        %SET.FOLLOWCURSORENABLED Enable or disable cursor-follow navigation.
             %FOLLOWCURSORENABLED  Enable or disable cursor-follow navigation.
 
             if tf
@@ -1198,6 +1390,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function p = get.FollowCursorLims(obj)
+        %GET.FOLLOWCURSORLIMS Return the normalized cursor-follow control interval.
             %FOLLOWCURSORLIMS  Normalized cursor-follow active interval.
             %
             %   FollowCursorLims is a two-element vector [a b] in normalized
@@ -1215,6 +1408,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function set.FollowCursorLims(obj,lims)
+        %SET.FOLLOWCURSORLIMS Set the normalized cursor-follow control interval.
             %FOLLOWCURSORLIMS  Set cursor-follow active interval.
             %
             %   If zoom and cursor-follow are currently active, changing the limits
@@ -1229,6 +1423,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function z = get.ZoomLevel(obj)
+        %GET.ZOOMLEVEL Return the visible fraction of the full image.
             %ZOOMLEVEL  Fraction of the full image visible in the zoomed view.
             %
             %   ZoomLevel==1 means the full image is visible. ZoomLevel==0.5 means
@@ -1257,6 +1452,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function f = get.ZoomFactor(obj)
+        %GET.ZOOMFACTOR Return the current visual magnification factor.
             %ZOOMFACTOR  Visual magnification factor, equal to 1/ZoomLevel.
 
             f = obj.clampZoomFactor(1 / obj.ZoomLevel);
@@ -1603,19 +1799,20 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     end
 
-
-
-
-
-
     %% Axes linking
+    % Link-group status writable only by ImageAxesLinkManager.
     properties (SetAccess=?matlabx.ui.axes.ImageAxesLinkManager)
+        % Whether this axes belongs to an active link group.
         hasLinks        (1,1) logical = false
     end
 
+    % Link-group peers, properties, and synchronization listeners.
     properties (Access=?matlabx.ui.axes.ImageAxesLinkManager)
+        % Other ImageAxes instances in the current link group.
         linkedAxes      (1,:) = []
+        % Property names synchronized across the current link group.
         linkedProps     (1,:) cell = {}
+        % Listeners that propagate linked state changes.
         LinkListener    event.listener
     end
 
@@ -1748,6 +1945,47 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods (Access=private)
         %% --- UI refresh helpers ---
 
+        function showInitialToolbar(obj)
+        %SHOWINITIALTOOLBAR Reveal the constructed toolbar and release its focus.
+            fig = obj.ParentFig;
+            if isempty(fig) || ~isvalid(fig)
+                return
+            end
+
+            if strcmp(fig.Visible, 'on')
+                obj.clearInitialToolbarFocusListener();
+                obj.mainAxes.Toolbar.Visible = obj.ToolbarVisible_;
+                if strcmp(obj.ToolbarVisible_, 'on')
+                    obj.releaseToolbarFocus();
+                end
+            elseif isempty(obj.InitialToolbarFocusListener) || ...
+                    ~isvalid(obj.InitialToolbarFocusListener)
+                obj.InitialToolbarFocusListener = addlistener(fig, ...
+                    'Visible','PostSet',@(~,~) obj.showInitialToolbar());
+            end
+        end
+
+        function releaseToolbarFocus(obj)
+        %RELEASETOOLBARFOCUS Return keyboard focus from the axes toolbar to its figure.
+            fig = obj.ParentFig;
+            if isempty(fig) || ~isvalid(fig)
+                return
+            end
+
+            if strcmp(fig.Visible, 'on')
+                focus(fig);
+            end
+        end
+
+        function clearInitialToolbarFocusListener(obj)
+        %CLEARINITIALTOOLBARFOCUSLISTENER Remove the pending visibility listener.
+            if ~isempty(obj.InitialToolbarFocusListener)
+                delete(obj.InitialToolbarFocusListener( ...
+                    isvalid(obj.InitialToolbarFocusListener)));
+            end
+            obj.InitialToolbarFocusListener = event.listener.empty;
+        end
+
         function restoreViewportNotifications_(obj)
         %RESTOREVIEWPORTNOTIFICATIONS_ Recover suppression after errors.
             if ~isempty(obj) && isvalid(obj)
@@ -1756,6 +1994,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updateOnResize(obj)
+        %UPDATEONRESIZE Recompute and apply the aspect-preserving component layout.
             if ~isvalid(obj); return; end
 
             if obj.pendingSizeUpdate
@@ -1780,12 +2019,14 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function clearPendingSizeUpdate(obj)
+        %CLEARPENDINGSIZEUPDATE Clear the resize coalescing flag.
             if isvalid(obj)
                 obj.pendingSizeUpdate = false;
             end
         end
 
         function S = computeResizeLayout(obj)
+        %COMPUTERESIZELAYOUT Compute the current aspect-preserving layout.
             S = matlabx.ui.axes.ImageAxesResizeLayout.compute( ...
                 obj, ...
                 obj.ImageData_.SizeY, ...
@@ -1794,6 +2035,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function S = getSizeDiagnostics(obj)
+        %GETSIZEDIAGNOSTICS Return calculated and realized layout diagnostics.
             S = obj.computeResizeLayout();
             S = matlabx.ui.axes.ImageAxesResizeLayout.addDiagnostics( ...
                 S, ...
@@ -1808,6 +2050,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function S = getDebugStatus(obj, includeSizeDiagnostics)
+        %GETDEBUGSTATUS Build the complete ImageAxes debugging report.
             toolStruct = obj.Tools;
             toolNames = string(fieldnames(toolStruct));
 
@@ -1849,7 +2092,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             S.UpdateState = struct( ...
                 "PendingSizeUpdate", obj.pendingSizeUpdate, ...
                 "LastResizeLayoutKey", obj.LastResizeLayoutKey_, ...
-                "InStartup", obj.inStartup);
+                "FirstUpdatePending", obj.FirstUpdatePending);
 
             if includeSizeDiagnostics
                 S.SizeDiagnostics = obj.getSizeDiagnostics();
@@ -1913,6 +2156,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updateBottomLabelText(obj)
+        %UPDATEBOTTOMLABELTEXT Update cursor coordinates, pixel values, and tool status text.
         
             px = obj.activePixel;
         
@@ -1970,6 +2214,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updateTopLabelText(obj)
+        %UPDATETOPLABELTEXT Update the panel title with current image and view information.
             sizeStr = obj.getImageSizeString();
             bitDepthStr = obj.getImageBitDepthString();
             compStr = obj.getComponentInfoString();
@@ -1987,7 +2232,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updatePointer(obj)
-
+        %UPDATEPOINTER Select the highest-priority pointer requested by installed tools.
             % invalid pixel, set pointer to 'arrow'
             if isempty(obj.activePixel), obj.ParentFig.Pointer = 'arrow'; return; end
 
@@ -2022,12 +2267,14 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updateImageCData(obj)
+        %UPDATEIMAGECDATA Render the current display data into the image primitive.
             matlabx.ui.axes.ImageAxesDisplayRenderer.updateImageCData( ...
                 obj.hImage, obj.DisplayCData);
             obj.updateImageMask();
         end
 
         function updateImageMask(obj)
+        %UPDATEIMAGEMASK Apply the stored mask to the image primitive alpha data.
             if isempty(obj.hImage) || ~isgraphics(obj.hImage)
                 return
             end
@@ -2036,6 +2283,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updateColorbar(obj)
+        %UPDATECOLORBAR Update colorbar visibility and limits for the current display.
             matlabx.ui.axes.ImageAxesDisplayRenderer.updateColorbar( ...
                 obj.Colorbar, ...
                 obj.ImageData_, ...
@@ -2044,6 +2292,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updateAxesColormap(obj)
+        %UPDATEAXESCOLORMAP Apply the current component display map to the axes.
             matlabx.ui.axes.ImageAxesDisplayRenderer.updateAxesColormap( ...
                 obj.mainAxes, ...
                 obj.ComponentDisplay_, ...
@@ -2051,6 +2300,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updateFontSizes(obj)
+        %UPDATEFONTSIZES Apply the configured font size and refresh panel calibration.
             obj.Panel.FontSize = obj.FontSize_;
             obj.BottomLabel.FontSize = obj.FontSize_;
             obj.uipanelOverheadPx_ = obj.UICal.uipanelTopChromeHeightPx(obj.FontSize_);
@@ -2099,6 +2349,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function refreshContextMenu(obj)
+        %REFRESHCONTEXTMENU Refresh dynamic context-menu state.
             obj.ContextMenuManager.refresh();
         end
 
@@ -2106,12 +2357,14 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         %% --- UI text helpers ---
 
         function s = getImageInfoString(obj)
+        %GETIMAGEINFOSTRING Return a compact description of the current render source.
             s1 = sprintf(strjoin(repmat({'%i'},1,numel(obj.RenderSourceSize)),'x'),obj.RenderSourceSize);
             s2 = sprintf('%s (%s)',obj.RenderSourceClass,obj.RenderSourceKind);
             s = [s1,' ',s2];
         end
 
         function s = getComponentInfoString(obj)
+        %GETCOMPONENTINFOSTRING Return label text for the current component.
             c = obj.ViewState_.C;
             nm = obj.ImageData_.getComponentName(c);
         
@@ -2129,6 +2382,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function s = getZInfoString(obj)
+        %GETZINFOSTRING Return label text for the current Z plane.
             if obj.ImageData_.SizeZ > 1
                 s = sprintf('Z: %i/%i', obj.ViewState_.Z, obj.ImageData_.SizeZ);
             else
@@ -2137,6 +2391,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function s = getTInfoString(obj)
+        %GETTINFOSTRING Return label text for the current time point.
             if obj.ImageData_.SizeT > 1
                 s = sprintf('T: %i/%i', obj.ViewState_.T, obj.ImageData_.SizeT);
             else
@@ -2145,6 +2400,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function s = getImageSizeString(obj)
+        %GETIMAGESIZESTRING Return formatted spatial image dimensions.
             sz = obj.RenderSourceSize;
             % list size up to but not including the first singleton dimension
             idx = find(sz==1,1,"first");
@@ -2156,6 +2412,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function s = getImageBitDepthString(obj)
+        %GETIMAGEBITDEPTHSTRING Return formatted image class and bit-depth information.
 
             if strcmpi(obj.RenderSourceKind,'rgb')
                 s = '';
@@ -2182,9 +2439,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods
     
         % --- ImageData: canonical source image object ---
-        function v = get.ImageData(obj), v = obj.ImageData_; end
+        function v = get.ImageData(obj)
+        %GET.IMAGEDATA Return the current image data value.
+            v = obj.ImageData_;
+        end
     
         function set.ImageData(obj, val)
+        %SET.IMAGEDATA Set image data and update dependent state.
             arguments
                 obj
                 val (1,1) matlabx.image.Image5D
@@ -2200,9 +2461,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         % --- CData: compatibility alias for raw image input/current source ---
-        function v = get.CData(obj), v = obj.RenderSource; end
+        function v = get.CData(obj)
+        %GET.CDATA Return the current cdata value.
+            v = obj.RenderSource;
+        end
     
         function set.CData(obj, cdata)
+        %SET.CDATA Replace ImageData from a raw MATLAB image value.
             % Convenience wrapper to set ImageData without constructing an Image5D.
             if isempty(cdata)
                 cdata = matlabx.ui.axes.ImageAxes.placeholderImage();
@@ -2218,9 +2483,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.notifyImageDataChanged_(oldSummary, obj.getImageDataEventSummary_());
         end
 
-        function value = get.Mask(obj), value = obj.Mask_; end
+        function value = get.Mask(obj)
+        %GET.MASK Return the current mask value.
+            value = obj.Mask_;
+        end
 
         function set.Mask(obj, value)
+        %SET.MASK Set mask and update dependent state.
             if ~isempty(value) && (~islogical(value) || ~ismatrix(value) || ...
                     ~isequal(size(value), [obj.ImageData_.SizeY obj.ImageData_.SizeX]))
                 error('matlabx:ui:axes:ImageAxes:InvalidMask', ...
@@ -2234,9 +2503,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.notifyDisplayStateChanged_("Mask", [], previous, value);
         end
 
-        function value = get.MaskEnabled(obj), value = obj.MaskEnabled_; end
+        function value = get.MaskEnabled(obj)
+        %GET.MASKENABLED Return the current mask enabled value.
+            value = obj.MaskEnabled_;
+        end
 
         function set.MaskEnabled(obj, value)
+        %SET.MASKENABLED Set mask enabled and update dependent state.
             previous = obj.MaskEnabled_;
             obj.MaskEnabled_ = value;
             obj.updateImageMask();
@@ -2244,9 +2517,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.notifyDisplayStateChanged_("MaskEnabled", [], previous, value);
         end
 
-        function value = get.OverlaysVisible(obj), value = obj.OverlaysVisible_; end
+        function value = get.OverlaysVisible(obj)
+        %GET.OVERLAYSVISIBLE Return the current overlays visible value.
+            value = obj.OverlaysVisible_;
+        end
 
         function set.OverlaysVisible(obj, value)
+        %SET.OVERLAYSVISIBLE Set overlays visible and update dependent state.
             previous = obj.OverlaysVisible_;
             obj.OverlaysVisible_ = value;
             if ~isempty(obj.OverlayManager)
@@ -2266,10 +2543,19 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.MaskEnabled = ~obj.MaskEnabled;
         end
 
+        function toggleToolbar(obj)
+        %TOGGLETOOLBAR Show or hide the toolbar without changing installed tools.
+            obj.ToolbarVisible = ~obj.ToolbarVisible;
+        end
+
         % --- RenderSource: selected plane or computed composite ---
-        function v = get.RenderSource(obj), v = obj.RenderSource_; end
+        function v = get.RenderSource(obj)
+        %GET.RENDERSOURCE Return the current render source value.
+            v = obj.RenderSource_;
+        end
 
         function v = get.RenderSourceSize(obj)
+        %GET.RENDERSOURCESIZE Return the current render source size value.
             if obj.ViewState_.ShowComposite
                 v = size(obj.RenderSource_);
             else
@@ -2278,6 +2564,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         function v = get.RenderSourceKind(obj)
+        %GET.RENDERSOURCEKIND Return the current render source kind value.
             if obj.ViewState_.ShowComposite
                 v = 'rgb';
             else
@@ -2286,6 +2573,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         function v = get.RenderSourceClass(obj)
+        %GET.RENDERSOURCECLASS Return the current render source class value.
             if obj.ViewState_.ShowComposite
                 v = class(obj.RenderSource_);
             else
@@ -2294,12 +2582,22 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         % --- CData metadata compatibility aliases ---
-        function v = get.CDataSize(obj),  v = obj.RenderSourceSize;  end
-        function v = get.CDataKind(obj),  v = obj.RenderSourceKind;  end
-        function v = get.CDataClass(obj), v = obj.RenderSourceClass; end
+        function v = get.CDataSize(obj)
+        %GET.CDATASIZE Return the current cdata size value.
+            v = obj.RenderSourceSize;
+        end
+        function v = get.CDataKind(obj)
+        %GET.CDATAKIND Return the current cdata kind value.
+            v = obj.RenderSourceKind;
+        end
+        function v = get.CDataClass(obj)
+        %GET.CDATACLASS Return the current cdata class value.
+            v = obj.RenderSourceClass;
+        end
 
         % --- DisplayCData: graphics-ready image CData ---
         function v = get.DisplayCData(obj)
+        %GET.DISPLAYCDATA Return the current display cdata value.
             v = matlabx.ui.axes.ImageAxesDisplayRenderer.getDisplayCData( ...
                 obj.RenderSource_, ...
                 obj.ImageData_, ...
@@ -2309,6 +2607,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % --- CLim ---
         function v = get.CLim(obj)
+        %GET.CLIM Return the current clim value.
             idx = obj.ViewState_.C;
             clim = obj.ComponentDisplay_(idx).CLim;
     
@@ -2320,15 +2619,18 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         function set.CLim(obj, val)
+        %SET.CLIM Set clim and update dependent state.
             obj.setComponentCLim(double(val), obj.ViewState_.C);
         end
 
         % --- CLimMode ---
         function v = get.CLimMode(obj)
+        %GET.CLIMMODE Return the current clim mode value.
             v = obj.ViewState_.CLimMode;
         end
     
         function set.CLimMode(obj, val)
+        %SET.CLIMMODE Set clim mode and update dependent state.
             if strcmp(obj.ViewState_.CLimMode, val)
                 return
             end
@@ -2360,22 +2662,38 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         % --- NumComponents ---
-        function v = get.NumComponents(obj), v = obj.ImageData_.NumComponents; end
+        function v = get.NumComponents(obj)
+        %GET.NUMCOMPONENTS Return the current num components value.
+            v = obj.ImageData_.NumComponents;
+        end
 
         % --- MultiComponent ---
-        function v = get.MultiComponent(obj), v = obj.ImageData_.MultiComponent; end
+        function v = get.MultiComponent(obj)
+        %GET.MULTICOMPONENT Return the current multi component value.
+            v = obj.ImageData_.MultiComponent;
+        end
 
         % --- MultiComponentKind ---
-        function v = get.MultiComponentKind(obj), v = obj.ImageData_.MultiComponentKind; end
+        function v = get.MultiComponentKind(obj)
+        %GET.MULTICOMPONENTKIND Return the current multi component kind value.
+            v = obj.ImageData_.MultiComponentKind;
+        end
 
         % --- CanMergeComponents ---
-        function tf = get.CanMergeComponents(obj), tf = obj.ImageData_.CanMergeComponents; end
+        function tf = get.CanMergeComponents(obj)
+        %GET.CANMERGECOMPONENTS Return the current can merge components value.
+            tf = obj.ImageData_.CanMergeComponents;
+        end
 
 
         % --- ShowComposite ---
-        function v = get.ShowComposite(obj), v = matlab.lang.OnOffSwitchState(obj.ViewState_.ShowComposite); end
+        function v = get.ShowComposite(obj)
+        %GET.SHOWCOMPOSITE Return the current show composite value.
+            v = matlab.lang.OnOffSwitchState(obj.ViewState_.ShowComposite);
+        end
     
         function set.ShowComposite(obj, val)
+        %SET.SHOWCOMPOSITE Set show composite and update dependent state.
             newVal = logical(val) && obj.CanMergeComponents;
 
             if obj.ViewState_.ShowComposite == newVal
@@ -2387,21 +2705,34 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         % --- toggleComposite ---
-        function toggleComposite(obj), obj.ShowComposite = ~obj.ViewState_.ShowComposite; end
+        function toggleComposite(obj)
+        %TOGGLECOMPOSITE Toggle composite.
+            obj.ShowComposite = ~obj.ViewState_.ShowComposite;
+        end
 
 
         %% C/Z/T control
 
         % --- nextComponent ---
-        function nextComponent(obj), obj.C = matlabx.utils.math.wrapStep(obj.C,1,1,obj.NumComponents); end
+        function nextComponent(obj)
+        %NEXTCOMPONENT Select the next component, wrapping at the end.
+            obj.C = matlabx.utils.math.wrapStep(obj.C,1,1,obj.NumComponents);
+        end
     
         % --- previousComponent ---
-        function previousComponent(obj), obj.C = matlabx.utils.math.wrapStep(obj.C,-1,1,obj.NumComponents); end
+        function previousComponent(obj)
+        %PREVIOUSCOMPONENT Select the previous component, wrapping at the beginning.
+            obj.C = matlabx.utils.math.wrapStep(obj.C,-1,1,obj.NumComponents);
+        end
     
         % --- C ---
-        function v = get.C(obj), v = obj.ViewState_.C; end
+        function v = get.C(obj)
+        %GET.C Return the current c value.
+            v = obj.ViewState_.C;
+        end
     
         function set.C(obj, val)
+        %SET.C Set c and update dependent state.
             newVal = clip(val, 1, obj.NumComponents);
 
             if obj.ViewState_.C == newVal
@@ -2414,15 +2745,25 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
 
         % --- nextZ ---
-        function nextZ(obj), obj.Z = matlabx.utils.math.wrapStep(obj.Z,1,1,obj.ImageData_.SizeZ); end
+        function nextZ(obj)
+        %NEXTZ Select the next Z plane, wrapping at the end.
+            obj.Z = matlabx.utils.math.wrapStep(obj.Z,1,1,obj.ImageData_.SizeZ);
+        end
     
         % --- previousZ ---
-        function previousZ(obj), obj.Z = matlabx.utils.math.wrapStep(obj.Z,-1,1,obj.ImageData_.SizeZ); end
+        function previousZ(obj)
+        %PREVIOUSZ Select the previous Z plane, wrapping at the beginning.
+            obj.Z = matlabx.utils.math.wrapStep(obj.Z,-1,1,obj.ImageData_.SizeZ);
+        end
     
         % --- Z ---
-        function v = get.Z(obj), v = obj.ViewState_.Z; end
+        function v = get.Z(obj)
+        %GET.Z Return the current z value.
+            v = obj.ViewState_.Z;
+        end
     
         function set.Z(obj, val)
+        %SET.Z Set z and update dependent state.
             newVal = clip(val, 1, obj.ImageData_.SizeZ);
 
             if obj.ViewState_.Z == newVal
@@ -2434,15 +2775,25 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         % --- nextT ---
-        function nextT(obj), obj.T = matlabx.utils.math.wrapStep(obj.T,1,1,obj.ImageData_.SizeT); end
+        function nextT(obj)
+        %NEXTT Select the next time point, wrapping at the end.
+            obj.T = matlabx.utils.math.wrapStep(obj.T,1,1,obj.ImageData_.SizeT);
+        end
     
         % --- previousT ---
-        function previousT(obj), obj.T = matlabx.utils.math.wrapStep(obj.T,-1,1,obj.ImageData_.SizeT); end
+        function previousT(obj)
+        %PREVIOUST Select the previous time point, wrapping at the beginning.
+            obj.T = matlabx.utils.math.wrapStep(obj.T,-1,1,obj.ImageData_.SizeT);
+        end
     
         % --- T ---
-        function v = get.T(obj), v = obj.ViewState_.T; end
+        function v = get.T(obj)
+        %GET.T Return the current t value.
+            v = obj.ViewState_.T;
+        end
     
         function set.T(obj, val)
+        %SET.T Set t and update dependent state.
             newVal = clip(val, 1, obj.ImageData_.SizeT);
 
             if obj.ViewState_.T == newVal
@@ -2457,9 +2808,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         %% Component-specific set/get
 
         % --- Colormap ---
-        function v = get.Colormap(obj), v = obj.ComponentDisplay_(obj.ViewState_.C).DisplayMap; end
+        function v = get.Colormap(obj)
+        %GET.COLORMAP Return the current colormap value.
+            v = obj.ComponentDisplay_(obj.ViewState_.C).DisplayMap;
+        end
 
         function set.Colormap(obj, val)
+        %SET.COLORMAP Set colormap and update dependent state.
             idx = obj.ViewState_.C;
             obj.setComponentColormap(double(val), idx);
         end
@@ -2467,6 +2822,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % --- ComponentColors ---
         function val = get.ComponentColors(obj)
+        %GET.COMPONENTCOLORS Return the current component colors value.
             val = cell(1, obj.NumComponents);
             for i = 1:obj.NumComponents
                 val{i} = char(obj.ComponentDisplay_(i).ColorName);
@@ -2474,6 +2830,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         function set.ComponentColors(obj, val)
+        %SET.COMPONENTCOLORS Set component colors and update dependent state.
             obj.validateFullComponentCell(val, 'ComponentColors');
 
             previousValue = obj.ComponentColors;
@@ -2489,6 +2846,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     
         % --- ComponentColormaps ---
         function val = get.ComponentColormaps(obj)
+        %GET.COMPONENTCOLORMAPS Return the current component colormaps value.
             val = cell(1, obj.NumComponents);
             for i = 1:obj.NumComponents
                 val{i} = obj.ComponentDisplay_(i).Colormap;
@@ -2496,6 +2854,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         function set.ComponentColormaps(obj, val)
+        %SET.COMPONENTCOLORMAPS Set component colormaps and update dependent state.
             obj.validateFullComponentCell(val, 'ComponentColormaps');
 
             previousValue = obj.ComponentColormaps;
@@ -2510,9 +2869,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         % --- ComponentColorMode ---
-        function v = get.ComponentColorMode(obj), v = obj.ViewState_.ComponentColorMode; end
+        function v = get.ComponentColorMode(obj)
+        %GET.COMPONENTCOLORMODE Return the current component color mode value.
+            v = obj.ViewState_.ComponentColorMode;
+        end
     
         function set.ComponentColorMode(obj, val)
+        %SET.COMPONENTCOLORMODE Set component color mode and update dependent state.
             if strcmp(obj.ViewState_.ComponentColorMode, val)
                 return
             end
@@ -2527,6 +2890,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % --- ComponentCLims ---
         function val = get.ComponentCLims(obj)
+        %GET.COMPONENTCLIMS Return the current component clims value.
             val = cell(1, obj.NumComponents);
             for i = 1:obj.NumComponents
                 val{i} = obj.ComponentDisplay_(i).CLim;
@@ -2534,6 +2898,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         function set.ComponentCLims(obj, val)
+        %SET.COMPONENTCLIMS Set component clims and update dependent state.
             obj.validateFullComponentCell(val, 'ComponentCLims');
 
             previousValue = obj.ComponentCLims;
@@ -2572,6 +2937,25 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.ComponentCLims = clims;
         end
 
+
+        % --- chooseColormap ---
+        function chooseColormap(obj)
+        %CHOOSECOLORMAP Open the colormap selector for the current component.
+            component = obj.C;
+            previousMap = obj.ComponentColormaps{component};
+            previousMode = obj.ComponentColorMode;
+
+            [cmap, accepted] = matlabx.app.ColormapSelector( ...
+                PreviewFcn=@(preview) obj.setComponentColormap(preview, component));
+
+            if accepted
+                obj.setComponentColormap(cmap, component);
+            elseif ~isequal(obj.ComponentColormaps{component}, previousMap) || ...
+                    ~strcmp(obj.ComponentColorMode, previousMode)
+                obj.setComponentColormap(previousMap, component);
+                obj.ComponentColorMode = previousMode;
+            end
+        end
 
         % --- setComponentColormap ---
         function setComponentColormap(obj, cmap, idx)
@@ -2621,6 +3005,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods (Access=private)
     
         function syncViewStateToImageData(obj)
+        %SYNCVIEWSTATETOIMAGEDATA Reconcile view and component display state with ImageData.
             n = obj.NumComponents;
     
             % clip C, Z, T to valid range
@@ -2638,6 +3023,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
     
         function displayState = initializeComponentDisplayState(obj, n)
+        %INITIALIZECOMPONENTDISPLAYSTATE Build per-component display state for the current image.
             old = obj.ComponentDisplay_;
 
             displayState = repmat(matlabx.ui.axes.ImageAxesComponentDisplayState(), 1, n);
@@ -2897,15 +3283,18 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function updateAllDisplayMaps(obj)
+        %UPDATEALLDISPLAYMAPS Rebuild every component display map for the active color mode.
             obj.ComponentDisplay_ = matlabx.ui.axes.ImageAxesDisplayRenderer.updateAllDisplayMaps( ...
                 obj.ComponentDisplay_, obj.ViewState_.ComponentColorMode);
         end
     
         function map = getDisplayMap(~, displayState, mode)
+        %GETDISPLAYMAP Return the effective display map for one component state.
             map = matlabx.ui.axes.ImageAxesDisplayRenderer.getDisplayMap(displayState, mode);
         end
     
         function I = getCompositeImage(obj)
+        %GETCOMPOSITEIMAGE Render the current multicomponent view as an RGB composite.
             I = matlabx.ui.axes.ImageAxesDisplayRenderer.getCompositeImage( ...
                 obj.ImageData_, obj.ComponentDisplay_, obj.ViewState_);
         end
@@ -2965,11 +3354,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods (Access=?matlabx.ui.axes.AxesTool, Hidden=true)
         
         function updateFromTool(obj)
+        %UPDATEFROMTOOL Refresh cursor-dependent host UI after tool interaction.
             obj.updateBottomLabelText();
             obj.updatePointer();
         end
 
         function restoreDefaultLimits(obj)
+        %RESTOREDEFAULTLIMITS Restore full-image limits on both hosted axes.
             obj.resetViewport();
         end
 
@@ -3043,6 +3434,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % cursor position in axes/image
         function cursorPosition = get.cursorPosition(obj)
+        %GET.CURSORPOSITION Return the current cursor position value.
             cursorPosition = obj.mainAxes.CurrentPoint(1,[1,2]);
             % return empty if outside limits
             if ~obj.isInLimits(cursorPosition,obj.mainAxes.XLim,obj.mainAxes.YLim)
@@ -3051,6 +3443,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function cursorPositionStatic = get.cursorPositionStatic(obj)
+        %GET.CURSORPOSITIONSTATIC Return the current cursor position static value.
             cursorPositionStatic = obj.staticAxes.CurrentPoint(1,[1,2]);
             % return empty if outside limits
             if ~obj.isInLimits(cursorPositionStatic,obj.staticAxes.XLim,obj.staticAxes.YLim)
@@ -3059,6 +3452,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function px = get.activePixel(obj)
+        %GET.ACTIVEPIXEL Return the integer image pixel currently under the pointer.
             % cursor position in axes
             XY = obj.cursorPosition;
             % empty -> return
@@ -3068,38 +3462,88 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         % image dimensions
-        function s = get.ImageSize(obj),    s = obj.RenderSourceSize;    end
-        function h = get.ImageHeight(obj),  h = obj.ImageSize(1); end
-        function w = get.ImageWidth(obj),   w = obj.ImageSize(2); end
+        function s = get.ImageSize(obj)
+        %GET.IMAGESIZE Return the current image size value.
+            s = obj.RenderSourceSize;
+        end
+        function h = get.ImageHeight(obj)
+        %GET.IMAGEHEIGHT Return the current image height value.
+            h = obj.ImageSize(1);
+        end
+        function w = get.ImageWidth(obj)
+        %GET.IMAGEWIDTH Return the current image width value.
+            w = obj.ImageSize(2);
+        end
 
         % default axes limits (set to prefectly enclose image)
-        function x = get.defaultXLim(obj),  x = [0 obj.ImageWidth] + 0.5; end
-        function y = get.defaultYLim(obj),  y = [0 obj.ImageHeight] + 0.5; end
+        function x = get.defaultXLim(obj)
+        %GET.DEFAULTXLIM Return the current default xlim value.
+            x = [0 obj.ImageWidth] + 0.5;
+        end
+        function y = get.defaultYLim(obj)
+        %GET.DEFAULTYLIM Return the current default ylim value.
+            y = [0 obj.ImageHeight] + 0.5;
+        end
 
         % retrieve fig/axes handles
-        function f = get.ParentFig(obj),    f = ancestor(obj,'Figure'); end
-        function ax = getAxes(obj),         ax = obj.mainAxes; end
-        function ax = getOverlayAxes(obj),  ax = obj.staticAxes; end
+        function f = get.ParentFig(obj)
+        %GET.PARENTFIG Return the current parent fig value.
+            f = ancestor(obj,'Figure');
+        end
+        function ax = getAxes(obj)
+        %GETAXES Return the primary image UIAxes.
+            ax = obj.mainAxes;
+        end
+        function ax = getOverlayAxes(obj)
+        %GETOVERLAYAXES Return the static full-image UIAxes.
+            ax = obj.staticAxes;
+        end
 
         % axes/image passthroughs (Set/Get)
 
         % ImageVisible
-        function v = get.ImageVisible(obj),v = obj.hImage.Visible; end
-        function set.ImageVisible(obj,val),obj.hImage.Visible = val; end
+        function v = get.ImageVisible(obj)
+        %GET.IMAGEVISIBLE Return the current image visible value.
+            v = obj.hImage.Visible;
+        end
+        function set.ImageVisible(obj,val)
+        %SET.IMAGEVISIBLE Set image visible and update dependent state.
+            obj.hImage.Visible = val;
+        end
         % AxesVisible
-        function v = get.AxesVisible(obj), v = obj.mainAxes.Visible; end
-        function set.AxesVisible(obj,val), obj.mainAxes.Visible = val; end
+        function v = get.AxesVisible(obj)
+        %GET.AXESVISIBLE Return the current axes visible value.
+            v = obj.mainAxes.Visible;
+        end
+        function set.AxesVisible(obj,val)
+        %SET.AXESVISIBLE Set axes visible and update dependent state.
+            obj.mainAxes.Visible = val;
+        end
         % ColorbarVisible
-        function v = get.ColorbarVisible(obj), v = obj.Colorbar.Visible; end
-        function set.ColorbarVisible(obj,val), obj.Colorbar.Visible = val; end
+        function v = get.ColorbarVisible(obj)
+        %GET.COLORBARVISIBLE Return the current colorbar visible value.
+            v = obj.Colorbar.Visible;
+        end
+        function set.ColorbarVisible(obj,val)
+        %SET.COLORBARVISIBLE Set colorbar visible and update dependent state.
+            obj.Colorbar.Visible = val;
+        end
         % MaxRenderedResolution
-        function v = get.MaxRenderedResolution(obj), v = obj.hImage.MaxRenderedResolution; end
-        function set.MaxRenderedResolution(obj,val), obj.hImage.MaxRenderedResolution = val; end
+        function v = get.MaxRenderedResolution(obj)
+        %GET.MAXRENDEREDRESOLUTION Return the current max rendered resolution value.
+            v = obj.hImage.MaxRenderedResolution;
+        end
+        function set.MaxRenderedResolution(obj,val)
+        %SET.MAXRENDEREDRESOLUTION Set max rendered resolution and update dependent state.
+            obj.hImage.MaxRenderedResolution = val;
+        end
         % ContextMenuItems
         function items = get.ContextMenuItems(obj)
+        %GET.CONTEXTMENUITEMS Return the current context menu items value.
             items = obj.ContextMenuItems_;
         end
         function set.ContextMenuItems(obj, items)
+        %SET.CONTEXTMENUITEMS Set context menu items and update dependent state.
             items = matlabx.ui.axes.ImageAxesContextMenuManager.validateBuiltinItems(items);
             obj.ContextMenuItems_ = items;
             if ~isempty(obj.ContextMenuManager)
@@ -3108,22 +3552,40 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
         % ViewportBoxVisible
         function val = get.ViewportBoxVisible(obj)
+        %GET.VIEWPORTBOXVISIBLE Return the current viewport box visible value.
             val = obj.ViewportBoxVisible_;
         end
         function set.ViewportBoxVisible(obj,val)
+        %SET.VIEWPORTBOXVISIBLE Set viewport box visible and update dependent state.
             obj.ViewportBoxVisible_ = val;
             obj.updateViewportBoxVisibility();
+            obj.refreshContextMenu();
+        end
+        % ToolbarVisible
+        function val = get.ToolbarVisible(obj)
+        %GET.TOOLBARVISIBLE Return the requested toolbar visibility.
+            val = obj.ToolbarVisible_;
+        end
+        function set.ToolbarVisible(obj,val)
+        %SET.TOOLBARVISIBLE Show or hide the toolbar without changing its tools.
+            obj.ToolbarVisible_ = val;
+            if ~isempty(obj.mainAxes) && isvalid(obj.mainAxes) && ...
+                    ~obj.FirstUpdatePending
+                obj.mainAxes.Toolbar.Visible = val;
+            end
             obj.refreshContextMenu();
         end
 
         % FontSize
         function set.FontSize(obj,val)
+        %SET.FONTSIZE Set font size and update dependent state.
             obj.FontSize_ = val;
             obj.updateFontSizes();
             obj.updateOnResize();
         end
 
         function v = get.FontSize(obj)
+        %GET.FONTSIZE Return the current font size value.
             v = obj.FontSize_;
         end
 
@@ -3134,6 +3596,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % determine whether this instance should claim event from FigureEventHub
         function tf = matches(obj, E)
+        %MATCHES Return whether a routed event belongs to this ImageAxes.
             % E.Target: hittest result from FigureEventHub that we are checking for a match to this component
             % E.Kind: the specific event kind (i.e. 'Move', 'Down', 'Up', 'Scroll', 'KeyPress', or 'KeyRelease')
             % E.RawEvent: event data associated with the event
@@ -3147,6 +3610,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onDown(obj, E)
+        %ONDOWN Route a pointer-down event to tools and host defaults.
             obj.routeEventToTools(E);
 
             if E.StopPropagation, return; end
@@ -3155,6 +3619,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onMove(obj, E)
+        %ONMOVE Handle routed pointer movement over the component.
             % get the ancestor toolbar button from event target, if it exists
             btn = obj.getToolbarButtonFromTarget(E.Target);
 
@@ -3177,14 +3642,17 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onUp(obj, E)
+        %ONUP Route a pointer-up event to installed tools.
             obj.routeEventToTools(E);
         end
 
         function onScroll(obj, E)
+        %ONSCROLL Route a scroll event to installed tools.
             obj.routeEventToTools(E);
         end
 
         function onKeyPress(obj, E)
+        %ONKEYPRESS Dispatch hotkeys, tools, and built-in keyboard commands.
             obj.routeHotkey(E);
             if E.StopPropagation, return; end
 
@@ -3211,10 +3679,12 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onKeyRelease(obj, E)
+        %ONKEYRELEASE Route a key-release event to installed tools.
             obj.routeEventToTools(E);
         end
 
         function onEnter(obj,E)
+        %ONENTER Activate hover UI and notify tools when the pointer enters.
             obj.BottomLabel.Visible = "on";
 
             if obj.ZoomEnabled && obj.FollowCursorEnabled
@@ -3231,6 +3701,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onLeave(obj,E)
+        %ONLEAVE Handle the pointer leaving the component.
             % hide label
             obj.BottomLabel.Visible = "off";
             % reset pointer to arrow
@@ -3247,11 +3718,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % executes on mouse move after PassiveInterceptors/Interceptors
         function onMove_(obj)
+        %ONMOVE_ Refresh the cursor label and pointer after movement.
             obj.updateBottomLabelText();
             obj.updatePointer();
         end
 
         function onDown_(obj,E)
+        %ONDOWN_ Open the host menu for an unclaimed context click.
 
             if E.StopPropagation
                 return
@@ -3269,6 +3742,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods (Access=private)
 
         function tf = isChild(obj,h)
+        %ISCHILD Return whether a graphics object belongs to this component.
             % true if h is child of this ImageAxes
             ia = ancestor(h,'matlabx.ui.axes.ImageAxes');
 
@@ -3280,12 +3754,14 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function tf = isAxesChild(obj,h)
+        %ISAXESCHILD Return whether a graphics object belongs to a hosted UIAxes.
             % true if h is child of UIAxes belonging to this ImageAxes
             ax = ancestor(h,'matlab.ui.control.UIAxes');
             tf = ~isempty(ax) && strcmp(ax.Tag,obj.Name);
         end
 
         function tf = isToolbarButtonChild(~,h)
+        %ISTOOLBARBUTTONCHILD Return whether a graphics object belongs to an axes toolbar button.
             % true if h is child of ToolbarStateButton or ToolbarPushButton (in any axes)
             % btn = ancestor(h,'matlab.ui.controls.ToolbarStateButton');
             % if isempty(btn)
@@ -3297,6 +3773,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function btn = getToolbarButtonFromTarget(~,target)
+        %GETTOOLBARBUTTONFROMTARGET Return the toolbar button containing an event target.
             % get the ancestor toolbar button from event target, if it exists
             % look for "state" buttons first
             btn = ancestor(target,'matlab.ui.controls.ToolbarStateButton');
@@ -3312,6 +3789,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods
 
         function routeEventToTools(obj,E)
+        %ROUTEEVENTTOTOOLS Route event to tools.
 
             obj.routeToPassiveInterceptors(E);
             if E.StopPropagation, return; end
@@ -3330,6 +3808,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function routeHotkey(obj,E)
+        %ROUTEHOTKEY Route hotkey.
             if isempty(obj.HotkeyRegistry)
                 return
             end
@@ -3338,6 +3817,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function routeToPassiveInterceptors(obj,E)
+        %ROUTETOPASSIVEINTERCEPTORS Route an event to every matching passive interceptor.
             % cell array of PassiveInterceptors for this eventType, sorted by Priority
             passiveInterceptors = obj.getPriorityPassiveInterceptors(E.Kind);
 
@@ -3358,41 +3838,49 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % register a tool (add it to the installed tool registry) - tools call this themselves
         function registerTool(obj, tool)
+        %REGISTERTOOL Register an installed tool and construct its contributions.
             obj.ToolManager.register(tool);
         end
 
         % remove tool from installed tool registry - it remains loaded
         function unregisterTool(obj, tool)
+        %UNREGISTERTOOL Remove a tool and all of its host-owned contributions.
             obj.ToolManager.unregister(tool);
         end
 
         % load all tools in matlabx.ui.axes.tools
         function loadAllTools(obj)
+        %LOADALLTOOLS Load all tools.
             obj.ToolManager.loadAll();
         end
 
         % unload all currently loaded tools
         function unloadAllTools(obj)
+        %UNLOADALLTOOLS Unload all tools.
             obj.ToolManager.unloadAll();
         end
 
         % load tools specified by toolNames (cell array of char vectors)
         function loadTools(obj,toolNames)
+        %LOADTOOLS Construct one or more manager-owned built-in tools.
             obj.ToolManager.loadMany(toolNames);
         end
 
         % load tool specified by name
         function loadTool(obj, name)
+        %LOADTOOL Load tool.
             obj.ToolManager.load(name);
         end
 
         % unload tool specified by name
         function unloadTool(obj, name)
+        %UNLOADTOOL Unload tool.
             obj.ToolManager.unload(name);
         end
 
         % install tools specified by toolNames (cell array of char vectors)
         function installTools(obj,toolNames)
+        %INSTALLTOOLS Install one or more loaded built-in tools by name.
             obj.ToolManager.installMany(toolNames);
         end
 
@@ -3415,6 +3903,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods
 
         function registerToolHotkeys(obj, tool)
+        %REGISTERTOOLHOTKEYS Register the hotkeys declared by an installed tool.
             if strlength(tool.ToggleHotkey) == 0
                 return
             end
@@ -3428,6 +3917,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onToolToggleHotkey(obj, name, E)
+        %ONTOOLTOGGLEHOTKEY Toggle a state tool in response to its registered hotkey.
             t = obj.getInstalledTool(name);
 
             if isempty(t)
@@ -3455,11 +3945,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % add a toolbar button for the tool (tool calls this on install)
         function addToolbarButton(obj, tool)
+        %ADDTOOLBARBUTTON Add toolbar button.
             obj.ToolManager.addToolbarButton(tool);
         end
 
         % add a toolbar button for the tool (tool calls this on uninstall)
         function removeToolbarButton(obj, tool)
+        %REMOVETOOLBARBUTTON Remove toolbar button.
             obj.ToolManager.removeToolbarButton(tool);
         end
 
@@ -3470,38 +3962,44 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % enable installed tool specified by name
         function enableTool(obj, name)
+        %ENABLETOOL Enable an installed state tool by name.
             obj.ToolManager.enable(name);
         end
 
         % disable installed tool specified by name
         function disableTool(obj, name)
+        %DISABLETOOL Disable an installed state tool by name.
             obj.ToolManager.disable(name);
         end
 
         % query Enabled state of tool specified by name
         function tf = toolEnabled(obj, name)
+        %TOOLENABLED Return whether an installed tool is enabled.
             tf = obj.ToolManager.enabled(name);
         end
 
         % toggle Enabled state of "state" tool specified by name (toolbar button ValueChangedFcn)
         function onToolToggle(obj,toolState,name)
-            focus(obj.ParentFig); % attempt to defocus the axes toolbar so that the axes can receive keyboard input
+        %ONTOOLTOGGLE Apply a toolbar state-button change to its tool.
+            obj.releaseToolbarFocus();
             obj.ToolManager.toggle(toolState, name);
         end
 
         % run "push" tool specified by name (toolbar button ButtonPushedFcn)
         function onToolPush(obj,name)
+        %ONTOOLPUSH Run the tool associated with a toolbar push button.
             obj.ToolManager.push(name);
         end
 
         % run installed tool specified by name
         function runTool(obj, name)
+        %RUNTOOL Run tool.
             obj.ToolManager.run(name);
         end
 
-
         % disable ActiveExclusiveTool if it exists
         function disableActiveExclusive(obj)
+        %DISABLEACTIVEEXCLUSIVE Disable active exclusive.
             obj.ToolManager.disableActiveExclusive();
         end
 
@@ -3512,26 +4010,31 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % get installed tool specified by name
         function t = getInstalledTool(obj, name)
+        %GETINSTALLEDTOOL Return installed tool.
             t = obj.ToolManager.getInstalled(name);
         end
 
         % get loaded tool specified by name
         function t = getLoadedTool(obj, name)
+        %GETLOADEDTOOL Return loaded tool.
             t = obj.ToolManager.getLoaded(name);
         end
 
         % get the highest Priority Interceptor for the specified eventType
         function tool = getPriorityInterceptor(obj,eventType)
+        %GETPRIORITYINTERCEPTOR Return the enabled interceptor that should receive an event.
             tool = obj.ToolManager.getPriorityInterceptor(eventType);
         end
 
         % get cell array of PassiveInterceptors for the specified eventType, sorted by descending Priority
         function toolsCell = getPriorityPassiveInterceptors(obj,eventType)
+        %GETPRIORITYPASSIVEINTERCEPTORS Return passive interceptors for an event in priority order.
             toolsCell = obj.ToolManager.getPriorityPassiveInterceptors(eventType);
         end
 
         % given a cell array of tools, return the same cell array sorted by descending Priority
         function toolsCell = prioritySortToolsCell(obj,toolsCell)
+        %PRIORITYSORTTOOLSCELL Sort tool objects by descending routing priority.
             toolsCell = obj.ToolManager.prioritySortCell(toolsCell);
         end
 
@@ -3637,6 +4140,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % --- MetadataWindow ---
         function openMetadataWindow(obj)
+        %OPENMETADATAWINDOW Open a text report of ImageData source metadata.
             if obj.metadataWindowOpen
                 return
             end
@@ -3653,11 +4157,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onMetadataWindowClosed(obj)
+        %ONMETADATAWINDOWCLOSED Clear metadata-window ownership state.
             obj.metadataWindowOpen = false;
         end
 
         % --- ImagePropertiesWindow ---
         function openImagePropertiesWindow(obj)
+        %OPENIMAGEPROPERTIESWINDOW Open a generated ImageData and view summary.
             if obj.imagePropertiesWindowOpen
                 return
             end
@@ -3675,11 +4181,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onImagePropertiesWindowClosed(obj)
+        %ONIMAGEPROPERTIESWINDOWCLOSED Clear image-properties window ownership state.
             obj.imagePropertiesWindowOpen = false;
         end
 
         % --- StatusWindow ---
         function openStatusWindow(obj)
+        %OPENSTATUSWINDOW Open the ImageAxes operational status report.
             if obj.statusWindowOpen
                 return
             end
@@ -3697,6 +4205,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onStatusWindowClosed(obj)
+        %ONSTATUSWINDOWCLOSED Clear status-window ownership state.
             obj.statusWindowOpen = false;
         end
 
@@ -3732,6 +4241,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onToolHelpWindowClosed(obj)
+        %ONTOOLHELPWINDOWCLOSED Clear tool-help window ownership state.
             obj.toolHelpWindowOpen = false;
         end
 
@@ -3741,6 +4251,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods
 
         function setComponentColorMode(obj,mode)
+        %SETCOMPONENTCOLORMODE Select solid-color or LUT component rendering.
             obj.ComponentColorMode = mode;
         end
 
@@ -3874,17 +4385,20 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods (Static, Access=private)
 
         function tf = isNonEmptyText(x)
+        %ISNONEMPTYTEXT Return whether a value is a nonempty text scalar.
             % check if text is non-empty
             tf = (ischar(x) || (isstring(x) && isscalar(x))) && strlength(string(x)) > 0;
         end
 
         function tf = isInLimits(XY,XLim,YLim)
+        %ISINLIMITS Return whether a point lies inside the supplied axes limits.
             % check if the point, XY, is within limits, XLim and YLim
             x = XY(1); y = XY(2);
             tf = x >= XLim(1) && x <= XLim(2) && y >= YLim(1) && y <= YLim(2);
         end
 
         function I = placeholderImage()
+        %PLACEHOLDERIMAGE Return the placeholder image used during startup.
             % return a placeholder image for startup
             I = zeros([256,256,3]); % all black truecolor array
         end
@@ -3895,11 +4409,13 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods (Static)
 
         function names = getToolClassNames()
+        %GETTOOLCLASSNAMES Return fully qualified built-in tool class names.
             % get cell array of char vectors of tool class names in matlabx.ui.axes.tools
             names = {matlab.metadata.Namespace.fromName("matlabx.ui.axes.tools").ClassList.Name}';
         end
 
         function names = getToolNames()
+        %GETTOOLNAMES Return the short names of available built-in tools.
             % return names of all tool classes (just the last part)
 
             classNames = matlabx.ui.axes.ImageAxes.getToolClassNames();
@@ -3924,6 +4440,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function names = getColorNames()
+        %GETCOLORNAMES Return supported component color names.
             % return names of allowed component colors
             names = {'cyan','magenta','yellow','red','green','blue'};
         end
@@ -3954,10 +4471,12 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function names = getDefaultTools()
+        %GETDEFAULTTOOLS Return default tools.
             names = {'Zoom','Colorbar','ChooseColormap','DisplayLimits'};
         end
 
         function props = getLinkableProperties()
+        %GETLINKABLEPROPERTIES Return linkable properties.
             props = { ...
                 'C', ...
                 'Z', ...
@@ -3971,6 +4490,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function ax = demo(name)
+        %DEMO Open one of the built-in ImageAxes demonstrations.
             arguments
                 name (1,:) char {mustBeMember(name,{'default','multicomponent','empty'})}
             end
@@ -4013,6 +4533,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function [viewer1,viewer2] = linkDemo()
+        %LINKDEMO Open two viewers with linked image and viewport state.
             I = matlabx.image.Image5D.demo();
 
             [viewer1,~] = matlabx.app.quickshow(I,"Title","Viewer 1","Location","west");
@@ -4025,6 +4546,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function ax = demoImage5D()
+        %DEMOIMAGE5D Display the built-in multidimensional Image5D example.
             I = matlabx.image.Image5D.demo();
             ax = matlabx.app.quickshow(I,"Title","Example 5D Image");
         end
@@ -4072,6 +4594,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function ax = demoOverlays()
+        %DEMOOVERLAYS Display an example viewer with native overlay tools.
             I = matlabx.image.Image5D.demo();
             ax = matlabx.app.quickshow(I,...
                 "Title","Overlay Demo", ...
@@ -4085,12 +4608,18 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     end
 
+    %% Application overlay mounting
     % Passive application content has its own lifetime registry. It does not
     % participate in the interactive overlay manager's selection or tools.
+    % Application overlay mounts and early-teardown listeners.
     properties (Access=private)
+        % Graphics parent for passive application-mounted content.
         ApplicationOverlayLayer = []
+        % Mount relationships currently owned by this host.
         ApplicationOverlayMounts = {}
+        % Listener that detaches mounts before axes teardown.
         ApplicationOverlayLifetimeListener = []
+        % Listener that uninstalls tools before toolbar teardown.
         ToolLifetimeListener = []
     end
 
@@ -4143,6 +4672,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     methods (Access=?matlabx.ui.axes.ImageAxesOverlayMount)
         function releaseOverlayMount(obj,mount)
+        %RELEASEOVERLAYMOUNT Remove a detached application overlay mount from host bookkeeping.
             obj.ApplicationOverlayMounts = obj.ApplicationOverlayMounts( ...
                 ~cellfun(@(m) m == mount,obj.ApplicationOverlayMounts));
         end
@@ -4150,6 +4680,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     methods (Access=private)
         function detachApplicationOverlays(obj)
+        %DETACHAPPLICATIONOVERLAYS Detach every mounted application overlay before teardown.
             % Snapshot because each removal unregisters itself. Continue even
             % if application cleanup fails, so other content can survive.
             mounts = obj.ApplicationOverlayMounts;
@@ -4169,6 +4700,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     methods
 
         function delete(obj)
+        %DELETE Release tools, overlays, listeners, windows, and hub registration.
 
             if ~isempty(obj.ToolManager) && isvalid(obj.ToolManager)
                 obj.ToolManager.uninstallAll();
@@ -4176,6 +4708,11 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.detachApplicationOverlays();
 
             % remove listeners first
+            if ~isempty(obj.ResizeListener)
+                delete(obj.ResizeListener(isvalid(obj.ResizeListener)));
+            end
+            obj.ResizeListener = event.listener.empty;
+            obj.clearInitialToolbarFocusListener();
             if ~isempty(obj.L), delete(obj.L(isvalid(obj.L))); end
             % replace listener property with empty array of event.listener
             obj.L = event.listener.empty;

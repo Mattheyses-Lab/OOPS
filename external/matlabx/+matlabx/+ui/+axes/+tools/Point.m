@@ -1,3 +1,11 @@
+classdef Point < matlabx.ui.axes.AxesTool
+%POINT Create and manipulate point overlays in ImageAxes.
+%
+%   The Point tool follows the same ownership pattern as Box: the tool
+%   interprets gestures and emits compatibility callbacks, while
+%   ImageAxesOverlayManager owns overlay lifetime plus active, hovered, and
+%   selected state.
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,14 +21,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-classdef Point < matlabx.ui.axes.AxesTool
-%POINT Create and manipulate point overlays in ImageAxes.
-%
-%   The Point tool follows the same ownership pattern as Box: the tool
-%   interprets gestures and emits compatibility callbacks, while
-%   ImageAxesOverlayManager owns overlay lifetime plus active, hovered, and
-%   selected state.
 
     properties
         Marker (1,:) char = '+'

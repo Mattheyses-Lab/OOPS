@@ -1,3 +1,18 @@
+classdef ViolinData
+%VIOLINDATA Normalized, validated data for grouped violin/swarm rendering.
+% Values and their color data remain aligned within each logical group.
+%
+%   data = matlabx.ui.axes.plot.ViolinData( ...
+%       Values={randn(1,100),randn(1,80)+1}, ...
+%       SeriesNames=["Control","Treatment"], ...
+%       CData={[0.2 0.5 0.8],[0.8 0.3 0.2]});
+%
+% CData entries may be one RGB triplet, one scalar per value, or one RGB
+% triplet per value.
+%
+% See also matlabx.ui.axes.plot.ViolinRenderer,
+% matlabx.ui.axes.plot.ViolinStyle
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -14,13 +29,13 @@
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-classdef ViolinData
-%VIOLINDATA Normalized, validated data for grouped violin/swarm rendering.
-% Values and their color data remain aligned within each logical group.
-
+    % Normalized group-aligned payload consumed by ViolinRenderer.
     properties (SetAccess=private)
+        % Numeric observations, stored as one row vector per group.
         Values (:,1) cell = {NaN}
+        % Display names with one entry per violin group.
         SeriesNames (:,1) string = "No data"
+        % Scalar or RGB color payload with one entry per group.
         CData (:,1) cell = {NaN}
     end
 

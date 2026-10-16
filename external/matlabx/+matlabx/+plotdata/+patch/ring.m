@@ -1,3 +1,8 @@
+function [XData,YData,CData] = ring(innerRadius,outerRadius,nWedges)
+%RING Return XData, YData, and CData for trapezoidal patches forming a circular ring
+%
+%   Notes: Uses hsv colormap by default
+
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
 %
@@ -13,11 +18,6 @@
 %
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
-
-function [XData,YData,CData] = ring(innerRadius,outerRadius,nWedges)
-%RING Return XData, YData, and CData for trapezoidal patches forming a circular ring
-%
-%   Notes: Uses hsv colormap by default
 
     % make hsv map with nWedges colors, copy the first color to the end
     cmap = hsv(nWedges);
