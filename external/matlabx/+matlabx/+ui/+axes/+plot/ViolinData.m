@@ -8,7 +8,13 @@ classdef ViolinData
 %       CData={[0.2 0.5 0.8],[0.8 0.3 0.2]});
 %
 % CData entries may be one RGB triplet, one scalar per value, or one RGB
-% triplet per value.
+% triplet per value. DataTipCells and SummaryDataTipCells optionally supply
+% one {labels,values} template per group; empty entries use generated defaults.
+%
+%   data = matlabx.ui.axes.plot.ViolinData( ...
+%       Values={values},SeriesNames="Control",CData={[0 0.45 0.74]}, ...
+%       DataTipCells={{{"Sample","Value"},{sampleIDs,values}}}, ...
+%       SummaryDataTipCells={{{"Condition","Score"},{"Control",score}}});
 %
 % See also matlabx.ui.axes.plot.ViolinRenderer,
 % matlabx.ui.axes.plot.ViolinStyle
@@ -37,6 +43,10 @@ classdef ViolinData
         SeriesNames (:,1) string = "No data"
         % Scalar or RGB color payload with one entry per group.
         CData (:,1) cell = {NaN}
+        % Optional point data-tip template for each violin group.
+        DataTipCells (:,1) cell = {[]}
+        % Optional central-line summary template for each violin group.
+        SummaryDataTipCells (:,1) cell = {[]}
     end
 
     methods
@@ -48,11 +58,17 @@ classdef ViolinData
                 opts.Values cell = {NaN}
                 opts.SeriesNames string = "No data"
                 opts.CData cell = {NaN}
+                opts.DataTipCells cell = {}
+                opts.SummaryDataTipCells cell = {}
             end
 
             obj.Values = normalizeNumericCells(opts.Values,"Values");
             obj.SeriesNames = string(opts.SeriesNames(:));
             obj.CData = normalizeColorCells(opts.CData);
+            count = numel(obj.Values);
+            obj.DataTipCells = normalizeDataTipCells(opts.DataTipCells,count);
+            obj.SummaryDataTipCells = normalizeDataTipCells( ...
+                opts.SummaryDataTipCells,count);
             obj.validateAlignment();
         end
 
@@ -65,18 +81,59 @@ classdef ViolinData
 
             count = numel(obj.Values);
 
-            if numel(obj.SeriesNames) ~= count || numel(obj.CData) ~= count
+            if numel(obj.SeriesNames) ~= count || numel(obj.CData) ~= count || ...
+                    numel(obj.DataTipCells) ~= count || ...
+                    numel(obj.SummaryDataTipCells) ~= count
                 error('matlabx:ui:axes:plot:ViolinDataGroupCountMismatch', ...
-                    'Values, SeriesNames, and CData must have equal group counts.');
+                    ['Values, SeriesNames, CData, DataTipCells, and ' ...
+                    'SummaryDataTipCells must have equal group counts.']);
             end
 
             for k = 1:count
                 validateColorCount(obj.CData{k},numel(obj.Values{k}),k);
+                validateDataTipCell(obj.DataTipCells{k},numel(obj.Values{k}),k,"point");
+                validateDataTipCell(obj.SummaryDataTipCells{k},[],k,"summary");
             end
         end
 
     end
 
+end
+
+function templates = normalizeDataTipCells(templates,count)
+%NORMALIZEDATATIPCELLS Expand omitted templates to one empty entry per group.
+    if isempty(templates)
+        templates = repmat({[]},count,1);
+    else
+        templates = templates(:);
+    end
+end
+
+function validateDataTipCell(template,valueCount,index,kind)
+%VALIDATEDATATIPCELL Validate one optional point or summary template.
+    if isempty(template)
+        return;
+    end
+    if ~iscell(template) || ~isequal(size(template),[1 2]) || ...
+            ~iscell(template{1}) || ~iscell(template{2}) || ...
+            isempty(template{1}) || numel(template{1}) ~= numel(template{2})
+        error('matlabx:ui:axes:plot:InvalidViolinDataTipCell', ...
+            '%s DataTipCells group %d must contain a nonempty {labels,values} template.', ...
+            kind,index);
+    end
+    if kind == "summary"
+        return;
+    end
+    for row = 1:numel(template{2})
+        value = template{2}{row};
+        if ischar(value) || isscalar(value) || isa(value,'function_handle')
+            continue;
+        end
+        if numel(value) ~= valueCount
+            error('matlabx:ui:axes:plot:ViolinDataTipCountMismatch', ...
+                'Data-tip row %d in group %d must be scalar or value-aligned.',row,index);
+        end
+    end
 end
 
 function values = normalizeNumericCells(values,name)
