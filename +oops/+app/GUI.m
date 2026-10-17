@@ -3119,6 +3119,9 @@ classdef GUI < handle
                 groupNames = "No data";
             end
 
+            % Series names enter tick labels and legends that use the TeX interpreter.
+            displayGroupNames = oops.render.escapeTeX(groupNames);
+
             xData = cell(size(members));
             yData = cell(size(members));
             plottedMembers = cell(size(members));
@@ -3144,6 +3147,14 @@ classdef GUI < handle
             % Resolve internal property names into text intended for display.
             xLabel = oops.model.ObjectMeasurements.label(settings.XVariable);
             yLabel = oops.model.ObjectMeasurements.label(settings.YVariable);
+
+            % Describe each plotted point using its model identity and measurements.
+            dataTipCells = cell(size(plottedMembers));
+
+            for k = 1:numel(plottedMembers)
+                dataTipCells{k} = obj.objectDataTipCell( ...
+                    plottedMembers{k},[xLabel,yLabel],{xData{k},yData{k}});
+            end
 
             % Translate application settings into the renderer-facing value.
             style = matlabx.ui.axes.plot.ScatterStyle( ...
@@ -3177,8 +3188,9 @@ classdef GUI < handle
             data = matlabx.ui.axes.plot.ScatterData( ...
                 XData=xData, ...
                 YData=yData, ...
-                SeriesNames=groupNames, ...
-                CData=colorData);
+                SeriesNames=displayGroupNames, ...
+                CData=colorData, ...
+                DataTipCells=dataTipCells);
 
             obj.ScatterRenderer.update(data,style);
         end
@@ -3193,6 +3205,9 @@ classdef GUI < handle
                 members = {oops.model.Object.empty(0,1)};
                 groupNames = "No data";
             end
+
+            % Series names enter tick labels that use the TeX interpreter.
+            displayGroupNames = oops.render.escapeTeX(groupNames);
 
             data = cell(size(members));
             plottedMembers = cell(size(members));
@@ -3214,6 +3229,14 @@ classdef GUI < handle
 
             % Resolve the internal property name into text intended for display.
             yLabel = oops.model.ObjectMeasurements.label(settings.YVariable);
+
+            % Describe each swarm point while leaving violin summary tips at defaults.
+            dataTipCells = cell(size(plottedMembers));
+
+            for k = 1:numel(plottedMembers)
+                dataTipCells{k} = obj.objectDataTipCell( ...
+                    plottedMembers{k},yLabel,{data{k}});
+            end
 
             % Resolve OOPS configuration into an application-independent style.
             style = matlabx.ui.axes.plot.ViolinStyle( ...
@@ -3251,8 +3274,9 @@ classdef GUI < handle
 
             plotData = matlabx.ui.axes.plot.ViolinData( ...
                 Values=data, ...
-                SeriesNames=groupNames, ...
-                CData=colorData);
+                SeriesNames=displayGroupNames, ...
+                CData=colorData, ...
+                DataTipCells=dataTipCells);
 
             obj.SwarmRenderer.update(plotData,style);
         end
@@ -3334,6 +3358,49 @@ classdef GUI < handle
             else
                 values = arrayfun(@(member) member.(property),members(:));
             end
+        end
+
+        function template = objectDataTipCell(~,members,measurementLabels,measurementValues)
+        %OBJECTDATATIPCELL Build one point-aligned model metadata template.
+
+            if isempty(members)
+                template = [];
+                return;
+            end
+
+            % Allocate identity values in the same order as the plotted objects.
+            count = numel(members);
+            groupNames = strings(count,1);
+            imageNames = strings(count,1);
+            objectIndices = zeros(count,1);
+            labelNames = strings(count,1);
+
+            for k = 1:count
+                member = members(k);
+                groupNames(k) = member.GroupName;
+                imageNames(k) = member.ImageName;
+                objectIndices(k) = member.SelfIdx;
+
+                % Prefer the current registry name but retain the stable ID if unresolved.
+                label = member.Label;
+
+                if isempty(label)
+                    labelNames(k) = member.LabelID;
+                else
+                    labelNames(k) = label.Name;
+                end
+            end
+
+            % MATLAB data-tip rows accept categorical identity and numeric measurement data.
+            labels = ["Group","Image","Object","Label",string(measurementLabels(:).')];
+            values = { ...
+                categorical(oops.render.escapeTeX(groupNames)), ...
+                categorical(oops.render.escapeTeX(imageNames)), ...
+                categorical(string(objectIndices)), ...
+                categorical(oops.render.escapeTeX(labelNames))};
+            values = [values,measurementValues(:).'];
+
+            template = {cellstr(labels),values};
         end
 
         function [data,colormap,limits] = plotColors(obj,members,mode,magnitudeProperty)

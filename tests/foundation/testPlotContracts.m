@@ -53,3 +53,12 @@ function testViolinDataAndStyleAreIndependentValues(t)
     t.verifyEqual(style.MarkerSize,25);
     t.verifyFalse(style.PointsVisible);
 end
+
+function testDisplayTextEscapesTeXFormattingCharacters(t)
+%TESTDISPLAYTEXTESCAPESTEXFORMATTINGCHARACTERS Preserve names as literal text.
+
+    actual = oops.render.escapeTeX(["Group_1","A^2","{control}","C:\data"]);
+    expected = ["Group\_1","A\^2","\{control\}","C:\backslash data"];
+
+    t.verifyEqual(actual,expected);
+end

@@ -542,6 +542,9 @@ orderIndex = find(string(xVariables.ItemsData) == "OrderMean",1);
 t.assertNotEmpty(orderIndex);
 t.verifyEqual(string(xVariables.Items{orderIndex}),"Order mean");
 
+% Plot-facing group names must display formatting characters literally.
+p.Groups(1).setProperties("Group_1",p.Groups(1).Color);
+
 % Supply finite stored measurements so both copied components receive real data.
 for group = p.Groups'
     for image = group.Images'
@@ -564,10 +567,26 @@ t.verifyEqual(ui.LeftPlotAxes.Content,ui.ScatterRenderer);
 t.verifyEqual(ui.RightPlotAxes.Content,ui.SwarmRenderer);
 t.verifyEqual(numel(ui.ScatterRenderer.Data.XData),numel(p.Groups));
 t.verifyEqual(numel(ui.SwarmRenderer.Data.Values),numel(p.Groups));
+t.verifyEqual(ui.ScatterRenderer.Data.SeriesNames(1),"Group\_1");
+t.verifyEqual(ui.SwarmRenderer.Data.SeriesNames(1),"Group\_1");
 t.verifyEqual(string(ui.LeftPlotAxes.Axes.XLabel.String), ...
     oops.model.ObjectMeasurements.label(p.Settings.ScatterPlot.XVariable));
 t.verifyEqual(string(ui.RightPlotAxes.Axes.YLabel.String), ...
     oops.model.ObjectMeasurements.label(p.Settings.SwarmPlot.YVariable));
+
+% Point data tips retain model identity alongside the plotted measurements.
+scatterTip = ui.ScatterRenderer.Data.DataTipCells{1};
+t.verifyEqual(string(scatterTip{1}), ...
+    ["Group","Image","Object","Label","Signal/background ratio","Order mean"]);
+t.verifyEqual(string(scatterTip{2}{1}(1)),"Group\_1");
+t.verifyEqual(string(scatterTip{2}{3}(1)),"1");
+t.verifyEqual(numel(scatterTip{2}{1}),numel(ui.ScatterRenderer.Data.XData{1}));
+
+swarmTip = ui.SwarmRenderer.Data.DataTipCells{1};
+t.verifyEqual(string(swarmTip{1}), ...
+    ["Group","Image","Object","Label","Order mean"]);
+t.verifyEqual(numel(swarmTip{2}{1}),numel(ui.SwarmRenderer.Data.Values{1}));
+t.verifyTrue(all(cellfun(@isempty,ui.SwarmRenderer.Data.SummaryDataTipCells)));
 
 markerSize = ui.SettingsUI.ScatterPlot.MarkerSize;
 markerSize.Value = 31;
