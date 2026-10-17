@@ -279,6 +279,44 @@ ui.SettingsUI.ObjectSelection.ColorMode.ValueChangedFcn( ...
 overlay = ui.LeftViewer.Overlays.get(image.Objects(2).ID);
 t.verifyEqual(overlay.EdgeColor,[0.2 0.8 0.2]);
 end
+
+function testLabelCheckTreeAndExpandedMenus(t)
+%TESTLABELCHECKTREEANDEXPANDEDMENUS Expose label batches and object commands.
+
+ui = t.TestData.GUI;
+project = ui.Project;
+project.addLabel("First",ID="first",Hotkey="1",Color=[1 0 0]);
+project.addLabel("Second",ID="second",Hotkey="2",Color=[0 1 0]);
+
+nodes = ui.LabelsTree.Children;
+ids = string({nodes.NodeData});
+t.verifyClass(ui.LabelsTree,'matlab.ui.container.CheckBoxTree');
+ui.LabelsTree.CheckedNodes = nodes(ismember(ids,["first","second"]));
+ui.LabelsTree.CheckedNodesChangedFcn(ui.LabelsTree,[]);
+
+mergeItems = findall(ui.Fig,'Type','uimenu','Tag','oops.mergeLabels');
+t.verifyTrue(all(string({mergeItems.Enable}) == "on"));
+
+first = nodes(ids == "first");
+texts = string({first.ContextMenu.Children.Text});
+t.verifyTrue(all(ismember(["Edit...","Select objects with this label", ...
+    "Apply to current object selection","Delete objects with this label", ...
+    "Delete label","New label...","Merge selected labels..."],texts)));
+
+unlabeled = nodes(ids == "unlabeled");
+ui.LabelsTree.CheckedNodes = [unlabeled;first];
+ui.LabelsTree.CheckedNodesChangedFcn(ui.LabelsTree,[]);
+t.verifyFalse(any(string({ui.LabelsTree.CheckedNodes.NodeData}) == "unlabeled"));
+
+objectsMenu = findall(ui.Fig,'Type','uimenu','Text','Objects');
+objectsMenu = objectsMenu(arrayfun(@(item) item.Parent == ui.Fig,objectsMenu));
+t.verifyNumElements(objectsMenu,1);
+top = string({objectsMenu.Children.Text});
+t.verifyTrue(all(ismember(["Select objects...","Clear object selection...", ...
+    "Invert object selection...","Delete objects...","Select by property...", ...
+    "Label by property...","Delete by property..."],top)));
+end
+
 function testImportContinuesPastInvalidFourAngleFile(t)
 ui = t.TestData.GUI;
 folder = tempname; mkdir(folder); cleaner = onCleanup(@() rmdir(folder,'s'));

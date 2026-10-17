@@ -563,7 +563,7 @@ classdef GUI < handle
             obj.Grid.Visible = state;
 
             for name = ["Close","Save","SaveAs","LoadImages","Calibration", ...
-                    "AuxiliaryChannels","Analysis","View","RuntimeStatus"]
+                    "AuxiliaryChannels","Analysis","View","Objects","RuntimeStatus"]
 
                 if isfield(obj.MenuUI,name)
                     obj.MenuUI.(name).Enable = state;
@@ -1000,10 +1000,12 @@ classdef GUI < handle
             set(pane,'RowHeight',{140},'ColumnWidth',{'1x'},'Padding',0);
 
             % Plain tree selection chooses the active label; object checks remain separate.
-            obj.LabelsTree = uitree(pane,'Tag','oops.labels', ...
+            obj.LabelsTree = uitree(pane,'checkbox','Tag','oops.labels', ...
                 'BackgroundColor',[.18 .18 .18],'FontColor',[.9 .9 .9], ...
-                'SelectionChangedFcn',@(~,~) obj.runCallback(@() obj.onLabelSelected()));
-            obj.LabelsTree.Tooltip = 'Select a label, or press its hotkey, to label checked objects.';
+                'SelectionChangedFcn',@(~,~) obj.runCallback(@() obj.onLabelSelected()), ...
+                'CheckedNodesChangedFcn',@(~,~) obj.runCallback(@() obj.onLabelChecksChanged()));
+            obj.LabelsTree.Tooltip = ...
+                'Highlight to activate a label; check labels for merge operations.';
             obj.LabelsTree.ContextMenu = obj.labelMenu("");
             obj.refreshLabels();
         end
@@ -1905,6 +1907,34 @@ classdef GUI < handle
                     'MenuSelectedFcn',@(src,~) obj.runCallback(@() obj.applyViewPreset(src.UserData)));
             end
 
+            % Project-wide object selection, labeling, and deletion commands.
+            objects = uimenu(obj.Fig,'Text','Objects');
+            obj.MenuUI.Objects = objects;
+            operations = ["Select objects...","Clear object selection...", ...
+                "Invert object selection...","Delete objects..."];
+            actions = ["Select","Clear","Invert","Delete"];
+            scopes = ["All","In current group","In current image"];
+            scopeValues = ["Project","Group","Image"];
+
+            for k = 1:numel(operations)
+                parent = uimenu(objects,'Text',char(operations(k)));
+
+                for j = 1:numel(scopes)
+                    uimenu(parent,'Text',char(scopes(j)), ...
+                        'UserData',struct('Action',actions(k),'Scope',scopeValues(j)), ...
+                        'MenuSelectedFcn',@(src,~) obj.runCallback( ...
+                            @() obj.applyObjectSelectionAction( ...
+                            src.UserData.Action,src.UserData.Scope)));
+                end
+            end
+
+            uimenu(objects,'Text','Select by property...','Separator','on', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.selectByProperty()));
+            uimenu(objects,'Text','Label by property...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.labelByProperty()));
+            uimenu(objects,'Text','Delete by property...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.deleteByProperty()));
+
             % Settings menu containing JSON save/load actions.
             settings = uimenu(obj.Fig,'Text','Settings');
             uimenu(settings,'Text','Save as app defaults','MenuSelectedFcn', ...
@@ -2505,6 +2535,12 @@ classdef GUI < handle
                 return;
             end
 
+            checkedIDs = strings(0,1);
+
+            if ~isempty(obj.LabelsTree.CheckedNodes)
+                checkedIDs = string({obj.LabelsTree.CheckedNodes.NodeData})';
+            end
+
             obj.deleteTreeNodes(obj.LabelsTree.Children);
 
             if isempty(obj.Project)
@@ -2533,8 +2569,19 @@ classdef GUI < handle
                 node.Icon = char(icon);
             end
 
+            nodes = obj.LabelsTree.Children;
+            nodeIDs = string({nodes.NodeData});
+            keep = ismember(nodeIDs,checkedIDs) & nodeIDs ~= "unlabeled";
+
+            if any(keep)
+                obj.LabelsTree.CheckedNodes = nodes(keep);
+            else
+                obj.LabelsTree.CheckedNodes = [];
+            end
+
             obj.refreshLabelHotkeys();
             obj.syncActiveLabel();
+            obj.refreshLabelMenus();
         end
 
         function refreshLabelHotkeys(obj)
@@ -2595,6 +2642,23 @@ classdef GUI < handle
             end
         end
 
+        function onLabelChecksChanged(obj)
+        %ONLABELCHECKSCHANGED Exclude Unlabeled and refresh merge availability.
+
+            nodes = obj.LabelsTree.CheckedNodes;
+
+            if ~isempty(nodes)
+                ids = string({nodes.NodeData});
+
+                if any(ids == "unlabeled")
+                    obj.LabelsTree.CheckedNodes = nodes(ids ~= "unlabeled");
+                    return;
+                end
+            end
+
+            obj.refreshLabelMenus();
+        end
+
         function onLabelHotkeyPressed(obj,key)
         %ONLABELHOTKEYPRESSED Label the active image's checked object set.
 
@@ -2631,21 +2695,40 @@ classdef GUI < handle
             menu = uicontextmenu(obj.Fig);
             uimenu(menu,'Text','New label...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.promptLabel()));
+            uimenu(menu,'Text','Merge selected labels...', ...
+                'Tag','oops.mergeLabels','Enable','off', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.mergeSelectedLabels()));
 
             if id == ""
                 return;
             end
 
-            uimenu(menu,'Text','Edit label...', ...
+            uimenu(menu,'Text','Edit...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.promptLabel(id)));
+            uimenu(menu,'Text','Select objects with this label', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.selectObjectsWithLabel(id)));
+            uimenu(menu,'Text','Apply to current object selection', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.applyLabelToSelection(id)));
+            uimenu(menu,'Text','Delete objects with this label', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.deleteObjectsWithLabel(id)));
 
             % Unlabeled is the permanent fallback used by new and reassigned objects.
-            item = uimenu(menu,'Text','Delete label...', ...
+            item = uimenu(menu,'Text','Delete label', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.deleteLabel(id)));
 
             if id == "unlabeled"
                 item.Enable = 'off';
             end
+        end
+
+        function refreshLabelMenus(obj)
+        %REFRESHLABELMENUS Enable merging only for two checked user labels.
+
+            checked = obj.LabelsTree.CheckedNodes;
+            mergeEnabled = numel(checked) >= 2 && ...
+                all(string({checked.NodeData}) ~= "unlabeled");
+            items = findall(obj.Fig,'Type','uimenu','Tag','oops.mergeLabels');
+            set(items,'Enable',matlab.lang.OnOffSwitchState(mergeEnabled));
         end
 
         function refreshViewers(obj,force,refreshControls)
@@ -5086,6 +5169,272 @@ classdef GUI < handle
 
             if strcmp(answer,'Delete')
                 obj.Project.removeLabel(labelID);
+            end
+        end
+
+        function mergeSelectedLabels(obj)
+        %MERGESELECTEDLABELS Replace checked user labels with one new label.
+
+            nodes = obj.LabelsTree.CheckedNodes;
+            ids = string({nodes.NodeData});
+            ids(ids == "unlabeled") = [];
+
+            if numel(ids) < 2
+                return;
+            end
+
+            number = numel(obj.Project.Labels.labels());
+            name = "Merged label " + number;
+            id = "merged-label-" + number;
+
+            while ~obj.labelIDAvailable(id,"") || ~obj.labelNameAvailable(name,"")
+                number = number+1;
+                name = "Merged label " + number;
+                id = "merged-label-" + number;
+            end
+
+            colors = zeros(numel(ids),3);
+
+            for k = 1:numel(ids)
+                colors(k,:) = obj.Project.Labels.getByID(ids(k)).Color;
+            end
+
+            params = matlabx.app.ParamsDialog.prompt('Merge selected labels', ...
+                {'Name','Name','string',name, ...
+                    @(value) obj.labelNameAvailable(value,""), ...
+                    'Name must be nonempty and unique.'}, ...
+                {'ID','ID','string',id, ...
+                    @(value) obj.labelIDAvailable(value,""), ...
+                    'ID must be nonempty and unique.'}, ...
+                {'Hotkey','Hotkey','string',obj.nextLabelHotkey(), ...
+                    @(value) obj.labelHotkeyAvailable(value,""), ...
+                    'Hotkey must be one unique alphanumeric character.'}, ...
+                {'Color','Color','color',mean(colors,1)});
+            obj.focusWindow();
+
+            if isempty(params)
+                return;
+            end
+
+            obj.Project.mergeLabels(ids,strtrim(string(params.Name)), ...
+                ID=strtrim(string(params.ID)), ...
+                Hotkey=lower(strtrim(string(params.Hotkey))), ...
+                Color=params.Color);
+        end
+
+        function selectObjectsWithLabel(obj,labelID)
+        %SELECTOBJECTSWITHLABEL Add every matching object to its image selection.
+
+            for image = reshape(obj.projectImages(),1,[])
+                matches = image.Objects([image.Objects.LabelID] == labelID);
+                ids = unique([image.SelectedObjectIDs; ...
+                    oops.model.internal.ids(matches)],'stable');
+                image.setSelectedObjects(ids);
+            end
+        end
+
+        function applyLabelToSelection(obj,labelID)
+        %APPLYLABELTOSELECTION Apply one label across all remembered selections.
+
+            for image = reshape(obj.projectImages(),1,[])
+                image.setObjectLabels(image.SelectedObjectIDs,labelID);
+            end
+        end
+
+        function deleteObjectsWithLabel(obj,labelID)
+        %DELETEOBJECTSWITHLABEL Delete every project object using one label.
+
+            for image = reshape(obj.projectImages(),1,[])
+                matches = image.Objects([image.Objects.LabelID] == labelID);
+                image.removeObjects(matches);
+            end
+        end
+
+        function applyObjectSelectionAction(obj,action,scope)
+        %APPLYOBJECTSELECTIONACTION Mutate selections within one model scope.
+
+            images = obj.objectScopeImages(scope);
+
+            for image = reshape(images,1,[])
+                allIDs = oops.model.internal.ids(image.Objects);
+
+                switch action
+                    case "Select"
+                        image.setSelectedObjects(allIDs);
+                    case "Clear"
+                        image.setSelectedObjects(strings(0,1));
+                    case "Invert"
+                        image.setSelectedObjects(allIDs( ...
+                            ~ismember(allIDs,image.SelectedObjectIDs)));
+                    case "Delete"
+                        image.removeObjects(image.SelectedObjectIDs);
+                end
+            end
+        end
+
+        function selectByProperty(obj)
+        %SELECTBYPROPERTY Add objects matching an AND filter set to selection.
+
+            filters = oops.app.objectFilterDialog(obj.Fig);
+            obj.focusWindow();
+
+            if isempty(filters)
+                return;
+            end
+
+            [images,ids,count] = obj.objectsMatchingFilters(filters);
+            added = 0;
+
+            for k = 1:numel(images)
+                old = images(k).SelectedObjectIDs;
+                next = unique([old;ids{k}],'stable');
+                added = added + numel(next)-numel(old);
+                images(k).setSelectedObjects(next);
+            end
+
+            uialert(obj.Fig,sprintf('%d objects were added to the selection.',added), ...
+                'Object selection','Icon','info');
+            oops.Log.INFO(sprintf('Property filters matched %d objects; %d were newly selected.', ...
+                count,added));
+        end
+
+        function labelByProperty(obj)
+        %LABELBYPROPERTY Apply an existing or new label to filtered objects.
+
+            filters = oops.app.objectFilterDialog(obj.Fig);
+            obj.focusWindow();
+
+            if isempty(filters)
+                return;
+            end
+
+            [images,ids,count] = obj.objectsMatchingFilters(filters);
+
+            if count == 0
+                uialert(obj.Fig,'No objects matched the specified filters.', ...
+                    'Label by property','Icon','info');
+                return;
+            end
+
+            choice = uiconfirm(obj.Fig,'Choose how to supply the target label.', ...
+                'Label matching objects','Options',{'Existing label','New label','Cancel'}, ...
+                'DefaultOption','Existing label','CancelOption','Cancel');
+
+            if strcmp(choice,'Cancel')
+                return;
+            elseif strcmp(choice,'New label')
+                before = obj.Project.Labels.ids();
+                obj.promptLabel();
+                created = setdiff(obj.Project.Labels.ids(),before,'stable');
+
+                if isempty(created)
+                    return;
+                end
+
+                labelID = created(1);
+            else
+                labels = obj.Project.Labels.labels();
+                names = [labels.Name];
+                params = matlabx.app.ParamsDialog.prompt('Choose object label', ...
+                    {'Label','Label','choice',names(1),cellstr(names)});
+                obj.focusWindow();
+
+                if isempty(params)
+                    return;
+                end
+
+                labelID = labels(names == string(params.Label)).ID;
+            end
+
+            for k = 1:numel(images)
+                images(k).setObjectLabels(ids{k},labelID);
+            end
+
+            uialert(obj.Fig,sprintf('%d objects were labeled.',count), ...
+                'Label by property','Icon','info');
+        end
+
+        function deleteByProperty(obj)
+        %DELETEBYPROPERTY Confirm and delete every object matching filters.
+
+            filters = oops.app.objectFilterDialog(obj.Fig);
+            obj.focusWindow();
+
+            if isempty(filters)
+                return;
+            end
+
+            [images,ids,count] = obj.objectsMatchingFilters(filters);
+
+            if count == 0
+                uialert(obj.Fig,'No objects matched the specified filters.', ...
+                    'Delete by property','Icon','info');
+                return;
+            end
+
+            answer = uiconfirm(obj.Fig,sprintf('Delete %d matching objects?',count), ...
+                'Delete by property','Options',{'Delete','Cancel'}, ...
+                'DefaultOption','Cancel','CancelOption','Cancel','Icon','warning');
+
+            if strcmp(answer,'Delete')
+                for k = 1:numel(images)
+                    images(k).removeObjects(ids{k});
+                end
+            end
+        end
+
+        function [images,ids,count] = objectsMatchingFilters(obj,filters)
+        %OBJECTSMATCHINGFILTERS Group matching object IDs by parent image.
+
+            images = obj.projectImages();
+            ids = cell(numel(images),1);
+            count = 0;
+
+            for k = 1:numel(images)
+                objects = images(k).Objects;
+                keep = true(numel(objects),1);
+
+                for j = 1:numel(filters)
+                    values = arrayfun(@(member) member.(filters(j).Property),objects(:));
+
+                    switch filters(j).Operator
+                        case ">",  match = values > filters(j).Value;
+                        case ">=", match = values >= filters(j).Value;
+                        case "==", match = values == filters(j).Value;
+                        case "~=", match = values ~= filters(j).Value;
+                        case "<=", match = values <= filters(j).Value;
+                        case "<",  match = values < filters(j).Value;
+                    end
+
+                    keep = keep & match;
+                end
+
+                ids{k} = oops.model.internal.ids(objects(keep));
+                count = count + numel(ids{k});
+            end
+        end
+
+        function images = objectScopeImages(obj,scope)
+        %OBJECTSCOPEIMAGES Resolve project, group, or image command scope.
+
+            switch scope
+                case "Project"
+                    images = obj.projectImages();
+                case "Group"
+                    group = obj.Project.ActiveGroup;
+                    if isempty(group), images = oops.model.Image.empty(0,1); else, images = group.Images; end
+                case "Image"
+                    images = obj.Project.ActiveImage;
+            end
+        end
+
+        function images = projectImages(obj)
+        %PROJECTIMAGES Flatten project images without changing hierarchy order.
+
+            images = oops.model.Image.empty(0,1);
+
+            for group = reshape(obj.Project.Groups,1,[])
+                images = [images;group.Images(:)]; %#ok<AGROW>
             end
         end
 

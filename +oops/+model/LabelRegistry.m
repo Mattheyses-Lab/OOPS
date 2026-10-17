@@ -167,12 +167,12 @@ classdef LabelRegistry < handle
             obj.validateIdentity(newID,name,hotkey,id);
 
             if label.hasHotkey()
-                remove(obj.IDsByHotkey,label.Hotkey);
+                obj.IDsByHotkey = remove(obj.IDsByHotkey,label.Hotkey);
             end
 
             % Re-key the registry and ordered list before exposing the new identity.
             if newID ~= id
-                remove(obj.LabelsByID,id);
+                obj.LabelsByID = remove(obj.LabelsByID,id);
                 obj.Order(obj.Order == id) = newID;
             end
 
@@ -207,10 +207,10 @@ classdef LabelRegistry < handle
             end
 
             if label.hasHotkey()
-                remove(obj.IDsByHotkey,label.Hotkey);
+                obj.IDsByHotkey = remove(obj.IDsByHotkey,label.Hotkey);
             end
 
-            remove(obj.LabelsByID,id);
+            obj.LabelsByID = remove(obj.LabelsByID,id);
             obj.Order(obj.Order == id) = [];
 
             if obj.ActiveLabelID == id

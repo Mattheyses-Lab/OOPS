@@ -481,6 +481,51 @@ classdef Project < handle
             obj.Labels.remove(id);
         end
 
+        function newID = mergeLabels(obj,ids,name,opts)
+        %MERGELABELS Reassign several user labels into one new registry entry.
+
+            arguments
+                obj
+                ids (:,1) string
+                name (1,1) string
+                opts.ID (1,1) string = ""
+                opts.Hotkey (1,1) string = ""
+                opts.Color (1,3) double = [1 1 1]
+            end
+
+            ids = unique(ids(:),'stable');
+
+            if numel(ids) < 2
+                error('oops:model:InsufficientLabels', ...
+                    'Merging requires at least two labels.');
+            end
+
+            if any(ids == "unlabeled")
+                error('oops:model:ReservedLabelID', ...
+                    'The default unlabeled label cannot be merged.');
+            end
+
+            for k = 1:numel(ids)
+                if isempty(obj.Labels.getByID(ids(k)))
+                    error('oops:model:UnknownLabel','Unknown object label ID: %s',ids(k));
+                end
+            end
+
+            newID = obj.addLabel(name,ID=opts.ID,Hotkey=opts.Hotkey,Color=opts.Color);
+
+            % Migrate each image once, then remove the unused registry entries.
+            for group = reshape(obj.Groups,1,[])
+                for image = reshape(group.Images,1,[])
+                    matches = image.Objects(ismember([image.Objects.LabelID],ids));
+                    image.setObjectLabels(matches,newID);
+                end
+            end
+
+            for k = 1:numel(ids)
+                obj.Labels.remove(ids(k));
+            end
+        end
+
     end
 
     %% Shared calibration registry
