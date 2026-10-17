@@ -10,8 +10,9 @@ classdef PolarHistogramStyle
         BinCount (1,1) double {mustBeFinite,mustBeInteger,mustBePositive} = 24
         Colormap (:,3) double {mustBeFinite,mustBeInRange(Colormap,0,1)} = hsv(256)
         WedgeFaceAlpha (1,1) double {mustBeFinite,mustBeInRange(WedgeFaceAlpha,0,1)} = .75
-        WedgeFaceColorMode (1,1) string {mustBeMember(WedgeFaceColorMode,["flat","interp"])} = "flat"
-        WedgeEdgeColorMode (1,1) string {mustBeMember(WedgeEdgeColorMode,["flat","interp"])} = "flat"
+        WedgeFaceColorMode (1,1) string {mustBeMember(WedgeFaceColorMode,["flat","interp","custom"])} = "flat"
+        WedgeFaceColor (1,3) double {mustBeFinite,mustBeInRange(WedgeFaceColor,0,1)} = [0 0.4470 0.7410]
+        WedgeEdgeColorMode (1,1) string {mustBeMember(WedgeEdgeColorMode,["flat","interp","custom"])} = "flat"
         WedgeEdgeColor (1,3) double {mustBeFinite,mustBeInRange(WedgeEdgeColor,0,1)} = [0 0 0]
         WedgeLineWidth (1,1) double {mustBeFinite,mustBeNonnegative} = 1
         GridlinesColor (1,3) double {mustBeFinite,mustBeInRange(GridlinesColor,0,1)} = [.9 .9 .9]

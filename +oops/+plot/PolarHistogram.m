@@ -119,19 +119,32 @@ classdef PolarHistogram < handle
             obj.refreshLabels(labelAngles,radialLimit + .1*buffer,style.LabelsColor);
 
             % Build triangular wedge faces using the legacy straight outer edges.
+            geometryMode = style.WedgeFaceColorMode;
+
+            if geometryMode == "custom"
+                geometryMode = "flat";
+            end
+
             [vertices,faces,colors] = obj.wedgeGeometry(counts,edges,style.Colormap, ...
-                style.WedgeFaceColorMode);
+                geometryMode);
             obj.Wedges.Vertices = vertices;
             obj.Wedges.Faces = faces;
             obj.Wedges.FaceVertexCData = colors;
-            obj.Wedges.FaceColor = char(style.WedgeFaceColorMode);
+            obj.Wedges.FaceColor = char(geometryMode);
+
+            if style.WedgeFaceColorMode == "custom"
+                obj.Wedges.FaceColor = style.WedgeFaceColor;
+            end
+
             obj.Wedges.FaceAlpha = style.WedgeFaceAlpha;
             obj.Wedges.LineWidth = style.WedgeLineWidth;
 
             if style.WedgeEdgeColorMode == "interp"
                 obj.Wedges.EdgeColor = 'interp';
-            else
+            elseif style.WedgeEdgeColorMode == "custom"
                 obj.Wedges.EdgeColor = style.WedgeEdgeColor;
+            else
+                obj.Wedges.EdgeColor = 'flat';
             end
 
             obj.setVisible(true);

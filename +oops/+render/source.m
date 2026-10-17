@@ -66,7 +66,7 @@ try
             values = oops.analysis.Analyzer.correctedStack(image);
 
             % Detector-class display copy; the stored analytical result remains double.
-            values = detectorDisplayValues(image,values);
+            values = oops.render.intensityDisplayValues(image,values);
             data = matlabx.image.Image5D.fromComponents( ...
                 arrayfun(@(k) values(:,:,k),1:4,'UniformOutput',false), ...
                 Names=["0 deg","45 deg","90 deg","135 deg"]);
@@ -75,7 +75,7 @@ try
             values = oops.analysis.Analyzer.ensureAverageIntensity(image);
 
             % Quantize only the display copy; the durable analytical average remains double.
-            values = detectorDisplayValues(image,values);
+            values = oops.render.intensityDisplayValues(image,values);
             data = matlabx.image.Image5D.fromComponents(values,Names="Average intensity");
         case "Auxiliary channels"
             [data,channelInfo] = auxiliaryChannels(image);
@@ -265,18 +265,4 @@ function [data,info] = auxiliaryChannels(image)
     info.ComponentCLims = limits;
     info.ComponentColors = colors;
     info.ComponentColormaps = colormaps;
-end
-
-function values = detectorDisplayValues(image,values)
-%DETECTORDISPLAYVALUES Quantize a render-only copy to the raw detector class.
-
-    [limits,className] = oops.analysis.detectorRange(image.Input);
-
-    if isempty(limits)
-        return;
-    end
-
-    % Integer casts round and saturate outside the class range. Model-owned
-    % analytical arrays are never modified by this display conversion.
-    values = cast(round(values),className);
 end

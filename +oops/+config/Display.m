@@ -7,8 +7,8 @@ classdef Display < handle
 % Events carry Domain, Name, OldValue, and NewValue like DesmoSTORM.
 
     properties (Access=private)
-        KeepAutoDisplayIntensity_ (1,1) logical = true
-        KeepAutoDisplayOrder_ (1,1) logical = true
+        KeepAutoDisplayIntensity_ (1,1) logical = false
+        KeepAutoDisplayOrder_ (1,1) logical = false
         LockDisplayIntensity_ (1,1) logical = false
         LockDisplayOrder_ (1,1) logical = false
         LockedDisplayRangeIntensity_ double = []

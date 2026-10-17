@@ -10,8 +10,9 @@ classdef PolarHistogram < handle
         Variable_ (1,1) string = "MidlineRelativeAzimuthMean"
         BinCount_ (1,1) double {mustBeFinite,mustBeInteger,mustBePositive} = 24
         WedgeFaceAlpha_ (1,1) double {mustBeFinite,mustBeInRange(WedgeFaceAlpha_,0,1)} = .75
-        WedgeFaceColorMode_ (1,1) string {mustBeMember(WedgeFaceColorMode_,["flat","interp"])} = "flat"
-        WedgeEdgeColorMode_ (1,1) string {mustBeMember(WedgeEdgeColorMode_,["flat","interp"])} = "flat"
+        WedgeFaceColorMode_ (1,1) string {mustBeMember(WedgeFaceColorMode_,["flat","interp","custom"])} = "flat"
+        WedgeFaceColor_ (1,3) double {mustBeFinite,mustBeInRange(WedgeFaceColor_,0,1)} = [0 0.4470 0.7410]
+        WedgeEdgeColorMode_ (1,1) string {mustBeMember(WedgeEdgeColorMode_,["flat","interp","custom"])} = "flat"
         WedgeEdgeColor_ (1,3) double {mustBeFinite,mustBeInRange(WedgeEdgeColor_,0,1)} = [0 0 0]
         WedgeLineWidth_ (1,1) double {mustBeFinite,mustBeNonnegative} = 1
         GridlinesColor_ (1,3) double {mustBeFinite,mustBeInRange(GridlinesColor_,0,1)} = [.9 .9 .9]
@@ -28,6 +29,7 @@ classdef PolarHistogram < handle
         BinCount
         WedgeFaceAlpha
         WedgeFaceColorMode
+        WedgeFaceColor
         WedgeEdgeColorMode
         WedgeEdgeColor
         WedgeLineWidth
@@ -55,6 +57,8 @@ classdef PolarHistogram < handle
         function set.WedgeFaceAlpha(obj,value), obj.setValue("WedgeFaceAlpha",value); end
         function value = get.WedgeFaceColorMode(obj), value = obj.WedgeFaceColorMode_; end
         function set.WedgeFaceColorMode(obj,value), obj.setValue("WedgeFaceColorMode",value); end
+        function value = get.WedgeFaceColor(obj), value = obj.WedgeFaceColor_; end
+        function set.WedgeFaceColor(obj,value), obj.setColor("WedgeFaceColor",value); end
         function value = get.WedgeEdgeColorMode(obj), value = obj.WedgeEdgeColorMode_; end
         function set.WedgeEdgeColorMode(obj,value), obj.setValue("WedgeEdgeColorMode",value); end
         function value = get.WedgeEdgeColor(obj), value = obj.WedgeEdgeColor_; end

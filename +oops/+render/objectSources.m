@@ -25,12 +25,8 @@ corrected = oops.analysis.Analyzer.correctedStack(image);
 [intensity,geometry,objectMask] = region.getCrop(corrected, ...
     Margin=display.CropMargin,Square=display.SquareCrop);
 
-% Quantize only the display copy to the raw detector's integer class.
-[detectorLimits,className] = oops.analysis.detectorRange(image.Input);
-
-if ~isempty(detectorLimits)
-    intensity = cast(round(intensity),className);
-end
+% Match the render-only crop to the parent image's raw input class.
+intensity = oops.render.intensityDisplayValues(image,intensity);
 
 % Four display slots returned in the same order as the quadrant UI.
 sources = cell(1,4);

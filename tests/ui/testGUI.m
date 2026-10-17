@@ -213,8 +213,13 @@ ui.Project.Settings.View.LeftSource = "Average intensity";
 
 tool = ui.OrientationFieldTools{1};
 field = ui.OrientationFields{1};
-t.verifyTrue(tool.Enabled);
+t.verifyFalse(tool.Enabled);
 t.verifyTrue(tool.Available);
+t.verifyEqual(string(field.Graphic.Parent.Visible),"off");
+
+% Orientation lines are opt-in for each application session.
+ui.LeftViewer.enableTool("OrientationField");
+t.verifyTrue(tool.Enabled);
 t.verifyEqual(string(field.Graphic.Parent.Visible),"on");
 
 % Accordion edits flow through project settings and repaint existing lines.
@@ -480,6 +485,8 @@ t.verifyEqual(image.SegmentationParameters.Mode,"Automatic");
 end
 function testIndependentDisplayLimitPolicies(t)
 ui = t.TestData.GUI; p = ui.Project; image = p.ActiveImage;
+t.verifyEqual(ui.DisplayLimitUI.Intensity.ValueDisplayFormat,'%.2f');
+t.verifyEqual(ui.DisplayLimitUI.Order.ValueDisplayFormat,'%.2f');
 p.Settings.View.LeftSource = "Average intensity";
 p.Settings.View.RightSource = "Input";
 slider = ui.DisplayLimitUI.Intensity; slider.Value = [.2 .8];
@@ -500,12 +507,15 @@ t.verifyTrue(p.Settings.Display.LockDisplayIntensity);
 t.verifyFalse(p.Settings.Display.KeepAutoDisplayIntensity);
 t.verifyEqual(p.Settings.Display.LockedDisplayRangeIntensity,ui.DisplayLimitUI.Intensity.Value);
 
-slider.Value = [.1 .9]; slider.ValueChangedFcn(slider,[]);
+% Choose an interior range so this lock test does not invoke slider clipping.
+bounds = slider.Limits;
+lockedRange = bounds(1)+[.1 .9]*diff(bounds);
+slider.Value = lockedRange; slider.ValueChangedFcn(slider,[]);
 t.verifyTrue(p.Settings.Display.LockDisplayIntensity);
-t.verifyEqual(p.Settings.Display.LockedDisplayRangeIntensity,[.1 .9]);
+t.verifyEqual(p.Settings.Display.LockedDisplayRangeIntensity,lockedRange);
 p.ActiveGroup.setActiveImage(p.ActiveGroup.Images(2));
-t.verifyEqual(ui.LeftViewer.CLim,[.1 .9]);
-t.verifyEqual(ui.RightViewer.CLim,[.1 .9]);
+t.verifyEqual(ui.LeftViewer.CLim,lockedRange);
+t.verifyEqual(ui.RightViewer.CLim,lockedRange);
 
 keepAuto = ui.DisplayLimitUI.Controls.Intensity.KeepAuto;
 keepAuto.Value = true; keepAuto.ValueChangedFcn(keepAuto,[]);
@@ -535,6 +545,12 @@ function testPlotPresetAndSingletonSourceMovement(t)
 
 ui = t.TestData.GUI;
 p = ui.Project;
+
+% Make the two user-facing data-tip modes deterministic for this test.
+p.Settings.ScatterPlot.DataTipDetail = "Verbose";
+p.Settings.SwarmPlot.DataTipDetail = "Verbose";
+p.Settings.ScatterPlot.MarkerFaceColorMode = "Auto";
+p.Settings.SwarmPlot.MarkerFaceColorMode = "Auto";
 
 % Dropdowns display readable labels while settings retain model property names.
 xVariables = ui.SettingsUI.ScatterPlot.XVariable;
@@ -579,14 +595,52 @@ scatterTip = ui.ScatterRenderer.Data.DataTipCells{1};
 t.verifyEqual(string(scatterTip{1}), ...
     ["Group","Image","Object","Label","Signal/background ratio","Order mean"]);
 t.verifyEqual(string(scatterTip{2}{1}(1)),"Group\_1");
-t.verifyEqual(string(scatterTip{2}{3}(1)),"1");
+t.verifyEqual(string(scatterTip{2}{3}(1)),"Object 1");
+t.verifyEqual(string(scatterTip{3}),["","","","","%.2f","%.2f"]);
 t.verifyEqual(numel(scatterTip{2}{1}),numel(ui.ScatterRenderer.Data.XData{1}));
 
 swarmTip = ui.SwarmRenderer.Data.DataTipCells{1};
 t.verifyEqual(string(swarmTip{1}), ...
     ["Group","Image","Object","Label","Order mean"]);
+t.verifyEqual(string(swarmTip{3}),["","","","","%.2f"]);
 t.verifyEqual(numel(swarmTip{2}{1}),numel(ui.SwarmRenderer.Data.Values{1}));
 t.verifyTrue(all(cellfun(@isempty,ui.SwarmRenderer.Data.SummaryDataTipCells)));
+
+% Compact mode replaces model names with stable one-based indices.
+p.Settings.ScatterPlot.DataTipDetail = "Compact";
+p.Settings.SwarmPlot.DataTipDetail = "Compact";
+
+scatterTip = ui.ScatterRenderer.Data.DataTipCells{1};
+t.verifyEqual([scatterTip{2}{1}(1),scatterTip{2}{2}(1),scatterTip{2}{3}(1)],[1 1 1]);
+t.verifyEqual(string(scatterTip{3}),["%d","%d","%d","","%.2f","%.2f"]);
+
+swarmTip = ui.SwarmRenderer.Data.DataTipCells{1};
+t.verifyEqual([swarmTip{2}{1}(1),swarmTip{2}{2}(1),swarmTip{2}{3}(1)],[1 1 1]);
+t.verifyEqual(string(swarmTip{3}),["%d","%d","%d","","%.2f"]);
+
+% The UI exposes semantic choices while the renderer receives MATLABX CData mode.
+t.verifyEqual(string(ui.SettingsUI.ScatterPlot.DataTipDetail.Items),["Compact","Verbose"]);
+t.verifyEqual(string(ui.SettingsUI.ScatterPlot.MarkerFaceColorMode.Items),["Auto","Custom"]);
+t.verifyEqual(string(ui.SettingsUI.ScatterPlot.MarkerEdgeColorMode.Items),["Auto","Custom"]);
+t.verifyFalse(any(string(ui.SettingsUI.ScatterPlot.MarkerEdgeColorMode.Items) == "CData"));
+t.verifyEqual(string(ui.SettingsUI.SwarmPlot.MarkerEdgeColorMode.Items),["Auto","Custom"]);
+t.verifyEqual(ui.ScatterRenderer.Style.MarkerFaceColorMode,"CData");
+t.verifyEqual(ui.SwarmRenderer.Style.MarkerFaceColorMode,"CData");
+
+% Paired color pickers share one row and activate only for Custom mode.
+faceMode = ui.SettingsUI.ScatterPlot.MarkerFaceColorMode;
+faceColor = ui.SettingsUI.ScatterPlot.MarkerFaceColor;
+t.verifyEqual(faceMode.Parent,faceColor.Parent);
+t.verifyEqual(string(faceColor.Enable),"off");
+faceMode.Value = 'Custom';
+faceMode.ValueChangedFcn(faceMode,[]);
+t.verifyEqual(string(faceColor.Enable),"on");
+
+% Data-tip detail is the last content setting before general axes options.
+t.verifyLessThan(ui.SettingsUI.ScatterPlot.DataTipDetail.Layout.Row, ...
+    ui.SettingsUI.ScatterPlot.BackgroundColor.Layout.Row);
+t.verifyLessThan(ui.SettingsUI.SwarmPlot.DataTipDetail.Layout.Row, ...
+    ui.SettingsUI.SwarmPlot.BackgroundColor.Layout.Row);
 
 markerSize = ui.SettingsUI.ScatterPlot.MarkerSize;
 markerSize.Value = 31;
@@ -688,15 +742,13 @@ t.verifyTrue(any(texts == "Objects"));
 objectsMenu = ui.LeftViewer.ContextMenu.Children(texts == "Objects");
 showItem = objectsMenu.Children(string({objectsMenu.Children.Text}) == "Show");
 t.verifyNumElements(showItem,1);
-t.verifyEqual(string(showItem.Checked),"on");
+t.verifyEqual(string(showItem.Checked),"off");
 
 % The application tool toggles native object boundaries without changing
 % membership or the independent application-overlay layer.
 polygon = findobj(ui.LeftViewer.getAxes(),'Tag','OverlayPolygon');
 applicationLayer = findobj(ui.LeftViewer.getAxes(),'Tag','ApplicationOverlayLayer');
-t.verifyTrue(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
-t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"on");
-ui.LeftViewer.disableTool("ObjectBoundaries");
+t.verifyFalse(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
 t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"off");
 t.verifyTrue(all(string({polygon.Visible}) == "off"));
 t.verifyEqual(string(applicationLayer.Visible),"on");

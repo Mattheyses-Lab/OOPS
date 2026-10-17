@@ -512,6 +512,7 @@ classdef GUI < handle
                     if isvalid(control) && isprop(control,'Value') && ...
                             isprop(obj.Settings.(domain),name)
                         control.Value = obj.Settings.(domain).(name);
+                        obj.refreshPairedColorControl(control);
                     end
 
                 end
@@ -788,34 +789,40 @@ classdef GUI < handle
             obj.SettingsUI.ScatterPlot.XVariable.Items = cellstr(labels);
             obj.SettingsUI.ScatterPlot.YVariable.Items = cellstr(labels);
 
+            % Data selection and grouping.
             obj.addSetting("Scatterplot","Group by","ScatterPlot","GroupingType",["Group","Label"]);
             obj.addSetting("Scatterplot","Color by","ScatterPlot","ColorMode",["Group","Label","Magnitude"]);
-            obj.addSetting("Scatterplot","Data-tip format","ScatterPlot","DataTipFormat");
+
+            % Point-marker visibility and appearance.
+            obj.addSetting("Scatterplot","Marker mode","ScatterPlot","MarkerMode",["single","multi","auto"]);
             obj.addSetting("Scatterplot","Marker size","ScatterPlot","MarkerSize");
             obj.addSetting("Scatterplot","Marker line width","ScatterPlot","MarkerLineWidth");
+            obj.addModeColorSetting("Scatterplot","Marker face color","ScatterPlot", ...
+                "MarkerFaceColorMode","MarkerFaceColor",["Auto","Custom"],"Custom");
             obj.addSetting("Scatterplot","Marker face alpha","ScatterPlot","MarkerFaceAlpha");
+            obj.addModeColorSetting("Scatterplot","Marker edge color","ScatterPlot", ...
+                "MarkerEdgeColorMode","MarkerEdgeColor",["Auto","Custom"],"Custom");
             obj.addSetting("Scatterplot","Marker edge alpha","ScatterPlot","MarkerEdgeAlpha");
-            obj.addSetting("Scatterplot","Marker mode","ScatterPlot","MarkerMode",["single","multi","auto"]);
-            obj.addSetting("Scatterplot","Marker face color","ScatterPlot", ...
-                "MarkerFaceColorMode",["CData","Custom","auto"]);
-            obj.addSetting("Scatterplot","Marker edge color","ScatterPlot", ...
-                "MarkerEdgeColorMode",["CData","Custom","auto"]);
+
+            % Optional group hulls and their appearance.
             obj.addSetting("Scatterplot","Show hulls","ScatterPlot","HullVisible");
             obj.addSetting("Scatterplot","Hull type","ScatterPlot","HullType",["concave","convex"]);
             obj.addSetting("Scatterplot","Hull line width","ScatterPlot","HullLineWidth");
+            obj.addModeColorSetting("Scatterplot","Hull face color","ScatterPlot", ...
+                "HullFaceColorMode","HullFaceColor",["auto","Custom"],"Custom");
             obj.addSetting("Scatterplot","Hull face alpha","ScatterPlot","HullFaceAlpha");
+            obj.addModeColorSetting("Scatterplot","Hull edge color","ScatterPlot", ...
+                "HullEdgeColorMode","HullEdgeColor",["auto","Custom"],"Custom");
             obj.addSetting("Scatterplot","Hull edge alpha","ScatterPlot","HullEdgeAlpha");
-            obj.addSetting("Scatterplot","Hull face color","ScatterPlot", ...
-                "HullFaceColorMode",["Custom","auto"]);
-            obj.addSetting("Scatterplot","Hull edge color","ScatterPlot", ...
-                "HullEdgeColorMode",["Custom","auto"]);
+
+            % Data-tip detail applies to every plotted point.
+            obj.addSetting("Scatterplot","Data-tip detail","ScatterPlot", ...
+                "DataTipDetail",["Compact","Verbose"]);
+
+            % General axes and legend appearance.
             obj.addSetting("Scatterplot","Show legend","ScatterPlot","LegendVisible");
             obj.addColorSetting("Scatterplot","Background","ScatterPlot","BackgroundColor");
             obj.addColorSetting("Scatterplot","Foreground","ScatterPlot","ForegroundColor");
-            obj.addColorSetting("Scatterplot","Marker face","ScatterPlot","MarkerFaceColor");
-            obj.addColorSetting("Scatterplot","Marker edge","ScatterPlot","MarkerEdgeColor");
-            obj.addColorSetting("Scatterplot","Hull face","ScatterPlot","HullFaceColor");
-            obj.addColorSetting("Scatterplot","Hull edge","ScatterPlot","HullEdgeColor");
         end
 
         function buildSwarmPlotControls(obj)
@@ -828,42 +835,49 @@ classdef GUI < handle
             labels = oops.model.ObjectMeasurements.labels(variables);
             obj.SettingsUI.SwarmPlot.YVariable.Items = cellstr(labels);
 
+            % Data selection and grouping.
             obj.addSetting("Swarmplot","Group by","SwarmPlot","GroupingType",["Group","Label","Both"]);
             obj.addSetting("Swarmplot","Color by","SwarmPlot","ColorMode",["Group","Label","Magnitude"]);
-            obj.addSetting("Swarmplot","Data-tip format","SwarmPlot","DataTipFormat");
+
+            % Point visibility followed by all marker-related appearance.
+            obj.addSetting("Swarmplot","Show points","SwarmPlot","PointsVisible");
             obj.addSetting("Swarmplot","Marker size","SwarmPlot","MarkerSize");
             obj.addSetting("Swarmplot","Marker line width","SwarmPlot","MarkerLineWidth");
-            obj.addSetting("Swarmplot","Marker face alpha","SwarmPlot","MarkerFaceAlpha");
-            obj.addSetting("Swarmplot","Marker edge alpha","SwarmPlot","MarkerEdgeAlpha");
-            obj.addSetting("Swarmplot","Marker face color","SwarmPlot", ...
-                "MarkerFaceColorMode",["CData","Custom","auto"]);
             obj.addSetting("Swarmplot","Jitter width","SwarmPlot","XJitterWidth");
-            obj.addSetting("Swarmplot","Show points","SwarmPlot","PointsVisible");
+            obj.addModeColorSetting("Swarmplot","Marker face color","SwarmPlot", ...
+                "MarkerFaceColorMode","MarkerFaceColor",["Auto","Custom"],"Custom");
+            obj.addSetting("Swarmplot","Marker face alpha","SwarmPlot","MarkerFaceAlpha");
+            obj.addModeColorSetting("Swarmplot","Marker edge color","SwarmPlot", ...
+                "MarkerEdgeColorMode","MarkerEdgeColor",["Auto","Custom"],"Custom");
+            obj.addSetting("Swarmplot","Marker edge alpha","SwarmPlot","MarkerEdgeAlpha");
+
+            % Violin visibility followed by fill and outline appearance.
             obj.addSetting("Swarmplot","Show violins","SwarmPlot","ViolinOutlinesVisible");
             obj.addSetting("Swarmplot","Violin line width","SwarmPlot","ViolinLineWidth");
+            obj.addModeColorSetting("Swarmplot","Violin face color","SwarmPlot", ...
+                "ViolinFaceColorMode","ViolinFaceColor",["auto","Custom"],"Custom");
+            obj.addModeColorSetting("Swarmplot","Violin edge color","SwarmPlot", ...
+                "ViolinEdgeColorMode","ViolinEdgeColor",["auto","Custom"],"Custom");
             obj.addSetting("Swarmplot","Violin edge alpha","SwarmPlot","ViolinEdgeAlpha");
+
+            % Error-bar visibility followed by summary statistics and appearance.
             obj.addSetting("Swarmplot","Show error bars","SwarmPlot","ErrorBarsVisible");
             obj.addSetting("Swarmplot","Central statistic","SwarmPlot", ...
                 "CentralStatistic",["mean","median"]);
             obj.addSetting("Swarmplot","Error statistic","SwarmPlot", ...
                 "ErrorStatistic",["std","sem","iqr"]);
-            obj.addSetting("Swarmplot","Error-bar line width","SwarmPlot","ErrorBarsLineWidth");
             obj.addSetting("Swarmplot","Central line width","SwarmPlot","CentralStatLineWidth");
-            obj.addSetting("Swarmplot","Marker edge color","SwarmPlot", ...
-                "MarkerEdgeColorMode",["CData","Custom","auto"]);
-            obj.addSetting("Swarmplot","Violin face color","SwarmPlot", ...
-                "ViolinFaceColorMode",["Custom","auto"]);
-            obj.addSetting("Swarmplot","Violin edge color","SwarmPlot", ...
-                "ViolinEdgeColorMode",["Custom","auto"]);
-            obj.addSetting("Swarmplot","Error-bar color","SwarmPlot", ...
-                "ErrorBarsColorMode",["Custom","auto"]);
+            obj.addSetting("Swarmplot","Error-bar line width","SwarmPlot","ErrorBarsLineWidth");
+            obj.addModeColorSetting("Swarmplot","Error-bar color","SwarmPlot", ...
+                "ErrorBarsColorMode","ErrorBarsColor",["auto","Custom"],"Custom");
+
+            % Data-tip detail applies to each visible swarm point.
+            obj.addSetting("Swarmplot","Data-tip detail","SwarmPlot", ...
+                "DataTipDetail",["Compact","Verbose"]);
+
+            % General axes appearance.
             obj.addColorSetting("Swarmplot","Background","SwarmPlot","BackgroundColor");
             obj.addColorSetting("Swarmplot","Foreground","SwarmPlot","ForegroundColor");
-            obj.addColorSetting("Swarmplot","Marker face","SwarmPlot","MarkerFaceColor");
-            obj.addColorSetting("Swarmplot","Marker edge","SwarmPlot","MarkerEdgeColor");
-            obj.addColorSetting("Swarmplot","Violin face","SwarmPlot","ViolinFaceColor");
-            obj.addColorSetting("Swarmplot","Violin edge","SwarmPlot","ViolinEdgeColor");
-            obj.addColorSetting("Swarmplot","Error bars","SwarmPlot","ErrorBarsColor");
         end
 
         function buildPolarHistogramControls(obj)
@@ -879,13 +893,18 @@ classdef GUI < handle
             obj.SettingsUI.PolarHistogram.Variable.Items = cellstr( ...
                 oops.model.ObjectMeasurements.labels(variables));
             obj.addSetting(item,"Number of bins",domain,"BinCount",[12 24 48 96]);
+
+            % Wedge fill followed by wedge outline appearance.
+            obj.addModeColorSetting(item,"Face color",domain, ...
+                "WedgeFaceColorMode","WedgeFaceColor",["flat","interp","custom"],"custom");
             obj.addSetting(item,"Face alpha",domain,"WedgeFaceAlpha");
-            obj.addSetting(item,"Face color mode",domain,"WedgeFaceColorMode",["flat","interp"]);
-            obj.addSetting(item,"Edge color mode",domain,"WedgeEdgeColorMode",["flat","interp"]);
+            obj.addModeColorSetting(item,"Edge color",domain, ...
+                "WedgeEdgeColorMode","WedgeEdgeColor",["flat","interp","custom"],"custom");
             obj.addSetting(item,"Wedge line width",domain,"WedgeLineWidth");
-            obj.addSetting(item,"Gridline width",domain,"GridlinesLineWidth");
-            obj.addColorSetting(item,"Wedge edge",domain,"WedgeEdgeColor");
+
+            % Grid, label, circle, and axes appearance.
             obj.addColorSetting(item,"Gridlines",domain,"GridlinesColor");
+            obj.addSetting(item,"Gridline width",domain,"GridlinesLineWidth");
             obj.addColorSetting(item,"Labels",domain,"LabelsColor");
             obj.addColorSetting(item,"Circle background",domain,"CircleBackgroundColor");
             obj.addColorSetting(item,"Circle edge",domain,"CircleColor");
@@ -916,6 +935,57 @@ classdef GUI < handle
             control.Layout.Column = 2;
             control.UserData = struct('Domain',domain,'Name',name);
             obj.SettingsUI.(domain).(name) = control;
+        end
+
+        function addModeColorSetting(obj,title,label,domain,modeName,colorName,choices,customValue)
+        %ADDMODECOLORSETTING Place a color mode and its picker on one row.
+
+            pane = obj.SettingsAccordion.getItem(title).Pane;
+
+            if ~isfield(obj.SettingsUI,domain)
+                obj.SettingsUI.(domain) = struct();
+            end
+
+            if isempty(pane.Children)
+                set(pane,'ColumnWidth',{'fit','1x'},'RowHeight',{}, ...
+                    'Padding',[5 5 5 5],'ColumnSpacing',5,'RowSpacing',5);
+            end
+
+            % One labeled row whose value cell contains the mode and picker.
+            row = numel(pane.RowHeight)+1;
+            pane.RowHeight{row} = 'fit';
+
+            text = uilabel(pane,'Text',label,'FontColor',[.85 .85 .85]);
+            text.Layout.Row = row;
+            text.Layout.Column = 1;
+
+            controls = uigridlayout(pane,[1 2], ...
+                'RowHeight',{'fit'},'ColumnWidth',{'1x','fit'}, ...
+                'Padding',0,'ColumnSpacing',5,'BackgroundColor',[.18 .18 .18]);
+            controls.Layout.Row = row;
+            controls.Layout.Column = 2;
+
+            mode = uidropdown(controls, ...
+                'Items',cellstr(string(choices)), ...
+                'ItemsData',cellstr(string(choices)), ...
+                'Value',obj.Settings.(domain).(modeName), ...
+                'ValueChangedFcn',@(src,~) obj.runCallback( ...
+                    @() obj.onPairedColorModeEdited(src)));
+            mode.Layout.Column = 1;
+            mode.BackgroundColor = [.3 .3 .3];
+            mode.FontColor = [.9 .9 .9];
+
+            color = uicolorpicker(controls, ...
+                'Value',obj.Settings.(domain).(colorName), ...
+                'ValueChangedFcn',@(src,~) obj.runCallback(@() obj.onSettingEdited(src)));
+            color.Layout.Column = 2;
+
+            mode.UserData = struct('Domain',domain,'Name',modeName, ...
+                'ColorControl',color,'CustomValue',string(customValue));
+            color.UserData = struct('Domain',domain,'Name',colorName);
+            obj.SettingsUI.(domain).(modeName) = mode;
+            obj.SettingsUI.(domain).(colorName) = color;
+            obj.refreshPairedColorControl(mode);
         end
 
         function buildLabels(obj)
@@ -1139,7 +1209,7 @@ classdef GUI < handle
                     % Bound UI component being constructed or synchronized.
                     control = matlabx.ui.control.Slider(pane,'Title',char(parameter.Label), ...
                         'ValueMode','scalar','Limits',parameter.Limits, ...
-                        'Value',mean(parameter.Limits),'ValueDisplayFormat','%.4g', ...
+                        'Value',mean(parameter.Limits),'ValueDisplayFormat','%.2f', ...
                         'FontColor',[.9 .9 .9],'BackgroundColor',[.18 .18 .18], ...
                         'ValueChangingFcn',@(src,~) obj.runCallback(@() obj.onSegmentationAdjustment(src,false)), ...
                         'ValueChangedFcn',@(src,~) obj.runCallback(@() obj.onSegmentationAdjustment(src,true)));
@@ -1377,7 +1447,7 @@ classdef GUI < handle
                 % Range slider used to preview and store an explicit image range.
                 control = matlabx.ui.control.Slider(pane,'Title',char(domain), ...
                     'ValueMode','range','Limits',[0 1],'Value',[0 1], ...
-                    'ValueDisplayFormat','%.4g','FontColor',[.9 .9 .9], ...
+                    'ValueDisplayFormat','%.2f','FontColor',[.9 .9 .9], ...
                     'BackgroundColor',[.18 .18 .18], ...
                     'ValueChangingFcn',@(src,~) obj.runCallback(@() obj.onDisplayLimitsEdited(src,false)), ...
                     'ValueChangedFcn',@(src,~) obj.runCallback(@() obj.onDisplayLimitsEdited(src,true)));
@@ -1456,11 +1526,30 @@ classdef GUI < handle
 
                 if ready
 
+                    % Match edit-field formatting and committed precision to display pixels.
+                    if domain == "Intensity"
+                        [detectorLimits,~] = oops.analysis.detectorRange(image.Input);
+                        integerDisplay = ~isempty(detectorLimits);
+                    else
+                        integerDisplay = false;
+                    end
+
+                    if integerDisplay
+                        control.ValueDisplayFormat = '%d';
+                        control.RoundValues = 'on';
+                        control.RoundDigits = 0;
+                    else
+                        control.ValueDisplayFormat = '%.2f';
+                        control.RoundValues = 'off';
+                    end
+
                     % Effective display range and slider bounds resolved for this image/domain.
                     [value,bounds] = oops.render.displayLimits(image,domain,obj.Settings);
                     control.Limits = bounds;
                     control.Value = value;
                 else
+                    control.ValueDisplayFormat = '%.2f';
+                    control.RoundValues = 'off';
                     control.Limits = [0 1];
                     control.Value = [0 1];
                 end
@@ -1484,6 +1573,10 @@ classdef GUI < handle
 
             % Range selected by the intensity/order display-limit slider.
             value = control.Value;
+
+            if domain == "Intensity"
+                value = oops.render.normalizeIntensityDisplayRange(image,value);
+            end
 
             if value(1) >= value(2)
                 obj.refreshDisplayLimits();
@@ -1528,6 +1621,10 @@ classdef GUI < handle
             % Reset and Auto ranges calculated from the current image and domain.
             [~,~,ranges] = oops.render.displayLimits(image,domain,obj.Settings);
             value = ranges.(action);
+
+            if domain == "Intensity"
+                value = oops.render.normalizeIntensityDisplayRange(image,value);
+            end
 
             % Existing processing state restored after the atomic policy update.
             previous = obj.Processing;
@@ -1620,16 +1717,16 @@ classdef GUI < handle
                 boundaryTool.ObjectSelectionChangedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundarySelectionChanged(d));
                 boundaryTool.ObjectsDeleteRequestedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundariesDeleteRequested(d));
                 viewer.installTool(boundaryTool);
-                boundaryTool.enable();
+                viewer.OverlaysVisible = 'off';
                 obj.PolygonTools{k} = polygonTool;
                 obj.ObjectBoundaryTools{k} = boundaryTool;
 
                 % Passive axial field uses MATLABX's application-overlay layer.
                 field = oops.render.OrientationField();
                 mount = viewer.mountOverlay(field);
+                mount.Visible = 'off';
                 tool = oops.ui.axes.tools.OrientationField(viewer,mount);
                 viewer.installTool(tool);
-                tool.enable();
                 obj.OrientationFields{k} = field;
                 obj.OrientationFieldTools{k} = tool;
 
@@ -2315,6 +2412,29 @@ classdef GUI < handle
             end
         end
 
+        function onPairedColorModeEdited(obj,control)
+        %ONPAIREDCOLORMODEEDITED Store a mode and update its adjacent picker.
+
+            obj.onSettingEdited(control);
+            obj.refreshPairedColorControl(control);
+        end
+
+        function refreshPairedColorControl(~,control)
+        %REFRESHPAIREDCOLORCONTROL Enable a picker only for its custom mode.
+
+            if ~isvalid(control) || ~isstruct(control.UserData) || ...
+                    ~isfield(control.UserData,'ColorControl')
+                return;
+            end
+
+            color = control.UserData.ColorControl;
+
+            if isvalid(color)
+                color.Enable = matlab.lang.OnOffSwitchState( ...
+                    string(control.Value) == control.UserData.CustomValue);
+            end
+        end
+
         function onSettingsChanged(obj,e)
         %ONSETTINGSCHANGED Sync the bound control and execute domain-specific refresh policy.
 
@@ -2323,6 +2443,7 @@ classdef GUI < handle
                 % Bound UI component being constructed or synchronized.
                 control = obj.SettingsUI.(e.Domain).(e.Name);
                 control.Value = e.NewValue;
+                obj.refreshPairedColorControl(control);
             end
 
             if isempty(obj.Project)
@@ -2752,6 +2873,10 @@ classdef GUI < handle
             % propagated to every visible source in the same display domain.
             value = viewer.CLim;
 
+            if domain == "Intensity"
+                value = oops.render.normalizeIntensityDisplayRange(image,value);
+            end
+
             % Ignore incomplete or unsupported values before entering model setters.
             if numel(value) ~= 2 || any(~isfinite(value)) || value(1) >= value(2)
                 return;
@@ -3095,6 +3220,7 @@ classdef GUI < handle
                 Colormap=map, ...
                 WedgeFaceAlpha=settings.WedgeFaceAlpha, ...
                 WedgeFaceColorMode=settings.WedgeFaceColorMode, ...
+                WedgeFaceColor=settings.WedgeFaceColor, ...
                 WedgeEdgeColorMode=settings.WedgeEdgeColorMode, ...
                 WedgeEdgeColor=settings.WedgeEdgeColor, ...
                 WedgeLineWidth=settings.WedgeLineWidth, ...
@@ -3153,7 +3279,8 @@ classdef GUI < handle
 
             for k = 1:numel(plottedMembers)
                 dataTipCells{k} = obj.objectDataTipCell( ...
-                    plottedMembers{k},[xLabel,yLabel],{xData{k},yData{k}});
+                    plottedMembers{k},settings.DataTipDetail, ...
+                    [xLabel,yLabel],{xData{k},yData{k}});
             end
 
             % Translate application settings into the renderer-facing value.
@@ -3164,16 +3291,17 @@ classdef GUI < handle
                 ForegroundColor=settings.ForegroundColor, ...
                 Colormap=colormap, ...
                 CLim=limits, ...
-                DataTipFormat=settings.DataTipFormat, ...
                 LegendVisible=settings.LegendVisible, ...
                 MarkerSize=settings.MarkerSize, ...
                 MarkerLineWidth=settings.MarkerLineWidth, ...
                 MarkerMode=settings.MarkerMode, ...
                 MarkerFaceAlpha=settings.MarkerFaceAlpha, ...
-                MarkerFaceColorMode=settings.MarkerFaceColorMode, ...
+                MarkerFaceColorMode=obj.plotMarkerColorMode( ...
+                    settings.MarkerFaceColorMode), ...
                 MarkerFaceColor=settings.MarkerFaceColor, ...
                 MarkerEdgeAlpha=settings.MarkerEdgeAlpha, ...
-                MarkerEdgeColorMode=settings.MarkerEdgeColorMode, ...
+                MarkerEdgeColorMode=obj.plotMarkerColorMode( ...
+                    settings.MarkerEdgeColorMode), ...
                 MarkerEdgeColor=settings.MarkerEdgeColor, ...
                 HullVisible=settings.HullVisible, ...
                 HullType=settings.HullType, ...
@@ -3235,7 +3363,7 @@ classdef GUI < handle
 
             for k = 1:numel(plottedMembers)
                 dataTipCells{k} = obj.objectDataTipCell( ...
-                    plottedMembers{k},yLabel,{data{k}});
+                    plottedMembers{k},settings.DataTipDetail,yLabel,{data{k}});
             end
 
             % Resolve OOPS configuration into an application-independent style.
@@ -3246,14 +3374,15 @@ classdef GUI < handle
                 ForegroundColor=settings.ForegroundColor, ...
                 Colormap=colormap, ...
                 CLim=limits, ...
-                DataTipFormat=settings.DataTipFormat, ...
                 MarkerSize=settings.MarkerSize, ...
                 MarkerLineWidth=settings.MarkerLineWidth, ...
                 MarkerFaceAlpha=settings.MarkerFaceAlpha, ...
-                MarkerFaceColorMode=settings.MarkerFaceColorMode, ...
+                MarkerFaceColorMode=obj.plotMarkerColorMode( ...
+                    settings.MarkerFaceColorMode), ...
                 MarkerFaceColor=settings.MarkerFaceColor, ...
                 MarkerEdgeAlpha=settings.MarkerEdgeAlpha, ...
-                MarkerEdgeColorMode=settings.MarkerEdgeColorMode, ...
+                MarkerEdgeColorMode=obj.plotMarkerColorMode( ...
+                    settings.MarkerEdgeColorMode), ...
                 MarkerEdgeColor=settings.MarkerEdgeColor, ...
                 XJitterWidth=settings.XJitterWidth, ...
                 PointsVisible=settings.PointsVisible, ...
@@ -3360,7 +3489,7 @@ classdef GUI < handle
             end
         end
 
-        function template = objectDataTipCell(~,members,measurementLabels,measurementValues)
+        function template = objectDataTipCell(~,members,detail,measurementLabels,measurementValues)
         %OBJECTDATATIPCELL Build one point-aligned model metadata template.
 
             if isempty(members)
@@ -3370,16 +3499,23 @@ classdef GUI < handle
 
             % Allocate identity values in the same order as the plotted objects.
             count = numel(members);
+            groupIndices = zeros(count,1);
+            imageIndices = zeros(count,1);
+            objectIndices = zeros(count,1);
             groupNames = strings(count,1);
             imageNames = strings(count,1);
-            objectIndices = zeros(count,1);
+            objectNames = strings(count,1);
             labelNames = strings(count,1);
 
             for k = 1:count
                 member = members(k);
+                groupIndices(k) = member.GroupIdx;
+                imageIndices(k) = find( ...
+                    member.Parent.Parent.Images == member.Parent,1);
+                objectIndices(k) = member.SelfIdx;
                 groupNames(k) = member.GroupName;
                 imageNames(k) = member.ImageName;
-                objectIndices(k) = member.SelfIdx;
+                objectNames(k) = member.Name;
 
                 % Prefer the current registry name but retain the stable ID if unresolved.
                 label = member.Label;
@@ -3391,16 +3527,40 @@ classdef GUI < handle
                 end
             end
 
-            % MATLAB data-tip rows accept categorical identity and numeric measurement data.
+            % Identity rows switch between full model names and compact indices.
             labels = ["Group","Image","Object","Label",string(measurementLabels(:).')];
-            values = { ...
-                categorical(oops.render.escapeTeX(groupNames)), ...
-                categorical(oops.render.escapeTeX(imageNames)), ...
-                categorical(string(objectIndices)), ...
-                categorical(oops.render.escapeTeX(labelNames))};
+
+            if detail == "Verbose"
+                values = { ...
+                    categorical(oops.render.escapeTeX(groupNames)), ...
+                    categorical(oops.render.escapeTeX(imageNames)), ...
+                    categorical(oops.render.escapeTeX(objectNames)), ...
+                    categorical(oops.render.escapeTeX(labelNames))};
+                formats = repmat({""},1,4);
+            else
+                values = { ...
+                    groupIndices, ...
+                    imageIndices, ...
+                    objectIndices, ...
+                    categorical(oops.render.escapeTeX(labelNames))};
+                formats = {"%d","%d","%d",""};
+            end
+
             values = [values,measurementValues(:).'];
 
-            template = {cellstr(labels),values};
+            % Measurement rows use one internal fixed-point convention.
+            formats = [formats,repmat({"%.2f"},1,numel(measurementValues))];
+            template = {cellstr(labels),values,formats};
+        end
+
+        function mode = plotMarkerColorMode(~,setting)
+        %PLOTMARKERCOLORMODE Translate a user-facing marker mode for MATLABX.
+
+            if setting == "Auto"
+                mode = "CData";
+            else
+                mode = "Custom";
+            end
         end
 
         function [data,colormap,limits] = plotColors(obj,members,mode,magnitudeProperty)

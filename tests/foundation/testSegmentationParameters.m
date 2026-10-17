@@ -114,6 +114,47 @@ p.Settings.Display.OrderAutoScaleMethod = "Data range";
 t.verifyEqual(ranges.Auto,[.2 .8],'AbsTol',eps);
 end
 
+function testIntensityLimitsUseSourceClassDisplayValues(t)
+%TESTINTENSITYLIMITSUSESOURCECLASSDISPLAYVALUES Match uint8 display quantization.
+
+p = oops.model.Project(); cleaner = onCleanup(@() delete(p));
+p.Settings.Display.KeepAutoDisplayIntensity = false;
+p.Settings.Display.LockDisplayIntensity = false;
+g = p.addGroup("A");
+raw = uint8(10*ones(4,5));
+im = g.addImage(matlabx.image.Image5D.fromComponents({raw,raw,raw,raw}));
+average = reshape(linspace(10.2,20.8,20),4,5);
+im.setResults(struct('AverageIntensity',average));
+im.setDisplayRange("Intensity",[10 21]);
+
+[value,bounds,ranges] = oops.render.displayLimits(im,"Intensity",p.Settings);
+[display,info] = oops.render.source(im,"Average intensity",p.Settings);
+displayPlane = display.getPlane(1);
+
+t.verifyClass(displayPlane,'uint8');
+t.verifyEqual(displayPlane,uint8(round(average)));
+t.verifyEqual(value,[10 21]);
+t.verifyEqual(bounds,[10 21]);
+t.verifyEqual(ranges.Reset,[10 21]);
+expectedAuto = round(prctile(double(uint8(round(average(:)))),[1 99]));
+t.verifyEqual(ranges.Auto,expectedAuto);
+t.verifyEqual(info.CLim,[10 21]);
+t.verifyEqual(oops.render.normalizeIntensityDisplayRange(im,[10.2 20.8]),[10 21]);
+
+% Floating-point sources retain their own class and fractional limits.
+singleRaw = single(10*ones(4,5));
+singleImage = g.addImage(matlabx.image.Image5D.fromComponents( ...
+    {singleRaw,singleRaw,singleRaw,singleRaw}));
+singleImage.setResults(struct('AverageIntensity',average));
+singleImage.setDisplayRange("Intensity",[10.2 20.8]);
+[singleDisplay,singleInfo] = oops.render.source( ...
+    singleImage,"Average intensity",p.Settings);
+
+t.verifyClass(singleDisplay.getPlane(1),'single');
+t.verifyEqual(singleDisplay.getPlane(1),single(average));
+t.verifyEqual(singleInfo.CLim,[10.2 20.8]);
+end
+
 function testPendingCalibrationInvalidatesAnOldManualRecipe(t)
 p = oops.model.Project(); cleaner = onCleanup(@() delete(p)); g = p.addGroup("A");
 I = zeros(60); I(20:24,20:24) = 100;

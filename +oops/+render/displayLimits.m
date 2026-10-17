@@ -22,7 +22,8 @@ if domain == "Intensity"
     % Average intensity is resident during normal GUI use. The lazy fallback
     % supports images created programmatically without rereading on later calls.
     average = oops.analysis.Analyzer.ensureAverageIntensity(image);
-    values = average(:);
+    average = oops.render.intensityDisplayValues(image,average);
+    values = double(average(:));
 else
     values = image.Order(:);
 end
@@ -45,6 +46,7 @@ end
 if domain == "Intensity"
     ranges.Reset = bounds;
     ranges.Auto = percentileRange(values,bounds);
+    ranges.Auto = oops.render.normalizeIntensityDisplayRange(image,ranges.Auto);
 else
     bounds = [0 1];
     ranges.Reset = [0 1];
@@ -70,6 +72,11 @@ elseif settings.Display.("LockDisplay"+domain)
     end
 else
     value = image.getDisplayRange(domain);
+end
+
+% Effective intensity limits follow the class and range of the displayed copy.
+if domain == "Intensity"
+    value = oops.render.normalizeIntensityDisplayRange(image,value);
 end
 
 % Expand UI slider bounds to keep user values accessible after recalibration.

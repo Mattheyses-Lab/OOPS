@@ -12,17 +12,17 @@ classdef ScatterPlot < handle
         BackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor_,0,1)} = [1.0 1.0 1.0]
         ForegroundColor_ (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor_,0,1)} = [0.0 0.0 0.0]
         LegendVisible_ (1,1) logical = false
-        DataTipFormat_ (1,1) string = "%.2f"
+        DataTipDetail_ (1,1) string {mustBeMember(DataTipDetail_,["Compact","Verbose"])} = "Compact"
         MarkerSize_ (1,1) double {mustBeFinite,mustBePositive} = 50.0
         MarkerLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 0.5
-        MarkerFaceColorMode_ (1,1) string = "CData"
+        MarkerFaceColorMode_ (1,1) string {mustBeMember(MarkerFaceColorMode_,["Auto","Custom"])} = "Auto"
         MarkerFaceColor_ (1,3) double {mustBeFinite,mustBeInRange(MarkerFaceColor_,0,1)} = [0.0 0.4470 0.7410]
         ColorMode_ (1,1) string = "Group"
         MarkerFaceAlpha_ (1,1) double {mustBeFinite,mustBeInRange(MarkerFaceAlpha_,0,1)} = 1.0
         HullLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
         HullFaceColor_ (1,3) double {mustBeFinite,mustBeInRange(HullFaceColor_,0,1)} = [1.0 1.0 1.0]
         HullFaceAlpha_ (1,1) double {mustBeFinite,mustBeInRange(HullFaceAlpha_,0,1)} = 0.5
-        MarkerEdgeColorMode_ (1,1) string = "Custom"
+        MarkerEdgeColorMode_ (1,1) string {mustBeMember(MarkerEdgeColorMode_,["Auto","Custom"])} = "Custom"
         HullFaceColorMode_ (1,1) string = "auto"
         HullEdgeColorMode_ (1,1) string = "auto"
         MarkerEdgeColor_ (1,3) double {mustBeFinite,mustBeInRange(MarkerEdgeColor_,0,1)} = [0.0 0.0 0.0]
@@ -41,7 +41,7 @@ classdef ScatterPlot < handle
         BackgroundColor
         ForegroundColor
         LegendVisible
-        DataTipFormat
+        DataTipDetail
         MarkerSize
         MarkerLineWidth
         MarkerFaceColorMode
@@ -133,16 +133,16 @@ classdef ScatterPlot < handle
             obj.setValue("LegendVisible",v);
         end
 
-        function v = get.DataTipFormat(obj)
-        %GET.DATATIPFORMAT Return the numeric data-tip display format.
+        function v = get.DataTipDetail(obj)
+        %GET.DATATIPDETAIL Return the amount of object identity shown in data tips.
 
-            v = obj.DataTipFormat_;
+            v = obj.DataTipDetail_;
         end
 
-        function set.DataTipFormat(obj,v)
-        %SET.DATATIPFORMAT Store and notify a data-tip format change.
+        function set.DataTipDetail(obj,v)
+        %SET.DATATIPDETAIL Store and notify a data-tip detail change.
 
-            obj.setValue("DataTipFormat",v);
+            obj.setValue("DataTipDetail",v);
         end
 
         function v = get.MarkerSize(obj)
@@ -177,6 +177,10 @@ classdef ScatterPlot < handle
 
         function set.MarkerFaceColorMode(obj,v)
         %SET.MARKERFACECOLORMODE Store and notify a marker face mode change.
+
+            if ismember(string(v),["CData","auto"])
+                v = "Auto";
+            end
 
             obj.setValue("MarkerFaceColorMode",v);
         end
@@ -263,6 +267,10 @@ classdef ScatterPlot < handle
 
         function set.MarkerEdgeColorMode(obj,v)
         %SET.MARKEREDGECOLORMODE Validate, store, and notify a ScatterPlot setting change.
+
+            if ismember(string(v),["CData","auto"])
+                v = "Auto";
+            end
 
             obj.setValue("MarkerEdgeColorMode",v);
         end
@@ -398,7 +406,7 @@ classdef ScatterPlot < handle
                 'BackgroundColor',obj.BackgroundColor, ...
                 'ForegroundColor',obj.ForegroundColor, ...
                 'LegendVisible',obj.LegendVisible, ...
-                'DataTipFormat',obj.DataTipFormat, ...
+                'DataTipDetail',obj.DataTipDetail, ...
                 'MarkerSize',obj.MarkerSize, ...
                 'MarkerLineWidth',obj.MarkerLineWidth, ...
                 'MarkerFaceColorMode',obj.MarkerFaceColorMode, ...
