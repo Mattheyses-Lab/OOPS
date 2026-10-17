@@ -553,10 +553,14 @@ classdef GUI < handle
         end
 
         function updateProjectUIState(obj)
-        %UPDATEPROJECTUISTATE Synchronize command availability and window title.
+        %UPDATEPROJECTUISTATE Synchronize content, commands, and window title.
 
             hasProject = ~isempty(obj.Project);
             state = matlab.lang.OnOffSwitchState(hasProject);
+
+            % Match DesmoSTORM's empty-session behavior: retain the figure
+            % menubar while hiding all project-specific application content.
+            obj.Grid.Visible = state;
 
             for name = ["Close","Save","SaveAs","LoadImages","Calibration", ...
                     "AuxiliaryChannels","Analysis","View","RuntimeStatus"]
