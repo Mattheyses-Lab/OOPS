@@ -12,10 +12,13 @@ classdef ScatterData
 % CData entries may be one RGB triplet, one scalar per point, or one RGB
 % triplet per point. DataTipCells optionally supplies one {labels,values}
 % template per group; an empty entry uses the renderer-generated default.
+% A third formats cell is optional. Empty row formats use DataTipFormat,
+% while nonempty entries override it for that row.
 %
 %   data = matlabx.ui.axes.plot.ScatterData( ...
 %       XData={x},YData={y},SeriesNames="Samples",CData={[0 0.45 0.74]}, ...
-%       DataTipCells={{{"Sample","Response"},{sampleIDs,y}}});
+%       DataTipCells={{{"Sample","Response"},{sampleIDs,y}, ...
+%       {"","%.2f"}}});
 %
 % See also matlabx.ui.axes.plot.ScatterRenderer,
 % matlabx.ui.axes.plot.ScatterStyle
@@ -120,12 +123,14 @@ function validateDataTipCell(template,pointCount,index)
     if isempty(template)
         return;
     end
-    if ~iscell(template) || ~isequal(size(template),[1 2]) || ...
+    if ~iscell(template) || size(template,1) ~= 1 || ...
+            ~any(size(template,2) == [2 3]) || ...
             ~iscell(template{1}) || ~iscell(template{2}) || ...
             isempty(template{1}) || numel(template{1}) ~= numel(template{2})
         error('matlabx:ui:axes:plot:InvalidScatterDataTipCell', ...
             'DataTipCells group %d must contain a nonempty {labels,values} template.',index);
     end
+    validateDataTipFormats(template,index,'Scatter');
     for row = 1:numel(template{2})
         value = template{2}{row};
         if ischar(value) || isscalar(value) || isa(value,'function_handle')
@@ -135,6 +140,19 @@ function validateDataTipCell(template,pointCount,index)
             error('matlabx:ui:axes:plot:ScatterDataTipCountMismatch', ...
                 'Data-tip row %d in group %d must be scalar or point-aligned.',row,index);
         end
+    end
+end
+
+function validateDataTipFormats(template,index,~)
+%VALIDATEDATATIPFORMATS Validate optional per-row format text.
+    if numel(template) < 3
+        return;
+    end
+    formats = template{3};
+    if ~iscell(formats) || numel(formats) ~= numel(template{1}) || ...
+            ~all(cellfun(@(x) (ischar(x) || (isstring(x) && isscalar(x))),formats))
+        error('matlabx:ui:axes:plot:InvalidScatterDataTipFormats', ...
+            'DataTipCells group %d formats must contain one text scalar per row.',index);
     end
 end
 

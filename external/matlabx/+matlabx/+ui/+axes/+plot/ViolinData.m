@@ -9,12 +9,15 @@ classdef ViolinData
 %
 % CData entries may be one RGB triplet, one scalar per value, or one RGB
 % triplet per value. DataTipCells and SummaryDataTipCells optionally supply
-% one {labels,values} template per group; empty entries use generated defaults.
+% one {labels,values[,formats]} template per group; empty entries use generated
+% defaults. Empty row formats use ViolinStyle.DataTipFormat.
 %
 %   data = matlabx.ui.axes.plot.ViolinData( ...
 %       Values={values},SeriesNames="Control",CData={[0 0.45 0.74]}, ...
-%       DataTipCells={{{"Sample","Value"},{sampleIDs,values}}}, ...
-%       SummaryDataTipCells={{{"Condition","Score"},{"Control",score}}});
+%       DataTipCells={{{"Sample","Value"},{sampleIDs,values}, ...
+%       {"","%.2f"}}}, ...
+%       SummaryDataTipCells={{{"Condition","Score"},{"Control",score}, ...
+%       {"","%.3g"}}});
 %
 % See also matlabx.ui.axes.plot.ViolinRenderer,
 % matlabx.ui.axes.plot.ViolinStyle
@@ -114,13 +117,15 @@ function validateDataTipCell(template,valueCount,index,kind)
     if isempty(template)
         return;
     end
-    if ~iscell(template) || ~isequal(size(template),[1 2]) || ...
+    if ~iscell(template) || size(template,1) ~= 1 || ...
+            ~any(size(template,2) == [2 3]) || ...
             ~iscell(template{1}) || ~iscell(template{2}) || ...
             isempty(template{1}) || numel(template{1}) ~= numel(template{2})
         error('matlabx:ui:axes:plot:InvalidViolinDataTipCell', ...
             '%s DataTipCells group %d must contain a nonempty {labels,values} template.', ...
             kind,index);
     end
+    validateDataTipFormats(template,index,kind);
     if kind == "summary"
         return;
     end
@@ -133,6 +138,20 @@ function validateDataTipCell(template,valueCount,index,kind)
             error('matlabx:ui:axes:plot:ViolinDataTipCountMismatch', ...
                 'Data-tip row %d in group %d must be scalar or value-aligned.',row,index);
         end
+    end
+end
+
+function validateDataTipFormats(template,index,kind)
+%VALIDATEDATATIPFORMATS Validate optional per-row format text.
+    if numel(template) < 3
+        return;
+    end
+    formats = template{3};
+    if ~iscell(formats) || numel(formats) ~= numel(template{1}) || ...
+            ~all(cellfun(@(x) (ischar(x) || (isstring(x) && isscalar(x))),formats))
+        error('matlabx:ui:axes:plot:InvalidViolinDataTipFormats', ...
+            '%s DataTipCells group %d formats must contain one text scalar per row.', ...
+            kind,index);
     end
 end
 

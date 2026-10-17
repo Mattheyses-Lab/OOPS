@@ -237,17 +237,22 @@ function testDataOwnedDataTipTemplates(t)
     scatterRenderer=t.TestData.Scatter;
     scatterRenderer.setData(matlabx.ui.axes.plot.ScatterData( ...
         XData={1:4},YData={[2 4 3 5]},SeriesNames="Samples",CData={[1 0 0]}, ...
-        DataTipCells={{{"Point","Response"},{"P"+(1:4),[2 4 3 5]}}}));
+        DataTipCells={{{"Point","Response"},{"P"+(1:4),[2 4 3 5]}, ...
+        {"","%.1f"}}}));
     host.mount(scatterRenderer);
     points=findobj(host.Axes,'Type','scatter','Tag','');
     labels=string({points.DataTipTemplate.DataTipRows.Label});
     t.verifyEqual(labels,["Point","Response"]);
+    formats=string({points.DataTipTemplate.DataTipRows.Format});
+    t.verifyEqual(formats(labels == "Response"),"%.1f");
 
     violinRenderer=t.TestData.Violin;
     violinRenderer.setData(matlabx.ui.axes.plot.ViolinData( ...
         Values={[1 2 3 4]},SeriesNames="Control",CData={[0 0 1]}, ...
-        DataTipCells={{{"Sample","Measurement"},{"S"+(1:4),[1 2 3 4]}}}, ...
-        SummaryDataTipCells={{{"Condition","Score"},{"Control",0.875}}}));
+        DataTipCells={{{"Sample","Measurement"},{"S"+(1:4),[1 2 3 4]}, ...
+        {"","%.3f"}}}, ...
+        SummaryDataTipCells={{{"Condition","Score"},{"Control",0.875}, ...
+        {"","%.1f"}}}));
     host.mount(violinRenderer);
     points=findobj(host.Axes,'Type','scatter','Tag','');
     summary=findobj(host.Axes,'Tag','ViolinCentralStatistic');
@@ -255,6 +260,10 @@ function testDataOwnedDataTipTemplates(t)
         ["Sample","Measurement"]);
     t.verifyEqual(string({summary.DataTipTemplate.DataTipRows.Label}), ...
         ["Condition","Score"]);
+    pointFormats=string({points.DataTipTemplate.DataTipRows.Format});
+    summaryFormats=string({summary.DataTipTemplate.DataTipRows.Format});
+    t.verifyEqual(pointFormats(2),"%.3f");
+    t.verifyEqual(summaryFormats(2),"%.1f");
 
     % Empty template entries request renderer-generated defaults and must
     % clear custom templates retained by reused low-level plot objects.

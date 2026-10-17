@@ -12,9 +12,12 @@ classdef Violin < handle
 % move the owned primitives without recreating them; Parent=[] detaches them.
 % Replace the complete point data-tip template with a two-cell value:
 %
-%   group.DataTipCell = {{"Label","Value"},{labels,values}};
+%   group.DataTipCell = {{"Label","Value"},{labels,values}, ...
+%       {"","%.2f"}};
 %
-% Each value may be scalar or contain one entry per point. Assign {{},{}} to
+% The optional third cell supplies one format per row; empty formats use
+% DataTipFormat. Each value may be scalar or contain one entry per point.
+% Assign {{},{}} to
 % restore the low-level X/Y template. This does not change the separate
 % central-statistic line template. Numeric point and summary rows share
 % DataTipFormat, which defaults to two decimal places:
@@ -82,11 +85,11 @@ classdef Violin < handle
         % Two-cell {labels,values} replacement for all point data-tip rows.
         % Labels and values must have equal counts. Values may be scalar or
         % contain one entry per point. Assign {{},{}} to restore X and Y.
-        DataTipCell (1,2) cell
+        DataTipCell (1,:) cell
         % Two-cell {labels,values} replacement for central-line summary rows.
         % Custom values persist across data changes and must be refreshed by
         % the caller. Assign {{},{}} to restore the generated statistics.
-        SummaryDataTipCell (1,2) cell
+        SummaryDataTipCell (1,:) cell
         % sprintf-style format applied to numeric point and summary rows.
         DataTipFormat (1,1) string
 
@@ -130,11 +133,13 @@ classdef Violin < handle
         % Backing value for ErrorStatistic.
         ErrorStatistic_ (1,1) string = "std"
         % Caller-supplied summary data-tip template retained across refreshes.
-        SummaryDataTipCell_ (1,2) cell = {{},{}}
+        SummaryDataTipCell_ (1,:) cell = {{},{}}
         % Whether the caller-supplied summary template overrides generated rows.
         HasCustomSummaryDataTip (1,1) logical = false
         % Backing value for the numeric data-tip format.
         DataTipFormat_ (1,1) string = "%.2f"
+        % Original point template, including optional per-row formats.
+        DataTipCell_ (1,:) cell = cell(1,0)
     end
 
     % Derived geometry calculated from the current observations.
@@ -173,7 +178,7 @@ classdef Violin < handle
                 NameValuePairs.YData (1,:) double = NaN
                 NameValuePairs.XJitter (1,:) char {mustBeMember(NameValuePairs.XJitter,{'none','density'})} = 'density'
                 NameValuePairs.XJitterWidth (1,1) double {mustBeInRange(NameValuePairs.XJitterWidth,0,1,"exclude-lower")} = 0.9
-                NameValuePairs.DataTipCell (1,2) cell = {{},{}};
+                NameValuePairs.DataTipCell (1,:) cell = {{},{}};
                 NameValuePairs.DataTipFormat (1,1) string = "%.2f"
 
                 NameValuePairs.MarkerEdgeColor = [0 0 0]
@@ -393,16 +398,18 @@ classdef Violin < handle
             end
         end
 
-        function row = createDataTipRow(obj,label,value)
+        function row = createDataTipRow(obj,label,value,format)
         %CREATEDATATIPROW Format numeric values and preserve text defaults.
-            if isnumeric(value)
+            if nargin >= 4 && strlength(string(format)) > 0
+                row = dataTipTextRow(label,value,format);
+            elseif isnumeric(value)
                 row = dataTipTextRow(label,value,obj.DataTipFormat_);
             else
                 row = dataTipTextRow(label,value);
             end
         end
 
-        function row = createSummaryDataTipRow(obj,label,value)
+        function row = createSummaryDataTipRow(obj,label,value,format)
         %CREATESUMMARYDATATIPROW Align values with left, center, and right vertices.
             if ischar(value)
                 value = repmat(string(value),1,3);
@@ -411,7 +418,10 @@ classdef Violin < handle
                     iscategorical(value) || isdatetime(value) || isduration(value))
                 value = repmat(value,1,3);
             end
-            row = obj.createDataTipRow(label,value);
+            if nargin < 4
+                format = "";
+            end
+            row = obj.createDataTipRow(label,value,format);
         end
 
         function emphasizeCentralStatLine(obj)
@@ -440,10 +450,16 @@ classdef Violin < handle
             dtNames = val{1};
             dtData = val{2};
             obj.validateDataTipCell(val,"DataTipCell");
+            if numel(val) == 3
+                dtFormats = val{3};
+            else
+                dtFormats = repmat({""},size(dtNames));
+            end
 
             rows = obj.violinPoints.DataTipTemplate.DataTipRows;
             for i = 1:numel(dtNames)
-                rows(i) = obj.createDataTipRow(dtNames{i},dtData{i});
+                rows(i) = obj.createDataTipRow( ...
+                    dtNames{i},dtData{i},dtFormats{i});
             end
             for i = numel(rows):-1:numel(dtNames)+1
                 rows(i) = [];
@@ -646,22 +662,18 @@ classdef Violin < handle
 
         function set.DataTipCell(obj,val)
         %SET.DATATIPCELL Replace every point data-tip row, or restore X/Y.
-            if any(cellfun(@(x) isempty(x),val))
+            if numel(val) < 2 || isempty(val{1}) || isempty(val{2})
                 val = {{"X","Y"},{obj.XData,obj.YData}};
             end
 
+            obj.validateDataTipCell(val,"DataTipCell");
+            obj.DataTipCell_ = val;
             obj.replacePointDataTipRows(val);
         end
 
         function DataTipCell = get.DataTipCell(obj)
         %GET.DATATIPCELL Return the current DataTipCell value from the owned graphics.
-            % array of datatip rows for this violin
-            dtRows = obj.violinPoints.DataTipTemplate.DataTipRows;
-            % names and values for each datatip
-            dtNames = arrayfun(@(x) x.Label,dtRows','UniformOutput',false);
-            dtData = arrayfun(@(x) x.Value,dtRows','UniformOutput',false);
-            % cell array of cell arrays with datatip info in violinPoints
-            DataTipCell = {dtNames,dtData};
+            DataTipCell = obj.DataTipCell_;
         end
 
         %% DataTipFormat
@@ -669,7 +681,7 @@ classdef Violin < handle
         function set.DataTipFormat(obj,val)
         %SET.DATATIPFORMAT Apply one format to numeric point and summary rows.
             obj.DataTipFormat_ = val;
-            obj.replacePointDataTipRows(obj.DataTipCell);
+            obj.replacePointDataTipRows(obj.DataTipCell_);
             obj.updateErrorBars();
         end
 
@@ -684,7 +696,7 @@ classdef Violin < handle
         %SET.SUMMARYDATATIPCELL Replace summary rows, or restore generated statistics.
         %   Values in a custom template are caller-owned and are not
         %   recalculated when XData, YData, or summary modes change.
-            if any(cellfun(@(x) isempty(x),val))
+            if numel(val) < 2 || isempty(val{1}) || isempty(val{2})
                 obj.SummaryDataTipCell_ = {{},{}};
                 obj.HasCustomSummaryDataTip = false;
                 obj.updateErrorBars();
@@ -702,7 +714,8 @@ classdef Violin < handle
             rows = obj.centralStatLine.DataTipTemplate.DataTipRows;
             names = arrayfun(@(row) row.Label,rows','UniformOutput',false);
             values = arrayfun(@(row) row.Value,rows','UniformOutput',false);
-            val = {names,values};
+            formats = arrayfun(@(row) row.Format,rows','UniformOutput',false);
+            val = {names,values,formats};
         end
 
         %% name
@@ -1052,9 +1065,15 @@ classdef Violin < handle
             obj.validateDataTipCell(val,"SummaryDataTipCell");
             names = val{1};
             values = val{2};
+            if numel(val) == 3
+                formats = val{3};
+            else
+                formats = repmat({""},size(names));
+            end
             rows = obj.centralStatLine.DataTipTemplate.DataTipRows;
             for i = 1:numel(names)
-                rows(i) = obj.createSummaryDataTipRow(names{i},values{i});
+                rows(i) = obj.createSummaryDataTipRow( ...
+                    names{i},values{i},formats{i});
             end
             for i = numel(rows):-1:numel(names)+1
                 rows(i) = [];
@@ -1063,11 +1082,20 @@ classdef Violin < handle
         end
 
         function validateDataTipCell(~,val,propertyName)
-        %VALIDATEDATATIPCELL Require paired, nonempty row labels and values.
-            if numel(val{1}) ~= numel(val{2}) || isempty(val{1})
+        %VALIDATEDATATIPCELL Require {labels,values[,formats]} row metadata.
+            if ~any(numel(val) == [2 3]) || ~iscell(val{1}) || ...
+                    ~iscell(val{2}) || isempty(val{1}) || ...
+                    numel(val{1}) ~= numel(val{2})
                 error('matlabx:ui:axes:plot:InvalidDataTipCell', ...
-                    '%s labels and values must have equal, nonzero counts.', ...
+                    '%s must contain {labels,values[,formats]} with equal row counts.', ...
                     propertyName);
+            end
+            if numel(val) == 3
+                if ~iscell(val{3}) || numel(val{3}) ~= numel(val{1}) || ...
+                        ~all(cellfun(@(x) (ischar(x) || (isstring(x) && isscalar(x))),val{3}))
+                    error('matlabx:ui:axes:plot:InvalidDataTipCell', ...
+                        '%s formats must contain one text scalar per row.',propertyName);
+                end
             end
         end
 

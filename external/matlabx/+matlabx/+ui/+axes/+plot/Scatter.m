@@ -12,9 +12,12 @@ classdef Scatter < handle & matlab.mixin.SetGet
 % move the owned primitives without recreating them; Parent=[] detaches them.
 % Replace the complete point data-tip template with a two-cell value:
 %
-%   group.DataTipCell = {{"Label","Value"},{labels,values}};
+%   group.DataTipCell = {{"Label","Value"},{labels,values}, ...
+%       {"","%.2f"}};
 %
-% Each value may be scalar or contain one entry per point. Assign {{},{}} to
+% The optional third cell supplies one format per row; empty formats use
+% DataTipFormat. Each value may be scalar or contain one entry per point.
+% Assign {{},{}} to
 % restore the low-level X/Y template. Numeric rows use DataTipFormat, which
 % defaults to two decimal places and may be changed independently:
 %
@@ -70,7 +73,7 @@ classdef Scatter < handle & matlab.mixin.SetGet
         % Two-cell {labels,values} replacement for all point data-tip rows.
         % Labels and values must have equal counts. Values may be scalar or
         % contain one entry per point. Assign {{},{}} to restore X and Y.
-        DataTipCell (1,2) cell
+        DataTipCell (1,:) cell
         % sprintf-style format applied to numeric data-tip rows.
         DataTipFormat (1,1) string
         % Series name stored in the scatter DisplayName.
@@ -103,6 +106,8 @@ classdef Scatter < handle & matlab.mixin.SetGet
         HullType_ (1,:) char {mustBeMember(HullType_,{'convex','concave'})} = 'concave'
         % Backing value for the numeric data-tip format.
         DataTipFormat_ (1,1) string = "%.2f"
+        % Original two- or three-entry point template, including row formats.
+        DataTipCell_ (1,:) cell = cell(1,0)
     end
 
     %% Graphics objects
@@ -129,7 +134,7 @@ classdef Scatter < handle & matlab.mixin.SetGet
                 % scatter properties
                 NameValuePairs.XData (1,:) double = NaN
                 NameValuePairs.YData (1,:) double = NaN
-                NameValuePairs.DataTipCell (1,2) cell = {{},{}};
+                NameValuePairs.DataTipCell (1,:) cell = {{},{}};
                 NameValuePairs.DataTipFormat (1,1) string = "%.2f"
                 NameValuePairs.MarkerFaceColor = 'flat'
                 NameValuePairs.MarkerFaceAlpha (1,1) double {mustBeInRange(NameValuePairs.MarkerFaceAlpha,0,1)} = 0.5
@@ -306,9 +311,11 @@ classdef Scatter < handle & matlab.mixin.SetGet
             end
         end
 
-        function row = createDataTipRow(obj,label,value)
+        function row = createDataTipRow(obj,label,value,format)
         %CREATEDATATIPROW Format numeric values and preserve text defaults.
-            if isnumeric(value)
+            if nargin >= 4 && strlength(string(format)) > 0
+                row = dataTipTextRow(label,value,format);
+            elseif isnumeric(value)
                 row = dataTipTextRow(label,value,obj.DataTipFormat_);
             else
                 row = dataTipTextRow(label,value);
@@ -319,6 +326,11 @@ classdef Scatter < handle & matlab.mixin.SetGet
         %REPLACEDATATIPROWS Rebuild all point rows with the current format.
             dtNames = val{1};
             dtData = val{2};
+            if numel(val) == 3
+                dtFormats = val{3};
+            else
+                dtFormats = repmat({""},size(dtNames));
+            end
             if numel(dtNames) ~= numel(dtData) || isempty(dtNames)
                 error('matlabx:ui:axes:plot:InvalidDataTipCell', ...
                     'DataTipCell labels and values must have equal, nonzero counts.');
@@ -326,12 +338,30 @@ classdef Scatter < handle & matlab.mixin.SetGet
 
             rows = obj.scatterPoints.DataTipTemplate.DataTipRows;
             for i = 1:numel(dtNames)
-                rows(i) = obj.createDataTipRow(dtNames{i},dtData{i});
+                rows(i) = obj.createDataTipRow( ...
+                    dtNames{i},dtData{i},dtFormats{i});
             end
             for i = numel(rows):-1:numel(dtNames)+1
                 rows(i) = [];
             end
             obj.scatterPoints.DataTipTemplate.DataTipRows = rows;
+        end
+
+        function validateDataTipCell(~,val)
+        %VALIDATEDATATIPCELL Require {labels,values[,formats]} row metadata.
+            if ~any(numel(val) == [2 3]) || ~iscell(val{1}) || ...
+                    ~iscell(val{2}) || isempty(val{1}) || ...
+                    numel(val{1}) ~= numel(val{2})
+                error('matlabx:ui:axes:plot:InvalidDataTipCell', ...
+                    'DataTipCell must contain {labels,values[,formats]} with equal row counts.');
+            end
+            if numel(val) == 3
+                if ~iscell(val{3}) || numel(val{3}) ~= numel(val{1}) || ...
+                        ~all(cellfun(@(x) (ischar(x) || (isstring(x) && isscalar(x))),val{3}))
+                    error('matlabx:ui:axes:plot:InvalidDataTipCell', ...
+                        'DataTipCell formats must contain one text scalar per row.');
+                end
+            end
         end
 
     end
@@ -514,22 +544,18 @@ classdef Scatter < handle & matlab.mixin.SetGet
 
         function set.DataTipCell(obj,val)
         %SET.DATATIPCELL Replace every point data-tip row, or restore X/Y.
-            if any(cellfun(@(x) isempty(x),val))
+            if numel(val) < 2 || isempty(val{1}) || isempty(val{2})
                 val = {{"X","Y"},{obj.XData,obj.YData}};
             end
 
+            obj.validateDataTipCell(val);
+            obj.DataTipCell_ = val;
             obj.replaceDataTipRows(val);
         end
 
         function DataTipCell = get.DataTipCell(obj)
         %GET.DATATIPCELL Return the current DataTipCell value from the owned graphics.
-            % array of datatip rows for this violin
-            dtRows = obj.scatterPoints.DataTipTemplate.DataTipRows;
-            % names and values for each datatip
-            dtNames = arrayfun(@(x) x.Label,dtRows','UniformOutput',false);
-            dtData = arrayfun(@(x) x.Value,dtRows','UniformOutput',false);
-            % cell array of cell arrays with datatip info in scatterPoints
-            DataTipCell = {dtNames,dtData};
+            DataTipCell = obj.DataTipCell_;
         end
 
         %% DataTipFormat
@@ -537,7 +563,7 @@ classdef Scatter < handle & matlab.mixin.SetGet
         function set.DataTipFormat(obj,val)
         %SET.DATATIPFORMAT Apply one format to every numeric point row.
             obj.DataTipFormat_ = val;
-            obj.replaceDataTipRows(obj.DataTipCell);
+            obj.replaceDataTipRows(obj.DataTipCell_);
         end
 
         function val = get.DataTipFormat(obj)
