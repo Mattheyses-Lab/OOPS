@@ -57,7 +57,7 @@ classdef Scatter < handle & matlab.mixin.SetGet
         % Marker edge color accepted by the MATLAB scatter primitive.
         MarkerEdgeColor
         % Marker edge opacity.
-        MarkerEdgeAlpha (1,1) double {mustBeInRange(MarkerEdgeAlpha,0,1)}
+        MarkerEdgeAlpha (1,1) double {mustBeBetween(MarkerEdgeAlpha,0,1)}
         % Marker edge line width.
         MarkerLineWidth (1,1) double {mustBePositive}
         % Marker area in points squared.
@@ -65,7 +65,7 @@ classdef Scatter < handle & matlab.mixin.SetGet
         % Marker face color or MATLAB color mode such as "flat".
         MarkerFaceColor
         % Marker face opacity.
-        MarkerFaceAlpha (1,1) double {mustBeInRange(MarkerFaceAlpha,0,1)}
+        MarkerFaceAlpha (1,1) double {mustBeBetween(MarkerFaceAlpha,0,1)}
         % Marker symbol used for this series.
         Marker (:,1) char {mustBeMember(Marker,{'o','s','^','h','p','d','v','>','<'})}
         % Scalar or RGB color data associated with the scatter points.
@@ -93,9 +93,9 @@ classdef Scatter < handle & matlab.mixin.SetGet
         % Hull patch edge color.
         HullEdgeColor (1,3) double
         % Hull face opacity.
-        HullFaceAlpha (1,1) double {mustBeInRange(HullFaceAlpha,0,1)}
+        HullFaceAlpha (1,1) double {mustBeBetween(HullFaceAlpha,0,1)}
         % Hull edge opacity.
-        HullEdgeAlpha (1,1) double {mustBeInRange(HullEdgeAlpha,0,1)}
+        HullEdgeAlpha (1,1) double {mustBeBetween(HullEdgeAlpha,0,1)}
         % Convex or concave boundary algorithm used for the hull.
         HullType (1,:) char {mustBeMember(HullType,{'convex','concave'})}
     end
@@ -137,9 +137,9 @@ classdef Scatter < handle & matlab.mixin.SetGet
                 NameValuePairs.DataTipCell (1,:) cell = {{},{}};
                 NameValuePairs.DataTipFormat (1,1) string = "%.2f"
                 NameValuePairs.MarkerFaceColor = 'flat'
-                NameValuePairs.MarkerFaceAlpha (1,1) double {mustBeInRange(NameValuePairs.MarkerFaceAlpha,0,1)} = 0.5
+                NameValuePairs.MarkerFaceAlpha (1,1) double {mustBeBetween(NameValuePairs.MarkerFaceAlpha,0,1)} = 0.5
                 NameValuePairs.MarkerEdgeColor = [0 0 0]
-                NameValuePairs.MarkerEdgeAlpha (1,1) double {mustBeInRange(NameValuePairs.MarkerEdgeAlpha,0,1)} = 1
+                NameValuePairs.MarkerEdgeAlpha (1,1) double {mustBeBetween(NameValuePairs.MarkerEdgeAlpha,0,1)} = 1
                 NameValuePairs.MarkerLineWidth (1,1) double {mustBePositive} = 0.5
                 NameValuePairs.MarkerSize = 50
                 NameValuePairs.Marker (:,1) char {mustBeMember(NameValuePairs.Marker,{'o','s','^','h','p','d','v','>','<'})} = 'o'
@@ -152,8 +152,8 @@ classdef Scatter < handle & matlab.mixin.SetGet
                 NameValuePairs.HullLineWidth (1,1) double = 1
                 NameValuePairs.HullFaceColor (1,3) double = [1 1 1]
                 NameValuePairs.HullEdgeColor (1,3) double = [0 0 0]
-                NameValuePairs.HullFaceAlpha (1,1) double {mustBeInRange(NameValuePairs.HullFaceAlpha,0,1)} = 0.5
-                NameValuePairs.HullEdgeAlpha (1,1) double {mustBeInRange(NameValuePairs.HullEdgeAlpha,0,1)} = 1
+                NameValuePairs.HullFaceAlpha (1,1) double {mustBeBetween(NameValuePairs.HullFaceAlpha,0,1)} = 0.5
+                NameValuePairs.HullEdgeAlpha (1,1) double {mustBeBetween(NameValuePairs.HullEdgeAlpha,0,1)} = 1
                 NameValuePairs.HullType (1,:) char {mustBeMember(NameValuePairs.HullType,{'convex','concave'})} = 'concave'
             end
 

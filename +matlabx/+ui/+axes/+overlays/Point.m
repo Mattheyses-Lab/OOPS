@@ -28,32 +28,41 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
     end
 
     properties (SetObservable, AbortSet)
+        % Normal point appearance.
         Marker (1,:) char = '+'
         MarkerSize (1,1) double {mustBePositive} = 8
-        HoverMarkerSize (1,1) double {mustBePositive} = 11
-        SelectionMarkerSize (1,1) double {mustBePositive} = 8
-        ActiveMarkerSize (1,1) double {mustBePositive} = 4
-        HoverActiveMarkerSize (1,1) double {mustBePositive} = 5
-
         MarkerEdgeColor = [1 1 1]
         MarkerFaceColor = [0 0 0]
         LineWidth (1,1) double {mustBePositive} = 1
-        HoverLineWidth (1,1) double {mustBePositive} = 1.5
-        SelectionLineWidth (1,1) double {mustBePositive} = 1.5
-        ActiveLineWidth (1,1) double {mustBePositive} = 2
-        ActiveMarkerLineWidth (1,1) double {mustBePositive} = 0.5
 
+        % Hover appearance.
+        HoverMarkerSize (1,1) double {mustBePositive} = 11
         HoverMarkerEdgeColor = [1 1 1]
         HoverMarkerFaceColor = [0 0 0]
+        HoverLineWidth (1,1) double {mustBePositive} = 1.5
+
+        % Selection appearance.
+        SelectionMarkerSize (1,1) double {mustBePositive} = 8
         SelectionMarkerEdgeColor = [1 1 0]
         SelectionMarkerFaceColor = [0.15 0.15 0]
-        ActiveMarkerEdgeColor = [0 0 0]
-        ActiveMarkerFaceColor = [1 1 1]
+        SelectionLineWidth (1,1) double {mustBePositive} = 1
+
+        % Active point appearance.
+        ActiveLineWidth (1,1) double {mustBePositive} = 1
+
+        % Active/hover square-marker appearance. These names remain
+        % point-specific because Marker and MarkerSize describe the point.
+        HandleMarkerStyle (1,:) char = 's'
+        HandleMarkerSize (1,1) double {mustBePositive} = 4
+        HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
+        HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
+        HandleMarkerEdgeColor = [0 0 0]
+        HandleMarkerFaceColor = [1 1 1]
     end
 
     properties (Access=private, Transient, NonCopyable)
         PointLine (1,1) matlab.graphics.primitive.Line
-        ActiveMarkerLine (1,1) matlab.graphics.primitive.Line
+        HandleMarkerLine (1,1) matlab.graphics.primitive.Line
         L event.listener = event.listener.empty()
         PendingUpdate (1,1) logical = false
     end
@@ -76,21 +85,22 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
                 opts.MarkerSize (1,1) double {mustBePositive} = 8
                 opts.HoverMarkerSize (1,1) double {mustBePositive} = 11
                 opts.SelectionMarkerSize (1,1) double {mustBePositive} = 8
-                opts.ActiveMarkerSize (1,1) double {mustBePositive} = 4
-                opts.HoverActiveMarkerSize (1,1) double {mustBePositive} = 5
+                opts.HandleMarkerSize (1,1) double {mustBePositive} = 4
+                opts.HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
                 opts.MarkerEdgeColor = [1 1 1]
                 opts.MarkerFaceColor = [0 0 0]
                 opts.LineWidth (1,1) double {mustBePositive} = 1
                 opts.HoverLineWidth (1,1) double {mustBePositive} = 1.5
-                opts.SelectionLineWidth (1,1) double {mustBePositive} = 1.5
-                opts.ActiveLineWidth (1,1) double {mustBePositive} = 2
-                opts.ActiveMarkerLineWidth (1,1) double {mustBePositive} = 0.5
+                opts.SelectionLineWidth (1,1) double {mustBePositive} = 1
+                opts.ActiveLineWidth (1,1) double {mustBePositive} = 1
+                opts.HandleMarkerStyle (1,:) char = 's'
+                opts.HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
                 opts.HoverMarkerEdgeColor = [1 1 1]
                 opts.HoverMarkerFaceColor = [0 0 0]
                 opts.SelectionMarkerEdgeColor = [1 1 0]
                 opts.SelectionMarkerFaceColor = [0.15 0.15 0]
-                opts.ActiveMarkerEdgeColor = [0 0 0]
-                opts.ActiveMarkerFaceColor = [1 1 1]
+                opts.HandleMarkerEdgeColor = [0 0 0]
+                opts.HandleMarkerFaceColor = [1 1 1]
             end
 
             obj@matlabx.ui.axes.ImageAxesOverlay(host, ...
@@ -116,21 +126,21 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
                 "PickableParts", "all", ...
                 "Tag", "OverlayPoint");
 
-            obj.ActiveMarkerLine = line(obj.TargetAxes, ...
+            obj.HandleMarkerLine = line(obj.TargetAxes, ...
                 "XData", NaN, ...
                 "YData", NaN, ...
                 "LineStyle", "none", ...
-                "Marker", "s", ...
-                "MarkerSize", opts.ActiveMarkerSize, ...
-                "MarkerEdgeColor", opts.ActiveMarkerEdgeColor, ...
-                "MarkerFaceColor", opts.ActiveMarkerFaceColor, ...
-                "LineWidth", opts.ActiveMarkerLineWidth, ...
+                "Marker", opts.HandleMarkerStyle, ...
+                "MarkerSize", opts.HandleMarkerSize, ...
+                "MarkerEdgeColor", opts.HandleMarkerEdgeColor, ...
+                "MarkerFaceColor", opts.HandleMarkerFaceColor, ...
+                "LineWidth", opts.HandleMarkerLineWidth, ...
                 "HitTest", "off", ...
                 "PickableParts", "none", ...
                 "Visible", "off", ...
-                "Tag", "OverlayPointActiveMarker");
+                "Tag", "OverlayPointHandleMarker");
 
-            obj.registerGraphics([obj.PointLine; obj.ActiveMarkerLine]);
+            obj.registerGraphics([obj.PointLine; obj.HandleMarkerLine]);
 
             obj.Position = opts.Position;
             obj.ButtonDownFcn = opts.ButtonDownFcn;
@@ -138,21 +148,22 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
             obj.MarkerSize = opts.MarkerSize;
             obj.HoverMarkerSize = opts.HoverMarkerSize;
             obj.SelectionMarkerSize = opts.SelectionMarkerSize;
-            obj.ActiveMarkerSize = opts.ActiveMarkerSize;
-            obj.HoverActiveMarkerSize = opts.HoverActiveMarkerSize;
+            obj.HandleMarkerSize = opts.HandleMarkerSize;
+            obj.HoverHandleMarkerSize = opts.HoverHandleMarkerSize;
             obj.MarkerEdgeColor = opts.MarkerEdgeColor;
             obj.MarkerFaceColor = opts.MarkerFaceColor;
             obj.LineWidth = opts.LineWidth;
             obj.HoverLineWidth = opts.HoverLineWidth;
             obj.SelectionLineWidth = opts.SelectionLineWidth;
             obj.ActiveLineWidth = opts.ActiveLineWidth;
-            obj.ActiveMarkerLineWidth = opts.ActiveMarkerLineWidth;
+            obj.HandleMarkerStyle = opts.HandleMarkerStyle;
+            obj.HandleMarkerLineWidth = opts.HandleMarkerLineWidth;
             obj.HoverMarkerEdgeColor = opts.HoverMarkerEdgeColor;
             obj.HoverMarkerFaceColor = opts.HoverMarkerFaceColor;
             obj.SelectionMarkerEdgeColor = opts.SelectionMarkerEdgeColor;
             obj.SelectionMarkerFaceColor = opts.SelectionMarkerFaceColor;
-            obj.ActiveMarkerEdgeColor = opts.ActiveMarkerEdgeColor;
-            obj.ActiveMarkerFaceColor = opts.ActiveMarkerFaceColor;
+            obj.HandleMarkerEdgeColor = opts.HandleMarkerEdgeColor;
+            obj.HandleMarkerFaceColor = opts.HandleMarkerFaceColor;
 
             geomProps = {'Position', 'ButtonDownFcn'};
             appProps = { ...
@@ -160,21 +171,22 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
                 'MarkerSize', ...
                 'HoverMarkerSize', ...
                 'SelectionMarkerSize', ...
-                'ActiveMarkerSize', ...
-                'HoverActiveMarkerSize', ...
+                'HandleMarkerSize', ...
+                'HoverHandleMarkerSize', ...
                 'MarkerEdgeColor', ...
                 'MarkerFaceColor', ...
                 'LineWidth', ...
                 'HoverLineWidth', ...
                 'SelectionLineWidth', ...
                 'ActiveLineWidth', ...
-                'ActiveMarkerLineWidth', ...
+                'HandleMarkerStyle', ...
+                'HandleMarkerLineWidth', ...
                 'HoverMarkerEdgeColor', ...
                 'HoverMarkerFaceColor', ...
                 'SelectionMarkerEdgeColor', ...
                 'SelectionMarkerFaceColor', ...
-                'ActiveMarkerEdgeColor', ...
-                'ActiveMarkerFaceColor'};
+                'HandleMarkerEdgeColor', ...
+                'HandleMarkerFaceColor'};
 
             obj.L(1) = addlistener(obj, geomProps, 'PostSet', @(~,~) obj.queueGeometryUpdate());
             obj.L(2) = addlistener(obj, appProps, 'PostSet', @(~,~) obj.updateAppearance());
@@ -201,8 +213,8 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
             obj.PointLine.XData = obj.Position(1);
             obj.PointLine.YData = obj.Position(2);
             obj.PointLine.ButtonDownFcn = obj.ButtonDownFcn;
-            obj.ActiveMarkerLine.XData = obj.Position(1);
-            obj.ActiveMarkerLine.YData = obj.Position(2);
+            obj.HandleMarkerLine.XData = obj.Position(1);
+            obj.HandleMarkerLine.YData = obj.Position(2);
         end
 
         function updateAppearance(obj)
@@ -219,15 +231,15 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
             obj.PointLine.MarkerFaceColor = faceColor;
             obj.PointLine.LineWidth = lineWidth;
 
-            obj.ActiveMarkerLine.Marker = "s";
+            obj.HandleMarkerLine.Marker = obj.HandleMarkerStyle;
             if obj.Hovered
-                obj.ActiveMarkerLine.MarkerSize = obj.HoverActiveMarkerSize;
+                obj.HandleMarkerLine.MarkerSize = obj.HoverHandleMarkerSize;
             else
-                obj.ActiveMarkerLine.MarkerSize = obj.ActiveMarkerSize;
+                obj.HandleMarkerLine.MarkerSize = obj.HandleMarkerSize;
             end
-            obj.ActiveMarkerLine.MarkerEdgeColor = obj.ActiveMarkerEdgeColor;
-            obj.ActiveMarkerLine.MarkerFaceColor = obj.ActiveMarkerFaceColor;
-            obj.ActiveMarkerLine.LineWidth = obj.ActiveMarkerLineWidth;
+            obj.HandleMarkerLine.MarkerEdgeColor = obj.HandleMarkerEdgeColor;
+            obj.HandleMarkerLine.MarkerFaceColor = obj.HandleMarkerFaceColor;
+            obj.HandleMarkerLine.LineWidth = obj.HandleMarkerLineWidth;
             obj.updateVisibility();
         end
 
@@ -248,7 +260,8 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
 
             effectiveVisible = obj.Visible == "on" && obj.ViewVisible == "on";
             obj.PointLine.Visible = matlab.lang.OnOffSwitchState(effectiveVisible);
-            obj.ActiveMarkerLine.Visible = matlab.lang.OnOffSwitchState(effectiveVisible && obj.Active);
+            obj.HandleMarkerLine.Visible = matlab.lang.OnOffSwitchState( ...
+                effectiveVisible && (obj.Hovered || obj.Active));
         end
     end
 
@@ -260,6 +273,16 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
                 edgeColor = obj.HoverMarkerEdgeColor;
                 faceColor = obj.HoverMarkerFaceColor;
                 lineWidth = obj.HoverLineWidth;
+            elseif obj.Active && obj.Selected
+                markerSize = obj.SelectionMarkerSize;
+                edgeColor = obj.SelectionMarkerEdgeColor;
+                faceColor = obj.SelectionMarkerFaceColor;
+                lineWidth = obj.ActiveLineWidth;
+            elseif obj.Active
+                markerSize = obj.MarkerSize;
+                edgeColor = obj.MarkerEdgeColor;
+                faceColor = obj.MarkerFaceColor;
+                lineWidth = obj.ActiveLineWidth;
             elseif obj.Selected
                 markerSize = obj.SelectionMarkerSize;
                 edgeColor = obj.SelectionMarkerEdgeColor;

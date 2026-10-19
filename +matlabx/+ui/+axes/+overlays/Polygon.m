@@ -28,36 +28,40 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
 
     properties (SetObservable, AbortSet)
         % Normal polygon appearance.
-        FaceColor = [1 1 1]
         EdgeColor = [1 1 1]
-        FaceAlpha = 0
-        LineWidth = 0.5
+        EdgeAlpha (1,1) double {mustBeBetween(EdgeAlpha,0,1)} = 1
+        FaceColor = [1 1 1]
+        FaceAlpha (1,1) double {mustBeBetween(FaceAlpha,0,1)} = 0
+        LineWidth (1,1) double {mustBePositive} = 1
 
         % Hover appearance.
-        HoverFaceColor = [1 1 1]
         HoverEdgeColor = [1 1 1]
-        HoverFaceAlpha = 0.5
-        HoverLineWidth = 2
+        HoverEdgeAlpha (1,1) double {mustBeBetween(HoverEdgeAlpha,0,1)} = 1
+        HoverFaceColor = [1 1 1]
+        HoverFaceAlpha (1,1) double {mustBeBetween(HoverFaceAlpha,0,1)} = 0
+        HoverLineWidth (1,1) double {mustBePositive} = 1
 
         % Selection appearance.
-        SelectionFaceColor = [1 1 1]
         SelectionEdgeColor = [1 1 0]
-        SelectionFaceAlpha = 0.1
-        SelectionLineWidth = 1
+        SelectionEdgeAlpha (1,1) double {mustBeBetween(SelectionEdgeAlpha,0,1)} = 1
+        SelectionFaceColor = [1 1 1]
+        SelectionFaceAlpha (1,1) double {mustBeBetween(SelectionFaceAlpha,0,1)} = 0
+        SelectionLineWidth (1,1) double {mustBePositive} = 1
 
         % Active appearance.
-        ActiveFaceColor = [1 1 1]
         ActiveEdgeColor = [1 1 1]
-        ActiveFaceAlpha = 0
-        ActiveLineWidth = 2
+        ActiveEdgeAlpha (1,1) double {mustBeBetween(ActiveEdgeAlpha,0,1)} = 1
+        ActiveFaceColor = [1 1 1]
+        ActiveFaceAlpha (1,1) double {mustBeBetween(ActiveFaceAlpha,0,1)} = 0
+        ActiveLineWidth (1,1) double {mustBePositive} = 1
 
-
-        % Square marker drawn at Center only while the polygon is active.
-        ActiveMarkerSize (1,1) double {mustBePositive} = 4
-        HoverActiveMarkerSize (1,1) double {mustBePositive} = 5
-        ActiveMarkerLineWidth (1,1) double {mustBePositive} = 0.5
-        ActiveMarkerEdgeColor = [0 0 0]
-        ActiveMarkerFaceColor = [1 1 1]
+        % Center-marker appearance.
+        HandleMarkerStyle (1,:) char = 's'
+        HandleMarkerSize (1,1) double {mustBePositive} = 4
+        HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
+        HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
+        HandleMarkerEdgeColor = [0 0 0]
+        HandleMarkerFaceColor = [1 1 1]
     end
 
     properties (SetAccess=private, Dependent)
@@ -70,7 +74,7 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
 
     properties (Access=private, Transient, NonCopyable)
         PolygonPatch = []
-        ActiveMarkerLine = []
+        HandleMarkerLine = []
         L event.listener = event.listener.empty()
     end
 
@@ -89,26 +93,31 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
                 opts.Visible (1,1) matlab.lang.OnOffSwitchState = "on"
                 opts.ActivateOnCreate (1,1) logical = false
                 opts.EdgeColor = [1 1 1]
+                opts.EdgeAlpha (1,1) double {mustBeBetween(opts.EdgeAlpha,0,1)} = 1
                 opts.FaceColor = [1 1 1]
-                opts.FaceAlpha (1,1) double {mustBeInRange(opts.FaceAlpha,0,1)} = 0
-                opts.LineWidth (1,1) double {mustBePositive} = 0.5
+                opts.FaceAlpha (1,1) double {mustBeBetween(opts.FaceAlpha,0,1)} = 0
+                opts.LineWidth (1,1) double {mustBePositive} = 1
                 opts.HoverEdgeColor = [1 1 1]
+                opts.HoverEdgeAlpha (1,1) double {mustBeBetween(opts.HoverEdgeAlpha,0,1)} = 1
                 opts.HoverFaceColor = [1 1 1]
-                opts.HoverFaceAlpha (1,1) double {mustBeInRange(opts.HoverFaceAlpha,0,1)} = 0.5
-                opts.HoverLineWidth (1,1) double {mustBePositive} = 2
+                opts.HoverFaceAlpha (1,1) double {mustBeBetween(opts.HoverFaceAlpha,0,1)} = 0
+                opts.HoverLineWidth (1,1) double {mustBePositive} = 1
                 opts.SelectionEdgeColor = [1 1 0]
+                opts.SelectionEdgeAlpha (1,1) double {mustBeBetween(opts.SelectionEdgeAlpha,0,1)} = 1
                 opts.SelectionFaceColor = [1 1 1]
-                opts.SelectionFaceAlpha (1,1) double {mustBeInRange(opts.SelectionFaceAlpha,0,1)} = 0.1
+                opts.SelectionFaceAlpha (1,1) double {mustBeBetween(opts.SelectionFaceAlpha,0,1)} = 0
                 opts.SelectionLineWidth (1,1) double {mustBePositive} = 1
                 opts.ActiveEdgeColor = [1 1 1]
+                opts.ActiveEdgeAlpha (1,1) double {mustBeBetween(opts.ActiveEdgeAlpha,0,1)} = 1
                 opts.ActiveFaceColor = [1 1 1]
-                opts.ActiveFaceAlpha (1,1) double {mustBeInRange(opts.ActiveFaceAlpha,0,1)} = 0
-                opts.ActiveLineWidth (1,1) double {mustBePositive} = 2
-                opts.ActiveMarkerSize (1,1) double {mustBePositive} = 4
-                opts.HoverActiveMarkerSize (1,1) double {mustBePositive} = 5
-                opts.ActiveMarkerLineWidth (1,1) double {mustBePositive} = 0.5
-                opts.ActiveMarkerEdgeColor = [0 0 0]
-                opts.ActiveMarkerFaceColor = [1 1 1]
+                opts.ActiveFaceAlpha (1,1) double {mustBeBetween(opts.ActiveFaceAlpha,0,1)} = 0
+                opts.ActiveLineWidth (1,1) double {mustBePositive} = 1
+                opts.HandleMarkerStyle (1,:) char = 's'
+                opts.HandleMarkerSize (1,1) double {mustBePositive} = 4
+                opts.HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
+                opts.HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
+                opts.HandleMarkerEdgeColor = [0 0 0]
+                opts.HandleMarkerFaceColor = [1 1 1]
             end
 
             obj@matlabx.ui.axes.ImageAxesOverlay(host, ...
@@ -121,50 +130,56 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
             obj.PolygonPatch = patch(obj.TargetAxes, ...
                 'Faces', [], 'Vertices', zeros(0,2), ...
                 'FaceColor', opts.FaceColor, 'FaceAlpha', opts.FaceAlpha, ...
-                'EdgeColor', opts.EdgeColor, 'HitTest', 'on', 'PickableParts', 'all', ...
+                'EdgeColor', obj.rgba(opts.EdgeColor, opts.EdgeAlpha), ...
+                'HitTest', 'on', 'PickableParts', 'all', ...
                 'Tag', 'OverlayPolygon');
 
-            % Keep the active marker passive so the patch remains the sole
+            % Keep the center marker passive so the patch remains the sole
             % interaction target even when the marker covers its center.
-            obj.ActiveMarkerLine = line(obj.TargetAxes, ...
+            obj.HandleMarkerLine = line(obj.TargetAxes, ...
                 'XData', NaN, 'YData', NaN, 'LineStyle', 'none', ...
-                'Marker', 's', 'MarkerSize', opts.ActiveMarkerSize, ...
-                'MarkerEdgeColor', opts.ActiveMarkerEdgeColor, ...
-                'MarkerFaceColor', opts.ActiveMarkerFaceColor, ...
-                'LineWidth', opts.ActiveMarkerLineWidth, ...
+                'Marker', opts.HandleMarkerStyle, 'MarkerSize', opts.HandleMarkerSize, ...
+                'MarkerEdgeColor', opts.HandleMarkerEdgeColor, ...
+                'MarkerFaceColor', opts.HandleMarkerFaceColor, ...
+                'LineWidth', opts.HandleMarkerLineWidth, ...
                 'HitTest', 'off', 'PickableParts', 'none', ...
-                'Visible', 'off', 'Tag', 'OverlayPolygonActiveMarker');
+                'Visible', 'off', 'Tag', 'OverlayPolygonHandle');
 
-            obj.registerGraphics([obj.PolygonPatch; obj.ActiveMarkerLine]);
+            obj.registerGraphics([obj.PolygonPatch; obj.HandleMarkerLine]);
             obj.FaceColor = opts.FaceColor;
             obj.EdgeColor = opts.EdgeColor;
+            obj.EdgeAlpha = opts.EdgeAlpha;
             obj.FaceAlpha = opts.FaceAlpha;
             obj.LineWidth = opts.LineWidth;
             obj.HoverFaceColor = opts.HoverFaceColor;
             obj.HoverEdgeColor = opts.HoverEdgeColor;
+            obj.HoverEdgeAlpha = opts.HoverEdgeAlpha;
             obj.HoverFaceAlpha = opts.HoverFaceAlpha;
             obj.HoverLineWidth = opts.HoverLineWidth;
             obj.SelectionFaceColor = opts.SelectionFaceColor;
             obj.SelectionEdgeColor = opts.SelectionEdgeColor;
+            obj.SelectionEdgeAlpha = opts.SelectionEdgeAlpha;
             obj.SelectionFaceAlpha = opts.SelectionFaceAlpha;
             obj.SelectionLineWidth = opts.SelectionLineWidth;
             obj.ActiveFaceColor = opts.ActiveFaceColor;
             obj.ActiveEdgeColor = opts.ActiveEdgeColor;
+            obj.ActiveEdgeAlpha = opts.ActiveEdgeAlpha;
             obj.ActiveFaceAlpha = opts.ActiveFaceAlpha;
             obj.ActiveLineWidth = opts.ActiveLineWidth;
-            obj.ActiveMarkerSize = opts.ActiveMarkerSize;
-            obj.HoverActiveMarkerSize = opts.HoverActiveMarkerSize;
-            obj.ActiveMarkerLineWidth = opts.ActiveMarkerLineWidth;
-            obj.ActiveMarkerEdgeColor = opts.ActiveMarkerEdgeColor;
-            obj.ActiveMarkerFaceColor = opts.ActiveMarkerFaceColor;
+            obj.HandleMarkerStyle = opts.HandleMarkerStyle;
+            obj.HandleMarkerSize = opts.HandleMarkerSize;
+            obj.HoverHandleMarkerSize = opts.HoverHandleMarkerSize;
+            obj.HandleMarkerLineWidth = opts.HandleMarkerLineWidth;
+            obj.HandleMarkerEdgeColor = opts.HandleMarkerEdgeColor;
+            obj.HandleMarkerFaceColor = opts.HandleMarkerFaceColor;
             obj.Vertices = opts.Vertices;
             obj.L = addlistener(obj, ...
-                {'FaceColor','EdgeColor','FaceAlpha','LineWidth', ...
-                'HoverFaceColor','HoverEdgeColor','HoverFaceAlpha','HoverLineWidth', ...
-                'SelectionFaceColor','SelectionEdgeColor','SelectionFaceAlpha','SelectionLineWidth', ...
-                'ActiveFaceColor','ActiveEdgeColor','ActiveFaceAlpha','ActiveLineWidth', ...
-                'ActiveMarkerSize','HoverActiveMarkerSize','ActiveMarkerLineWidth', ...
-                'ActiveMarkerEdgeColor','ActiveMarkerFaceColor'}, ...
+                {'EdgeColor','EdgeAlpha','FaceColor','FaceAlpha','LineWidth', ...
+                'HoverEdgeColor','HoverEdgeAlpha','HoverFaceColor','HoverFaceAlpha','HoverLineWidth', ...
+                'SelectionEdgeColor','SelectionEdgeAlpha','SelectionFaceColor','SelectionFaceAlpha','SelectionLineWidth', ...
+                'ActiveEdgeColor','ActiveEdgeAlpha','ActiveFaceColor','ActiveFaceAlpha','ActiveLineWidth', ...
+                'HandleMarkerStyle','HandleMarkerSize','HoverHandleMarkerSize','HandleMarkerLineWidth', ...
+                'HandleMarkerEdgeColor','HandleMarkerFaceColor'}, ...
                 'PostSet', @(~,~) obj.updateAppearance());
             obj.refresh();
         end
@@ -218,7 +233,7 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
             faces = 1:size(obj.Vertices_,1);
             set(obj.PolygonPatch, 'Faces', faces, 'Vertices', obj.Vertices_);
             center = obj.Center;
-            set(obj.ActiveMarkerLine, 'XData', center(1), 'YData', center(2));
+            set(obj.HandleMarkerLine, 'XData', center(1), 'YData', center(2));
         end
 
         function updateAppearance(obj)
@@ -227,40 +242,45 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
                 width = obj.HoverLineWidth;
                 alpha = obj.HoverFaceAlpha;
                 edgeColor = obj.HoverEdgeColor;
+                edgeAlpha = obj.HoverEdgeAlpha;
                 faceColor = obj.HoverFaceColor;
             elseif obj.Active && obj.Selected
                 width = obj.ActiveLineWidth;
                 alpha = obj.SelectionFaceAlpha;
-                edgeColor = obj.ActiveEdgeColor;
+                edgeColor = obj.SelectionEdgeColor;
+                edgeAlpha = obj.SelectionEdgeAlpha;
                 faceColor = obj.SelectionFaceColor;
             elseif obj.Active
                 width = obj.ActiveLineWidth;
                 alpha = obj.ActiveFaceAlpha;
                 edgeColor = obj.ActiveEdgeColor;
+                edgeAlpha = obj.ActiveEdgeAlpha;
                 faceColor = obj.ActiveFaceColor;
             elseif obj.Selected
                 width = obj.SelectionLineWidth;
                 alpha = obj.SelectionFaceAlpha;
                 edgeColor = obj.SelectionEdgeColor;
+                edgeAlpha = obj.SelectionEdgeAlpha;
                 faceColor = obj.SelectionFaceColor;
             else
                 width = obj.LineWidth;
                 alpha = obj.FaceAlpha;
                 edgeColor = obj.EdgeColor;
+                edgeAlpha = obj.EdgeAlpha;
                 faceColor = obj.FaceColor;
             end
             set(obj.PolygonPatch, 'FaceColor', faceColor, 'FaceAlpha', alpha, ...
-                'EdgeColor', edgeColor, 'LineWidth', width);
+                'EdgeColor', obj.rgba(edgeColor, edgeAlpha), 'LineWidth', width);
 
             if obj.Hovered
-                markerSize = obj.HoverActiveMarkerSize;
+                markerSize = obj.HoverHandleMarkerSize;
             else
-                markerSize = obj.ActiveMarkerSize;
+                markerSize = obj.HandleMarkerSize;
             end
-            set(obj.ActiveMarkerLine, 'Marker', 's', 'MarkerSize', markerSize, ...
-                'MarkerEdgeColor', obj.ActiveMarkerEdgeColor, ...
-                'MarkerFaceColor', obj.ActiveMarkerFaceColor, ...
-                'LineWidth', obj.ActiveMarkerLineWidth);
+            set(obj.HandleMarkerLine, 'Marker', obj.HandleMarkerStyle, 'MarkerSize', markerSize, ...
+                'MarkerEdgeColor', obj.HandleMarkerEdgeColor, ...
+                'MarkerFaceColor', obj.HandleMarkerFaceColor, ...
+                'LineWidth', obj.HandleMarkerLineWidth);
             obj.updateVisibility();
         end
 
@@ -275,15 +295,29 @@ classdef Polygon < matlabx.ui.axes.ImageAxesOverlay
 
     methods (Access=protected)
         function updateVisibility(obj)
-        %UPDATEVISIBILITY Apply polygon and active-marker visibility policy.
+        %UPDATEVISIBILITY Apply polygon and active-handle visibility policy.
             if isempty(obj.PolygonPatch) || ~isgraphics(obj.PolygonPatch)
                 return
             end
 
             effectiveVisible = obj.Visible == "on" && obj.ViewVisible == "on";
             obj.PolygonPatch.Visible = matlab.lang.OnOffSwitchState(effectiveVisible);
-            obj.ActiveMarkerLine.Visible = matlab.lang.OnOffSwitchState( ...
-                effectiveVisible && obj.Active);
+            obj.HandleMarkerLine.Visible = matlab.lang.OnOffSwitchState( ...
+                effectiveVisible && (obj.Hovered || obj.Active));
+        end
+    end
+
+    methods (Static, Access=private)
+        function color = rgba(rgb, alpha)
+        %RGBA Return an RGB/RGBA color with requested alpha.
+            color = double(rgb);
+            color = color(:).';
+            if numel(color) >= 4
+                color = color(1:4);
+                color(4) = alpha;
+            elseif alpha < 1
+                color = [color(1:3), alpha];
+            end
         end
     end
 end

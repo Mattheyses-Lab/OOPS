@@ -37,11 +37,11 @@ classdef ViolinStyle
         % Y-axis label text.
         YLabel (1,1) string = ""
         % PlotAxes and axes background color.
-        BackgroundColor (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor,0,1)} = [1 1 1]
+        BackgroundColor (1,3) double {mustBeFinite,mustBeBetween(BackgroundColor,0,1)} = [1 1 1]
         % Ruler, label, title, and automatic edge color.
-        ForegroundColor (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor,0,1)} = [0 0 0]
+        ForegroundColor (1,3) double {mustBeFinite,mustBeBetween(ForegroundColor,0,1)} = [0 0 0]
         % Colormap applied to scalar CData.
-        Colormap (:,3) double {mustBeFinite,mustBeInRange(Colormap,0,1)} = parula(256)
+        Colormap (:,3) double {mustBeFinite,mustBeBetween(Colormap,0,1)} = parula(256)
         % Color limits applied to scalar CData.
         CLim (1,2) double {mustBeFinite,mustBeIncreasingLimits} = [0 1]
         % sprintf-style format applied to numeric point and summary values.
@@ -51,17 +51,17 @@ classdef ViolinStyle
         % Marker edge line width.
         MarkerLineWidth (1,1) double {mustBeFinite,mustBePositive} = 0.5
         % Marker face opacity.
-        MarkerFaceAlpha (1,1) double {mustBeFinite,mustBeInRange(MarkerFaceAlpha,0,1)} = 1
+        MarkerFaceAlpha (1,1) double {mustBeFinite,mustBeBetween(MarkerFaceAlpha,0,1)} = 1
         % Whether marker faces use CData, MarkerFaceColor, or the axes color order.
         MarkerFaceColorMode (1,1) string {mustBeMember(MarkerFaceColorMode,["CData","Custom","auto"])} = "CData"
         % Custom marker face color.
-        MarkerFaceColor (1,3) double {mustBeFinite,mustBeInRange(MarkerFaceColor,0,1)} = [0 0.4470 0.7410]
+        MarkerFaceColor (1,3) double {mustBeFinite,mustBeBetween(MarkerFaceColor,0,1)} = [0 0.4470 0.7410]
         % Marker edge opacity.
-        MarkerEdgeAlpha (1,1) double {mustBeFinite,mustBeInRange(MarkerEdgeAlpha,0,1)} = 1
+        MarkerEdgeAlpha (1,1) double {mustBeFinite,mustBeBetween(MarkerEdgeAlpha,0,1)} = 1
         % Whether marker edges use CData, MarkerEdgeColor, or the axes color order.
         MarkerEdgeColorMode (1,1) string {mustBeMember(MarkerEdgeColorMode,["CData","Custom","auto"])} = "Custom"
         % Custom marker edge color.
-        MarkerEdgeColor (1,3) double {mustBeFinite,mustBeInRange(MarkerEdgeColor,0,1)} = [0 0 0]
+        MarkerEdgeColor (1,3) double {mustBeFinite,mustBeBetween(MarkerEdgeColor,0,1)} = [0 0 0]
         % Horizontal density-jitter width relative to group spacing.
         XJitterWidth (1,1) double {mustBeFinite,mustBePositive,mustBeLessThanOrEqual(XJitterWidth,1)} = 0.6
         % Whether individual observations are visible.
@@ -73,13 +73,13 @@ classdef ViolinStyle
         % Whether violin faces use ViolinFaceColor or the axes color order.
         ViolinFaceColorMode (1,1) string {mustBeMember(ViolinFaceColorMode,["Custom","auto"])} = "auto"
         % Custom violin face color.
-        ViolinFaceColor (1,3) double {mustBeFinite,mustBeInRange(ViolinFaceColor,0,1)} = [1 1 1]
+        ViolinFaceColor (1,3) double {mustBeFinite,mustBeBetween(ViolinFaceColor,0,1)} = [1 1 1]
         % Whether violin edges use ViolinEdgeColor or the axes color order.
         ViolinEdgeColorMode (1,1) string {mustBeMember(ViolinEdgeColorMode,["Custom","auto"])} = "auto"
         % Custom violin edge color.
-        ViolinEdgeColor (1,3) double {mustBeFinite,mustBeInRange(ViolinEdgeColor,0,1)} = [0 0 0]
+        ViolinEdgeColor (1,3) double {mustBeFinite,mustBeBetween(ViolinEdgeColor,0,1)} = [0 0 0]
         % Violin edge opacity.
-        ViolinEdgeAlpha (1,1) double {mustBeFinite,mustBeInRange(ViolinEdgeAlpha,0,1)} = 1
+        ViolinEdgeAlpha (1,1) double {mustBeFinite,mustBeBetween(ViolinEdgeAlpha,0,1)} = 1
         % Whether the central statistic and interval graphics are visible.
         ErrorBarsVisible (1,1) logical = true
         % Statistic shown by the central marker and middle bar.
@@ -89,7 +89,7 @@ classdef ViolinStyle
         % Whether summary graphics use ErrorBarsColor or the axes color order.
         ErrorBarsColorMode (1,1) string {mustBeMember(ErrorBarsColorMode,["Custom","auto"])} = "Custom"
         % Custom central statistic and interval color.
-        ErrorBarsColor (1,3) double {mustBeFinite,mustBeInRange(ErrorBarsColor,0,1)} = [0 0 0]
+        ErrorBarsColor (1,3) double {mustBeFinite,mustBeBetween(ErrorBarsColor,0,1)} = [0 0 0]
         % Central statistic and interval line width.
         ErrorBarsLineWidth (1,1) double {mustBeFinite,mustBePositive} = 1
         % Width of the independently interactive central-statistic line.

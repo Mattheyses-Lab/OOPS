@@ -38,42 +38,52 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
     end
 
     properties (SetObservable, AbortSet)
+        % Normal rectangle appearance.
         EdgeColor = [1 1 1]
-        SelectionEdgeColor = [1 1 0]
-        HoverEdgeColor = [1 1 1]
-        ActiveEdgeColor = [1 1 1]
-
         EdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(EdgeAlpha,0), mustBeLessThanOrEqual(EdgeAlpha,1)} = 1
-        SelectionEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(SelectionEdgeAlpha,0), mustBeLessThanOrEqual(SelectionEdgeAlpha,1)} = 1
-        HoverEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(HoverEdgeAlpha,0), mustBeLessThanOrEqual(HoverEdgeAlpha,1)} = 1
-        ActiveEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(ActiveEdgeAlpha,0), mustBeLessThanOrEqual(ActiveEdgeAlpha,1)} = 1
-
-        LineWidth (1,1) double {mustBePositive} = 1
-        SelectionLineWidth (1,1) double {mustBePositive} = 1
-        HoverLineWidth (1,1) double {mustBePositive} = 1
-        ActiveLineWidth (1,1) double {mustBePositive} = 1
-
-        LineStyle (1,:) char = '-'
         FaceColor = [1 1 1]
         FaceAlpha (1,1) double {mustBeGreaterThanOrEqual(FaceAlpha,0), mustBeLessThanOrEqual(FaceAlpha,1)} = 0
+        LineWidth (1,1) double {mustBePositive} = 1
+        LineStyle (1,:) char = '-'
+
+        % Hover appearance.
+        HoverEdgeColor = [1 1 1]
+        HoverEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(HoverEdgeAlpha,0), mustBeLessThanOrEqual(HoverEdgeAlpha,1)} = 1
+        HoverFaceColor = [1 1 1]
         HoverFaceAlpha (1,1) double {mustBeGreaterThanOrEqual(HoverFaceAlpha,0), mustBeLessThanOrEqual(HoverFaceAlpha,1)} = 0
+        HoverLineWidth (1,1) double {mustBePositive} = 1
+
+        % Selection appearance.
+        SelectionEdgeColor = [1 1 0]
+        SelectionEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(SelectionEdgeAlpha,0), mustBeLessThanOrEqual(SelectionEdgeAlpha,1)} = 1
+        SelectionFaceColor = [1 1 1]
         SelectionFaceAlpha (1,1) double {mustBeGreaterThanOrEqual(SelectionFaceAlpha,0), mustBeLessThanOrEqual(SelectionFaceAlpha,1)} = 0
+        SelectionLineWidth (1,1) double {mustBePositive} = 1
+
+        % Active appearance.
+        ActiveEdgeColor = [1 1 1]
+        ActiveEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(ActiveEdgeAlpha,0), mustBeLessThanOrEqual(ActiveEdgeAlpha,1)} = 1
+        ActiveFaceColor = [1 1 1]
         ActiveFaceAlpha (1,1) double {mustBeGreaterThanOrEqual(ActiveFaceAlpha,0), mustBeLessThanOrEqual(ActiveFaceAlpha,1)} = 0
+        ActiveLineWidth (1,1) double {mustBePositive} = 1
 
-        MarkerStyle (1,:) char = 's'
-        MarkerSize (1,1) double {mustBePositive} = 4
-        HoverMarkerSize (1,1) double {mustBePositive} = 5
-        MarkerLineWidth (1,1) double {mustBePositive} = 0.5
-        MarkerEdgeColor = [0 0 0]
-        MarkerFaceColor = [1 1 1]
+        % Handle and center-marker appearance.
+        HandleMarkerStyle (1,:) char = 's'
+        HandleMarkerSize (1,1) double {mustBePositive} = 4
+        HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
+        HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
+        HandleMarkerEdgeColor = [0 0 0]
+        HandleMarkerFaceColor = [1 1 1]
 
-        MarkersVisible (1,1) matlab.lang.OnOffSwitchState = "on"
-        AlwaysShowMarkers (1,1) matlab.lang.OnOffSwitchState = "off"
+        HandlesVisible (1,1) matlab.lang.OnOffSwitchState = "on"
+        % Internal drawing override used before a new overlay becomes active.
+        AlwaysShowHandles (1,1) matlab.lang.OnOffSwitchState = "off"
     end
 
     properties (Access=private, Transient, NonCopyable)
         RectPatch (1,1) matlab.graphics.primitive.Patch
-        MarkerLine (1,1) matlab.graphics.primitive.Line
+        HandleMarkerLine (1,1) matlab.graphics.primitive.Line
+        CenterHandleMarkerLine (1,1) matlab.graphics.primitive.Line
         L event.listener = event.listener.empty()
         PendingUpdate (1,1) logical = false
     end
@@ -93,11 +103,27 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
                 opts.LineStyle (1,:) char = '-'
                 opts.FaceColor = [1 1 1]
                 opts.FaceAlpha (1,1) double {mustBeGreaterThanOrEqual(opts.FaceAlpha,0), mustBeLessThanOrEqual(opts.FaceAlpha,1)} = 0
-                opts.MarkerStyle (1,:) char = 's'
-                opts.MarkerSize (1,1) double {mustBePositive} = 4
-                opts.HoverMarkerSize (1,1) double {mustBePositive} = 5
-                opts.MarkerEdgeColor = [0 0 0]
-                opts.MarkerFaceColor = [1 1 1]
+                opts.HoverEdgeColor = [1 1 1]
+                opts.HoverEdgeAlpha (1,1) double {mustBeBetween(opts.HoverEdgeAlpha,0,1)} = 1
+                opts.HoverFaceColor = [1 1 1]
+                opts.HoverFaceAlpha (1,1) double {mustBeBetween(opts.HoverFaceAlpha,0,1)} = 0
+                opts.HoverLineWidth (1,1) double {mustBePositive} = 1
+                opts.SelectionEdgeColor = [1 1 0]
+                opts.SelectionEdgeAlpha (1,1) double {mustBeBetween(opts.SelectionEdgeAlpha,0,1)} = 1
+                opts.SelectionFaceColor = [1 1 1]
+                opts.SelectionFaceAlpha (1,1) double {mustBeBetween(opts.SelectionFaceAlpha,0,1)} = 0
+                opts.SelectionLineWidth (1,1) double {mustBePositive} = 1
+                opts.ActiveEdgeColor = [1 1 1]
+                opts.ActiveEdgeAlpha (1,1) double {mustBeBetween(opts.ActiveEdgeAlpha,0,1)} = 1
+                opts.ActiveFaceColor = [1 1 1]
+                opts.ActiveFaceAlpha (1,1) double {mustBeBetween(opts.ActiveFaceAlpha,0,1)} = 0
+                opts.ActiveLineWidth (1,1) double {mustBePositive} = 1
+                opts.HandleMarkerStyle (1,:) char = 's'
+                opts.HandleMarkerSize (1,1) double {mustBePositive} = 4
+                opts.HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
+                opts.HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
+                opts.HandleMarkerEdgeColor = [0 0 0]
+                opts.HandleMarkerFaceColor = [1 1 1]
                 opts.C = "all"
                 opts.Z = "all"
                 opts.T = "all"
@@ -128,20 +154,31 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
                 'PickableParts', 'all', ...
                 'Tag', 'OverlayRectangle');
 
-            obj.MarkerLine = line(ax, ...
+            obj.HandleMarkerLine = line(ax, ...
                 'XData', NaN(1,8), ...
                 'YData', NaN(1,8), ...
-                'Color', obj.rgba(opts.MarkerEdgeColor, 1), ...
+                'Color', obj.rgba(opts.HandleMarkerEdgeColor, 1), ...
                 'LineStyle', 'none', ...
-                'LineWidth', obj.MarkerLineWidth, ...
-                'Marker', opts.MarkerStyle, ...
-                'MarkerSize', opts.MarkerSize, ...
-                'MarkerFaceColor', opts.MarkerFaceColor, ...
+                'LineWidth', opts.HandleMarkerLineWidth, ...
+                'Marker', opts.HandleMarkerStyle, ...
+                'MarkerSize', opts.HandleMarkerSize, ...
+                'MarkerFaceColor', opts.HandleMarkerFaceColor, ...
                 'HitTest', 'on', ...
                 'PickableParts', 'all', ...
-                'Tag', 'OverlayRectangleMarkers');
+                'Tag', 'OverlayRectangleHandles');
 
-            obj.registerGraphics([obj.RectPatch; obj.MarkerLine]);
+            % The center marker is display-only. Keeping it separate from
+            % HandlePoints preserves the tool's existing eight resize handles.
+            obj.CenterHandleMarkerLine = line(ax, ...
+                'XData', NaN, 'YData', NaN, 'LineStyle', 'none', ...
+                'LineWidth', opts.HandleMarkerLineWidth, 'Marker', opts.HandleMarkerStyle, ...
+                'MarkerSize', opts.HandleMarkerSize, ...
+                'MarkerEdgeColor', opts.HandleMarkerEdgeColor, ...
+                'MarkerFaceColor', opts.HandleMarkerFaceColor, ...
+                'HitTest', 'off', 'PickableParts', 'none', ...
+                'Tag', 'OverlayRectangleCenterHandle');
+
+            obj.registerGraphics([obj.RectPatch; obj.HandleMarkerLine; obj.CenterHandleMarkerLine]);
 
             obj.Position = obj.normalizedPosition(opts.Position);
             obj.ButtonDownFcn = opts.ButtonDownFcn;
@@ -151,11 +188,27 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
             obj.LineStyle = opts.LineStyle;
             obj.FaceColor = opts.FaceColor;
             obj.FaceAlpha = opts.FaceAlpha;
-            obj.MarkerStyle = opts.MarkerStyle;
-            obj.MarkerSize = opts.MarkerSize;
-            obj.HoverMarkerSize = opts.HoverMarkerSize;
-            obj.MarkerEdgeColor = opts.MarkerEdgeColor;
-            obj.MarkerFaceColor = opts.MarkerFaceColor;
+            obj.HoverEdgeColor = opts.HoverEdgeColor;
+            obj.HoverEdgeAlpha = opts.HoverEdgeAlpha;
+            obj.HoverFaceColor = opts.HoverFaceColor;
+            obj.HoverFaceAlpha = opts.HoverFaceAlpha;
+            obj.HoverLineWidth = opts.HoverLineWidth;
+            obj.SelectionEdgeColor = opts.SelectionEdgeColor;
+            obj.SelectionEdgeAlpha = opts.SelectionEdgeAlpha;
+            obj.SelectionFaceColor = opts.SelectionFaceColor;
+            obj.SelectionFaceAlpha = opts.SelectionFaceAlpha;
+            obj.SelectionLineWidth = opts.SelectionLineWidth;
+            obj.ActiveEdgeColor = opts.ActiveEdgeColor;
+            obj.ActiveEdgeAlpha = opts.ActiveEdgeAlpha;
+            obj.ActiveFaceColor = opts.ActiveFaceColor;
+            obj.ActiveFaceAlpha = opts.ActiveFaceAlpha;
+            obj.ActiveLineWidth = opts.ActiveLineWidth;
+            obj.HandleMarkerStyle = opts.HandleMarkerStyle;
+            obj.HandleMarkerSize = opts.HandleMarkerSize;
+            obj.HoverHandleMarkerSize = opts.HoverHandleMarkerSize;
+            obj.HandleMarkerLineWidth = opts.HandleMarkerLineWidth;
+            obj.HandleMarkerEdgeColor = opts.HandleMarkerEdgeColor;
+            obj.HandleMarkerFaceColor = opts.HandleMarkerFaceColor;
 
             geomProps = {'Position', 'ButtonDownFcn'};
             appProps = { ...
@@ -173,18 +226,21 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
                 'ActiveLineWidth', ...
                 'LineStyle', ...
                 'FaceColor', ...
+                'HoverFaceColor', ...
+                'SelectionFaceColor', ...
+                'ActiveFaceColor', ...
                 'FaceAlpha', ...
                 'HoverFaceAlpha', ...
                 'SelectionFaceAlpha', ...
                 'ActiveFaceAlpha', ...
-                'MarkerStyle', ...
-                'MarkerSize', ...
-                'HoverMarkerSize', ...
-                'MarkerLineWidth', ...
-                'MarkerEdgeColor', ...
-                'MarkerFaceColor', ...
-                'MarkersVisible', ...
-                'AlwaysShowMarkers'};
+                'HandleMarkerStyle', ...
+                'HandleMarkerSize', ...
+                'HoverHandleMarkerSize', ...
+                'HandleMarkerLineWidth', ...
+                'HandleMarkerEdgeColor', ...
+                'HandleMarkerFaceColor', ...
+                'HandlesVisible', ...
+                'AlwaysShowHandles'};
 
             obj.L(1) = addlistener(obj, geomProps, 'PostSet', @(~,~) obj.queueGeometryUpdate());
             obj.L(2) = addlistener(obj, appProps, 'PostSet', @(~,~) obj.updateAppearance());
@@ -266,15 +322,17 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
             obj.RectPatch.YData = c(:,2).';
 
             handles = obj.HandlePoints;
-            obj.MarkerLine.XData = handles(:,1).';
-            obj.MarkerLine.YData = handles(:,2).';
+            obj.HandleMarkerLine.XData = handles(:,1).';
+            obj.HandleMarkerLine.YData = handles(:,2).';
+            obj.CenterHandleMarkerLine.XData = obj.Center(1);
+            obj.CenterHandleMarkerLine.YData = obj.Center(2);
 
             if isempty(obj.ButtonDownFcn)
                 obj.RectPatch.ButtonDownFcn = [];
-                obj.MarkerLine.ButtonDownFcn = [];
+                obj.HandleMarkerLine.ButtonDownFcn = [];
             else
                 obj.RectPatch.ButtonDownFcn = obj.ButtonDownFcn;
-                obj.MarkerLine.ButtonDownFcn = obj.ButtonDownFcn;
+                obj.HandleMarkerLine.ButtonDownFcn = obj.ButtonDownFcn;
             end
         end
 
@@ -284,19 +342,25 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
                 return
             end
 
-            [edgeColor, edgeAlpha, lineWidth, faceAlpha] = obj.effectiveAppearance();
+            [edgeColor, edgeAlpha, faceColor, faceAlpha, lineWidth] = ...
+                obj.effectiveAppearance();
 
             obj.RectPatch.EdgeColor = obj.rgba(edgeColor, edgeAlpha);
             obj.RectPatch.LineWidth = lineWidth;
             obj.RectPatch.LineStyle = obj.LineStyle;
-            obj.RectPatch.FaceColor = obj.FaceColor;
+            obj.RectPatch.FaceColor = faceColor;
             obj.RectPatch.FaceAlpha = faceAlpha;
 
-            obj.MarkerLine.Color = obj.rgba(obj.MarkerEdgeColor, edgeAlpha);
-            obj.MarkerLine.Marker = obj.MarkerStyle;
-            obj.MarkerLine.MarkerSize = obj.effectiveMarkerSize();
-            obj.MarkerLine.LineWidth = obj.MarkerLineWidth;
-            obj.MarkerLine.MarkerFaceColor = obj.MarkerFaceColor;
+            obj.HandleMarkerLine.Color = obj.HandleMarkerEdgeColor;
+            obj.HandleMarkerLine.Marker = obj.HandleMarkerStyle;
+            obj.HandleMarkerLine.MarkerSize = obj.effectiveHandleMarkerSize();
+            obj.HandleMarkerLine.LineWidth = obj.HandleMarkerLineWidth;
+            obj.HandleMarkerLine.MarkerFaceColor = obj.HandleMarkerFaceColor;
+            obj.CenterHandleMarkerLine.MarkerEdgeColor = obj.HandleMarkerEdgeColor;
+            obj.CenterHandleMarkerLine.Marker = obj.HandleMarkerStyle;
+            obj.CenterHandleMarkerLine.MarkerSize = obj.effectiveHandleMarkerSize();
+            obj.CenterHandleMarkerLine.LineWidth = obj.HandleMarkerLineWidth;
+            obj.CenterHandleMarkerLine.MarkerFaceColor = obj.HandleMarkerFaceColor;
 
             obj.updateGeometry();
             obj.updateVisibility();
@@ -319,8 +383,10 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
 
             effectiveVisible = obj.Visible == "on" && obj.ViewVisible == "on";
             obj.RectPatch.Visible = matlab.lang.OnOffSwitchState(effectiveVisible);
-            obj.MarkerLine.Visible = matlab.lang.OnOffSwitchState( ...
-                effectiveVisible && obj.markersShouldShow());
+            obj.HandleMarkerLine.Visible = matlab.lang.OnOffSwitchState( ...
+                effectiveVisible && obj.handlesShouldShow());
+            obj.CenterHandleMarkerLine.Visible = matlab.lang.OnOffSwitchState( ...
+                effectiveVisible && obj.handlesShouldShow());
         end
     end
 
@@ -337,48 +403,53 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
             obj.PendingUpdate = false;
         end
 
-        function tf = markersShouldShow(obj)
-        %MARKERSSHOULDSHOW True when handle marker layer should be visible.
-            tf = obj.MarkersVisible == "on" ...
-                && (obj.AlwaysShowMarkers == "on" || obj.Hovered || obj.Active);
+        function tf = handlesShouldShow(obj)
+        %HANDLESSHOULDSHOW True when handle handle layer should be visible.
+            tf = obj.HandlesVisible == "on" ...
+                && (obj.AlwaysShowHandles == "on" || obj.Hovered || obj.Active);
         end
 
-        function markerSize = effectiveMarkerSize(obj)
-        %EFFECTIVEMARKERSIZE Return marker size implied by overlay state.
+        function markerSize = effectiveHandleMarkerSize(obj)
+        %EFFECTIVEHANDLEMARKERSIZE Return marker size implied by overlay state.
             if obj.Hovered
-                markerSize = obj.HoverMarkerSize;
+                markerSize = obj.HoverHandleMarkerSize;
             else
-                markerSize = obj.MarkerSize;
+                markerSize = obj.HandleMarkerSize;
             end
         end
 
-        function [edgeColor, edgeAlpha, lineWidth, faceAlpha] = effectiveAppearance(obj)
+        function [edgeColor, edgeAlpha, faceColor, faceAlpha, lineWidth] = effectiveAppearance(obj)
         %EFFECTIVEAPPEARANCE Return style implied by overlay state.
             if obj.Hovered
                 edgeColor = obj.HoverEdgeColor;
                 edgeAlpha = obj.HoverEdgeAlpha;
-                lineWidth = obj.HoverLineWidth;
+                faceColor = obj.HoverFaceColor;
                 faceAlpha = obj.HoverFaceAlpha;
+                lineWidth = obj.HoverLineWidth;
             elseif obj.Active && obj.Selected
                 edgeColor = obj.SelectionEdgeColor;
                 edgeAlpha = obj.SelectionEdgeAlpha;
-                lineWidth = obj.ActiveLineWidth;
+                faceColor = obj.SelectionFaceColor;
                 faceAlpha = obj.SelectionFaceAlpha;
+                lineWidth = obj.ActiveLineWidth;
             elseif obj.Active
                 edgeColor = obj.ActiveEdgeColor;
                 edgeAlpha = obj.ActiveEdgeAlpha;
-                lineWidth = obj.ActiveLineWidth;
+                faceColor = obj.ActiveFaceColor;
                 faceAlpha = obj.ActiveFaceAlpha;
+                lineWidth = obj.ActiveLineWidth;
             elseif obj.Selected
                 edgeColor = obj.SelectionEdgeColor;
                 edgeAlpha = obj.SelectionEdgeAlpha;
-                lineWidth = obj.SelectionLineWidth;
+                faceColor = obj.SelectionFaceColor;
                 faceAlpha = obj.SelectionFaceAlpha;
+                lineWidth = obj.SelectionLineWidth;
             else
                 edgeColor = obj.EdgeColor;
                 edgeAlpha = obj.EdgeAlpha;
-                lineWidth = obj.LineWidth;
+                faceColor = obj.FaceColor;
                 faceAlpha = obj.FaceAlpha;
+                lineWidth = obj.LineWidth;
             end
         end
 
