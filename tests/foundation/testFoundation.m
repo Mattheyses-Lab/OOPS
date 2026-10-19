@@ -340,20 +340,15 @@ g2 = p.addGroup('Two');
 a = g1.addImage(oops.io.readInput(t.TestData.File),'A');
 b = g2.addImage(oops.io.readInput(t.TestData.File),'B');
 c = g1.addImage(oops.io.readInput(t.TestData.File),'C');
-[state,l] = capture(p,'ActiveImageChanged');
-listener = onCleanup(@() delete(l));
 p.setActiveImage(a);
 p.setActiveImage(b);
 t.verifyFalse(a.IsLoaded || b.IsLoaded);
 p.setActiveImage(c);
 t.verifyFalse(a.IsLoaded || b.IsLoaded || c.IsLoaded);
-t.verifyEqual(state('last').NewID,c.ID);
-t.verifyEqual(state('last').OldID,b.ID);
 p.setActiveImage(b);
 p.setActiveImage(a);
 t.verifyFalse(a.IsLoaded || b.IsLoaded || c.IsLoaded);
 p.setActiveImage(a);
-t.verifyEqual(state('count'),5);
 end
 
 function testDistinctIdentities(t)

@@ -66,7 +66,9 @@ classdef GUI < handle
         ObjectViewerKey (1,1) string = ""
         LabelHotkeys (1,:) string = string.empty(1,0)
         ViewerListeners event.listener = event.listener.empty()
+        AccordionListeners event.listener = event.listener.empty()
         SyncingViewerDisplay (1,1) logical = false
+        ObjectsTreeDirty (1,1) logical = true
     end
 
     methods
@@ -338,6 +340,7 @@ classdef GUI < handle
                 obj(k).Closing = true;
                 delete(obj(k).Listeners);
                 delete(obj(k).ViewerListeners);
+                delete(obj(k).AccordionListeners);
 
                 % Detach renderers before deleting their independently owned graphics.
                 if ~isempty(obj(k).LeftPlotAxes) && isvalid(obj(k).LeftPlotAxes)
@@ -718,6 +721,9 @@ classdef GUI < handle
             obj.GroupsTree = obj.buildTree("Groups",140);
             obj.ImagesTree = obj.buildTree("Images",200);
             obj.ObjectsTree = obj.buildTree("Objects",200);
+            objectsItem = obj.SettingsAccordion.getItem("Objects");
+            obj.AccordionListeners(end+1) = addlistener(objectsItem,'expanded','PostSet', ...
+                @(~,~) obj.runCallback(@() obj.onObjectsAccordionExpanded()));
             obj.buildLabels();
             obj.buildSummary();
 
@@ -1719,8 +1725,11 @@ classdef GUI < handle
                 boundaryTool.ObjectsDeleteRequestedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundariesDeleteRequested(d));
                 boundaryTool.RefreshRequestedFcn = @(~,~) ...
                     obj.runCallback(@() obj.refreshViewerRegions());
-                viewer.installTool(boundaryTool);
+
+                % Establish the initial hidden state before installation so the
+                % tool's first host-state synchronization cannot request model UI.
                 viewer.OverlaysVisible = 'off';
+                viewer.installTool(boundaryTool);
                 obj.PolygonTools{k} = polygonTool;
                 obj.ObjectBoundaryTools{k} = boundaryTool;
 
@@ -2192,10 +2201,19 @@ classdef GUI < handle
             % Active image supplying data and object membership for this operation.
             image = p.ActiveImage;
 
-            if isempty(image)
-                obj.syncTree(obj.ObjectsTree,oops.model.Object.empty(0,1),"",strings(0,1));
+            objectsItem = obj.SettingsAccordion.getItem("Objects");
+
+            if objectsItem.expanded
+
+                if isempty(image)
+                    obj.syncTree(obj.ObjectsTree,oops.model.Object.empty(0,1),"",strings(0,1));
+                else
+                    obj.syncTree(obj.ObjectsTree,image.Objects,image.ActiveObjectID,image.SelectedObjectIDs);
+                end
+
+                obj.ObjectsTreeDirty = false;
             else
-                obj.syncTree(obj.ObjectsTree,image.Objects,image.ActiveObjectID,image.SelectedObjectIDs);
+                obj.ObjectsTreeDirty = true;
             end
 
             obj.refreshSummary();
@@ -2218,16 +2236,39 @@ classdef GUI < handle
                 oldIDs(k) = string(nodes(k).NodeData);
             end
 
-            % Flags marking nodes whose model children no longer exist.
-            removed = ~ismember(oldIDs,ids);
-            obj.deleteTreeNodes(nodes(removed));
-            nodes = nodes(~removed);
-            oldIDs = oldIDs(~removed);
-            % Collections currently append/remove children. If a future model
-            % reorders them, rebuild that tree rather than displaying a wrong order.
-            if ~isequal(oldIDs,ids(1:numel(oldIDs)))
-                obj.deleteTreeNodes(nodes);
-                nodes = tree.Children;
+            % Object nodes are reusable display slots. Their menus resolve the
+            % current ID from UserData, so switching images need not recreate UI.
+            reuseSlots = tree == obj.ObjectsTree;
+
+            if reuseSlots
+                retained = ismember(oldIDs,ids);
+
+                if any(retained)
+                    % Same-image deletions retain surviving handles, menus, and
+                    % overlay-driven tree state even when their indices shift.
+                    obj.deleteTreeNodes(nodes(~retained));
+                    nodes = tree.Children;
+                    oldIDs = oldIDs(retained);
+                else
+                    % A different image has unrelated IDs. Rebind the existing
+                    % display slots and adjust only the difference in node count.
+                    excess = nodes(numel(children)+1:end);
+                    obj.deleteTreeNodes(excess);
+                    nodes = tree.Children;
+                    oldIDs = strings(0,1);
+                end
+            else
+                removed = ~ismember(oldIDs,ids);
+                obj.deleteTreeNodes(nodes(removed));
+                nodes = nodes(~removed);
+                oldIDs = oldIDs(~removed);
+
+                % Collections currently append/remove children. If a future model
+                % reorders them, rebuild that tree rather than displaying a wrong order.
+                if ~isequal(oldIDs,ids(1:numel(oldIDs)))
+                    obj.deleteTreeNodes(nodes);
+                    nodes = tree.Children;
+                end
             end
 
             % Create/relabel nodes for the current ordered child collection.
@@ -2249,6 +2290,11 @@ classdef GUI < handle
             nodes = tree.Children;
 
             for k = 1:numel(nodes)
+
+                if reuseSlots
+                    nodes(k).NodeData = children(k).ID;
+                    nodes(k).ContextMenu.UserData = children(k).ID;
+                end
 
                 % Current child label to synchronize without replacing its tree node.
                 name = char(children(k).Name);
@@ -2297,6 +2343,28 @@ classdef GUI < handle
 
             end
 
+        end
+
+        function onObjectsAccordionExpanded(obj)
+        %ONOBJECTSACCORDIONEXPANDED Populate deferred object navigation on demand.
+
+            item = obj.SettingsAccordion.getItem("Objects");
+
+            if ~item.expanded || ~obj.ObjectsTreeDirty || isempty(obj.Project)
+                return;
+            end
+
+            image = obj.Project.ActiveImage;
+
+            if isempty(image)
+                obj.syncTree(obj.ObjectsTree,oops.model.Object.empty(0,1),"",strings(0,1));
+            else
+                obj.syncTree(obj.ObjectsTree,image.Objects, ...
+                    image.ActiveObjectID,image.SelectedObjectIDs);
+            end
+
+            obj.ObjectsTreeDirty = false;
+            obj.scrollToActiveObject();
         end
 
         function scrollToActiveObject(obj)
@@ -2917,8 +2985,22 @@ classdef GUI < handle
         function onViewerDisplayStateChanged(obj,viewer,event)
         %ONVIEWERDISPLAYSTATECHANGED Persist contrast changed with ImageAxes tools.
 
-            if obj.SyncingViewerDisplay || isempty(obj.Project) || ...
-                    event.Property ~= "ComponentCLims"
+            if obj.SyncingViewerDisplay || isempty(obj.Project)
+                return;
+            end
+
+            % Native mask visibility remains the public ImageAxes control. Load
+            % the model mask only when the user reveals it.
+            if event.Property == "MaskEnabled"
+
+                if viewer.MaskEnabled
+                    obj.refreshViewerRegions();
+                end
+
+                return;
+            end
+
+            if event.Property ~= "ComponentCLims"
                 return;
             end
 
@@ -3786,32 +3868,40 @@ classdef GUI < handle
                     continue;
                 end
 
-                % Pixels eligible for display before applying spatial sampling.
-                mask = isfinite(image.Order) & isfinite(image.Azimuth);
+                % Candidate linear indices are restricted before finite checks so
+                % object-only fields never scan the complete result images.
+                spacing = settings.ScaleDownFactor;
 
                 if settings.ObjectMask
 
                     if isempty(image.Mask)
-                        mask(:) = false;
+                        indices = zeros(0,1);
                     else
-                        mask = mask & image.Mask;
+                        indices = find(image.Mask);
                     end
 
+                    if spacing > 1 && ~isempty(indices)
+                        [rows,columns] = ind2sub(size(image.Mask),indices);
+                        keep = mod(rows-1,spacing) == 0 & ...
+                            mod(columns-1,spacing) == 0;
+                        indices = indices(keep);
+                    end
+                else
+                    rows = (1:spacing:size(image.Order,1))';
+                    columns = 1:spacing:size(image.Order,2);
+                    indices = reshape(rows + (columns-1)*size(image.Order,1),[],1);
                 end
 
-                % Regular sampling lattice limits the number of graphics segments.
-                spacing = settings.ScaleDownFactor;
+                % Read each candidate result once, then discard the rare invalid pair.
+                angle = image.Azimuth(indices);
+                magnitude = image.Order(indices);
+                finite = isfinite(angle) & isfinite(magnitude);
+                indices = indices(finite);
+                angle = angle(finite);
+                magnitude = magnitude(finite);
 
-                if spacing > 1
-                    sampled = false(size(mask));
-                    sampled(1:spacing:end,1:spacing:end) = true;
-                    mask = mask & sampled;
-                end
-
-                % Parent-image pixel centers and their axial FPM results.
-                [y,x] = find(mask);
-                angle = image.Azimuth(mask);
-                magnitude = image.Order(mask);
+                % Convert only retained candidates to parent-image coordinates.
+                [y,x] = ind2sub(size(image.Order),indices);
 
                 % Direction uses the cyclic azimuth map; magnitude uses order.
                 if settings.ColorMode == "Magnitude"
@@ -3839,7 +3929,8 @@ classdef GUI < handle
         % apply to all four frames, but not to unavailable sources or a
         % calibration stack with different spatial dimensions.
 
-            if obj.SyncingOverlays || obj.Closing
+            if obj.SyncingOverlays || obj.Closing || isempty(obj.Project) || ...
+                    isempty(obj.LeftViewer) || isempty(obj.RightViewer)
                 return;
             end
 
@@ -3892,9 +3983,9 @@ classdef GUI < handle
 
                 end
 
-                % Assigning ImageData clears ImageAxes.Mask. Restore it even
-                % when the objects have not changed during a display refresh.
-                if ~isequal(viewer.Mask,mask)
+                % ImageData replacement clears the mask. Restore it only when
+                % visible; the native Mask tool requests it when later enabled.
+                if viewer.MaskEnabled && ~isequal(viewer.Mask,mask)
                     viewer.Mask = mask;
                 end
 
@@ -3955,7 +4046,7 @@ classdef GUI < handle
                 height = box(4);
                 geometry = [x y; x+width y; x+width y+height; x y+height];
             else
-                geometry = oops.geometry.objectBoundary(region);
+                geometry = region.getBoundaryVertices();
             end
         end
 
@@ -4333,24 +4424,25 @@ classdef GUI < handle
 
             % Context menu bound to this tree/node identity.
             menu = uicontextmenu(obj.Fig);
+            menu.UserData = id;
 
             if title == "Groups"
                 uimenu(menu,'Text','New group...','MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.promptGroup()));
 
                 if id ~= ""
                     uimenu(menu,'Text','Edit group...', ...
-                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.promptGroup(id)));
+                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.promptGroup(string(menu.UserData))));
 
                     % Occasional calibration actions grouped away from routine navigation.
                     calibration = uimenu(menu,'Text','Calibration');
                     uimenu(calibration,'Text','View assignment...', ...
-                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.showCalibrationAssignment(id)));
+                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.showCalibrationAssignment(string(menu.UserData))));
                     uimenu(calibration,'Text','Assign registered calibrations...', ...
-                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseRegisteredCalibrations(id)));
+                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseRegisteredCalibrations(string(menu.UserData))));
                     uimenu(calibration,'Text','Import and assign...', ...
-                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseCalibrationFiles(id)));
+                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseCalibrationFiles(string(menu.UserData))));
                     uimenu(calibration,'Text','Clear assignment','Separator','on', ...
-                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.applyCalibrationAssignment(id,strings(0,1))));
+                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.applyCalibrationAssignment(string(menu.UserData),strings(0,1))));
                 end
 
                 % Domain label used for node-specific and batch deletion actions.
@@ -4360,7 +4452,7 @@ classdef GUI < handle
 
                 if id ~= ""
                     uimenu(menu,'Text','Info...', ...
-                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.showImageInfo(id)));
+                        'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.showImageInfo(string(menu.UserData))));
                 end
             else
                 singular = "object";
@@ -4376,7 +4468,7 @@ classdef GUI < handle
 
             if id ~= ""
                 uimenu(menu,'Text',char("Delete "+singular),'MenuSelectedFcn', ...
-                    @(~,~) obj.runCallback(@() obj.deleteNavigation(title,id)));
+                    @(~,~) obj.runCallback(@() obj.deleteNavigation(title,string(menu.UserData))));
             end
 
             uimenu(menu,'Text',char("Delete selected "+lower(title)),'MenuSelectedFcn', ...
@@ -4815,14 +4907,12 @@ classdef GUI < handle
                 return;
             end
 
-            % Modal editor centered approximately over the main application window.
-            mainPosition = obj.Fig.Position;
+            % Modal editor centered on the active display.
             width = 520;
             height = 420;
-            position = [mainPosition(1)+(mainPosition(3)-width)/2 ...
-                mainPosition(2)+(mainPosition(4)-height)/2 width height];
             dialog = uifigure('Name',char(group.Name + " — Calibration assignment"), ...
-                'Position',position,'WindowStyle','modal','Resize','on');
+                'Position',[0 0 width height],'WindowStyle','modal','Resize','on');
+            oops.app.centerDialog(dialog);
 
             % Simple tree-and-buttons layout leaves room for longer source paths.
             grid = uigridlayout(dialog,[2 1], ...

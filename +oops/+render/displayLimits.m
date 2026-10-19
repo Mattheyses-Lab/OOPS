@@ -17,26 +17,8 @@ end
 started = tic;
 oops.Log.DEBUG("Resolving " + domain + " display limits for " + image.Name + ".");
 
-if domain == "Intensity"
-
-    % Average intensity is resident during normal GUI use. The lazy fallback
-    % supports images created programmatically without rereading on later calls.
-    average = oops.analysis.Analyzer.ensureAverageIntensity(image);
-    average = oops.render.intensityDisplayValues(image,average);
-    values = double(average(:));
-else
-    values = image.Order(:);
-end
-
-values = values(isfinite(values));
-
-if isempty(values)
-
-    % Finite data range used for slider bounds, with an empty-data fallback.
-    bounds = [0 1];
-else
-    bounds = [min(values) max(values)];
-end
+statistics = image.getDisplayStatistics(domain);
+bounds = [statistics.Minimum statistics.Maximum];
 
 if bounds(2) <= bounds(1)
     bounds(2) = bounds(1)+max(1,eps(bounds(1)));
@@ -45,7 +27,7 @@ end
 % One-shot ranges used by the Reset and Auto buttons.
 if domain == "Intensity"
     ranges.Reset = bounds;
-    ranges.Auto = percentileRange(values,bounds);
+    ranges.Auto = [statistics.Percentile1 statistics.Percentile99];
     ranges.Auto = oops.render.normalizeIntensityDisplayRange(image,ranges.Auto);
 else
     bounds = [0 1];
@@ -53,11 +35,11 @@ else
 
     switch settings.Display.OrderAutoScaleMethod
         case "Contrast"
-            ranges.Auto = percentileRange(values,[0 1]);
+            ranges.Auto = [statistics.Percentile1 statistics.Percentile99];
         case "Zero to max"
-            ranges.Auto = zeroToMaxRange(values,[0 1]);
+            ranges.Auto = zeroToMaxRange(statistics.Maximum,[0 1]);
         case "Data range"
-            ranges.Auto = finiteRange(values,[0 1]);
+            ranges.Auto = [statistics.Minimum statistics.Maximum];
     end
 end
 
@@ -92,41 +74,13 @@ oops.Log.DEBUG(sprintf( ...
     domain,image.Name,toc(started),value(1),value(2),bounds(1),bounds(2)));
 end
 
-function value = zeroToMaxRange(values,fallback)
+function value = zeroToMaxRange(maximum,fallback)
 %ZEROTOMAXRANGE Anchor order at zero and scale to the finite data maximum.
 
-if isempty(values)
+if ~isfinite(maximum)
     value = fallback;
 else
-    value = [0 max(values)];
-end
-
-if value(2) <= value(1)
-    value = fallback;
-end
-end
-
-function value = percentileRange(values,fallback)
-%PERCENTILERANGE Return robust intensity limits with a valid fallback.
-
-if isempty(values)
-    value = fallback;
-else
-    value = prctile(values,[1 99]);
-end
-
-if value(2) <= value(1)
-    value = finiteRange(values,fallback);
-end
-end
-
-function value = finiteRange(values,fallback)
-%FINITERANGE Return finite data extrema while preserving a positive span.
-
-if isempty(values)
-    value = fallback;
-else
-    value = [min(values) max(values)];
+    value = [0 maximum];
 end
 
 if value(2) <= value(1)

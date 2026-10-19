@@ -38,7 +38,6 @@ classdef Project < handle
     properties (Access=private)
         GroupListeners cell = {}
         LabelListeners event.listener = event.listener.empty()
-        LastActiveImageID (1,1) string = ""
     end
 
     %% Model events
@@ -50,7 +49,6 @@ classdef Project < handle
         GroupChanged
         ImageAdded
         ImageRemoved
-        ActiveImageChanged
         ObjectsChanged
         DataChanged
         LabelsChanged
@@ -756,26 +754,9 @@ classdef Project < handle
             % Image resolved from the current group/image bookmarks.
             image = obj.ActiveImage;
 
-            % Active image ID to publish; remains empty when no image is active.
-            id = "";
-
-            if ~isempty(image)
-                id = image.ID;
-            end
-
             % The cache manager decides whether navigation should retain a full
             % raw buffer. With the default zero-byte budget, Image5D remains lazy.
             obj.CacheManager.activateInput(image,obj.allImages());
-
-            % Notify observers after the residency policy reaches its final state.
-
-            % Last published active image ID, used to detect a global activation change.
-            old = obj.LastActiveImageID;
-            obj.LastActiveImageID = id;
-
-            if old ~= id
-                notify(obj,'ActiveImageChanged',oops.model.events.ActiveImageChanged(id,old));
-            end
 
         end
 

@@ -18,6 +18,10 @@ classdef Object < handle
         PixelMidlineTangentList (:,1) double = [] % Tangent radians aligned with PixelIdxList.
     end
 
+    properties (Access=private, Transient)
+        BoundaryVerticesCache (:,2) double = zeros(0,2)
+    end
+
     %% Scalar analysis results (NaN means not yet measured)
     properties (SetAccess=private)
         Area (1,1) double = NaN % Object area, in pixels.
@@ -91,6 +95,16 @@ classdef Object < handle
 
     %% Identity and parent metadata
     methods
+
+        function vertices = getBoundaryVertices(obj)
+        %GETBOUNDARYVERTICES Return cached patch-ready parent-image geometry.
+
+            if isempty(obj.BoundaryVerticesCache)
+                obj.BoundaryVerticesCache = oops.geometry.objectBoundary(obj);
+            end
+
+            vertices = obj.BoundaryVerticesCache;
+        end
 
         function idx = get.SelfIdx(obj)
         %GET.SELFIDX Return this object's current position within its parent.

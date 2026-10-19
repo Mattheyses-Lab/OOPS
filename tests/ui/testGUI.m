@@ -46,6 +46,24 @@ t.verifyEqual(ui.ImagesTree.SelectedNodes.NodeData,g.Images(3).ID);
 t.verifyEqual(numel(ui.ImagesTree.CheckedNodes),2);
 end
 
+function testCollapsedObjectTreeDefersAndReusesNodes(t)
+%TESTCOLLAPSEDOBJECTTREEDEFERSANDREUSESNODES Avoid hidden UI reconstruction.
+
+ui = t.TestData.GUI;
+group = ui.Project.ActiveGroup;
+item = ui.SettingsAccordion.getItem("Objects");
+nodes = ui.ObjectsTree.Children;
+oldIDs = string({nodes.NodeData});
+item.collapse();
+group.setActiveImage(group.Images(2));
+t.verifyEqual(string({ui.ObjectsTree.Children.NodeData}),oldIDs);
+item.expand();
+t.verifyEqual(ui.ObjectsTree.Children,nodes);
+t.verifyEqual(string({nodes.NodeData}), ...
+    reshape(oops.model.internal.ids(group.Images(2).Objects),1,[]));
+t.verifyEqual(string(nodes(1).ContextMenu.UserData),group.Images(2).Objects(1).ID);
+end
+
 function testImageActivationRunsOneLazyViewerRefresh(t)
 %TESTIMAGEACTIVATIONRUNSONELAZYVIEWERREFRESH Avoid duplicate and hidden-overlay work.
 
@@ -786,6 +804,7 @@ ui.RightViewer.enableTool("ObjectBoundaries");
 ids = oops.model.internal.ids(image.Objects);
 for viewer = {ui.LeftViewer,ui.RightViewer}
     axes = viewer{1};
+    axes.enableTool("Mask");
     t.verifyEqual(axes.Mask,image.Mask);
     actual = axes.Overlays.ids(Type="Polygon");
     t.verifyEqual(sort(actual(:)),sort(ids));
@@ -935,7 +954,7 @@ t.verifyEqual(ui.ObjectsTree.Children,node);
 t.verifyEqual(node.ContextMenu,menu);
 t.verifyEqual(ui.LeftViewer.Overlays.get(ids(3)),left);
 t.verifyEqual(ui.RightViewer.Overlays.get(ids(3)),right);
-t.verifyEqual(ui.LeftViewer.Mask,image.Mask);
+t.verifyEmpty(ui.LeftViewer.Mask);
 t.verifyEqual(ui.RightViewer.ImageData.getPlane(1,1,1),image.Mask);
 t.verifyEqual(image.IntensityDisplayRange,[.1 .9]);
 % The retained subscription must still forward measurement updates.

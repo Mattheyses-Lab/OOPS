@@ -42,6 +42,7 @@ classdef Image < handle
 
     properties (Access=private, Transient)
         ObjectListeners event.listener = event.listener.empty()
+        DisplayStatistics (1,1) struct = struct()
     end
 
     properties (Dependent, SetAccess=private)
@@ -372,6 +373,8 @@ classdef Image < handle
             validateattributes(average,{'double'}, ...
                 {'real','size',[obj.Input.SizeY,obj.Input.SizeX]});
             obj.Results.AverageIntensity = average;
+            obj.DisplayStatistics.Intensity = obj.calculateDisplayStatistics( ...
+                obj.intensityDisplayCopy(average),[0 1]);
             notify(obj,'DataChanged',oops.model.events.DataChanged( ...
                 obj.ID,"AverageIntensity"));
         end
@@ -386,6 +389,17 @@ classdef Image < handle
 
             try
                 obj.Results = results;
+                obj.DisplayStatistics = struct();
+
+                if isfield(results,'AverageIntensity')
+                    obj.DisplayStatistics.Intensity = obj.calculateDisplayStatistics( ...
+                        obj.intensityDisplayCopy(results.AverageIntensity),[0 1]);
+                end
+
+                if isfield(results,'Order')
+                    obj.DisplayStatistics.Order = obj.calculateDisplayStatistics( ...
+                        results.Order,[0 1]);
+                end
 
                 % Reset stored intensity and polarization measurements on each
                 % existing object, leaving its morphology measurements unchanged.
@@ -415,6 +429,8 @@ classdef Image < handle
                 {'real','size',[obj.Input.SizeY,obj.Input.SizeX]});
             obj.Results.AverageIntensity = average;
             obj.Results.Segmentation = cache;
+            obj.DisplayStatistics.Intensity = obj.calculateDisplayStatistics( ...
+                obj.intensityDisplayCopy(average),[0 1]);
         end
 
     end
@@ -723,6 +739,31 @@ classdef Image < handle
     %% Persistent display ranges
     methods
 
+        function statistics = getDisplayStatistics(obj,domain)
+        %GETDISPLAYSTATISTICS Return cached extrema and robust percentiles.
+
+            domain = string(domain);
+
+            if ~ismember(domain,["Intensity","Order"])
+                error('oops:model:UnknownDisplayDomain','Unknown display domain: %s',domain);
+            end
+
+            if ~isfield(obj.DisplayStatistics,domain)
+
+                if domain == "Intensity"
+                    values = oops.analysis.Analyzer.ensureAverageIntensity(obj);
+                    values = obj.intensityDisplayCopy(values);
+                else
+                    values = obj.Order;
+                end
+
+                obj.DisplayStatistics.(domain) = ...
+                    obj.calculateDisplayStatistics(values,[0 1]);
+            end
+
+            statistics = obj.DisplayStatistics.(domain);
+        end
+
         function value = getDisplayRange(obj,domain)
         %GETDISPLAYRANGE Return the explicitly stored user display limits.
 
@@ -762,6 +803,56 @@ classdef Image < handle
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
             end
+        end
+
+    end
+
+    methods (Access=private)
+
+        function values = intensityDisplayCopy(obj,values)
+        %INTENSITYDISPLAYCOPY Match detector-class display quantization for statistics.
+
+            [~,className] = oops.analysis.detectorRange(obj.Input);
+
+            if startsWith(className,"uint") || startsWith(className,"int") || ...
+                    className == "logical"
+                values = round(values);
+            end
+
+            values = cast(values,className);
+        end
+
+    end
+
+    methods (Static, Access=private)
+
+        function statistics = calculateDisplayStatistics(values,fallback)
+        %CALCULATEDISPLAYSTATISTICS Scan one result when generated, not per refresh.
+
+            values = double(values(:));
+            values = values(isfinite(values));
+
+            if isempty(values)
+                limits = fallback;
+                percentiles = fallback;
+            else
+                limits = [min(values) max(values)];
+                percentiles = prctile(values,[1 99]);
+
+                if percentiles(2) <= percentiles(1)
+                    percentiles = limits;
+                end
+            end
+
+            if limits(2) <= limits(1)
+                limits(2) = limits(1)+max(1,eps(limits(1)));
+            end
+
+            statistics = struct( ...
+                'Minimum',limits(1), ...
+                'Maximum',limits(2), ...
+                'Percentile1',percentiles(1), ...
+                'Percentile99',percentiles(2));
         end
 
     end
