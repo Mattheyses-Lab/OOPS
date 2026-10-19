@@ -72,6 +72,12 @@ elseif settings.Display.("LockDisplay"+domain)
     end
 else
     value = image.getDisplayRange(domain);
+
+    % Until the user stores manual intensity limits, display the extrema of
+    % the resident average-intensity copy. Never initialize from raw frames.
+    if isempty(value)
+        value = ranges.Reset;
+    end
 end
 
 % Effective intensity limits follow the class and range of the displayed copy.

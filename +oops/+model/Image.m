@@ -724,49 +724,12 @@ classdef Image < handle
     methods
 
         function value = getDisplayRange(obj,domain)
-        %GETDISPLAYRANGE Return user limits, lazily initializing intensity from raw data.
-        % Initial limits are data bounds; automatic display choices never write here.
+        %GETDISPLAYRANGE Return the explicitly stored user display limits.
 
             domain = string(domain);
 
             if ~ismember(domain,["Intensity","Order"])
                 error('oops:model:UnknownDisplayDomain','Unknown display domain: %s',domain);
-            end
-
-            % Initialize a missing manual range once. Auto-scaling belongs to
-            % rendering and must never replace this remembered user range.
-            if domain == "Intensity" && isempty(obj.IntensityDisplayRange)
-
-                % Running minimum finite intensity across the four raw input frames.
-                low = Inf;
-
-                % Running maximum finite intensity across the four raw input frames.
-                high = -Inf;
-
-                % Read each input angle and accumulate its finite intensity extrema.
-                for k = 1:4
-
-                    % Numeric pixels from the current polarization frame, converted to double.
-                    values = double(obj.getFrame(k));
-                    values = values(isfinite(values));
-
-                    if ~isempty(values)
-                        low = min(low,min(values));
-                        high = max(high,max(values));
-                    end
-
-                end
-
-                if ~isfinite(low)
-                    low = 0;
-                    high = 1;
-                end
-
-                if high <= low
-                    high = low+max(1,eps(low));
-                end
-
-                obj.IntensityDisplayRange = [low high];
             end
 
             value = obj.(domain+"DisplayRange");

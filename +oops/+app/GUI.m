@@ -30,7 +30,6 @@ classdef GUI < handle
         OrientationFieldTools cell = {}
         PolygonTools cell = {}
         ObjectBoundaryTools cell = {}
-        AuxiliaryCompositeTools cell = {}
         ScatterRenderer matlabx.ui.axes.plot.ScatterRenderer
         SwarmRenderer matlabx.ui.axes.plot.ViolinRenderer
         PolarHistogramRenderer oops.plot.PolarHistogramRenderer
@@ -63,6 +62,7 @@ classdef GUI < handle
         MenuUI struct = struct()
         Closing (1,1) logical = false
         ViewerKeys (1,2) string = ["",""]
+        PanelContentNames (1,2) string = ["",""]
         ObjectViewerKey (1,1) string = ""
         LabelHotkeys (1,:) string = string.empty(1,0)
         ViewerListeners event.listener = event.listener.empty()
@@ -384,12 +384,6 @@ classdef GUI < handle
                     end
                 end
 
-                for tool = obj(k).AuxiliaryCompositeTools
-                    if ~isempty(tool{1}) && isvalid(tool{1})
-                        delete(tool{1});
-                    end
-                end
-
                 for tool = obj(k).PolygonTools
                     if ~isempty(tool{1}) && isvalid(tool{1})
                         delete(tool{1});
@@ -535,6 +529,7 @@ classdef GUI < handle
             obj.LabelHotkeys = string.empty(1,0);
             obj.SummaryTable.Data = table();
             obj.ViewerKeys(:) = "";
+            obj.PanelContentNames(:) = "";
             obj.ObjectViewerKey = "";
 
             viewers = {obj.LeftViewer,obj.RightViewer};
@@ -794,8 +789,8 @@ classdef GUI < handle
             obj.SettingsUI.ScatterPlot.YVariable.Items = cellstr(labels);
 
             % Data selection and grouping.
-            obj.addSetting("Scatterplot","Group by","ScatterPlot","GroupingType",["Group","Label"]);
-            obj.addSetting("Scatterplot","Color by","ScatterPlot","ColorMode",["Group","Label","Magnitude"]);
+            obj.addSetting("Scatterplot","Group points by","ScatterPlot","GroupingType",["Group","Label"]);
+            obj.addSetting("Scatterplot","Color points by","ScatterPlot","ColorMode",["Group","Label","Magnitude"]);
 
             % Point-marker visibility and appearance.
             obj.addSetting("Scatterplot","Marker mode","ScatterPlot","MarkerMode",["single","multi","auto"]);
@@ -840,8 +835,8 @@ classdef GUI < handle
             obj.SettingsUI.SwarmPlot.YVariable.Items = cellstr(labels);
 
             % Data selection and grouping.
-            obj.addSetting("Swarmplot","Group by","SwarmPlot","GroupingType",["Group","Label","Both"]);
-            obj.addSetting("Swarmplot","Color by","SwarmPlot","ColorMode",["Group","Label","Magnitude"]);
+            obj.addSetting("Swarmplot","Group points by","SwarmPlot","GroupingType",["Group","Label","Both"]);
+            obj.addSetting("Swarmplot","Color points by","SwarmPlot","ColorMode",["Group","Label","Magnitude"]);
 
             % Point visibility followed by all marker-related appearance.
             obj.addSetting("Swarmplot","Show points","SwarmPlot","PointsVisible");
@@ -1722,6 +1717,8 @@ classdef GUI < handle
                 boundaryTool.ObjectActivatedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundaryActivated(d));
                 boundaryTool.ObjectSelectionChangedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundarySelectionChanged(d));
                 boundaryTool.ObjectsDeleteRequestedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundariesDeleteRequested(d));
+                boundaryTool.RefreshRequestedFcn = @(~,~) ...
+                    obj.runCallback(@() obj.refreshViewerRegions());
                 viewer.installTool(boundaryTool);
                 viewer.OverlaysVisible = 'off';
                 obj.PolygonTools{k} = polygonTool;
@@ -1732,14 +1729,12 @@ classdef GUI < handle
                 mount = viewer.mountOverlay(field);
                 mount.Visible = 'off';
                 tool = oops.ui.axes.tools.OrientationField(viewer,mount);
+                tool.RefreshRequestedFcn = @(~,~) obj.runCallback(@() ...
+                    obj.refreshOrientationFields([obj.Settings.View.LeftSource, ...
+                    obj.Settings.View.RightSource]));
                 viewer.installTool(tool);
                 obj.OrientationFields{k} = field;
                 obj.OrientationFieldTools{k} = tool;
-
-                % Context-only application tool exposes merged auxiliary channels.
-                compositeTool = oops.ui.axes.tools.AuxiliaryComposite(viewer);
-                viewer.installTool(compositeTool);
-                obj.AuxiliaryCompositeTools{k} = compositeTool;
 
                 if k == 1
                     obj.LeftViewer = viewer;
@@ -2000,8 +1995,6 @@ classdef GUI < handle
                 @(~,~) obj.runCallback(@() obj.onGroupChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'ImageAdded', ...
                 @(~,e) obj.runCallback(@() obj.onImageAdded(e)));
-            obj.Listeners(end+1) = addlistener(obj.Project,'ActiveImageChanged', ...
-                @(~,~) obj.runCallback(@() obj.onNavigationChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'NavigationChanged', ...
                 @(~,e) obj.runCallback(@() obj.onNavigationChanged(e)));
             obj.Listeners(end+1) = addlistener(obj.Project,'DataChanged', ...
@@ -2775,12 +2768,18 @@ classdef GUI < handle
             % Left and right panel source names in viewer order.
             names = [settings.View.LeftSource,settings.View.RightSource];
 
-            % Reparent the two singleton plot sources and expose one content type per panel.
+            % Reparent or resize panel content only when the view definition changes.
+            % Image navigation changes pixels, not the surrounding component layout.
             stage = tic;
-            obj.syncPanelContent(names);
-            obj.resizeViewers();
-            oops.Log.DEBUG(sprintf( ...
-                'Synchronized panel content and layout in %.3f s.',toc(stage)));
+
+            if ~isequal(obj.PanelContentNames,names)
+                obj.syncPanelContent(names);
+                obj.resizeViewers();
+                oops.Log.DEBUG(sprintf( ...
+                    'Synchronized changed panel content and layout in %.3f s.',toc(stage)));
+            else
+                oops.Log.DEBUG("Panel content unchanged; skipped layout synchronization.");
+            end
 
             % Whether both main panels currently expose their persistent ImageAxes.
             linkViewports = obj.LeftViewer.Visible == "on" && ...
@@ -2845,10 +2844,6 @@ classdef GUI < handle
                         viewer.T = min(indices(3),data.SizeT);
                     end
 
-                    if names(k) ~= "Auxiliary channels" || ~sameSource
-                        viewer.ShowComposite = 'off';
-                    end
-
                     if isempty(info.ComponentColormaps)
                         viewer.ComponentColormaps = repmat({info.Colormap},1,data.NumComponents);
                     else
@@ -2885,13 +2880,6 @@ classdef GUI < handle
                 obj.setLargeViewerViewportLink(true);
             end
 
-            % Composite commands are available only for the registry-backed source.
-            for k = 1:2
-                obj.AuxiliaryCompositeTools{k}.setAvailable( ...
-                    names(k) == "Auxiliary channels" && viewers{k}.ImageVisible == "on" && ...
-                    viewers{k}.CanMergeComponents);
-            end
-
             if any(ismember(names,["Scatterplot","Swarmplot","Polar histogram"]))
                 stage = tic;
                 obj.refreshPlots();
@@ -2906,9 +2894,13 @@ classdef GUI < handle
 
             stage = tic;
             obj.refreshViewerRegions();
+            oops.Log.DEBUG(sprintf( ...
+                'Refreshed masks and object boundaries in %.3f s.',toc(stage)));
+
+            stage = tic;
             obj.refreshOrientationFields(names);
             oops.Log.DEBUG(sprintf( ...
-                'Refreshed overlays and orientation fields in %.3f s.',toc(stage)));
+                'Refreshed orientation fields in %.3f s.',toc(stage)));
 
             if refreshControls
                 stage = tic;
@@ -3113,6 +3105,8 @@ classdef GUI < handle
                         viewers{k}.Visible = 'on';
                 end
             end
+
+            obj.PanelContentNames = names;
         end
 
         function setLargeViewerViewportLink(obj,enabled)
@@ -3494,7 +3488,46 @@ classdef GUI < handle
                 CData=colorData, ...
                 DataTipCells=dataTipCells);
 
+            % MATLABX resolves automatic violin and summary colors from the host
+            % axes color order. Supply colors for the partitioning variable here,
+            % independently of the CData palette used to color individual points.
+            host = obj.SwarmRenderer.Host;
+
+            if ~isempty(host) && isvalid(host)
+                host.Axes.ColorOrder = obj.swarmGroupingColors( ...
+                    settings.GroupingType,numel(members));
+            end
+
             obj.SwarmRenderer.update(plotData,style);
+        end
+
+        function colors = swarmGroupingColors(obj,grouping,count)
+        %SWARMGROUPINGCOLORS Return one automatic color per violin partition.
+
+            if grouping == "Group"
+                colors = reshape([obj.Project.Groups.Color],3,[])';
+            else
+                labels = obj.Project.Labels.labels();
+                labelColors = reshape([labels.Color],3,[])';
+
+                if grouping == "Both"
+                    % Partitions are ordered by group, then label. Repeat the
+                    % label palette within every group so adjacent label
+                    % distributions retain their semantic label colors.
+                    colors = repmat(labelColors,numel(obj.Project.Groups),1);
+                else
+                    colors = labelColors;
+                end
+            end
+
+            % Empty projects and placeholder data still require a valid color
+            % order. Repeat or truncate defensively to match rendered partitions.
+            if isempty(colors)
+                colors = get(groot,'defaultAxesColorOrder');
+            end
+
+            indices = mod(0:max(1,count)-1,size(colors,1))+1;
+            colors = colors(indices,:);
         end
 
         function [members,names] = plotPartitions(obj,grouping)
@@ -3745,6 +3778,14 @@ classdef GUI < handle
                     continue;
                 end
 
+                % Preserve availability while deferring pixel traversal and
+                % graphics updates until this optional overlay is enabled.
+                tool.setAvailable(true);
+
+                if ~tool.Enabled
+                    continue;
+                end
+
                 % Pixels eligible for display before applying spatial sampling.
                 mask = isfinite(image.Order) & isfinite(image.Azimuth);
 
@@ -3787,7 +3828,6 @@ classdef GUI < handle
                     Alpha=settings.LineAlpha, ...
                     Scale=settings.LineScale);
                 field.setData(x,y,angle,magnitude);
-                tool.setAvailable(true);
             end
 
         end
@@ -3856,6 +3896,12 @@ classdef GUI < handle
                 % when the objects have not changed during a display refresh.
                 if ~isequal(viewer.Mask,mask)
                     viewer.Mask = mask;
+                end
+
+                % Keep the mask current independently, but defer all polygon
+                % registry and geometry work while object boundaries are hidden.
+                if ~viewer.Tools.ObjectBoundaries.Enabled
+                    continue;
                 end
 
                 % Remove obsolete overlays in one consistent registry update.
@@ -3977,6 +4023,10 @@ classdef GUI < handle
 
                 % Left and right viewer handles whose overlay navigation is synchronized.
                 axes = viewer{1};
+
+                if ~axes.Tools.ObjectBoundaries.Enabled
+                    continue;
+                end
 
                 % Selected model IDs restricted to the polygons available in this viewer.
                 ids = strings(0,1);

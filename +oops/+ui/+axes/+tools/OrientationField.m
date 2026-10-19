@@ -11,6 +11,10 @@ classdef OrientationField < matlabx.ui.axes.AxesTool
         Available (1,1) logical = false
     end
 
+    properties
+        RefreshRequestedFcn = []
+    end
+
     properties (Access=private)
         Mount = []
     end
@@ -44,6 +48,10 @@ classdef OrientationField < matlabx.ui.axes.AxesTool
 
         function onEnabled(obj)
         %ONENABLED Show available field content after a user toggle.
+
+            if ~isempty(obj.RefreshRequestedFcn)
+                obj.RefreshRequestedFcn(obj,[]);
+            end
 
             obj.updateVisibility();
         end

@@ -46,6 +46,33 @@ t.verifyEqual(ui.ImagesTree.SelectedNodes.NodeData,g.Images(3).ID);
 t.verifyEqual(numel(ui.ImagesTree.CheckedNodes),2);
 end
 
+function testImageActivationRunsOneLazyViewerRefresh(t)
+%TESTIMAGEACTIVATIONRUNSONELAZYVIEWERREFRESH Avoid duplicate and hidden-overlay work.
+
+ui = t.TestData.GUI;
+group = ui.Project.ActiveGroup;
+t.verifyFalse(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
+t.verifyFalse(ui.OrientationFieldTools{1}.Enabled);
+
+profile clear;
+profile on;
+profileCleanup = onCleanup(@() profile('off'));
+group.setActiveImage(group.Images(2));
+profile off;
+stats = profile('info');
+names = string({stats.FunctionTable.FunctionName});
+entry = stats.FunctionTable(names == "GUI>GUI.refreshViewers");
+t.verifyEqual(numel(entry),1);
+
+if ~isempty(entry)
+    t.verifyEqual(entry.NumCalls,1);
+end
+
+% Deferred object overlays are populated only if their visibility tool is enabled.
+t.verifyEmpty(ui.LeftViewer.Overlays.ids(Type="Polygon"));
+t.verifyEmpty(ui.RightViewer.Overlays.ids(Type="Polygon"));
+end
+
 function testImageNavigationPreservesContentPanelTitles(t)
 %TESTIMAGENAVIGATIONPRESERVESCONTENTPANELTITLES Keep source-only titles.
 
@@ -169,19 +196,16 @@ p.Settings.View.RightSource = "Auxiliary channels";
 
 t.verifyEqual(ui.RightViewer.ImageData.NumComponents,2);
 t.verifyEqual([ui.RightViewer.ImageData.Components.Name],["DAPI" "Actin"]);
-t.verifyEqual(ui.RightViewer.ImageData.getPlane(1),zeros(20,30,'single'));
-t.verifyEqual(ui.RightViewer.ImageData.getPlane(2),single(9*ones(20,30)));
+t.verifyEqual(ui.RightViewer.ImageData.getPlane(1),zeros(20,30,'uint16'));
+t.verifyEqual(ui.RightViewer.ImageData.getPlane(2),uint16(9*ones(20,30)));
 t.verifyEqual(ui.RightViewer.ImageData.Components(1).Color,dapi.Color);
 t.verifyEqual(ui.RightViewer.ImageData.Components(2).Color,actin.Color);
 t.verifyTrue(ui.RightViewer.CanMergeComponents);
 
-compositeTool = ui.AuxiliaryCompositeTools{2};
-t.verifyTrue(compositeTool.Available);
-compositeMenu = ui.RightViewer.ContextMenu.Children( ...
-    string({ui.RightViewer.ContextMenu.Children.Text}) == "Show channel composite");
-t.verifyNumElements(compositeMenu,1);
-compositeMenu.MenuSelectedFcn(compositeMenu,[]);
-t.verifyTrue(compositeTool.Enabled);
+% ImageAxes owns native composite display without an OOPS-specific tool.
+t.verifyFalse(any(string({ui.RightViewer.ContextMenu.Children.Text}) == ...
+    "Show channel composite"));
+ui.RightViewer.ShowComposite = 'on';
 t.verifyEqual(ui.RightViewer.ShowComposite,matlab.lang.OnOffSwitchState.on);
 
 % ImageAxes contrast edits persist against the semantic assignment.
@@ -276,6 +300,7 @@ t.verifyEqual(string(ui.LabelsTree.SelectedNodes.NodeData),"object");
 ui.SettingsUI.ObjectSelection.ColorMode.Value = 'Label';
 ui.SettingsUI.ObjectSelection.ColorMode.ValueChangedFcn( ...
     ui.SettingsUI.ObjectSelection.ColorMode,[]);
+ui.LeftViewer.enableTool("ObjectBoundaries");
 overlay = ui.LeftViewer.Overlays.get(image.Objects(2).ID);
 t.verifyEqual(overlay.EdgeColor,[0.2 0.8 0.2]);
 end
@@ -665,6 +690,19 @@ t.verifyEqual(string(ui.SettingsUI.SwarmPlot.MarkerEdgeColorMode.Items),["Auto",
 t.verifyEqual(ui.ScatterRenderer.Style.MarkerFaceColorMode,"CData");
 t.verifyEqual(ui.SwarmRenderer.Style.MarkerFaceColorMode,"CData");
 
+% Automatic violin colors follow the partitioning variable, independently
+% of the separate point-color setting.
+p.Settings.SwarmPlot.ViolinFaceColorMode = "auto";
+p.Settings.SwarmPlot.GroupingType = "Label";
+p.Settings.SwarmPlot.ColorMode = "Group";
+labelColors = reshape([p.Labels.labels().Color],3,[])';
+t.verifyEqual(ui.RightPlotAxes.Axes.ColorOrder,labelColors,'AbsTol',1e-12);
+
+p.Settings.SwarmPlot.GroupingType = "Group";
+p.Settings.SwarmPlot.ColorMode = "Label";
+groupColors = reshape([p.Groups.Color],3,[])';
+t.verifyEqual(ui.RightPlotAxes.Axes.ColorOrder,groupColors,'AbsTol',1e-12);
+
 % Paired color pickers share one row and activate only for Custom mode.
 faceMode = ui.SettingsUI.ScatterPlot.MarkerFaceColorMode;
 faceColor = ui.SettingsUI.ScatterPlot.MarkerFaceColor;
@@ -743,6 +781,8 @@ function testMasksAndPolygonsFollowCommittedMembership(t)
 %TESTMASKSANDPOLYGONSFOLLOWCOMMITTEDMEMBERSHIP Keep geometry and mask in both viewers.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
 ui.Project.Settings.View.RightSource = "Average intensity";
+ui.LeftViewer.enableTool("ObjectBoundaries");
+ui.RightViewer.enableTool("ObjectBoundaries");
 ids = oops.model.internal.ids(image.Objects);
 for viewer = {ui.LeftViewer,ui.RightViewer}
     axes = viewer{1};
@@ -788,11 +828,13 @@ polygon = findobj(ui.LeftViewer.getAxes(),'Tag','OverlayPolygon');
 applicationLayer = findobj(ui.LeftViewer.getAxes(),'Tag','ApplicationOverlayLayer');
 t.verifyFalse(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
 t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"off");
-t.verifyTrue(all(string({polygon.Visible}) == "off"));
+t.verifyEmpty(polygon);
 t.verifyEqual(string(applicationLayer.Visible),"on");
 showItem.MenuSelectedFcn(showItem,[]);
 t.verifyTrue(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
 t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"on");
+polygon = findobj(ui.LeftViewer.getAxes(),'Tag','OverlayPolygon');
+t.verifyNotEmpty(polygon);
 ui.LeftViewer.enableTool("ObjectBoundaries");
 t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"on");
 t.verifyTrue(all(string({polygon.Visible}) == "on"));
@@ -800,6 +842,7 @@ ui.LeftViewer.OverlaysVisible = 'off';
 t.verifyFalse(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
 ui.LeftViewer.OverlaysVisible = 'on';
 t.verifyTrue(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
+ui.RightViewer.enableTool("ObjectBoundaries");
 
 ui.LeftViewer.Tools.ObjectBoundaries.setActiveObjectID(ids(2));
 ui.LeftViewer.Tools.ObjectBoundaries.setSelectedObjectIDs(ids(1));
@@ -822,6 +865,8 @@ function testPolygonDeletionRemovesModelObjectAndMaskPixels(t)
 %TESTPOLYGONDELETIONREMOVESMODELOBJECTANDMASKPIXELS Commit app-owned tool deletion.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
 ui.Project.Settings.View.RightSource = "Mask";
+ui.LeftViewer.enableTool("ObjectBoundaries");
+ui.RightViewer.enableTool("ObjectBoundaries");
 removed = image.Objects(1); id = removed.ID; pixels = removed.PixelIdxList;
 survivor = image.Objects(2); mask = image.Mask; mask(pixels) = false;
 image.setActiveObject(removed); image.setSelectedObjects(image.Objects);
@@ -867,6 +912,8 @@ function testBatchDeletionRetainsSurvivingNodesAndPolygons(t)
 %TESTBATCHDELETIONRETAINSSURVIVINGNODESANDPOLYGONS One request keeps unrelated UI intact.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
 ui.Project.Settings.View.RightSource = "Mask";
+ui.LeftViewer.enableTool("ObjectBoundaries");
+ui.RightViewer.enableTool("ObjectBoundaries");
 mask = false(20,30);
 mask(2:3,2:3) = true; mask(2:3,8:9) = true; mask(2:3,14:15) = true;
 image.setMask(mask,oops.analysis.segment.objectsFromMask(mask));

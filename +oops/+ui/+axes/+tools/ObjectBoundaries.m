@@ -12,6 +12,7 @@ classdef ObjectBoundaries < matlabx.ui.axes.AxesTool
         ObjectActivatedFcn = []
         ObjectSelectionChangedFcn = []
         ObjectsDeleteRequestedFcn = []
+        RefreshRequestedFcn = []
     end
 
     properties (Access=private)
@@ -65,6 +66,10 @@ classdef ObjectBoundaries < matlabx.ui.axes.AxesTool
 
         function onEnabled(obj)
         %ONENABLED Show the native polygon overlays representing image objects.
+
+            if ~isempty(obj.RefreshRequestedFcn)
+                obj.RefreshRequestedFcn(obj,[]);
+            end
 
             obj.Host.OverlaysVisible = 'on';
         end
@@ -276,7 +281,14 @@ classdef ObjectBoundaries < matlabx.ui.axes.AxesTool
         function syncState(obj)
         %SYNCSTATE Reflect host visibility without recursively toggling it.
 
+            wasEnabled = obj.Enabled;
             obj.Enabled = logical(obj.Host.OverlaysVisible);
+
+            % ImageAxes may expose the same visibility property through another
+            % control. Populate deferred boundaries when that path reveals them.
+            if obj.Enabled && ~wasEnabled && ~isempty(obj.RefreshRequestedFcn)
+                obj.RefreshRequestedFcn(obj,[]);
+            end
 
             if isfield(obj.Host.ToolbarButtons,obj.Name) && ...
                     isvalid(obj.Host.ToolbarButtons.(obj.Name))
