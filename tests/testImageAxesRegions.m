@@ -116,6 +116,53 @@ function testPolygonGeometry(testCase)
     verifyTrue(testCase,all(isnan(p.Center)));
 end
 
+function testPolygonAppearanceAndActiveMarker(testCase)
+    ax = testCase.TestData.Axes;
+    vertices = [1 1; 5 1; 5 3; 1 3];
+    p = ax.Overlays.add('Polygon', ...
+        'Vertices', vertices, ...
+        'HoverEdgeColor', [0 1 0], ...
+        'HoverFaceColor', [0 0.5 0], ...
+        'SelectionEdgeColor', [1 1 0], ...
+        'SelectionFaceColor', [0.5 0.5 0], ...
+        'ActiveEdgeColor', [1 0 0], ...
+        'ActiveFaceColor', [0.5 0 0]);
+
+    patch = findobj(ax.getAxes(), 'Tag', 'OverlayPolygon');
+    marker = findobj(ax.getAxes(), 'Tag', 'OverlayPolygonActiveMarker');
+    verifyEqual(testCase, marker.Marker, 'square');
+    verifyEqual(testCase, [marker.XData marker.YData], p.Center);
+    verifyEqual(testCase, string(marker.Visible), "off");
+    verifyEqual(testCase, patch.FaceAlpha, p.FaceAlpha);
+
+    p.Selected = true;
+    verifyEqual(testCase, patch.EdgeColor, p.SelectionEdgeColor);
+    verifyEqual(testCase, patch.FaceColor, p.SelectionFaceColor);
+    verifyEqual(testCase, patch.FaceAlpha, p.SelectionFaceAlpha);
+    verifyEqual(testCase, patch.LineWidth, p.SelectionLineWidth);
+
+    p.Active = true;
+    verifyEqual(testCase, patch.EdgeColor, p.ActiveEdgeColor);
+    verifyEqual(testCase, patch.FaceColor, p.SelectionFaceColor);
+    verifyEqual(testCase, patch.FaceAlpha, p.SelectionFaceAlpha);
+    verifyEqual(testCase, patch.LineWidth, p.ActiveLineWidth);
+    verifyEqual(testCase, string(marker.Visible), "on");
+    verifyEqual(testCase, marker.MarkerSize, p.ActiveMarkerSize);
+
+    p.Hovered = true;
+    verifyEqual(testCase, patch.EdgeColor, p.HoverEdgeColor);
+    verifyEqual(testCase, patch.FaceColor, p.HoverFaceColor);
+    verifyEqual(testCase, patch.FaceAlpha, p.HoverFaceAlpha);
+    verifyEqual(testCase, patch.LineWidth, p.HoverLineWidth);
+    verifyEqual(testCase, marker.MarkerSize, p.HoverActiveMarkerSize);
+
+    p.Vertices = vertices + 10;
+    verifyEqual(testCase, [marker.XData marker.YData], p.Center);
+    p.Visible = 'off';
+    verifyEqual(testCase, string(patch.Visible), "off");
+    verifyEqual(testCase, string(marker.Visible), "off");
+end
+
 function testPolygonSelectionAndDeletion(testCase)
     ax = testCase.TestData.Axes;
     tool = ax.Tools.Polygon;
