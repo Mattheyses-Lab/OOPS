@@ -27,7 +27,7 @@ classdef circularColorbar < handle
         % inner radius of the circular colorbar
         innerRadius (1,1) double
         % matrix of RGB triplets specifying the colors in the colorbar
-        Colormap (:,3) double {mustBeInRange(Colormap,0,1)}
+        Colormap (:,3) double {mustBeBetween(Colormap,0,1)}
         % integer specifying the number of times the colors in Colormap are repeated
         nRepeats (1,1) double
         % interpolated or solid face colors
@@ -45,7 +45,7 @@ classdef circularColorbar < handle
     properties(Access=private)
         user_centerX (1,1) double = 0
         user_centerY (1,1) double = 0
-        user_Colormap (:,3) double {mustBeInRange(user_Colormap,0,1)} = hsv(256)
+        user_Colormap (:,3) double {mustBeBetween(user_Colormap,0,1)} = hsv(256)
         user_nRepeats (1,1) double = 2
         user_outerRadius (1,1) double = 10
         user_innerRadius (1,1) double = 7
@@ -86,7 +86,7 @@ classdef circularColorbar < handle
                 NameValuePairs.centerY (1,1) double = 0
                 NameValuePairs.outerRadius (1,1) double = 10
                 NameValuePairs.innerRadius (1,1) double = 7
-                NameValuePairs.Colormap (:,3) double {mustBeInRange(NameValuePairs.Colormap,0,1)} = hsv(256)
+                NameValuePairs.Colormap (:,3) double {mustBeBetween(NameValuePairs.Colormap,0,1)} = hsv(256)
                 NameValuePairs.nRepeats (1,1) double = 2
                 NameValuePairs.colorMode (1,:) char {mustBeMember(NameValuePairs.colorMode,{'interp','flat'})} = 'interp'
                 NameValuePairs.FontSize (1,1) double = 12

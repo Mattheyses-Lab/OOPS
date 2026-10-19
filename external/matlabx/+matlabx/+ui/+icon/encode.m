@@ -23,7 +23,7 @@ function name = encode(options)
 
     arguments
         options.Shape (1,1) string {mustBeMember(options.Shape,"circle")} = "circle"
-        options.Color (1,3) double {mustBeReal,mustBeFinite,mustBeInRange(options.Color,0,1)} = [0 0.4470 0.7410]
+        options.Color (1,3) double {mustBeReal,mustBeFinite,mustBeBetween(options.Color,0,1)} = [0 0.4470 0.7410]
         options.Size (1,1) double {mustBeReal,mustBeFinite,mustBeInteger,mustBePositive} = 16
     end
 

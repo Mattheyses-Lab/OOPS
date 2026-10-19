@@ -63,7 +63,8 @@ end
 function testInvalidOptions(t)
     t.verifyError(@() matlabx.ui.icon.get(Shape="square"),'MATLAB:validators:mustBeMember');
     t.verifyError(@() matlabx.ui.icon.get(Color=[0 NaN 0]),'MATLAB:validators:mustBeFinite');
-    t.verifyError(@() matlabx.ui.icon.get(Color=[0 2 0]),'MATLAB:validators:mustBeInRange');
+    t.verifyError(@() matlabx.ui.icon.get(Color=[0 2 0]), ...
+        'MATLAB:validators:mustBeBetweenScalarBounds');
     t.verifyError(@() matlabx.ui.icon.get(Color=[0 1i 0]),'MATLAB:validators:mustBeReal');
     t.verifyError(@() matlabx.ui.icon.get(Size=0),'MATLAB:validators:mustBePositive');
     t.verifyError(@() matlabx.ui.icon.get(Size=1.5),'MATLAB:validators:mustBeInteger');

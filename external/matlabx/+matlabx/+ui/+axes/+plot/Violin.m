@@ -64,13 +64,13 @@ classdef Violin < handle
         % Whether individual observation points are visible.
         PointsVisible (1,1) matlab.lang.OnOffSwitchState
         % Horizontal density-jitter width.
-        XJitterWidth (1,1) double {mustBeInRange(XJitterWidth,0,1,"exclude-lower")}
+        XJitterWidth (1,1) double {mustBeBetween(XJitterWidth,0,1,"openleft")}
         % MATLAB scatter jitter mode.
         XJitter (1,:) char {mustBeMember(XJitter,{'density','none'})}
         % Marker edge color accepted by the MATLAB scatter primitive.
         MarkerEdgeColor
         % Marker edge opacity.
-        MarkerEdgeAlpha (1,1) double {mustBeInRange(MarkerEdgeAlpha,0,1)}
+        MarkerEdgeAlpha (1,1) double {mustBeBetween(MarkerEdgeAlpha,0,1)}
         % Marker edge line width.
         MarkerLineWidth (1,1) double {mustBePositive}
         % Marker area in points squared.
@@ -78,7 +78,7 @@ classdef Violin < handle
         % Marker face color mode accepted by the MATLAB scatter primitive.
         MarkerFaceColorMode
         % Marker face opacity.
-        MarkerFaceAlpha (1,1) double {mustBeInRange(MarkerFaceAlpha,0,1)}
+        MarkerFaceAlpha (1,1) double {mustBeBetween(MarkerFaceAlpha,0,1)}
         % Scalar or RGB color data associated with the observations.
         CData
 
@@ -102,9 +102,9 @@ classdef Violin < handle
         % Violin patch edge color.
         ViolinEdgeColor (1,3) double
         % Violin patch edge opacity.
-        ViolinEdgeAlpha (1,1) double {mustBeInRange(ViolinEdgeAlpha,0,1)}
+        ViolinEdgeAlpha (1,1) double {mustBeBetween(ViolinEdgeAlpha,0,1)}
         % Violin patch face opacity.
-        ViolinFaceAlpha (1,1) double {mustBeInRange(ViolinFaceAlpha,0,1)}
+        ViolinFaceAlpha (1,1) double {mustBeBetween(ViolinFaceAlpha,0,1)}
 
         % Whether the central statistic and interval graphics are visible.
         ErrorBarsVisible (1,1) matlab.lang.OnOffSwitchState
@@ -177,25 +177,25 @@ classdef Violin < handle
                 NameValuePairs.XData (1,:) double = NaN
                 NameValuePairs.YData (1,:) double = NaN
                 NameValuePairs.XJitter (1,:) char {mustBeMember(NameValuePairs.XJitter,{'none','density'})} = 'density'
-                NameValuePairs.XJitterWidth (1,1) double {mustBeInRange(NameValuePairs.XJitterWidth,0,1,"exclude-lower")} = 0.9
+                NameValuePairs.XJitterWidth (1,1) double {mustBeBetween(NameValuePairs.XJitterWidth,0,1,"openleft")} = 0.9
                 NameValuePairs.DataTipCell (1,:) cell = {{},{}};
                 NameValuePairs.DataTipFormat (1,1) string = "%.2f"
 
                 NameValuePairs.MarkerEdgeColor = [0 0 0]
-                NameValuePairs.MarkerEdgeAlpha (1,1) double {mustBeInRange(NameValuePairs.MarkerEdgeAlpha,0,1)} = 1
+                NameValuePairs.MarkerEdgeAlpha (1,1) double {mustBeBetween(NameValuePairs.MarkerEdgeAlpha,0,1)} = 1
                 NameValuePairs.MarkerLineWidth (1,1) double {mustBePositive} = 0.5
                 NameValuePairs.MarkerSize = 50
                 NameValuePairs.MarkerFaceColorMode = 'flat'
                 NameValuePairs.CData = [0 0 0]
                 NameValuePairs.PointsVisible (1,1) matlab.lang.OnOffSwitchState = "on"
-                NameValuePairs.MarkerFaceAlpha (1,1) double {mustBeInRange(NameValuePairs.MarkerFaceAlpha,0,1)} = 0.5
+                NameValuePairs.MarkerFaceAlpha (1,1) double {mustBeBetween(NameValuePairs.MarkerFaceAlpha,0,1)} = 0.5
 
                 NameValuePairs.ViolinOutlinesVisible (1,1) matlab.lang.OnOffSwitchState = "on"
                 NameValuePairs.ViolinLineWidth (1,1) double = 1
                 NameValuePairs.ViolinFaceColor (1,3) double = [1 1 1]
                 NameValuePairs.ViolinEdgeColor (1,3) double = [0 0 0]
-                NameValuePairs.ViolinEdgeAlpha (1,1) double {mustBeInRange(NameValuePairs.ViolinEdgeAlpha,0,1)} = 1
-                NameValuePairs.ViolinFaceAlpha (1,1) double {mustBeInRange(NameValuePairs.ViolinFaceAlpha,0,1)} = 0.5
+                NameValuePairs.ViolinEdgeAlpha (1,1) double {mustBeBetween(NameValuePairs.ViolinEdgeAlpha,0,1)} = 1
+                NameValuePairs.ViolinFaceAlpha (1,1) double {mustBeBetween(NameValuePairs.ViolinFaceAlpha,0,1)} = 0.5
 
                 NameValuePairs.ErrorBarsVisible (1,1) matlab.lang.OnOffSwitchState = "on"
                 NameValuePairs.CentralStatistic (1,1) string {mustBeMember(NameValuePairs.CentralStatistic,["mean","median"])} = "mean"

@@ -116,7 +116,7 @@ function testPolygonGeometry(testCase)
     verifyTrue(testCase,all(isnan(p.Center)));
 end
 
-function testPolygonAppearanceAndActiveMarker(testCase)
+function testPolygonAppearanceAndHandleMarker(testCase)
     ax = testCase.TestData.Axes;
     vertices = [1 1; 5 1; 5 3; 1 3];
     p = ax.Overlays.add('Polygon', ...
@@ -129,7 +129,7 @@ function testPolygonAppearanceAndActiveMarker(testCase)
         'ActiveFaceColor', [0.5 0 0]);
 
     patch = findobj(ax.getAxes(), 'Tag', 'OverlayPolygon');
-    marker = findobj(ax.getAxes(), 'Tag', 'OverlayPolygonActiveMarker');
+    marker = findobj(ax.getAxes(), 'Tag', 'OverlayPolygonHandle');
     verifyEqual(testCase, marker.Marker, 'square');
     verifyEqual(testCase, [marker.XData marker.YData], p.Center);
     verifyEqual(testCase, string(marker.Visible), "off");
@@ -142,25 +142,90 @@ function testPolygonAppearanceAndActiveMarker(testCase)
     verifyEqual(testCase, patch.LineWidth, p.SelectionLineWidth);
 
     p.Active = true;
-    verifyEqual(testCase, patch.EdgeColor, p.ActiveEdgeColor);
+    verifyEqual(testCase, patch.EdgeColor, p.SelectionEdgeColor);
     verifyEqual(testCase, patch.FaceColor, p.SelectionFaceColor);
     verifyEqual(testCase, patch.FaceAlpha, p.SelectionFaceAlpha);
     verifyEqual(testCase, patch.LineWidth, p.ActiveLineWidth);
     verifyEqual(testCase, string(marker.Visible), "on");
-    verifyEqual(testCase, marker.MarkerSize, p.ActiveMarkerSize);
+    verifyEqual(testCase, marker.MarkerSize, p.HandleMarkerSize);
 
     p.Hovered = true;
     verifyEqual(testCase, patch.EdgeColor, p.HoverEdgeColor);
     verifyEqual(testCase, patch.FaceColor, p.HoverFaceColor);
     verifyEqual(testCase, patch.FaceAlpha, p.HoverFaceAlpha);
     verifyEqual(testCase, patch.LineWidth, p.HoverLineWidth);
-    verifyEqual(testCase, marker.MarkerSize, p.HoverActiveMarkerSize);
+    verifyEqual(testCase, marker.MarkerSize, p.HoverHandleMarkerSize);
 
     p.Vertices = vertices + 10;
     verifyEqual(testCase, [marker.XData marker.YData], p.Center);
     p.Visible = 'off';
     verifyEqual(testCase, string(patch.Visible), "off");
     verifyEqual(testCase, string(marker.Visible), "off");
+end
+
+function testRectangleCenterMarkerAndAppearance(testCase)
+    ax = testCase.TestData.Axes;
+    r = ax.Overlays.add('Rectangle', 'Position', [2 3 6 4], ...
+        'SelectionFaceColor', [0.5 0.5 0], ...
+        'SelectionFaceAlpha', 0.25);
+    patch = findobj(ax.getAxes(), 'Tag', 'OverlayRectangle');
+    handles = findobj(ax.getAxes(), 'Tag', 'OverlayRectangleHandles');
+    center = findobj(ax.getAxes(), 'Tag', 'OverlayRectangleCenterHandle');
+
+    verifyEqual(testCase, [center.XData center.YData], r.Center);
+    verifyEqual(testCase, string(handles.Visible), "off");
+    verifyEqual(testCase, string(center.Visible), "off");
+
+    r.Hovered = true;
+    verifyEqual(testCase, string(handles.Visible), "on");
+    verifyEqual(testCase, string(center.Visible), "on");
+    verifyEqual(testCase, center.MarkerSize, r.HoverHandleMarkerSize);
+
+    r.Hovered = false;
+    r.Selected = true;
+    verifyEqual(testCase, string(handles.Visible), "off");
+    verifyEqual(testCase, patch.FaceColor, r.SelectionFaceColor);
+    verifyEqual(testCase, patch.FaceAlpha, r.SelectionFaceAlpha);
+
+    r.Active = true;
+    verifyEqual(testCase, string(handles.Visible), "on");
+    verifyEqual(testCase, string(center.Visible), "on");
+    verifyEqual(testCase, center.Marker, 'square');
+end
+
+function testUnifiedLineAndPointMarkers(testCase)
+    ax = testCase.TestData.Axes;
+    lineOverlay = ax.Overlays.add('Line', 'ID', 'line-style-test', ...
+        'Endpoints', [1 1; 5 5]);
+    lineGraphic = findobj(ax.getAxes(), 'Tag', 'OverlayLine');
+    lineHandles = findobj(ax.getAxes(), 'Tag', 'OverlayLineHandles');
+
+    verifyEqual(testCase, lineOverlay.LineWidth, 1);
+    verifyEqual(testCase, lineOverlay.HoverLineWidth, 1);
+    verifyEqual(testCase, lineOverlay.SelectionLineWidth, 1);
+    verifyEqual(testCase, lineOverlay.ActiveLineWidth, 1);
+    verifyEqual(testCase, string(lineHandles.Visible), "off");
+    lineOverlay.Hovered = true;
+    verifyEqual(testCase, string(lineHandles.Visible), "on");
+    verifyEqual(testCase, lineHandles.MarkerSize, lineOverlay.HoverHandleMarkerSize);
+    lineOverlay.Hovered = false;
+    lineOverlay.Selected = true;
+    verifyEqual(testCase, lineGraphic.Color(1:3), [1 1 0]);
+    verifyEqual(testCase, string(lineHandles.Visible), "off");
+    lineOverlay.Active = true;
+    verifyEqual(testCase, string(lineHandles.Visible), "on");
+
+    pointOverlay = ax.Overlays.add('Point', 'ID', 'point-style-test', ...
+        'Position', [3 4]);
+    pointMarker = findobj(ax.getAxes(), 'Tag', 'OverlayPointHandleMarker');
+    verifyEqual(testCase, string(pointMarker.Visible), "off");
+    pointOverlay.Hovered = true;
+    verifyEqual(testCase, string(pointMarker.Visible), "on");
+    verifyEqual(testCase, pointMarker.MarkerSize, pointOverlay.HoverHandleMarkerSize);
+    pointOverlay.Hovered = false;
+    pointOverlay.Active = true;
+    verifyEqual(testCase, string(pointMarker.Visible), "on");
+    verifyEqual(testCase, pointMarker.MarkerSize, pointOverlay.HandleMarkerSize);
 end
 
 function testPolygonSelectionAndDeletion(testCase)

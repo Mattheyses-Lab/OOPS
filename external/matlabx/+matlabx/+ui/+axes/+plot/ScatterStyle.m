@@ -35,11 +35,11 @@ classdef ScatterStyle
         % Y-axis label text.
         YLabel (1,1) string = ""
         % PlotAxes and axes background color.
-        BackgroundColor (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor,0,1)} = [1 1 1]
+        BackgroundColor (1,3) double {mustBeFinite,mustBeBetween(BackgroundColor,0,1)} = [1 1 1]
         % Ruler, label, title, and automatic edge color.
-        ForegroundColor (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor,0,1)} = [0 0 0]
+        ForegroundColor (1,3) double {mustBeFinite,mustBeBetween(ForegroundColor,0,1)} = [0 0 0]
         % Colormap applied to scalar CData.
-        Colormap (:,3) double {mustBeFinite,mustBeInRange(Colormap,0,1)} = parula(256)
+        Colormap (:,3) double {mustBeFinite,mustBeBetween(Colormap,0,1)} = parula(256)
         % Color limits applied to scalar CData.
         CLim (1,2) double {mustBeFinite,mustBeIncreasingLimits} = [0 1]
         % sprintf-style format applied to numeric data-tip values.
@@ -53,17 +53,17 @@ classdef ScatterStyle
         % Whether groups share one marker or cycle through marker shapes.
         MarkerMode (1,1) string {mustBeMember(MarkerMode,["single","multi","auto"])} = "single"
         % Marker face opacity.
-        MarkerFaceAlpha (1,1) double {mustBeFinite,mustBeInRange(MarkerFaceAlpha,0,1)} = 1
+        MarkerFaceAlpha (1,1) double {mustBeFinite,mustBeBetween(MarkerFaceAlpha,0,1)} = 1
         % Whether marker faces use CData, MarkerFaceColor, or the axes color order.
         MarkerFaceColorMode (1,1) string {mustBeMember(MarkerFaceColorMode,["CData","Custom","auto"])} = "CData"
         % Custom marker face color.
-        MarkerFaceColor (1,3) double {mustBeFinite,mustBeInRange(MarkerFaceColor,0,1)} = [0 0.4470 0.7410]
+        MarkerFaceColor (1,3) double {mustBeFinite,mustBeBetween(MarkerFaceColor,0,1)} = [0 0.4470 0.7410]
         % Marker edge opacity.
-        MarkerEdgeAlpha (1,1) double {mustBeFinite,mustBeInRange(MarkerEdgeAlpha,0,1)} = 1
+        MarkerEdgeAlpha (1,1) double {mustBeFinite,mustBeBetween(MarkerEdgeAlpha,0,1)} = 1
         % Whether marker edges use CData, MarkerEdgeColor, or the axes color order.
         MarkerEdgeColorMode (1,1) string {mustBeMember(MarkerEdgeColorMode,["CData","Custom","auto"])} = "Custom"
         % Custom marker edge color.
-        MarkerEdgeColor (1,3) double {mustBeFinite,mustBeInRange(MarkerEdgeColor,0,1)} = [0 0 0]
+        MarkerEdgeColor (1,3) double {mustBeFinite,mustBeBetween(MarkerEdgeColor,0,1)} = [0 0 0]
         % Whether to draw a hull around each scatter group.
         HullVisible (1,1) logical = false
         % Algorithm used to construct group hulls.
@@ -71,17 +71,17 @@ classdef ScatterStyle
         % Hull edge line width.
         HullLineWidth (1,1) double {mustBeFinite,mustBePositive} = 1
         % Hull face opacity.
-        HullFaceAlpha (1,1) double {mustBeFinite,mustBeInRange(HullFaceAlpha,0,1)} = 0.5
+        HullFaceAlpha (1,1) double {mustBeFinite,mustBeBetween(HullFaceAlpha,0,1)} = 0.5
         % Hull edge opacity.
-        HullEdgeAlpha (1,1) double {mustBeFinite,mustBeInRange(HullEdgeAlpha,0,1)} = 1
+        HullEdgeAlpha (1,1) double {mustBeFinite,mustBeBetween(HullEdgeAlpha,0,1)} = 1
         % Whether hull faces use HullFaceColor or the axes color order.
         HullFaceColorMode (1,1) string {mustBeMember(HullFaceColorMode,["Custom","auto"])} = "auto"
         % Custom hull face color.
-        HullFaceColor (1,3) double {mustBeFinite,mustBeInRange(HullFaceColor,0,1)} = [1 1 1]
+        HullFaceColor (1,3) double {mustBeFinite,mustBeBetween(HullFaceColor,0,1)} = [1 1 1]
         % Whether hull edges use HullEdgeColor or the axes color order.
         HullEdgeColorMode (1,1) string {mustBeMember(HullEdgeColorMode,["Custom","auto"])} = "auto"
         % Custom hull edge color.
-        HullEdgeColor (1,3) double {mustBeFinite,mustBeInRange(HullEdgeColor,0,1)} = [0 0 0]
+        HullEdgeColor (1,3) double {mustBeFinite,mustBeBetween(HullEdgeColor,0,1)} = [0 0 0]
     end
 
     methods

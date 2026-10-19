@@ -1,7 +1,7 @@
 classdef Line < matlabx.ui.axes.ImageAxesOverlay
 %LINE Two-endpoint line overlay for ImageAxes image-space annotations.
 %
-%   overlays.Line owns a line segment plus an optional marker layer. Geometry is
+%   overlays.Line owns a line segment plus an optional handle layer. Geometry is
 %   stored as two endpoints. Marker geometry is normalized as
 %   endpoint1 -> midpoint -> endpoint2 so tools can use the same overlay for
 %   endpoint handles, midpoint dragging, hover feedback, and active-state
@@ -37,33 +37,39 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
     end
 
     properties (SetObservable, AbortSet)
+        % Normal line appearance.
         LineColor = [1 1 1]
-        SelectionLineColor = [1 1 0]
-        HoverLineColor = [1 1 1]
-        ActiveLineColor = [1 1 1]
-
         LineAlpha (1,1) double {mustBeGreaterThanOrEqual(LineAlpha,0), mustBeLessThanOrEqual(LineAlpha,1)} = 1
-        SelectionLineAlpha (1,1) double {mustBeGreaterThanOrEqual(SelectionLineAlpha,0), mustBeLessThanOrEqual(SelectionLineAlpha,1)} = 1
-        HoverLineAlpha (1,1) double {mustBeGreaterThanOrEqual(HoverLineAlpha,0), mustBeLessThanOrEqual(HoverLineAlpha,1)} = 1
-        ActiveLineAlpha (1,1) double {mustBeGreaterThanOrEqual(ActiveLineAlpha,0), mustBeLessThanOrEqual(ActiveLineAlpha,1)} = 1
-
         LineWidth (1,1) double {mustBePositive} = 1
-        SelectionLineWidth (1,1) double {mustBePositive} = 1
-        HoverLineWidth (1,1) double {mustBePositive} = 1
-        ActiveLineWidth (1,1) double {mustBePositive} = 1
-
         LineStyle (1,:) char = '-'
 
-        MarkerStyle (1,:) char = 's'
-        MarkerSize (1,1) double {mustBePositive} = 4
-        HoverMarkerSize (1,1) double {mustBePositive} = 5
-        MarkerLineWidth (1,1) double {mustBePositive} = 0.5
-        MarkerEdgeColor = [0 0 0]
-        MarkerFaceColor = [1 1 1]
+        % Hover appearance.
+        HoverLineColor = [1 1 1]
+        HoverLineAlpha (1,1) double {mustBeGreaterThanOrEqual(HoverLineAlpha,0), mustBeLessThanOrEqual(HoverLineAlpha,1)} = 1
+        HoverLineWidth (1,1) double {mustBePositive} = 1
+
+        % Selection appearance.
+        SelectionLineColor = [1 1 0]
+        SelectionLineAlpha (1,1) double {mustBeGreaterThanOrEqual(SelectionLineAlpha,0), mustBeLessThanOrEqual(SelectionLineAlpha,1)} = 1
+        SelectionLineWidth (1,1) double {mustBePositive} = 1
+
+        % Active appearance.
+        ActiveLineColor = [1 1 1]
+        ActiveLineAlpha (1,1) double {mustBeGreaterThanOrEqual(ActiveLineAlpha,0), mustBeLessThanOrEqual(ActiveLineAlpha,1)} = 1
+        ActiveLineWidth (1,1) double {mustBePositive} = 1
+
+        % Endpoint and midpoint-marker appearance.
+        HandleMarkerStyle (1,:) char = 's'
+        HandleMarkerSize (1,1) double {mustBePositive} = 4
+        HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
+        HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
+        HandleMarkerEdgeColor = [0 0 0]
+        HandleMarkerFaceColor = [1 1 1]
         HitAreaWidth (1,1) double {mustBePositive} = 10
 
-        MarkersVisible (1,1) matlab.lang.OnOffSwitchState = "on"
-        AlwaysShowMarkers (1,1) matlab.lang.OnOffSwitchState = "off"
+        HandlesVisible (1,1) matlab.lang.OnOffSwitchState = "on"
+        % Internal drawing override used before a new overlay becomes active.
+        AlwaysShowHandles (1,1) matlab.lang.OnOffSwitchState = "off"
         Endpoint1MarkerVisible (1,1) matlab.lang.OnOffSwitchState = "on"
         MidpointMarkerVisible (1,1) matlab.lang.OnOffSwitchState = "on"
         Endpoint2MarkerVisible (1,1) matlab.lang.OnOffSwitchState = "on"
@@ -72,7 +78,7 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
     properties (Access=private, Transient, NonCopyable)
         HitPatch (1,1) matlab.graphics.primitive.Patch
         SegmentLine (1,1) matlab.graphics.primitive.Line
-        MarkerLine (1,1) matlab.graphics.primitive.Line
+        HandleMarkerLine (1,1) matlab.graphics.primitive.Line
         L event.listener = event.listener.empty()
         PendingUpdate (1,1) logical = false
     end
@@ -92,11 +98,21 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
                 opts.LineAlpha (1,1) double {mustBeGreaterThanOrEqual(opts.LineAlpha,0), mustBeLessThanOrEqual(opts.LineAlpha,1)} = 1
                 opts.LineWidth (1,1) double {mustBePositive} = 1
                 opts.LineStyle (1,:) char = '-'
-                opts.MarkerStyle (1,:) char = 's'
-                opts.MarkerSize (1,1) double {mustBePositive} = 4
-                opts.HoverMarkerSize (1,1) double {mustBePositive} = 5
-                opts.MarkerEdgeColor = [0 0 0]
-                opts.MarkerFaceColor = []
+                opts.HoverLineColor = [1 1 1]
+                opts.HoverLineAlpha (1,1) double {mustBeBetween(opts.HoverLineAlpha,0,1)} = 1
+                opts.HoverLineWidth (1,1) double {mustBePositive} = 1
+                opts.SelectionLineColor = [1 1 0]
+                opts.SelectionLineAlpha (1,1) double {mustBeBetween(opts.SelectionLineAlpha,0,1)} = 1
+                opts.SelectionLineWidth (1,1) double {mustBePositive} = 1
+                opts.ActiveLineColor = [1 1 1]
+                opts.ActiveLineAlpha (1,1) double {mustBeBetween(opts.ActiveLineAlpha,0,1)} = 1
+                opts.ActiveLineWidth (1,1) double {mustBePositive} = 1
+                opts.HandleMarkerStyle (1,:) char = 's'
+                opts.HandleMarkerSize (1,1) double {mustBePositive} = 4
+                opts.HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
+                opts.HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
+                opts.HandleMarkerEdgeColor = [0 0 0]
+                opts.HandleMarkerFaceColor = [1 1 1]
                 opts.HitAreaWidth (1,1) double {mustBePositive} = 10
                 opts.C = "all"
                 opts.Z = "all"
@@ -138,20 +154,20 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
                 'PickableParts', 'all', ...
                 'Tag', 'OverlayLine');
 
-            obj.MarkerLine = line(ax, ...
+            obj.HandleMarkerLine = line(ax, ...
                 'XData', [NaN NaN NaN], ...
                 'YData', [NaN NaN NaN], ...
-                'Color', obj.rgba(opts.MarkerEdgeColor, 1), ...
+                'Color', obj.rgba(opts.HandleMarkerEdgeColor, 1), ...
                 'LineStyle', 'none', ...
-                'LineWidth', obj.MarkerLineWidth, ...
-                'Marker', opts.MarkerStyle, ...
-                'MarkerSize', opts.MarkerSize, ...
-                'MarkerFaceColor', obj.defaultMarkerFaceColor(opts.MarkerFaceColor, opts.LineColor), ...
+                'LineWidth', obj.HandleMarkerLineWidth, ...
+                'Marker', opts.HandleMarkerStyle, ...
+                'MarkerSize', opts.HandleMarkerSize, ...
+                'MarkerFaceColor', opts.HandleMarkerFaceColor, ...
                 'HitTest', 'on', ...
                 'PickableParts', 'all', ...
-                'Tag', 'OverlayLineMarkers');
+                'Tag', 'OverlayLineHandles');
 
-            obj.registerGraphics([obj.HitPatch; obj.SegmentLine; obj.MarkerLine]);
+            obj.registerGraphics([obj.HitPatch; obj.SegmentLine; obj.HandleMarkerLine]);
 
             obj.Endpoints = opts.Endpoints;
             if ~any(isnan(opts.Endpoint1)) || ~any(isnan(opts.Endpoint2))
@@ -163,11 +179,21 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
             obj.LineAlpha = opts.LineAlpha;
             obj.LineWidth = opts.LineWidth;
             obj.LineStyle = opts.LineStyle;
-            obj.MarkerStyle = opts.MarkerStyle;
-            obj.MarkerSize = opts.MarkerSize;
-            obj.HoverMarkerSize = opts.HoverMarkerSize;
-            obj.MarkerEdgeColor = opts.MarkerEdgeColor;
-            obj.MarkerFaceColor = obj.defaultMarkerFaceColor(opts.MarkerFaceColor, opts.LineColor);
+            obj.HoverLineColor = opts.HoverLineColor;
+            obj.HoverLineAlpha = opts.HoverLineAlpha;
+            obj.HoverLineWidth = opts.HoverLineWidth;
+            obj.SelectionLineColor = opts.SelectionLineColor;
+            obj.SelectionLineAlpha = opts.SelectionLineAlpha;
+            obj.SelectionLineWidth = opts.SelectionLineWidth;
+            obj.ActiveLineColor = opts.ActiveLineColor;
+            obj.ActiveLineAlpha = opts.ActiveLineAlpha;
+            obj.ActiveLineWidth = opts.ActiveLineWidth;
+            obj.HandleMarkerStyle = opts.HandleMarkerStyle;
+            obj.HandleMarkerSize = opts.HandleMarkerSize;
+            obj.HoverHandleMarkerSize = opts.HoverHandleMarkerSize;
+            obj.HandleMarkerLineWidth = opts.HandleMarkerLineWidth;
+            obj.HandleMarkerEdgeColor = opts.HandleMarkerEdgeColor;
+            obj.HandleMarkerFaceColor = opts.HandleMarkerFaceColor;
             obj.HitAreaWidth = opts.HitAreaWidth;
 
             geomProps = {'Endpoints', 'ButtonDownFcn'};
@@ -185,15 +211,15 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
                 'HoverLineWidth', ...
                 'ActiveLineWidth', ...
                 'LineStyle', ...
-                'MarkerStyle', ...
-                'MarkerSize', ...
-                'HoverMarkerSize', ...
-                'MarkerLineWidth', ...
-                'MarkerEdgeColor', ...
-                'MarkerFaceColor', ...
+                'HandleMarkerStyle', ...
+                'HandleMarkerSize', ...
+                'HoverHandleMarkerSize', ...
+                'HandleMarkerLineWidth', ...
+                'HandleMarkerEdgeColor', ...
+                'HandleMarkerFaceColor', ...
                 'HitAreaWidth', ...
-                'MarkersVisible', ...
-                'AlwaysShowMarkers', ...
+                'HandlesVisible', ...
+                'AlwaysShowHandles', ...
                 'Endpoint1MarkerVisible', ...
                 'MidpointMarkerVisible', ...
                 'Endpoint2MarkerVisible'};
@@ -270,16 +296,16 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
             markerXY = [p1; pm; p2];
             markerMask = obj.markerMask();
             markerXY(~markerMask,:) = NaN;
-            obj.MarkerLine.XData = markerXY(:,1).';
-            obj.MarkerLine.YData = markerXY(:,2).';
+            obj.HandleMarkerLine.XData = markerXY(:,1).';
+            obj.HandleMarkerLine.YData = markerXY(:,2).';
 
             if isempty(obj.ButtonDownFcn)
                 obj.SegmentLine.ButtonDownFcn = [];
-                obj.MarkerLine.ButtonDownFcn = [];
+                obj.HandleMarkerLine.ButtonDownFcn = [];
                 obj.HitPatch.ButtonDownFcn = [];
             else
                 obj.SegmentLine.ButtonDownFcn = obj.ButtonDownFcn;
-                obj.MarkerLine.ButtonDownFcn = obj.ButtonDownFcn;
+                obj.HandleMarkerLine.ButtonDownFcn = obj.ButtonDownFcn;
                 obj.HitPatch.ButtonDownFcn = obj.ButtonDownFcn;
             end
         end
@@ -296,11 +322,11 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
             obj.SegmentLine.LineWidth = lineWidth;
             obj.SegmentLine.LineStyle = obj.LineStyle;
 
-            obj.MarkerLine.Color = obj.rgba(obj.MarkerEdgeColor, lineAlpha);
-            obj.MarkerLine.Marker = obj.MarkerStyle;
-            obj.MarkerLine.MarkerSize = obj.effectiveMarkerSize();
-            obj.MarkerLine.LineWidth = obj.MarkerLineWidth;
-            obj.MarkerLine.MarkerFaceColor = obj.MarkerFaceColor;
+            obj.HandleMarkerLine.Color = obj.rgba(obj.HandleMarkerEdgeColor, lineAlpha);
+            obj.HandleMarkerLine.Marker = obj.HandleMarkerStyle;
+            obj.HandleMarkerLine.MarkerSize = obj.effectiveHandleMarkerSize();
+            obj.HandleMarkerLine.LineWidth = obj.HandleMarkerLineWidth;
+            obj.HandleMarkerLine.MarkerFaceColor = obj.HandleMarkerFaceColor;
 
             obj.updateGeometry();
             obj.updateVisibility();
@@ -316,7 +342,7 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
 
     methods (Access=protected)
         function updateVisibility(obj)
-        %UPDATEVISIBILITY Apply line and marker visibility policy.
+        %UPDATEVISIBILITY Apply line and handle visibility policy.
             if isempty(obj.SegmentLine) || ~isgraphics(obj.SegmentLine)
                 return
             end
@@ -324,8 +350,8 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
             effectiveVisible = obj.Visible == "on" && obj.ViewVisible == "on";
             obj.HitPatch.Visible = matlab.lang.OnOffSwitchState(effectiveVisible);
             obj.SegmentLine.Visible = matlab.lang.OnOffSwitchState(effectiveVisible);
-            obj.MarkerLine.Visible = matlab.lang.OnOffSwitchState( ...
-                effectiveVisible && obj.markersShouldShow());
+            obj.HandleMarkerLine.Visible = matlab.lang.OnOffSwitchState( ...
+                effectiveVisible && obj.handlesShouldShow());
         end
     end
 
@@ -350,18 +376,18 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
                 obj.Endpoint2MarkerVisible == "on"];
         end
 
-        function tf = markersShouldShow(obj)
-        %MARKERSSHOULDSHOW True when marker layer should be visible.
-            tf = obj.MarkersVisible == "on" ...
-                && (obj.AlwaysShowMarkers == "on" || obj.Hovered || obj.Active);
+        function tf = handlesShouldShow(obj)
+        %HANDLESSHOULDSHOW True when handle layer should be visible.
+            tf = obj.HandlesVisible == "on" ...
+                && (obj.AlwaysShowHandles == "on" || obj.Hovered || obj.Active);
         end
 
-        function markerSize = effectiveMarkerSize(obj)
-        %EFFECTIVEMARKERSIZE Return marker size implied by overlay state.
+        function markerSize = effectiveHandleMarkerSize(obj)
+        %EFFECTIVEHANDLEMARKERSIZE Return marker size implied by overlay state.
             if obj.Hovered
-                markerSize = obj.HoverMarkerSize;
+                markerSize = obj.HoverHandleMarkerSize;
             else
-                markerSize = obj.MarkerSize;
+                markerSize = obj.HandleMarkerSize;
             end
         end
 
@@ -424,13 +450,5 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
             end
         end
 
-        function color = defaultMarkerFaceColor(markerFaceColor, lineColor)
-        %DEFAULTMARKERFACECOLOR Use LineColor when MarkerFaceColor is omitted.
-            if isempty(markerFaceColor)
-                color = lineColor;
-            else
-                color = markerFaceColor;
-            end
-        end
     end
 end

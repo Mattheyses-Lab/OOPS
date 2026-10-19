@@ -26,8 +26,8 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
         EdgeColor = [1 1 1]
         EdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(EdgeAlpha,0), mustBeLessThanOrEqual(EdgeAlpha,1)} = 1
         LineWidth (1,1) double {mustBePositive} = 1
-        MarkerSize (1,1) double {mustBePositive} = 4
-        HoverMarkerSize (1,1) double {mustBePositive} = 5
+        HandleMarkerSize (1,1) double {mustBePositive} = 4
+        HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
         ActivateOnCreate (1,1) logical = true
         DragStartThresholdPx (1,1) double {mustBeNonnegative} = 3
     end
@@ -256,7 +256,7 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
                     obj.emitMoveCommitted(id);
                 end
                 obj.setMode('DrawingRectangle', false);
-                obj.setDrawingRectangleMarkersVisible("off");
+                obj.setDrawingRectangleHandlesVisible("off");
                 obj.DrawingRectangleID = "";
                 obj.clearDragStart();
                 obj.DragStartCursor = [NaN NaN];
@@ -429,7 +429,7 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
             catch
             end
 
-            if tag ~= "OverlayRectangleMarkers"
+            if tag ~= "OverlayRectangleHandles"
                 part = "body";
                 return
             end
@@ -624,7 +624,7 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
             id = matlabx.utils.text.uniqueID();
             obj.addRectangle(id, [XY 0 0]);
             obj.DrawingRectangleID = id;
-            obj.setDrawingRectangleMarkersVisible("on");
+            obj.setDrawingRectangleHandlesVisible("on");
 
             if ~isempty(obj.RectangleCreatedFcn)
                 obj.RectangleCreatedFcn(obj, struct('ID', id, 'Position', [XY 0 0]));
@@ -637,11 +637,11 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
             obj.previewDrawRectangle(E);
         end
 
-        function setDrawingRectangleMarkersVisible(obj, value)
-        %SETDRAWINGRECTANGLEMARKERSVISIBLE Temporarily show handles while drawing.
+        function setDrawingRectangleHandlesVisible(obj, value)
+        %SETDRAWINGRECTANGLEHANDLESVISIBLE Temporarily show handles while drawing.
             idx = obj.idxOfId(obj.DrawingRectangleID);
             if obj.isValidRectangleIdx(idx)
-                obj.RectangleROI(idx).AlwaysShowMarkers = value;
+                obj.RectangleROI(idx).AlwaysShowHandles = value;
             end
         end
 
@@ -999,8 +999,8 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
                 opts.EdgeColor = []
                 opts.EdgeAlpha = []
                 opts.LineWidth = []
-                opts.MarkerSize = []
-                opts.HoverMarkerSize = []
+                opts.HandleMarkerSize = []
+                opts.HoverHandleMarkerSize = []
             end
 
             position = obj.clampRectanglePosition(position);
@@ -1012,8 +1012,8 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
                 "EdgeColor", obj.valueOrDefault(opts.EdgeColor, obj.EdgeColor), ...
                 "EdgeAlpha", obj.valueOrDefault(opts.EdgeAlpha, obj.EdgeAlpha), ...
                 "LineWidth", obj.valueOrDefault(opts.LineWidth, obj.LineWidth), ...
-                "MarkerSize", obj.valueOrDefault(opts.MarkerSize, obj.MarkerSize), ...
-                "HoverMarkerSize", obj.valueOrDefault(opts.HoverMarkerSize, obj.HoverMarkerSize), ...
+                "HandleMarkerSize", obj.valueOrDefault(opts.HandleMarkerSize, obj.HandleMarkerSize), ...
+                "HoverHandleMarkerSize", obj.valueOrDefault(opts.HoverHandleMarkerSize, obj.HoverHandleMarkerSize), ...
                 "ActivateOnCreate", obj.ActivateOnCreate};
 
             obj.RectangleROI(next) = obj.Host.Overlays.add("Rectangle", nv{:});

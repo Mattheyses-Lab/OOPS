@@ -100,9 +100,9 @@ classdef Slider < matlab.ui.componentcontainer.ComponentContainer
         Limits double = [0,1]
 
         % color of the thumb faces
-        ThumbFaceColor (1,3) double {mustBeInRange(ThumbFaceColor,0,1)} = [1 1 1]
+        ThumbFaceColor (1,3) double {mustBeBetween(ThumbFaceColor,0,1)} = [1 1 1]
         % color of the thumb edges
-        ThumbEdgeColor (1,3) double {mustBeInRange(ThumbEdgeColor,0,1)} = [0 0 0]
+        ThumbEdgeColor (1,3) double {mustBeBetween(ThumbEdgeColor,0,1)} = [0 0 0]
 
         % overall height of the slider component (excluding labels)
         Height (1,1) double = 20

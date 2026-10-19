@@ -26,8 +26,8 @@ classdef Line < matlabx.ui.axes.AxesTool
         LineColor = [1 1 1]
         LineAlpha (1,1) double {mustBeGreaterThanOrEqual(LineAlpha,0), mustBeLessThanOrEqual(LineAlpha,1)} = 1
         LineWidth (1,1) double {mustBePositive} = 1
-        MarkerSize (1,1) double {mustBePositive} = 4
-        HoverMarkerSize (1,1) double {mustBePositive} = 5
+        HandleMarkerSize (1,1) double {mustBePositive} = 4
+        HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
         ActivateOnCreate (1,1) logical = true
         DragStartThresholdPx (1,1) double {mustBeNonnegative} = 3
     end
@@ -205,7 +205,7 @@ classdef Line < matlabx.ui.axes.AxesTool
             notes = [ ...
                 "Line overlay state is owned by ImageAxes.Overlays."; ...
                 "The Line tool emits line-specific callbacks for app controllers."; ...
-                "Markers are shown while a line is hovered or active."];
+                "Handles are shown while a line is hovered or active."];
         end
     end
 
@@ -278,7 +278,7 @@ classdef Line < matlabx.ui.axes.AxesTool
                     obj.emitMoveCommitted(id);
                 end
                 obj.setMode('DrawingLine', false);
-                obj.setDrawingLineMarkersVisible("off");
+                obj.setDrawingLineHandlesVisible("off");
                 obj.DrawingLineID = "";
                 obj.clearDragStart();
                 obj.DragStartCursor = [NaN NaN];
@@ -452,7 +452,7 @@ classdef Line < matlabx.ui.axes.AxesTool
             catch
             end
 
-            if tag ~= "OverlayLineMarkers"
+            if tag ~= "OverlayLineHandles"
                 part = "line";
                 return
             end
@@ -676,7 +676,7 @@ classdef Line < matlabx.ui.axes.AxesTool
             id = matlabx.utils.text.uniqueID();
             obj.addLine(id, [XY; XY]);
             obj.DrawingLineID = id;
-            obj.setDrawingLineMarkersVisible("on");
+            obj.setDrawingLineHandlesVisible("on");
 
             if ~isempty(obj.LineCreatedFcn)
                 obj.LineCreatedFcn(obj, struct('ID', id, 'Endpoints', [XY; XY]));
@@ -689,11 +689,11 @@ classdef Line < matlabx.ui.axes.AxesTool
             obj.previewDrawLine();
         end
 
-        function setDrawingLineMarkersVisible(obj, value)
-        %SETDRAWINGLINEMARKERSVISIBLE Temporarily show handles while drawing.
+        function setDrawingLineHandlesVisible(obj, value)
+        %SETDRAWINGLINEHANDLESVISIBLE Temporarily show handles while drawing.
             idx = obj.idxOfId(obj.DrawingLineID);
             if obj.isValidLineIdx(idx)
-                obj.LineROI(idx).AlwaysShowMarkers = value;
+                obj.LineROI(idx).AlwaysShowHandles = value;
             end
         end
 
@@ -812,8 +812,8 @@ classdef Line < matlabx.ui.axes.AxesTool
                 opts.LineColor = []
                 opts.LineAlpha = []
                 opts.LineWidth = []
-                opts.MarkerSize = []
-                opts.HoverMarkerSize = []
+                opts.HandleMarkerSize = []
+                opts.HoverHandleMarkerSize = []
             end
 
             endpoints = obj.clampEndpointsToImage(endpoints);
@@ -825,8 +825,8 @@ classdef Line < matlabx.ui.axes.AxesTool
                 "LineColor", obj.valueOrDefault(opts.LineColor, obj.LineColor), ...
                 "LineAlpha", obj.valueOrDefault(opts.LineAlpha, obj.LineAlpha), ...
                 "LineWidth", obj.valueOrDefault(opts.LineWidth, obj.LineWidth), ...
-                "MarkerSize", obj.valueOrDefault(opts.MarkerSize, obj.MarkerSize), ...
-                "HoverMarkerSize", obj.valueOrDefault(opts.HoverMarkerSize, obj.HoverMarkerSize), ...
+                "HandleMarkerSize", obj.valueOrDefault(opts.HandleMarkerSize, obj.HandleMarkerSize), ...
+                "HoverHandleMarkerSize", obj.valueOrDefault(opts.HoverHandleMarkerSize, obj.HoverHandleMarkerSize), ...
                 "ActivateOnCreate", obj.ActivateOnCreate};
 
             obj.LineROI(next) = obj.Host.Overlays.add("Line", nv{:});
