@@ -125,11 +125,11 @@ classdef ImageAxesDisplayRenderer
         %GETDISPLAYMAP Return colormap for color-name or LUT display modes.
             switch mode
                 case 'colors'
-                    % Color mode uses the component's canonical MATLAB color name to
-                    % create a grayscale-like ramp ending at that color.
+                    % Color mode creates a grayscale-like ramp ending at the
+                    % component's resolved RGB display tint.
                     map = matlabx.colors.ops.colorGradient( ...
                         [0 0 0], ...
-                        matlabx.colors.names.toRGB(char(displayState.ColorName), "Palette", "MATLAB"), ...
+                        displayState.Color, ...
                         256);
                 case 'luts'
                     % LUT mode uses the stored colormap directly.
@@ -168,8 +168,7 @@ classdef ImageAxesDisplayRenderer
                     % Colors mode merges channels using one RGB color per component.
                     colors = zeros(n, 3);
                     for i = 1:n
-                        colors(i,:) = matlabx.colors.names.toRGB( ...
-                            char(componentDisplay(i).ColorName), "Palette", "MATLAB");
+                        colors(i,:) = componentDisplay(i).Color;
                     end
                     I = matlabx.image.compose.mergeChannelsRGB_add(data, clims, colors);
 
