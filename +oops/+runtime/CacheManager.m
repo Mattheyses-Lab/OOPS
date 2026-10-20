@@ -26,6 +26,12 @@ classdef CacheManager < handle
         CorrectedImageIDs (:,1) string = strings(0,1)
         CorrectedValues (:,1) cell = cell(0,1)
         CorrectedBytes (:,1) double = zeros(0,1)
+
+        PinnedCorrectedKey (1,1) string = ""
+        PinnedCorrectedImageID (1,1) string = ""
+        PinnedCorrectedCalibrationIDs (:,1) string = strings(0,1)
+        PinnedCorrectedValue = []
+        PinnedCorrectedBytes (1,1) double {mustBeNonnegative} = 0
     end
 
     methods
@@ -160,6 +166,16 @@ classdef CacheManager < handle
         %GETCORRECTED Return one corrected stack and update its LRU position.
 
             key = obj.correctedKey(imageID,calibrationIDs);
+
+            if obj.PinnedCorrectedKey == key
+                value = obj.PinnedCorrectedValue;
+                found = true;
+                oops.Log.DEBUG(sprintf( ...
+                    'Pinned corrected-stack hit: image %s (%.3f MiB).', ...
+                    string(imageID),obj.PinnedCorrectedBytes/(1024^2)));
+                return;
+            end
+
             index = find(obj.CorrectedKeys == key,1);
             found = ~isempty(index);
 
@@ -176,6 +192,59 @@ classdef CacheManager < handle
             obj.CorrectedImageIDs = obj.moveFirst(obj.CorrectedImageIDs,index);
             obj.CorrectedValues = obj.moveFirst(obj.CorrectedValues,index);
             obj.CorrectedBytes = obj.moveFirst(obj.CorrectedBytes,index);
+        end
+
+        function pinCorrected(obj,imageID,calibrationIDs,value)
+        %PINCORRECTED Retain one view-scoped corrected stack outside the LRU budget.
+
+            key = obj.correctedKey(imageID,calibrationIDs);
+
+            if obj.PinnedCorrectedKey == key
+                return;
+            end
+
+            % The previous view pin may return to the ordinary LRU when its
+            % configured budget permits. The new pin must have one owner entry.
+            obj.releasePinnedCorrected();
+            existing = obj.CorrectedKeys == key;
+            obj.CorrectedKeys(existing) = [];
+            obj.CorrectedImageIDs(existing) = [];
+            obj.CorrectedValues(existing) = [];
+            obj.CorrectedBytes(existing) = [];
+
+            obj.PinnedCorrectedKey = key;
+            obj.PinnedCorrectedImageID = string(imageID);
+            obj.PinnedCorrectedCalibrationIDs = string(calibrationIDs(:));
+            obj.PinnedCorrectedValue = value;
+            obj.PinnedCorrectedBytes = obj.valueBytes(value);
+            oops.Log.DEBUG(sprintf( ...
+                'Pinned corrected stack for active object view: image %s (%.3f MiB).', ...
+                string(imageID),obj.PinnedCorrectedBytes/(1024^2)));
+        end
+
+        function releasePinnedCorrected(obj)
+        %RELEASEPINNEDCORRECTED Release the active-view pin through LRU policy.
+
+            if obj.PinnedCorrectedKey == ""
+                return;
+            end
+
+            imageID = obj.PinnedCorrectedImageID;
+            value = obj.PinnedCorrectedValue;
+            calibrationIDs = obj.PinnedCorrectedCalibrationIDs;
+            bytes = obj.PinnedCorrectedBytes;
+            obj.clearPinnedCorrected();
+            oops.Log.DEBUG(sprintf( ...
+                'Released corrected-stack view pin: image %s (%.3f MiB).', ...
+                imageID,bytes/(1024^2)));
+            obj.putCorrected(imageID,calibrationIDs,value);
+        end
+
+        function tf = isCorrectedPinned(obj,imageID,calibrationIDs)
+        %ISCORRECTEDPINNED Report whether the active-view pin matches this recipe.
+
+            tf = obj.PinnedCorrectedKey == ...
+                obj.correctedKey(imageID,calibrationIDs);
         end
 
         function putCorrected(obj,imageID,calibrationIDs,value)
@@ -228,18 +297,27 @@ classdef CacheManager < handle
             obj.CorrectedImageIDs(remove) = [];
             obj.CorrectedValues(remove) = [];
             obj.CorrectedBytes(remove) = [];
+
+            if obj.PinnedCorrectedImageID == string(imageID)
+                obj.clearPinnedCorrected();
+            end
         end
 
         function tf = hasCorrected(obj,imageID)
         %HASCORRECTED Report whether any corrected entry belongs to an image.
 
-            tf = any(obj.CorrectedImageIDs == string(imageID));
+            tf = any(obj.CorrectedImageIDs == string(imageID)) || ...
+                obj.PinnedCorrectedImageID == string(imageID);
         end
 
         function bytes = correctedBytes(obj,imageID)
         %CORRECTEDBYTES Return resident corrected bytes belonging to an image.
 
             bytes = sum(obj.CorrectedBytes(obj.CorrectedImageIDs == string(imageID)));
+
+            if obj.PinnedCorrectedImageID == string(imageID)
+                bytes = bytes+obj.PinnedCorrectedBytes;
+            end
         end
 
         function T = calibrationStatus(obj)
@@ -258,6 +336,7 @@ classdef CacheManager < handle
                 'RawInputMiB',sum(obj.RawBytes)/(1024^2), ...
                 'CorrectedStackLimitMiB',obj.CorrectedStackLimitBytes/(1024^2), ...
                 'CorrectedStackMiB',sum(obj.CorrectedBytes)/(1024^2), ...
+                'PinnedCorrectedStackMiB',obj.PinnedCorrectedBytes/(1024^2), ...
                 'CalibrationLimitMiB',obj.CalibrationLimitBytes/(1024^2), ...
                 'CalibrationMiB',sum(obj.CalibrationBytes)/(1024^2), ...
                 'AuxiliaryLimitMiB',obj.AuxiliaryLimitBytes/(1024^2));
@@ -279,6 +358,7 @@ classdef CacheManager < handle
             obj.CorrectedImageIDs = strings(0,1);
             obj.CorrectedValues = cell(0,1);
             obj.CorrectedBytes = zeros(0,1);
+            obj.clearPinnedCorrected();
         end
 
     end
@@ -323,6 +403,16 @@ classdef CacheManager < handle
             remove = obj.RawImageIDs == string(imageID);
             obj.RawImageIDs(remove) = [];
             obj.RawBytes(remove) = [];
+        end
+
+        function clearPinnedCorrected(obj)
+        %CLEARPINNEDCORRECTED Drop the active-view entry without LRU reinsertion.
+
+            obj.PinnedCorrectedKey = "";
+            obj.PinnedCorrectedImageID = "";
+            obj.PinnedCorrectedCalibrationIDs = strings(0,1);
+            obj.PinnedCorrectedValue = [];
+            obj.PinnedCorrectedBytes = 0;
         end
 
     end

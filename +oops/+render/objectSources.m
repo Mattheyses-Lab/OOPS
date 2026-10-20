@@ -2,7 +2,7 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-function [sources,info,objectMask] = objectSources(region,settings)
+function [sources,info,objectMask,geometry] = objectSources(region,settings,opts)
 %OBJECTSOURCES Build aligned display-only crops for the active object grid.
 % All four sources use one square crop geometry. The object owns only its
 % pixel membership; corrected and derived image arrays remain parent-owned.
@@ -10,6 +10,7 @@ function [sources,info,objectMask] = objectSources(region,settings)
 arguments
     region (1,1) oops.model.Object
     settings (1,1) oops.config.Settings
+    opts.Corrected = []
 end
 
 % Parent image supplying corrected data and stored polarization results.
@@ -18,8 +19,13 @@ image = region.Parent;
 % Display settings defining the common square crop around this object.
 display = settings.ObjectDisplay;
 
-% Corrected stack is retrieved from the project runtime cache or computed on demand.
-corrected = oops.analysis.Analyzer.correctedStack(image);
+% Caller-supplied active-view stack avoids a second cache lookup. Other callers
+% retain the ordinary on-demand corrected-stack behavior.
+corrected = opts.Corrected;
+
+if isempty(corrected)
+    corrected = oops.analysis.Analyzer.correctedStack(image);
+end
 
 % Shared crop geometry and object-only mask produced with the intensity crop.
 [intensity,geometry,objectMask] = region.getCrop(corrected, ...

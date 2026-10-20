@@ -70,3 +70,33 @@ t.verifyFalse(foundB);
 t.verifyTrue(foundC);
 t.verifyEqual(valueC,3*ones(2,3,4));
 end
+
+function testCorrectedViewPinIgnoresLRUBudgetAndMovesBetweenImages(t)
+%TESTCORRECTEDVIEWPINIGNORESLRUBUDGET Verify one view-scoped corrected entry.
+
+cache = oops.runtime.CacheManager(CorrectedStackLimitMiB=0);
+ids = ["cal-a";"cal-b"];
+first = ones(2,3,4);
+second = 2*ones(2,3,4);
+
+cache.pinCorrected("image-a",ids,first);
+[value,found] = cache.getCorrected("image-a",ids);
+t.verifyTrue(found);
+t.verifyEqual(value,first);
+t.verifyTrue(cache.isCorrectedPinned("image-a",ids));
+
+cache.pinCorrected("image-b",ids,second);
+[~,foundFirst] = cache.getCorrected("image-a",ids);
+[valueSecond,foundSecond] = cache.getCorrected("image-b",ids);
+t.verifyFalse(foundFirst);
+t.verifyTrue(foundSecond);
+t.verifyEqual(valueSecond,second);
+
+cache.releasePinnedCorrected();
+[~,foundReleased] = cache.getCorrected("image-b",ids);
+t.verifyFalse(foundReleased);
+
+% Runtime diagnostics should report no view-scoped corrected allocation.
+summary = cache.summary();
+t.verifyEqual(summary.PinnedCorrectedStackMiB,0);
+end

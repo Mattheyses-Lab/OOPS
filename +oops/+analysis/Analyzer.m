@@ -200,15 +200,17 @@ classdef Analyzer
             % Calibration assignment participating in corrected-cache identity.
             ids = image.Parent.CalibrationIDs;
 
-            if isempty(ids)
-                corrected = oops.analysis.readStack(image.Input);
-                return;
-            end
-
-            % Previously corrected stack retained by the configured byte budget.
+            % A budgeted LRU entry or active-view pin may satisfy either the
+            % calibrated recipe or the empty-calibration raw fallback.
             [corrected,cached] = image.Parent.Parent.CacheManager.getCorrected(image.ID,ids);
 
             if cached
+                return;
+            end
+
+            if isempty(ids)
+                corrected = oops.analysis.readStack(image.Input);
+                image.Parent.Parent.CacheManager.putCorrected(image.ID,ids,corrected);
                 return;
             end
 

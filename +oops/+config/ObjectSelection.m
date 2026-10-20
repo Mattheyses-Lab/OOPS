@@ -11,6 +11,7 @@ classdef ObjectSelection < handle
         ColorMode_ (1,1) string = "Custom"
         LineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
         SelectedLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 2.0
+        ActiveLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 2.0
         Color_ (1,3) double {mustBeFinite,mustBeInRange(Color_,0,1)} = [1.0 1.0 1.0]
     end
 
@@ -19,6 +20,7 @@ classdef ObjectSelection < handle
         ColorMode
         LineWidth
         SelectedLineWidth
+        ActiveLineWidth
         Color
     end
 
@@ -79,6 +81,18 @@ classdef ObjectSelection < handle
             obj.setValue("SelectedLineWidth",v);
         end
 
+        function v = get.ActiveLineWidth(obj)
+        %GET.ACTIVELINEWIDTH Return the stored ActiveLineWidth setting.
+
+            v = obj.ActiveLineWidth_;
+        end
+
+        function set.ActiveLineWidth(obj,v)
+        %SET.ACTIVELINEWIDTH Validate, store, and notify an ObjectSelection change.
+
+            obj.setValue("ActiveLineWidth",v);
+        end
+
         function v = get.Color(obj)
         %GET.COLOR Return the stored Color setting.
 
@@ -100,6 +114,7 @@ classdef ObjectSelection < handle
                 'ColorMode',obj.ColorMode, ...
                 'LineWidth',obj.LineWidth, ...
                 'SelectedLineWidth',obj.SelectedLineWidth, ...
+                'ActiveLineWidth',obj.ActiveLineWidth, ...
                 'Color',obj.Color);
         end
 

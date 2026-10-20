@@ -26,6 +26,12 @@ classdef GUI < handle
         ObjectNavigationGrid
         ObjectViewerPanels
         ObjectViewers cell = {}
+        ObjectViewerBoundaryContents cell = {}
+        ObjectViewerBoundaryTools cell = {}
+        ObjectViewerOrientationFields cell = {}
+        ObjectViewerOrientationTools cell = {}
+        ObjectViewerMidlineContents cell = {}
+        ObjectViewerMidlineTools cell = {}
         OrientationFields cell = {}
         OrientationFieldTools cell = {}
         PolygonTools cell = {}
@@ -379,6 +385,18 @@ classdef GUI < handle
                     end
                 end
 
+                % Active-object viewer tools own only application-overlay UI.
+                objectViewerTools = [ ...
+                    obj(k).ObjectViewerBoundaryTools, ...
+                    obj(k).ObjectViewerOrientationTools, ...
+                    obj(k).ObjectViewerMidlineTools];
+
+                for tool = objectViewerTools
+                    if ~isempty(tool{1}) && isvalid(tool{1})
+                        delete(tool{1});
+                    end
+                end
+
                 % Object-facing facades release callbacks before their borrowed
                 % headless Polygon controllers are destroyed.
                 for tool = obj(k).ObjectBoundaryTools
@@ -397,6 +415,18 @@ classdef GUI < handle
                 for field = obj(k).OrientationFields
                     if ~isempty(field{1}) && isvalid(field{1})
                         delete(field{1});
+                    end
+                end
+
+                % Passive object-view contents dispose their own primitives.
+                objectViewerContents = [ ...
+                    obj(k).ObjectViewerBoundaryContents, ...
+                    obj(k).ObjectViewerOrientationFields, ...
+                    obj(k).ObjectViewerMidlineContents];
+
+                for content = objectViewerContents
+                    if ~isempty(content{1}) && isvalid(content{1})
+                        delete(content{1});
                     end
                 end
 
@@ -736,6 +766,8 @@ classdef GUI < handle
             obj.addSetting("Object Selection","Line width","ObjectSelection","LineWidth");
             obj.addSetting("Object Selection","Selected width", ...
                 "ObjectSelection","SelectedLineWidth");
+            obj.addSetting("Object Selection","Active width", ...
+                "ObjectSelection","ActiveLineWidth");
 
             % Axial orientation-field appearance and spatial sampling controls.
             obj.addSetting("Orientation Lines","Color by","AzimuthDisplay", ...
@@ -1807,6 +1839,48 @@ classdef GUI < handle
                     'Name',char("Object"+erase(titles(k)," ")), ...
                     'CData',[],'Tools',{'Zoom','Mask','Colorbar'}, ...
                     'Colormap',gray(256),'CLim',[0 1],'FontSize',12);
+
+                % Passive boundary content displays only the active object's outline.
+                boundary = oops.render.ObjectBoundary();
+                boundaryMount = viewers{k}.mountOverlay(boundary);
+                boundaryMount.Visible = 'off';
+                boundaryTool = oops.ui.axes.tools.OverlayVisibility( ...
+                    viewers{k},boundaryMount,"ActiveObjectBoundary", ...
+                    Tooltip="Show/Hide Object Boundary", ...
+                    MenuLabel="Show object boundary", ...
+                    Icon=matlabx.internal.Paths.icons('ObjectsWhiteFGTransparentBG.svg'));
+                boundaryTool.RefreshRequestedFcn = @(~,~) obj.runCallback(@() ...
+                    obj.refreshObjectViewerOverlays());
+                viewers{k}.installTool(boundaryTool);
+
+                % Object-restricted orientation segments share the main-view renderer.
+                field = oops.render.OrientationField();
+                fieldMount = viewers{k}.mountOverlay(field);
+                fieldMount.Visible = 'off';
+                fieldTool = oops.ui.axes.tools.OrientationField(viewers{k},fieldMount);
+                fieldTool.RefreshRequestedFcn = @(~,~) obj.runCallback(@() ...
+                    obj.refreshObjectViewerOverlays());
+                viewers{k}.installTool(fieldTool);
+
+                % A single passive line displays the computed object midline.
+                midline = oops.render.ObjectMidline();
+                midlineMount = viewers{k}.mountOverlay(midline);
+                midlineMount.Visible = 'off';
+                midlineTool = oops.ui.axes.tools.OverlayVisibility( ...
+                    viewers{k},midlineMount,"ObjectMidline", ...
+                    Tooltip="Show/Hide Object Midline", ...
+                    MenuLabel="Show object midline", ...
+                    Icon=matlabx.internal.Paths.icons('DrawLineWhiteFGTransparentBG.svg'));
+                midlineTool.RefreshRequestedFcn = @(~,~) obj.runCallback(@() ...
+                    obj.refreshObjectViewerOverlays());
+                viewers{k}.installTool(midlineTool);
+
+                obj.ObjectViewerBoundaryContents{k} = boundary;
+                obj.ObjectViewerBoundaryTools{k} = boundaryTool;
+                obj.ObjectViewerOrientationFields{k} = field;
+                obj.ObjectViewerOrientationTools{k} = fieldTool;
+                obj.ObjectViewerMidlineContents{k} = midline;
+                obj.ObjectViewerMidlineTools{k} = midlineTool;
             end
 
             % Narrow right gutter with vertically centered square navigation buttons.
@@ -2168,6 +2242,12 @@ classdef GUI < handle
                 obj.refreshViewers(true);
             elseif e.Name == "ObjectLabels"
                 obj.refreshOverlayAppearance();
+                if obj.Settings.View.RightSource == "Objects"
+                    obj.refreshObjectViewerOverlays();
+                end
+            elseif e.Name == "ObjectMidline" && ...
+                    obj.Settings.View.RightSource == "Objects"
+                obj.refreshObjectViewerOverlays();
             end
 
         end
@@ -2575,8 +2655,16 @@ classdef GUI < handle
                 case "AzimuthDisplay"
                     obj.refreshOrientationFields([obj.Settings.View.LeftSource, ...
                         obj.Settings.View.RightSource]);
+
+                    if obj.Settings.View.RightSource == "Objects"
+                        obj.refreshObjectViewerOverlays();
+                    end
                 case "ObjectSelection"
                     obj.refreshViewerRegions();
+
+                    if obj.Settings.View.RightSource == "Objects"
+                        obj.refreshObjectViewerOverlays();
+                    end
                 case "ObjectDisplay"
                     obj.ObjectViewerKey = "";
 
@@ -2747,6 +2835,11 @@ classdef GUI < handle
             obj.refreshLabels();
             obj.refreshSummary();
             obj.refreshOverlayAppearance();
+
+            if obj.Settings.View.RightSource == "Objects"
+                obj.refreshObjectViewerOverlays();
+            end
+
             obj.refreshPlots();
         end
 
@@ -3152,6 +3245,10 @@ classdef GUI < handle
             obj.ViewerPanels(2).Visible = matlab.lang.OnOffSwitchState(~showingObjects);
             obj.ObjectViewerGrid.Visible = matlab.lang.OnOffSwitchState(showingObjects);
 
+            if ~showingObjects && ~isempty(obj.Project)
+                obj.Project.CacheManager.releasePinnedCorrected();
+            end
+
             for k = 1:2
                 obj.ViewerPanels(k).Title = char(names(k));
 
@@ -3228,6 +3325,7 @@ classdef GUI < handle
             region = obj.Project.ActiveObject;
 
             if isempty(region)
+                obj.Project.CacheManager.releasePinnedCorrected();
                 obj.clearObjectViewers("No active object");
                 obj.ObjectViewerKey = "";
                 return;
@@ -3236,12 +3334,25 @@ classdef GUI < handle
             % Identity key avoids rebuilding four Image5D objects for unrelated refreshes.
             key = region.Parent.ID + ":" + region.ID;
 
+            % Object navigation repeatedly crops one parent stack. Pin exactly
+            % that image while this view is active, replacing any previous pin.
+            image = region.Parent;
+            calibrationIDs = image.Parent.CalibrationIDs;
+            cache = obj.Project.CacheManager;
+
+            if ~cache.isCorrectedPinned(image.ID,calibrationIDs)
+                cache.releasePinnedCorrected();
+            end
+
+            corrected = oops.analysis.Analyzer.correctedStack(image);
+            cache.pinCorrected(image.ID,calibrationIDs,corrected);
+
             if ~force && obj.ObjectViewerKey == key
                 return;
             end
 
-            [sources,info,objectMask] = oops.render.objectSources( ...
-                region,obj.Settings);
+            [sources,info,objectMask,geometry] = oops.render.objectSources( ...
+                region,obj.Settings,Corrected=corrected);
 
             for k = 1:numel(obj.ObjectViewers)
 
@@ -3279,7 +3390,161 @@ classdef GUI < handle
                 panel.Title = char(info(k).Title);
             end
 
+            % Passive active-object overlays share this crop's local coordinates.
+            obj.refreshObjectViewerOverlays(region,geometry,objectMask);
+
             obj.ObjectViewerKey = key;
+        end
+
+        function refreshObjectViewerOverlays(obj,region,geometry,objectMask)
+        %REFRESHOBJECTVIEWEROVERLAYS Update passive overlays for all four crops.
+
+            if isempty(obj.Project) || isempty(obj.ObjectViewers)
+                return;
+            end
+
+            if nargin < 2
+                region = obj.Project.ActiveObject;
+            end
+
+            if isempty(region)
+                obj.clearObjectViewerOverlays();
+                return;
+            end
+
+            % Crop geometry is cheap to reconstruct for appearance-only changes.
+            if nargin < 3
+                display = obj.Settings.ObjectDisplay;
+                geometry = region.getCropGeometry( ...
+                    Margin=display.CropMargin,Square=display.SquareCrop);
+            end
+
+            if nargin < 4
+                [objectMask,geometry] = region.getMask( ...
+                    Margin=obj.Settings.ObjectDisplay.CropMargin, ...
+                    Square=obj.Settings.ObjectDisplay.SquareCrop);
+            end
+
+            % Convert the parent-image boundary from [x y] to local coordinates.
+            boundary = region.getBoundaryVertices();
+
+            if ~isempty(boundary)
+                localRC = geometry.toLocal(boundary(:,[2 1]));
+                boundary = localRC(:,[2 1]);
+            end
+
+            % Base boundary color follows either the custom setting or object label.
+            selection = obj.Settings.ObjectSelection;
+            boundaryColor = selection.Color;
+
+            if selection.ColorMode == "Label" && ~isempty(region.Label)
+                boundaryColor = region.Label.Color;
+            end
+
+            % Convert the stored parent-image [x y] midline into this crop.
+            midline = region.Midline;
+
+            if ~isempty(midline)
+                localRC = geometry.toLocal(midline(:,[2 1]));
+                midline = localRC(:,[2 1]);
+            end
+
+            % Sample analytical values only at this object's local pixels.
+            image = region.Parent;
+            hasOrientation = ~isempty(image.Order) && ~isempty(image.Azimuth);
+            renderOrientation = hasOrientation && any(cellfun( ...
+                @(tool) tool.Enabled,obj.ObjectViewerOrientationTools));
+            x = zeros(0,1);
+            y = zeros(0,1);
+            angle = zeros(0,1);
+            magnitude = zeros(0,1);
+
+            if renderOrientation
+                indices = find(objectMask);
+                [rows,columns] = ind2sub(size(objectMask),indices);
+
+                % Apply the same spatial sampling interval used by main fields.
+                spacing = obj.Settings.AzimuthDisplay.ScaleDownFactor;
+
+                if spacing > 1
+                    keep = mod(rows-1,spacing) == 0 & ...
+                        mod(columns-1,spacing) == 0;
+                    indices = indices(keep);
+                    rows = rows(keep);
+                    columns = columns(keep);
+                end
+
+                % Crop analytical outputs before reading local object membership.
+                order = geometry.extract(image.Order,FillValue=0);
+                azimuth = geometry.extract(image.Azimuth,FillValue=0);
+                magnitude = order(indices);
+                angle = azimuth(indices);
+
+                % Invalid analysis pairs are rare and checked only within the object.
+                finite = isfinite(angle) & isfinite(magnitude);
+                x = double(columns(finite));
+                y = double(rows(finite));
+                angle = double(angle(finite));
+                magnitude = double(magnitude(finite));
+            end
+
+            % Direction uses azimuth colors; magnitude uses the order map.
+            azimuthSettings = obj.Settings.AzimuthDisplay;
+
+            if azimuthSettings.ColorMode == "Magnitude"
+                map = oops.render.colormap(obj.Settings.Colormaps,"Order");
+            else
+                map = oops.render.colormap(obj.Settings.Colormaps,"Azimuth");
+            end
+
+            for k = 1:numel(obj.ObjectViewers)
+
+                % A blank source cannot host a meaningful active-object overlay.
+                available = logical(obj.ObjectViewers{k}.ImageVisible);
+
+                boundaryContent = obj.ObjectViewerBoundaryContents{k};
+                boundaryContent.setStyle(boundaryColor,selection.LineWidth);
+                boundaryContent.setData(boundary);
+                obj.ObjectViewerBoundaryTools{k}.setAvailable(available && ~isempty(boundary));
+
+                field = obj.ObjectViewerOrientationFields{k};
+                field.setStyle( ...
+                    ColorMode=azimuthSettings.ColorMode, ...
+                    Colormap=map, ...
+                    Color=azimuthSettings.Color, ...
+                    LineWidth=azimuthSettings.LineWidth, ...
+                    Alpha=azimuthSettings.LineAlpha, ...
+                    Scale=azimuthSettings.LineScale);
+                field.setData(x,y,angle,magnitude);
+                obj.ObjectViewerOrientationTools{k}.setAvailable( ...
+                    available && hasOrientation);
+
+                % Black remains visible over the binary mask; white suits other images.
+                midlineColor = [1 1 1];
+
+                if k == 3
+                    midlineColor = [0 0 0];
+                end
+
+                midlineContent = obj.ObjectViewerMidlineContents{k};
+                midlineContent.setStyle(midlineColor,1);
+                midlineContent.setData(midline);
+                obj.ObjectViewerMidlineTools{k}.setAvailable( ...
+                    available && ~isempty(midline));
+            end
+        end
+
+        function clearObjectViewerOverlays(obj)
+        %CLEAROBJECTVIEWEROVERLAYS Clear and disable every passive object overlay.
+
+            for k = 1:numel(obj.ObjectViewers)
+                obj.ObjectViewerBoundaryContents{k}.clear();
+                obj.ObjectViewerBoundaryTools{k}.setAvailable(false);
+                obj.ObjectViewerOrientationFields{k}.clear();
+                obj.ObjectViewerOrientationTools{k}.setAvailable(false);
+                obj.ObjectViewerMidlineContents{k}.clear();
+                obj.ObjectViewerMidlineTools{k}.setAvailable(false);
+            end
         end
 
         function clearObjectViewers(obj,reason)
@@ -3295,6 +3560,8 @@ classdef GUI < handle
                 viewer.AxesVisible = 'off';
                 obj.ObjectViewerPanels(k).Title = char(titles(k)+" — "+reason);
             end
+
+            obj.clearObjectViewerOverlays();
         end
 
         function stepActiveObject(obj,direction)
@@ -4091,7 +4358,7 @@ classdef GUI < handle
             overlay.FaceColor = color;
             overlay.LineWidth = settings.LineWidth;
             overlay.SelectionLineWidth = settings.SelectedLineWidth;
-            overlay.ActiveLineWidth = settings.SelectedLineWidth;
+            overlay.ActiveLineWidth = settings.ActiveLineWidth;
         end
 
         function syncOverlayState(obj)
@@ -5720,6 +5987,8 @@ lines = [ ...
     "CACHE BUDGETS AND OCCUPANCY"
     cacheLine("Raw input",cache.RawInputMiB,cache.RawInputLimitMiB)
     cacheLine("Corrected stacks",cache.CorrectedStackMiB,cache.CorrectedStackLimitMiB)
+    sprintf('Pinned object-view corrected stack: %.3f MiB', ...
+        cache.PinnedCorrectedStackMiB)
     cacheLine("Normalized calibrations",cache.CalibrationMiB,cache.CalibrationLimitMiB)
     cacheLine("Auxiliary sources",0,cache.AuxiliaryLimitMiB)
     ""

@@ -198,6 +198,42 @@ t.verifyFalse(ui.LeftViewer.hasLinks);
 t.verifyFalse(ui.RightViewer.hasLinks);
 end
 
+function testObjectViewersProvidePassiveAnalysisOverlays(t)
+%TESTOBJECTVIEWERSPROVIDEPASSIVEANALYSISOVERLAYS Mount active-object content.
+
+ui = t.TestData.GUI;
+image = ui.Project.ActiveImage;
+region = image.ActiveObject;
+
+% Stored analytical arrays and parent-coordinate midline supply all three overlays.
+image.setResults(struct( ...
+    'Order',0.5*ones(20,30), ...
+    'Azimuth',pi/4*ones(20,30)));
+region.setMidlineResult([2 2;3 3;4 4],[],struct());
+ui.Project.Settings.ObjectSelection.Color = [0.2 0.4 0.6];
+ui.Project.Settings.View.RightSource = "Objects";
+
+for k = 1:4
+    t.verifyTrue(ui.ObjectViewerBoundaryTools{k}.Available);
+    t.verifyTrue(ui.ObjectViewerOrientationTools{k}.Available);
+    t.verifyTrue(ui.ObjectViewerMidlineTools{k}.Available);
+    t.verifyFalse(ui.ObjectViewerBoundaryTools{k}.Enabled);
+    t.verifyFalse(ui.ObjectViewerOrientationTools{k}.Enabled);
+    t.verifyFalse(ui.ObjectViewerMidlineTools{k}.Enabled);
+    t.verifyEqual(ui.ObjectViewerBoundaryContents{k}.Color,[0.2 0.4 0.6]);
+end
+
+% Orientation sampling remains deferred until one field is requested.
+t.verifyEmpty(ui.ObjectViewerOrientationFields{1}.X);
+ui.ObjectViewerOrientationTools{1}.enable();
+t.verifyEqual(numel(ui.ObjectViewerOrientationFields{1}.X), ...
+    numel(region.PixelIdxList));
+
+% The binary-mask quadrant alone uses a black midline for contrast.
+t.verifyEqual(ui.ObjectViewerMidlineContents{3}.Color,[0 0 0]);
+t.verifyEqual(ui.ObjectViewerMidlineContents{1}.Color,[1 1 1]);
+end
+
 function testAuxiliaryChannelViewerUsesProjectSemanticOrder(t)
 %TESTAUXILIARYCHANNELVIEWERUSESPROJECTSEMANTICORDER Display stable missing slots.
 
