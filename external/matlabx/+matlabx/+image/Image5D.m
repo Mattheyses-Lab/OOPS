@@ -73,6 +73,7 @@ classdef Image5D < handle
                 data
                 opts.Names string = matlabx.string.empty()
                 opts.Kinds string = matlabx.string.empty()
+                opts.Colors = []
                 opts.Source string = ""
             end
 
@@ -80,6 +81,7 @@ classdef Image5D < handle
                 data, ...
                 Names=opts.Names, ...
                 Kinds=opts.Kinds, ...
+                Colors=opts.Colors, ...
                 Source=opts.Source);
             obj = matlabx.image.Image5D(src);
         end
@@ -273,6 +275,10 @@ classdef Image5D < handle
 
         function val = getComponentName(obj,idx)
             val = obj.Components(idx).Name;
+        end
+
+        function val = getComponentColor(obj,idx)
+            val = obj.Components(idx).Color;
         end
 
     end

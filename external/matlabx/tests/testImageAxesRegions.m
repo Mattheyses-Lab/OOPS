@@ -50,6 +50,31 @@ function testMaskDisplay(testCase)
     verifyEqual(testCase, h.AlphaData, 1);
 end
 
+function testCanonicalGrayComponentColor(testCase)
+    aliases = ["gray","grey","grays","greys","grayscale","greyscale","white"];
+    for alias = aliases
+        [name, rgb] = matlabx.image.normalizeComponentColor(alias);
+        verifyEqual(testCase, name, "gray");
+        verifyEqual(testCase, rgb, [1 1 1]);
+    end
+
+    imageData = matlabx.image.Image5D.fromComponents( ...
+        {zeros(10,12), ones(10,12)}, Colors=["grey","red"]);
+    verifyEqual(testCase, imageData.getComponentColor(1), "gray");
+    verifyEqual(testCase, imageData.getComponentColor(2), "red");
+
+    ax = testCase.TestData.Axes;
+    ax.ImageData = imageData;
+    verifyEqual(testCase, ax.ComponentColors, {'gray','red'});
+    ax.C = 1;
+    verifyEqual(testCase, ax.Colormap(end,:), [1 1 1]);
+
+    ax.ComponentColors = {'greyscale','blue'};
+    verifyEqual(testCase, ax.ComponentColors, {'gray','blue'});
+    verifyEqual(testCase, ax.Colormap(end,:), [1 1 1]);
+    verifyTrue(testCase, ismember('gray', matlabx.ui.axes.ImageAxes.getColorNames()));
+end
+
 function testMaskValidationAndReplacement(testCase)
     ax = testCase.TestData.Axes;
     verifyError(testCase, @() set(ax,'Mask',ones(10,12)), ...
