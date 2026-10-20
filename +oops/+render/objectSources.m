@@ -38,7 +38,8 @@ intensity = oops.render.intensityDisplayValues(image,intensity);
 sources = cell(1,4);
 info = repmat(struct( ...
     'Title',"",'Available',false,'Reason',"", ...
-    'Colormap',gray(256),'CLim',[]),1,4);
+    'Colormap',gray(256),'CLim',[], ...
+    'ComponentColorMode',"luts",'ComponentColors',{{}}),1,4);
 
 % Corrected four-angle crop used by the order/orientation analysis.
 sources{1} = matlabx.image.Image5D.fromComponents( ...
@@ -47,6 +48,16 @@ sources{1} = matlabx.image.Image5D.fromComponents( ...
 info(1) = sourceInfo("Corrected intensity",true,"", ...
     oops.render.colormap(settings.Colormaps,"Intensity"), ...
     oops.render.displayLimits(image,"Intensity",settings));
+
+% Use the input component's metadata color for the corrected object stack.
+componentIndex = image.FrameLocations(1,1);
+color = oops.render.canonicalComponentColor( ...
+    image.Input.Components(componentIndex).Color);
+
+if color ~= ""
+    info(1).ComponentColorMode = "colors";
+    info(1).ComponentColors = repmat({char(color)},1,4);
+end
 
 % Order crop remains unavailable until the parent analysis has run.
 if isempty(image.Order)
@@ -80,5 +91,6 @@ function info = sourceInfo(title,available,reason,colormap,limits)
 %SOURCEINFO Construct one uniform object-view metadata record.
 
 info = struct('Title',title,'Available',available,'Reason',reason, ...
-    'Colormap',colormap,'CLim',limits);
+    'Colormap',colormap,'CLim',limits, ...
+    'ComponentColorMode',"luts",'ComponentColors',{{}});
 end

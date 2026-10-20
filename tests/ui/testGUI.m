@@ -234,6 +234,28 @@ t.verifyEqual(ui.ObjectViewerMidlineContents{3}.Color,[0 0 0]);
 t.verifyEqual(ui.ObjectViewerMidlineContents{1}.Color,[1 1 1]);
 end
 
+function testIntensityMetadataColorFollowsDerivedSources(t)
+%TESTINTENSITYMETADATACOLORFOLLOWSDERIVEDSOURCES Preserve channel appearance.
+
+ui = t.TestData.GUI;
+image = ui.Project.ActiveImage;
+component = image.FrameLocations(1,1);
+image.Input.Components(component).Color = ...
+    matlabx.colors.names.toRGB('green',"Palette","MATLAB");
+
+ui.Project.Settings.View.LeftSource = "Mask";
+ui.Project.Settings.View.LeftSource = "Input";
+t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
+t.verifyTrue(all(string(ui.LeftViewer.ComponentColors) == "green"));
+
+ui.Project.Settings.View.LeftSource = "Average intensity";
+t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
+t.verifyEqual(string(ui.LeftViewer.ComponentColors{1}),"green");
+
+ui.Project.Settings.View.LeftSource = "Mask";
+t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"luts");
+end
+
 function testAuxiliaryChannelViewerUsesProjectSemanticOrder(t)
 %TESTAUXILIARYCHANNELVIEWERUSESPROJECTSEMANTICORDER Display stable missing slots.
 
@@ -259,8 +281,19 @@ t.verifyTrue(ui.RightViewer.CanMergeComponents);
 % ImageAxes owns native composite display without an OOPS-specific tool.
 t.verifyFalse(any(string({ui.RightViewer.ContextMenu.Children.Text}) == ...
     "Show channel composite"));
+t.verifyEqual(string(ui.RightViewer.ComponentColorMode),"colors");
 ui.RightViewer.ShowComposite = 'on';
 t.verifyEqual(ui.RightViewer.ShowComposite,matlab.lang.OnOffSwitchState.on);
+
+% Moving unlike sources between viewers must replace their complete color state.
+p.Settings.View.LeftSource = "Auxiliary channels";
+p.Settings.View.RightSource = "Mask";
+t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
+t.verifyEqual(string(ui.RightViewer.ComponentColorMode),"luts");
+p.Settings.View.LeftSource = "Mask";
+p.Settings.View.RightSource = "Auxiliary channels";
+t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"luts");
+t.verifyEqual(string(ui.RightViewer.ComponentColorMode),"colors");
 
 % ImageAxes contrast edits persist against the semantic assignment.
 ui.RightViewer.C = 2;

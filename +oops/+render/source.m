@@ -29,7 +29,8 @@ data = matlabx.image.Image5D.empty(0,1);
 % Source title, availability, colormap, and display-limit metadata for the caller.
 info = struct('Title',name,'Available',false,'Reason',"No active image", ...
     'Colormap',gray(256),'CLim',[],'Domain',"", ...
-    'ComponentCLims',{{}},'ComponentColors',{{}},'ComponentColormaps',{{}});
+    'ComponentColorMode',"luts",'ComponentCLims',{{}}, ...
+    'ComponentColors',{{}},'ComponentColormaps',{{}});
 try
 
     if isempty(image)
@@ -88,6 +89,7 @@ try
             info.ComponentCLims = channelInfo.ComponentCLims;
             info.ComponentColors = channelInfo.ComponentColors;
             info.ComponentColormaps = channelInfo.ComponentColormaps;
+            info.ComponentColorMode = channelInfo.ComponentColorMode;
             info.Title = image.Name + " — Auxiliary channels";
         case "Mask"
 
@@ -143,8 +145,21 @@ try
         end
 
         info.Domain = "Intensity";
+
+        % One metadata color describes the single semantic polarization
+        % channel across its raw, corrected, and averaged representations.
+        color = primaryComponentColor(image);
+
+        if color ~= ""
+            info.ComponentColorMode = "colors";
+            info.ComponentColors = repmat({char(color)},1,data.NumComponents);
+        end
     elseif name == "Order"
         info.Domain = "Order";
+    elseif name == "Azimuth"
+        info.Domain = "Azimuth";
+    elseif name == "Mask"
+        info.Domain = "Mask";
     end
 
     if domain == "Azimuth"
@@ -157,6 +172,20 @@ try
 catch ME
     oops.Log.EXCEPTION(ME);
     rethrow(ME);
+end
+
+function color = primaryComponentColor(image)
+%PRIMARYCOMPONENTCOLOR Resolve the first polarization frame's metadata color.
+
+color = "";
+componentIndex = image.FrameLocations(1,1);
+
+if componentIndex > numel(image.Input.Components)
+    return;
+end
+
+color = oops.render.canonicalComponentColor( ...
+    image.Input.Components(componentIndex).Color);
 end
 end
 
@@ -173,7 +202,8 @@ function [data,info] = auxiliaryChannels(image)
 
     data = matlabx.image.Image5D.empty(0,1);
     info = struct('Reason',"No auxiliary channels are registered", ...
-        'ComponentCLims',{{}},'ComponentColors',{{}},'ComponentColormaps',{{}});
+        'ComponentColorMode',"colors",'ComponentCLims',{{}}, ...
+        'ComponentColors',{{}},'ComponentColormaps',{{}});
 
     definitions = image.Parent.Parent.AuxiliaryChannels.Channels;
 
@@ -186,9 +216,11 @@ function [data,info] = auxiliaryChannels(image)
     names = strings(1,numel(definitions));
     limits = cell(1,numel(definitions));
     colors = cell(1,numel(definitions));
+    metadataColors = cell(1,numel(definitions));
     colormaps = repmat({gray(256)},1,numel(definitions));
     available = false(1,numel(definitions));
     sourceClasses = strings(1,numel(definitions));
+    colorsCompatible = true;
 
     % Read assigned planes in their native classes. The common display class
     % cannot be selected until every available source has been inspected.
@@ -196,7 +228,18 @@ function [data,info] = auxiliaryChannels(image)
         definition = definitions(k);
         assignment = image.getAuxiliaryChannel(definition.ID);
         names(k) = definition.Name;
-        colors{k} = definition.Color;
+        metadataColors{k} = definition.Color;
+        color = oops.render.canonicalComponentColor(definition.Color);
+
+        if color == ""
+            % Arbitrary RGB definitions use equivalent monochromatic LUTs.
+            colorsCompatible = false;
+            colors{k} = [];
+            metadataColors{k} = [];
+            colormaps{k} = linspace(0,1,256)'.*definition.Color;
+        else
+            colors{k} = char(color);
+        end
 
         if isempty(assignment)
             continue;
@@ -258,10 +301,15 @@ function [data,info] = auxiliaryChannels(image)
 
     % ImageAxes initializes exact composite colors from component metadata.
     for k = 1:numel(definitions)
-        data.Components(k).Color = colors{k};
+        data.Components(k).Color = metadataColors{k};
     end
 
     info.Reason = "";
+    if colorsCompatible
+        info.ComponentColorMode = "colors";
+    else
+        info.ComponentColorMode = "luts";
+    end
     info.ComponentCLims = limits;
     info.ComponentColors = colors;
     info.ComponentColormaps = colormaps;

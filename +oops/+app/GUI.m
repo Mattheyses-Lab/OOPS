@@ -736,7 +736,7 @@ classdef GUI < handle
 
             % Ordered item titles for navigation and settings sections.
             titles = ["Groups","Images","Objects","Labels", ...
-                "Display Limits","Colormap","View","Object Selection", ...
+                "Display Limits","Image Display","View","Object Selection", ...
                 "Mask","Scatterplot","Swarmplot","Polar histogram", ...
                 "Orientation Lines","Summary"];
 
@@ -3011,6 +3011,14 @@ classdef GUI < handle
                         viewer.ComponentColormaps = info.ComponentColormaps;
                     end
 
+                    % Every source supplies complete coloring state so a viewer
+                    % cannot inherit mode or colors from its previous content.
+                    if ~isempty(info.ComponentColors)
+                        viewer.ComponentColors = info.ComponentColors;
+                    end
+
+                    viewer.ComponentColorMode = char(info.ComponentColorMode);
+
                     if ~isempty(info.ComponentCLims)
                         viewer.CLimMode = 'manual';
                         viewer.ComponentCLims = info.ComponentCLims;
@@ -3376,6 +3384,12 @@ classdef GUI < handle
                 viewer.ShowComposite = 'off';
                 viewer.ComponentColormaps = repmat( ...
                     {info(k).Colormap},1,sources{k}.NumComponents);
+
+                if ~isempty(info(k).ComponentColors)
+                    viewer.ComponentColors = info(k).ComponentColors;
+                end
+
+                viewer.ComponentColorMode = char(info(k).ComponentColorMode);
 
                 if ~isempty(info(k).CLim)
                     viewer.CLimMode = 'manual';
@@ -4582,7 +4596,7 @@ classdef GUI < handle
         %BUILDCOLORMAPCONTROLS Use one domain selector, preview, and registry category tree.
 
             % Accordion item grid that owns the controls being created or updated.
-            pane = obj.SettingsAccordion.getItem("Colormap").Pane;
+            pane = obj.SettingsAccordion.getItem("Image Display").Pane;
             set(pane,'ColumnWidth',{'1x'},'RowHeight',{24,24,200},'Padding',5,'RowSpacing',5);
             obj.ColormapDomain = uidropdown(pane,'Items',{'Intensity','Order','Azimuth'}, ...
                 'Value','Intensity','BackgroundColor',[.3 .3 .3],'FontColor',[.9 .9 .9], ...
