@@ -1,6 +1,7 @@
 function txt = prettyPrint(S, opts)
-%PRETTYPRINT Format scalar struct contents as readable text.
-%   txt = PRETTYPRINT(S) returns formatted text for scalar struct S.
+%PRETTYPRINT Format struct contents as readable text.
+%   txt = PRETTYPRINT(S) recursively formats scalar structs and struct arrays.
+%   Array elements are introduced by MATLAB-style index headings.
 %
 %   PRETTYPRINT(S) with no output prints to the command window.
 %
@@ -27,7 +28,7 @@ function txt = prettyPrint(S, opts)
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
     arguments
-        S (1,1) struct
+        S struct
         opts.OutputType (1,1) string {mustBeMember(opts.OutputType, ["char","string"])} = "char"
         opts.NameAlign  (1,1) string {mustBeMember(opts.NameAlign,  ["left","right"])} = "left"
         opts.IndentSize (1,1) double {mustBeInteger, mustBeNonnegative} = 4
@@ -50,6 +51,16 @@ end
 
 function lines = buildLines(S, nameAlign, indentSize, stringArrayStyle)
 
+    if isempty(S)
+        lines = {emptyStructText(S)};
+        return
+    end
+
+    if ~isscalar(S)
+        lines = buildStructArrayLines(S, nameAlign, indentSize, stringArrayStyle);
+        return
+    end
+
     fn = fieldnames(S);
 
     if isempty(fn)
@@ -60,12 +71,10 @@ function lines = buildLines(S, nameAlign, indentSize, stringArrayStyle)
     isHeader = false(size(fn));
     for k = 1:numel(fn)
         v = S.(fn{k});
-        isHeader(k) = isstruct(v) && isscalar(v);
+        isHeader(k) = isstruct(v);
     end
 
     leafNames = fn(~isHeader);
-    headerNames = fn(isHeader);
-
     if isempty(leafNames)
         maxLen = 0;
     else
@@ -74,10 +83,29 @@ function lines = buildLines(S, nameAlign, indentSize, stringArrayStyle)
 
     lines = {};
 
-    % First pass: non-header fields
-    for k = 1:numel(leafNames)
-        name = leafNames{k};
+    % Process fields in declaration order. Alignment is based only on leaf
+    % fields so recursive headings do not affect scalar value formatting.
+    for k = 1:numel(fn)
+        name = fn{k};
         value = S.(name);
+
+        if isstruct(value)
+            if isempty(value)
+                lines{end+1} = sprintf('%s: %s', name, emptyStructText(value)); %#ok<AGROW>
+                continue
+            end
+
+            if isscalar(value)
+                lines{end+1} = name; %#ok<AGROW>
+            else
+                lines{end+1} = [name ':']; %#ok<AGROW>
+            end
+
+            subLines = buildLines(value, nameAlign, indentSize, stringArrayStyle);
+            lines = [lines, indentLines(subLines, indentSize)]; %#ok<AGROW>
+            continue
+        end
+
         valLines = valueToLines(value, stringArrayStyle);
 
         switch nameAlign
@@ -91,25 +119,43 @@ function lines = buildLines(S, nameAlign, indentSize, stringArrayStyle)
             lines{end+1} = sprintf('%s: %s', nameFmt, valLines{1}); %#ok<AGROW>
         else
             lines{end+1} = name; %#ok<AGROW>
-            pad = repmat(' ', 1, indentSize);
-            valLines = cellfun(@(s) [pad s], valLines, 'UniformOutput', false);
-            lines = [lines, valLines]; %#ok<AGROW>
+            lines = [lines, indentLines(valLines, indentSize)]; %#ok<AGROW>
         end
     end
+end
 
-    % Second pass: nested structs
-    for k = 1:numel(headerNames)
-        name = headerNames{k};
-        value = S.(name);
-
-        lines{end+1} = name; %#ok<AGROW>
-
-        subLines = buildLines(value, nameAlign, indentSize, stringArrayStyle);
-        pad = repmat(' ', 1, indentSize);
-        subLines = cellfun(@(s) [pad s], subLines, 'UniformOutput', false);
-
-        lines = [lines, subLines]; %#ok<AGROW>
+function lines = buildStructArrayLines(S, nameAlign, indentSize, stringArrayStyle)
+%BUILDSTRUCTARRAYLINES Enumerate and recursively format each array element.
+    lines = {};
+    for linearIndex = 1:numel(S)
+        lines{end+1} = [structIndexText(S, linearIndex) ':']; %#ok<AGROW>
+        subLines = buildLines(S(linearIndex), nameAlign, indentSize, stringArrayStyle);
+        lines = [lines, indentLines(subLines, indentSize)]; %#ok<AGROW>
     end
+end
+
+function text = structIndexText(S, linearIndex)
+%STRUCTINDEXTEXT Return a vector or multidimensional element heading.
+    if isvector(S)
+        text = sprintf('(%d)', linearIndex);
+        return
+    end
+
+    sz = size(S);
+    subs = cell(1, numel(sz));
+    [subs{:}] = ind2sub(sz, linearIndex);
+    text = ['(' strjoin(cellfun(@num2str, subs, 'UniformOutput', false), ',') ')'];
+end
+
+function text = emptyStructText(S)
+%EMPTYSTRUCTTEXT Describe an empty struct array and its dimensions.
+    text = sprintf('[empty struct %s]', char(strjoin(string(size(S)), 'x')));
+end
+
+function lines = indentLines(lines, indentSize)
+%INDENTLINES Indent an existing cell array of formatted lines.
+    pad = repmat(' ', 1, indentSize);
+    lines = cellfun(@(s) [pad s], lines, 'UniformOutput', false);
 end
 
 function lines = valueToLines(v, stringArrayStyle)
