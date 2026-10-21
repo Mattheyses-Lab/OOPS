@@ -258,21 +258,25 @@ p = oops.model.Project();
 cleanup = onCleanup(@() delete(p));
 g = p.addGroup('Group');
 im = g.addImage(memoryInput(),'Image');
-dapi = p.AuxiliaryChannels.add('DAPI',[0.2 0.4 1]);
-actin = p.AuxiliaryChannels.add('Actin',[1 0.2 0.2]);
+t.verifyNotEmpty(im.PrimaryChannel);
+t.verifyTrue(im.PrimaryChannel.IsPrimary);
+dapi = p.Channels.add('DAPI',[0.2 0.4 1]);
+actin = p.Channels.add('Actin',[1 0.2 0.2]);
+dapi.markAuxiliary();
 auxiliary = matlabx.image.Image5D.fromComponents( ...
     {uint16(11*ones(10,12)),uint16(22*ones(10,12))}, ...
     Names=["Actin","DAPI"]);
 
 % File component order does not determine the project-wide semantic order.
 im.addAuxiliaryChannel(actin.ID,auxiliary,1);
+t.verifyTrue(actin.IsAuxiliary);
 [data,info] = oops.render.source(im,"Auxiliary channels",p.Settings);
 t.verifyTrue(info.Available);
 t.verifyEqual(data.NumComponents,2);
 t.verifyEqual([data.Components.Name],["DAPI" "Actin"]);
 t.verifyEqual(data.getPlane(1),zeros(10,12,'uint16'));
 t.verifyEqual(data.getPlane(2),uint16(11*ones(10,12)));
-t.verifyEqual(info.ComponentColors,{dapi.Color,actin.Color});
+t.verifyEqual(string(info.ComponentColors),["blue" "red"]);
 
 % Heterogeneous source classes use one single-precision display stack.
 dapiSource = matlabx.image.Image5D.fromComponents(uint8(7*ones(10,12)));
@@ -291,7 +295,7 @@ p = oops.model.Project('Auxiliary persistence');
 cleanup = onCleanup(@() delete(p));
 g = p.addGroup('Group');
 im = g.addImage(oops.io.readInput(t.TestData.File),'Image');
-definition = p.AuxiliaryChannels.add('Brightfield',[1 1 1]);
+definition = p.Channels.add('Brightfield',[1 1 1]);
 source = matlabx.image.Image5D.fromFile(auxiliaryFile);
 im.addAuxiliaryChannel(definition.ID,source,1,[5 100]);
 projectFile = fullfile(t.TestData.Folder,'auxiliary.oops.mat');
@@ -299,8 +303,11 @@ oops.io.project.save(p,projectFile);
 
 loaded = oops.io.project.load(projectFile);
 loadedCleanup = onCleanup(@() delete(loaded));
-restoredDefinition = loaded.AuxiliaryChannels.findByName('Brightfield');
+restoredDefinition = loaded.Channels.findByName('Brightfield');
 restored = loaded.Groups(1).Images(1).getAuxiliaryChannel(restoredDefinition.ID);
+t.verifyEqual(loaded.Groups(1).Images(1).PrimaryChannel.Name,im.PrimaryChannel.Name);
+t.verifyTrue(loaded.Groups(1).Images(1).PrimaryChannel.IsPrimary);
+t.verifyTrue(restoredDefinition.IsAuxiliary);
 t.verifyEqual(restored.ComponentIndex,1);
 t.verifyEqual(restored.DisplayRange,[5 100]);
 t.verifyEqual(restored.getPlane(),uint16(77*ones(10,12)));

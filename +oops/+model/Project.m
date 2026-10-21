@@ -16,7 +16,7 @@ classdef Project < handle
         SchemaVersion (1,1) string = oops.Info.ProjectSchemaVersion
         Groups (:,1) oops.model.Group = oops.model.Group.empty(0,1)
         Calibrations (:,1) oops.model.Calibration = oops.model.Calibration.empty(0,1)
-        AuxiliaryChannels (1,1) oops.model.AuxiliaryChannelRegistry
+        Channels (1,1) oops.model.ChannelRegistry
         Settings oops.config.Settings
         Labels oops.model.LabelRegistry
         ActiveGroupID (1,1) string = ""
@@ -76,7 +76,7 @@ classdef Project < handle
                 obj.Settings = settings;
                 obj.CacheManager = oops.runtime.CacheManager();
                 obj.Labels = oops.model.LabelRegistry.default();
-                obj.AuxiliaryChannels = oops.model.AuxiliaryChannelRegistry();
+                obj.Channels = oops.model.ChannelRegistry();
                 obj.LabelListeners(1) = addlistener(obj.Labels,'LabelsChanged', ...
                     @(~,~) notify(obj,'LabelsChanged'));
                 obj.LabelListeners(2) = addlistener(obj.Labels,'ActiveChanged', ...
@@ -100,7 +100,7 @@ classdef Project < handle
 
                 delete(obj(i).Groups);
                 delete(obj(i).Calibrations);
-                delete(obj(i).AuxiliaryChannels);
+                delete(obj(i).Channels);
                 delete(obj(i).CacheManager);
                 delete(obj(i).LabelListeners);
                 delete(obj(i).Labels);
@@ -127,7 +127,7 @@ classdef Project < handle
                 'Name',obj.Name, ...
                 'Settings',obj.Settings.toStruct(), ...
                 'Labels',obj.Labels.toStruct(), ...
-                'AuxiliaryChannels',obj.AuxiliaryChannels.toStruct(), ...
+                'Channels',obj.Channels.toStruct(), ...
                 'Calibrations',calibrations, ...
                 'Groups',groups, ...
                 'ActiveGroupID',obj.ActiveGroupID, ...
@@ -163,14 +163,9 @@ classdef Project < handle
             obj = oops.model.Project(string(S.Name),settings);
             obj.ID = string(S.ID);
 
-            delete(obj.AuxiliaryChannels);
+            delete(obj.Channels);
 
-            if isfield(S,'AuxiliaryChannels')
-                obj.AuxiliaryChannels = ...
-                    oops.model.AuxiliaryChannelRegistry.fromStruct(S.AuxiliaryChannels);
-            else
-                obj.AuxiliaryChannels = oops.model.AuxiliaryChannelRegistry();
-            end
+            obj.Channels = oops.model.ChannelRegistry.fromStruct(S.Channels);
 
             delete(obj.LabelListeners);
             delete(obj.Labels);
@@ -233,7 +228,10 @@ classdef Project < handle
 
                     input = oops.io.readInput(path, ...
                         SeriesIndex=imageData.Source.SeriesIndex);
-                    image = group.addImage(input,string(imageData.Name));
+                    primaryChannel = obj.Channels.findByID( ...
+                        string(imageData.PrimaryChannelID));
+                    image = group.addImage( ...
+                        input,string(imageData.Name),primaryChannel);
                     image.restoreStruct(imageData,string(data.CalibrationIDs));
                     restoredImages(end+1,1) = image; %#ok<AGROW>
 

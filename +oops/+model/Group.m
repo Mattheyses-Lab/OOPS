@@ -110,13 +110,15 @@ classdef Group < handle
             obj.setSelectedImages(string(S.SelectedImageIDs));
         end
 
-        function image = addImage(obj,input,name)
+        function image = addImage(obj,input,name,primaryChannel)
         %ADDIMAGE Attach an independently owned four-angle Image5D source.
 
             arguments
                 obj
                 input (1,1) matlabx.image.Image5D
                 name (1,1) string = "Image"
+                primaryChannel (:,1) oops.model.ChannelDefinition = ...
+                    oops.model.ChannelDefinition.empty(0,1)
             end
 
             try
@@ -148,10 +150,22 @@ classdef Group < handle
 
                 end
 
+                % Metadata supplies a deterministic semantic default for
+                % programmatic imports that do not use the assignment dialog.
+                if isempty(primaryChannel)
+                    primaryChannel = obj.defaultPrimaryChannel(input);
+                end
+
+                if ~isscalar(primaryChannel) || isempty(obj.Parent.Channels.findByID(primaryChannel.ID))
+                    error('oops:model:UnknownPrimaryChannel', ...
+                        'The primary channel must belong to this project.');
+                end
+
                 % Attach the model and its subscriptions before announcing it.
 
                 % New image model attached to this group after input validation.
                 image = oops.model.Image(obj,input,name);
+                image.setPrimaryChannel(primaryChannel);
                 obj.Images(end+1,1) = image;
 
                 % Subscriptions forwarding object, data, and navigation changes from this image.
@@ -357,6 +371,36 @@ classdef Group < handle
 
             % Single-column summary with statistic names supplied as table row names.
             T = oops.model.internal.summaryTable([names statusNames],[values statusValues]);
+        end
+
+    end
+
+    methods (Access=private)
+
+        function channel = defaultPrimaryChannel(obj,input)
+        %DEFAULTPRIMARYCHANNEL Reuse metadata identity for noninteractive imports.
+
+            locations = oops.io.fourAngleLocations(input);
+            component = input.getComponent(locations(1,1));
+            name = strtrim(string(component.Name));
+
+            if name == ""
+                name = "Primary channel";
+            end
+
+            channel = obj.Parent.Channels.findByName(name);
+
+            if ~isempty(channel)
+                return;
+            end
+
+            color = component.Color;
+
+            if isempty(color)
+                color = [1 1 1];
+            end
+
+            channel = obj.Parent.Channels.add(name,double(color));
         end
 
     end

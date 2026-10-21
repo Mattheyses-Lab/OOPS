@@ -9,7 +9,7 @@ arguments
     parent (1,1) matlab.ui.Figure
     images (:,1) oops.model.Image
     files (:,1) string
-    registry (1,1) oops.model.AuxiliaryChannelRegistry
+    registry (1,1) oops.model.ChannelRegistry
 end
 
 if numel(images) ~= numel(files)
@@ -293,7 +293,7 @@ oops.Log.INFO("Auxiliary channel import dialog ready.");
 % Empty output distinguishes cancellation from a confirmed import plan.
 plan = struct( ...
     'Image',{},'Input',{},'ComponentIndex',{},'ChannelName',{},'ChannelColor',{});
-%uiwait(dialog);
+uiwait(dialog);
 
     function index = currentImageIndex()
     %CURRENTIMAGEINDEX Resolve the target list's stable image ID.
@@ -576,13 +576,14 @@ plan = struct( ...
                     return;
                 end
 
+                [~,channelColor] = matlabx.image.normalizeComponentColor( ...
+                    string(rows.Color(row)));
                 nextPlan(end+1) = struct( ... %#ok<AGROW>
                     'Image',images(imageIndex), ...
                     'Input',sources(fileIndex), ...
                     'ComponentIndex',row, ...
                     'ChannelName',strtrim(rows.ProjectChannel(row)), ...
-                    'ChannelColor',matlabx.colors.names.toRGB( ...
-                    string(rows.Color(row)),"Palette","MATLAB"));
+                    'ChannelColor',channelColor);
             end
         end
 
@@ -610,7 +611,7 @@ plan = struct( ...
         end
 
         plan = nextPlan;
-        %uiresume(dialog);
+        uiresume(dialog);
         delete(dialog);
     end
 end

@@ -234,14 +234,17 @@ t.verifyEqual(ui.ObjectViewerMidlineContents{3}.Color,[0 0 0]);
 t.verifyEqual(ui.ObjectViewerMidlineContents{1}.Color,[1 1 1]);
 end
 
-function testIntensityMetadataColorFollowsDerivedSources(t)
-%TESTINTENSITYMETADATACOLORFOLLOWSDERIVEDSOURCES Preserve channel appearance.
+function testPrimaryChannelColorFollowsDerivedSources(t)
+%TESTPRIMARYCHANNELCOLORFOLLOWSDERIVEDSOURCES Preserve semantic appearance.
 
 ui = t.TestData.GUI;
 image = ui.Project.ActiveImage;
 component = image.FrameLocations(1,1);
 image.Input.Components(component).Color = ...
     matlabx.colors.names.toRGB('green',"Palette","MATLAB");
+definition = ui.Project.Channels.add( ...
+    'Green primary',matlabx.colors.names.toRGB('green',"Palette","MATLAB"));
+image.setPrimaryChannel(definition);
 
 ui.Project.Settings.View.LeftSource = "Mask";
 ui.Project.Settings.View.LeftSource = "Input";
@@ -256,14 +259,32 @@ ui.Project.Settings.View.LeftSource = "Mask";
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"luts");
 end
 
+function testPrimaryIntensityUsesGrayWithoutMetadataColor(t)
+%TESTPRIMARYINTENSITYUSESGRAYWITHOUTMETADATACOLOR Use an explicit fallback.
+
+ui = t.TestData.GUI;
+image = ui.Project.ActiveImage;
+component = image.FrameLocations(1,1);
+image.Input.Components(component).Color = [];
+
+ui.Project.Settings.View.LeftSource = "Mask";
+ui.Project.Settings.View.LeftSource = "Average intensity";
+
+t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
+t.verifyEqual(string(ui.LeftViewer.ComponentColors{1}),"gray");
+t.verifyEqual(string(ui.ColormapDomain.Items{1}),"Primary intensity");
+t.verifyEqual(string(ui.ColormapDomain.ItemsData{1}),"Intensity");
+end
+
 function testAuxiliaryChannelViewerUsesProjectSemanticOrder(t)
 %TESTAUXILIARYCHANNELVIEWERUSESPROJECTSEMANTICORDER Display stable missing slots.
 
 ui = t.TestData.GUI;
 p = ui.Project;
 image = p.ActiveImage;
-dapi = p.AuxiliaryChannels.add('DAPI',[0.2 0.4 1]);
-actin = p.AuxiliaryChannels.add('Actin',[1 0.2 0.2]);
+dapi = p.Channels.add('DAPI',[0.2 0.4 1]);
+actin = p.Channels.add('Actin',[1 0.2 0.2]);
+dapi.markAuxiliary();
 source = matlabx.image.Image5D.fromComponents( ...
     {uint16(9*ones(20,30)),uint16(17*ones(20,30))}, ...
     Names=["Actin","DAPI"]);
@@ -442,7 +463,7 @@ group = ui.Project.ActiveGroup; count = numel(group.Images);
 imported = ui.addFiles([string(invalid),string(valid)]);
 t.verifyEqual(numel(imported),1); t.verifyEqual(numel(group.Images),count+1);
 t.verifyEqual(ui.Project.ActiveImage,imported(1));
-t.verifyTrue(imported(1).IsLoaded);
+t.verifyFalse(imported(1).IsLoaded);
 t.verifyEqual(imported(1).getFrame(4),uint16(4*ones(12,16)));
 t.verifyEqual(ui.LeftViewer.ImageData,imported(1).Input);
 end

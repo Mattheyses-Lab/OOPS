@@ -51,13 +51,19 @@ info(1) = sourceInfo("Corrected intensity",true,"", ...
 
 % Use the input component's metadata color for the corrected object stack.
 componentIndex = image.FrameLocations(1,1);
-color = oops.render.canonicalComponentColor( ...
-    image.Input.Components(componentIndex).Color);
-
-if color ~= ""
-    info(1).ComponentColorMode = "colors";
-    info(1).ComponentColors = repmat({char(color)},1,4);
+if isempty(image.PrimaryChannel)
+    color = oops.render.canonicalComponentColor( ...
+        image.Input.Components(componentIndex).Color);
+else
+    color = oops.render.canonicalComponentColor(image.PrimaryChannel.Color);
 end
+
+if color == ""
+    color = "gray";
+end
+
+info(1).ComponentColorMode = "colors";
+info(1).ComponentColors = repmat({char(color)},1,4);
 
 % Order crop remains unavailable until the parent analysis has run.
 if isempty(image.Order)

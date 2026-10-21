@@ -2,12 +2,12 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-classdef AuxiliaryChannelRegistry < handle
-%AUXILIARYCHANNELREGISTRY Own ordered project-wide semantic channel definitions.
+classdef ChannelRegistry < handle
+%CHANNELREGISTRY Own ordered project-wide semantic channel definitions.
 
     properties (SetAccess=private)
-        Channels (:,1) oops.model.AuxiliaryChannelDefinition = ...
-            oops.model.AuxiliaryChannelDefinition.empty(0,1)
+        Channels (:,1) oops.model.ChannelDefinition = ...
+            oops.model.ChannelDefinition.empty(0,1)
     end
 
     methods
@@ -33,10 +33,10 @@ classdef AuxiliaryChannelRegistry < handle
 
             if any(strcmpi(name,string({obj.Channels.Name})))
                 error('oops:model:DuplicateChannelName', ...
-                    'An auxiliary channel named "%s" already exists.',name);
+                    'A channel named "%s" already exists.',name);
             end
 
-            channel = oops.model.AuxiliaryChannelDefinition(name,color);
+            channel = oops.model.ChannelDefinition(name,color);
             obj.Channels(end+1,1) = channel;
         end
 
@@ -47,7 +47,7 @@ classdef AuxiliaryChannelRegistry < handle
             index = find(ids == string(id),1);
 
             if isempty(index)
-                channel = oops.model.AuxiliaryChannelDefinition.empty(0,1);
+                channel = oops.model.ChannelDefinition.empty(0,1);
             else
                 channel = obj.Channels(index);
             end
@@ -60,7 +60,7 @@ classdef AuxiliaryChannelRegistry < handle
             index = find(strcmpi(strtrim(string(name)),names),1);
 
             if isempty(index)
-                channel = oops.model.AuxiliaryChannelDefinition.empty(0,1);
+                channel = oops.model.ChannelDefinition.empty(0,1);
             else
                 channel = obj.Channels(index);
             end
@@ -95,15 +95,15 @@ classdef AuxiliaryChannelRegistry < handle
         function obj = fromStruct(S)
         %FROMSTRUCT Restore an ordered registry from serialized definitions.
 
-            obj = oops.model.AuxiliaryChannelRegistry();
+            obj = oops.model.ChannelRegistry();
 
             for k = 1:numel(S)
-                channel = oops.model.AuxiliaryChannelDefinition.fromStruct(S(k));
+                channel = oops.model.ChannelDefinition.fromStruct(S(k));
 
                 if ~isempty(obj.findByID(channel.ID)) || ...
                         ~isempty(obj.findByName(channel.Name))
                     error('oops:model:DuplicateChannelDefinition', ...
-                        'Auxiliary channel IDs and names must be unique.');
+                        'Channel IDs and names must be unique.');
                 end
 
                 obj.Channels(end+1,1) = channel;

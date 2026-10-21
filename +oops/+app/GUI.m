@@ -161,6 +161,11 @@ classdef GUI < handle
             % Operation progress dialog and its exception-safe cleanup guard.
             [progress,cleanupProgress] = obj.createProgressDialog("Loading four-angle inputs..."); %#ok<ASGLU>
 
+            % Validated sources remain staged until their semantic primary-channel
+            % mappings have been reviewed and committed together.
+            inputs = matlabx.image.Image5D.empty(0,1);
+            imageNames = strings(0,1);
+
             % Open each chosen input independently so a bad file does not stop later imports.
             for k = 1:numel(files)
 
@@ -174,13 +179,39 @@ classdef GUI < handle
                     % Lazy four-angle input opened from the current path.
                     input = oops.io.readInput(files(k));
 
-                    % New image model attached to the destination group.
-                    image = group.addImage(input,string(name));
-                    images(end+1,1) = image; %#ok<AGROW>
+                    inputs(end+1,1) = input; %#ok<AGROW>
+                    imageNames(end+1,1) = string(name); %#ok<AGROW>
                 catch ME
                     oops.Log.EXCEPTION(ME);
                     % One invalid file must not prevent importing later valid files.
                 end
+            end
+
+            if isempty(inputs)
+                return;
+            end
+
+            % Visible imports let the user distinguish acquisition metadata from
+            % the semantic project channel assigned to each polarization input.
+            if strcmp(obj.Fig.Visible,'on')
+                delete(cleanupProgress);
+                plan = oops.app.primaryChannelImportDialog( ...
+                    obj.Fig,inputs,imageNames,obj.Project.Channels);
+            else
+                plan = defaultPrimaryChannelPlan( ...
+                    inputs,imageNames,obj.Project.Channels);
+            end
+
+            if isempty(plan)
+                return;
+            end
+
+            for k = 1:numel(plan)
+                definition = obj.Project.Channels.findOrAdd( ...
+                    plan(k).ChannelName,plan(k).ChannelColor);
+                image = group.addImage( ...
+                    plan(k).Input,plan(k).ImageName,definition);
+                images(end+1,1) = image; %#ok<AGROW>
             end
 
             if ~isempty(images)
@@ -3177,7 +3208,8 @@ classdef GUI < handle
                 return;
             end
 
-            definitions = obj.Project.AuxiliaryChannels.Channels;
+            definitions = obj.Project.Channels.Channels;
+            definitions = definitions([definitions.IsAuxiliary]);
             indices = event.ComponentIdx;
 
             if isempty(indices)
@@ -4598,7 +4630,9 @@ classdef GUI < handle
             % Accordion item grid that owns the controls being created or updated.
             pane = obj.SettingsAccordion.getItem("Image Display").Pane;
             set(pane,'ColumnWidth',{'1x'},'RowHeight',{24,24,200},'Padding',5,'RowSpacing',5);
-            obj.ColormapDomain = uidropdown(pane,'Items',{'Intensity','Order','Azimuth'}, ...
+            obj.ColormapDomain = uidropdown(pane, ...
+                'Items',{'Primary intensity','Order','Azimuth'}, ...
+                'ItemsData',{'Intensity','Order','Azimuth'}, ...
                 'Value','Intensity','BackgroundColor',[.3 .3 .3],'FontColor',[.9 .9 .9], ...
                 'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.refreshColormapControls()));
             obj.ColormapDomain.Layout.Row = 1;
@@ -4641,7 +4675,7 @@ classdef GUI < handle
                 return;
             end
 
-            % Intensity, order, or azimuth domain selected for colormap editing.
+            % Internal settings key for the selected user-facing display domain.
             domain = string(obj.ColormapDomain.Value);
 
             % Project-wide map/category assignments for all display domains.
@@ -5010,7 +5044,7 @@ classdef GUI < handle
 
             obj.Settings.IO.DefaultFolder = string(folder);
             plan = oops.app.auxiliaryChannelImportDialog( ...
-                obj.Fig,images,files,obj.Project.AuxiliaryChannels);
+                obj.Fig,images,files,obj.Project.Channels);
 
             if isempty(plan)
                 return;
@@ -5028,7 +5062,7 @@ classdef GUI < handle
             importedImageIDs = strings(numel(plan),1);
 
             for k = 1:numel(plan)
-                definition = obj.Project.AuxiliaryChannels.findOrAdd( ...
+                definition = obj.Project.Channels.findOrAdd( ...
                     plan(k).ChannelName,plan(k).ChannelColor);
                 plan(k).Image.addAuxiliaryChannel( ...
                     definition.ID,plan(k).Input,plan(k).ComponentIndex);
@@ -6073,6 +6107,46 @@ function logDebugElapsed(operation,started)
 %LOGDEBUGELAPSED Report completion time from an exception-safe cleanup.
 
 oops.Log.DEBUG(sprintf('%s in %.3f s.',operation,toc(started)));
+end
+
+function plan = defaultPrimaryChannelPlan(inputs,imageNames,registry)
+%DEFAULTPRIMARYCHANNELPLAN Map hidden/programmatic imports without UI prompts.
+
+plan = repmat(struct( ...
+    'Input',matlabx.image.Image5D.empty(0,1), ...
+    'ImageName',"",'ChannelName',"",'ChannelColor',[0 0 0]), ...
+    numel(inputs),1);
+
+for k = 1:numel(inputs)
+    locations = oops.io.fourAngleLocations(inputs(k));
+    component = inputs(k).getComponent(locations(1,1));
+    name = strtrim(string(component.Name));
+
+    if name == ""
+        name = "Primary channel";
+    end
+
+    definition = registry.findByName(name);
+
+    if isempty(definition)
+        colorName = oops.render.canonicalComponentColor(component.Color);
+
+        if colorName == ""
+            colorName = "gray";
+        end
+
+        [~,color] = matlabx.image.normalizeComponentColor(colorName);
+    else
+        name = definition.Name;
+        color = definition.Color;
+    end
+
+    plan(k) = struct( ...
+        'Input',inputs(k), ...
+        'ImageName',imageNames(k), ...
+        'ChannelName',name, ...
+        'ChannelColor',color);
+end
 end
 
 function closeProgressDialog(progress)

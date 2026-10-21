@@ -177,15 +177,31 @@ end
 function color = primaryComponentColor(image)
 %PRIMARYCOMPONENTCOLOR Resolve the first polarization frame's metadata color.
 
-color = "";
+% Gray is the predictable display color when acquisition metadata does not
+% provide a canonical color for the primary polarization channel.
+color = "gray";
+
+if ~isempty(image.PrimaryChannel)
+    registeredColor = oops.render.canonicalComponentColor(image.PrimaryChannel.Color);
+
+    if registeredColor ~= ""
+        color = registeredColor;
+        return;
+    end
+end
+
 componentIndex = image.FrameLocations(1,1);
 
 if componentIndex > numel(image.Input.Components)
     return;
 end
 
-color = oops.render.canonicalComponentColor( ...
+metadataColor = oops.render.canonicalComponentColor( ...
     image.Input.Components(componentIndex).Color);
+
+if metadataColor ~= ""
+    color = metadataColor;
+end
 end
 end
 
@@ -205,7 +221,8 @@ function [data,info] = auxiliaryChannels(image)
         'ComponentColorMode',"colors",'ComponentCLims',{{}}, ...
         'ComponentColors',{{}},'ComponentColormaps',{{}});
 
-    definitions = image.Parent.Parent.AuxiliaryChannels.Channels;
+    definitions = image.Parent.Parent.Channels.Channels;
+    definitions = definitions([definitions.IsAuxiliary]);
 
     if isempty(definitions)
         return;

@@ -13,6 +13,7 @@ classdef Image < handle
 
     properties (SetAccess=private)
         ID (1,1) string = ""
+        PrimaryChannelID (1,1) string = ""
         PixelSize (1,1) struct = struct('X',1,'Y',1,'UnitX',"px",'UnitY',"px")
         ActiveObjectID (1,1) string = ""
         SelectedObjectIDs (:,1) string = strings(0,1)
@@ -49,6 +50,7 @@ classdef Image < handle
         SummaryTable (:,:) table
         IsLoaded
         ActiveObject
+        PrimaryChannel
         Order
         Azimuth
     end
@@ -125,6 +127,7 @@ classdef Image < handle
             S = struct( ...
                 'ID',obj.ID, ...
                 'Name',obj.Name, ...
+                'PrimaryChannelID',obj.PrimaryChannelID, ...
                 'Source',oops.io.project.sourceReference(obj.Input,projectFolder), ...
                 'PixelSize',obj.PixelSize, ...
                 'FrameLocations',obj.FrameLocations, ...
@@ -148,6 +151,7 @@ classdef Image < handle
             end
 
             obj.ID = string(S.ID);
+            obj.setPrimaryChannel(string(S.PrimaryChannelID));
             obj.PixelSize = S.PixelSize;
             obj.FrameLocations = double(S.FrameLocations);
             obj.IntensityDisplayRange = double(S.IntensityDisplayRange);
@@ -209,8 +213,13 @@ classdef Image < handle
                 displayRange double = []
             end
 
-            if isempty(obj.Parent) || isempty(obj.Parent.Parent) || ...
-                    isempty(obj.Parent.Parent.AuxiliaryChannels.findByID(channelID))
+            definition = oops.model.ChannelDefinition.empty(0,1);
+
+            if ~isempty(obj.Parent) && ~isempty(obj.Parent.Parent)
+                definition = obj.Parent.Parent.Channels.findByID(channelID);
+            end
+
+            if isempty(definition)
                 error('oops:model:UnknownAuxiliaryChannel', ...
                     'The auxiliary channel ID is not registered with this project.');
             end
@@ -225,6 +234,7 @@ classdef Image < handle
 
             assignment = oops.model.AuxiliaryChannelAssignment( ...
                 channelID,input,componentIndex,displayRange);
+            definition.markAuxiliary();
             channelIDs = string({obj.AuxiliaryChannels.ChannelID});
             existing = find(channelIDs == channelID,1);
 
@@ -238,6 +248,50 @@ classdef Image < handle
 
             notify(obj,'DataChanged', ...
                 oops.model.events.DataChanged(obj.ID,"AuxiliaryChannels"));
+        end
+
+        function setPrimaryChannel(obj,channel)
+        %SETPRIMARYCHANNEL Assign the semantic identity of the polarization input.
+
+            if isempty(obj.Parent) || isempty(obj.Parent.Parent)
+                error('oops:model:DetachedImage', ...
+                    'A detached image cannot assign a primary channel.');
+            end
+
+            if isa(channel,'oops.model.ChannelDefinition')
+                id = channel.ID;
+            else
+                id = string(channel);
+            end
+
+            definition = obj.Parent.Parent.Channels.findByID(id);
+
+            if isempty(definition)
+                error('oops:model:UnknownPrimaryChannel', ...
+                    'The primary channel ID is not registered with this project.');
+            end
+
+            if obj.PrimaryChannelID == definition.ID
+                return;
+            end
+
+            obj.PrimaryChannelID = definition.ID;
+            definition.markPrimary();
+            notify(obj,'DataChanged', ...
+                oops.model.events.DataChanged(obj.ID,"PrimaryChannelID"));
+        end
+
+        function channel = get.PrimaryChannel(obj)
+        %GET.PRIMARYCHANNEL Resolve the primary semantic identity from the project.
+
+            channel = oops.model.ChannelDefinition.empty(0,1);
+
+            if isempty(obj.Parent) || isempty(obj.Parent.Parent) || ...
+                    obj.PrimaryChannelID == ""
+                return;
+            end
+
+            channel = obj.Parent.Parent.Channels.findByID(obj.PrimaryChannelID);
         end
 
         function assignment = getAuxiliaryChannel(obj,channelID)
@@ -894,17 +948,31 @@ classdef Image < handle
             maskCurrent = ~isempty(obj.Mask) && ...
                 obj.MaskProvenance.isCurrent(obj.CorrectionProvenance);
 
+            % Primary semantic identity remains distinct from acquisition metadata.
+            primary = struct( ...
+                'ChannelID',obj.PrimaryChannelID, ...
+                'ChannelName',"", ...
+                'PreferredColor',[], ...
+                'SourceChannel',obj.Input.getComponentName(obj.FrameLocations(1,1)));
+
+            if ~isempty(obj.PrimaryChannel)
+                primary.ChannelName = obj.PrimaryChannel.Name;
+                primary.PreferredColor = obj.PrimaryChannel.Color;
+            end
+
             % Semantic assignments summarized without reading their source planes.
-            auxiliary = struct('ChannelID',{},'ChannelName',{},'SourceChannel',{}, ...
-                'ComponentIndex',{},'FilePath',{},'DisplayRange',{});
+            % Use named fields in a scalar structure so the generic pretty
+            % printer expands every assignment instead of collapsing a
+            % nonscalar structure array to "[struct]".
+            auxiliary = struct('Count',numel(obj.AuxiliaryChannels));
 
             for k = 1:numel(obj.AuxiliaryChannels)
                 assignment = obj.AuxiliaryChannels(k);
-                definition = oops.model.AuxiliaryChannelDefinition.empty(0,1);
+                definition = oops.model.ChannelDefinition.empty(0,1);
                 channelName = "Unknown";
 
                 if ~isempty(obj.Parent) && ~isempty(obj.Parent.Parent)
-                    definition = obj.Parent.Parent.AuxiliaryChannels.findByID(assignment.ChannelID);
+                    definition = obj.Parent.Parent.Channels.findByID(assignment.ChannelID);
                 end
 
                 if ~isempty(definition)
@@ -917,13 +985,17 @@ classdef Image < handle
                     filePath = string(assignment.Input.Source.FilePath);
                 end
 
-                auxiliary(end+1) = struct( ... %#ok<AGROW>
+                channel = struct( ...
                     'ChannelID',assignment.ChannelID, ...
                     'ChannelName',channelName, ...
                     'SourceChannel',assignment.Input.getComponentName(assignment.ComponentIndex), ...
                     'ComponentIndex',assignment.ComponentIndex, ...
                     'FilePath',filePath, ...
                     'DisplayRange',assignment.DisplayRange);
+
+                % Stable ordinal field used only to present this assignment.
+                fieldName = sprintf('Channel%d',k);
+                auxiliary.(fieldName) = channel;
             end
 
             info = struct( ...
@@ -940,6 +1012,7 @@ classdef Image < handle
                         'Z',obj.Input.SizeZ, ...
                         'T',obj.Input.SizeT), ...
                     'ComponentClass',string(obj.Input.getComponentClass(1)), ...
+                    'PrimaryChannel',primary, ...
                     'PixelSize',obj.PixelSize, ...
                     'FrameLocations',obj.FrameLocations, ...
                     'Loaded',obj.IsLoaded), ...
