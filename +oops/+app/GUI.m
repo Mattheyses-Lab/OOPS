@@ -622,7 +622,7 @@ classdef GUI < handle
             obj.Grid.Visible = state;
 
             for name = ["Close","Save","SaveAs","LoadImages","Calibration", ...
-                    "AuxiliaryChannels","Analysis","View","Objects","RuntimeStatus"]
+                    "AuxiliaryChannels","Run","View","Objects","RuntimeStatus"]
 
                 if isfield(obj.MenuUI,name)
                     obj.MenuUI.(name).Enable = state;
@@ -821,10 +821,10 @@ classdef GUI < handle
             obj.addSetting("View","Left","View","LeftSource",sources(sources ~= "Objects"));
             obj.addSetting("View","Right","View","RightSource",sources);
 
-            % Segmentation catalog used to populate the strategy selector and controls.
-            definitions = oops.analysis.segment.strategies();
-            obj.addSetting("Mask","Strategy","Segmentation","Strategy",[definitions.Name]);
-            obj.SettingsUI.Segmentation.Strategy.Items = cellstr([definitions.Label]);
+            % Segmentation catalog used to populate the algorithm selector and controls.
+            definitions = oops.analysis.segment.algorithms();
+            obj.addSetting("Mask","Algorithm","Segmentation","Algorithm",[definitions.ID]);
+            obj.SettingsUI.Segmentation.Algorithm.Items = cellstr([definitions.Label]);
             obj.addSetting("Mask","Connectivity","Segmentation","Connectivity",[4 8]);
             obj.buildSegmentationAdjustments(definitions);
             obj.addSectionLabel("Mask","Object filtering");
@@ -1256,17 +1256,24 @@ classdef GUI < handle
         end
 
         function buildSegmentationAdjustments(obj,definitions)
-        %BUILDSEGMENTATIONADJUSTMENTS Build scalar controls from strategy metadata.
-        % Names/ranges live in the catalog; callback bindings carry no strategy switch.
+        %BUILDSEGMENTATIONADJUSTMENTS Build scalar controls from algorithm metadata.
 
             % Accordion item grid that owns the controls being created or updated.
             pane = obj.SettingsAccordion.getItem("Mask").Pane;
 
-            % Read each strategy's control definitions.
-            for definition = definitions
+            % Read each algorithm's control definitions.
+            for definitionIndex = 1:numel(definitions)
 
-                % Create a scalar slider for each adjustable strategy parameter.
-                for parameter = definition.Parameters
+                definition = definitions(definitionIndex);
+
+                % Valid structure field used only to retain this algorithm's controls.
+                algorithmField = matlab.lang.makeValidName(definition.ID);
+
+                % Create a scalar slider for each adjustable algorithm parameter.
+                parameters = definition.ParameterDefinitions;
+
+                for k = 1:numel(parameters)
+                    parameter = parameters(k);
 
                     if ~parameter.Adjustable
                         continue;
@@ -1285,8 +1292,8 @@ classdef GUI < handle
                         'ValueChangedFcn',@(src,~) obj.runCallback(@() obj.onSegmentationAdjustment(src,true)));
                     control.Layout.Row = row;
                     control.Layout.Column = [1 2];
-                    control.UserData = struct('Strategy',definition.Name,'Name',parameter.Name);
-                    obj.SegmentationUI.(definition.Name).(parameter.Name) = control;
+                    control.UserData = struct('Algorithm',definition.ID,'Name',parameter.Name);
+                    obj.SegmentationUI.(algorithmField).(parameter.Name) = control;
                 end
 
             end
@@ -1310,40 +1317,49 @@ classdef GUI < handle
         end
 
         function refreshSegmentationControls(obj)
-        %REFRESHSEGMENTATIONCONTROLS Show only parameters for the selected strategy.
-        % A project strategy change does not relabel or alter an existing mask recipe.
+        %REFRESHSEGMENTATIONCONTROLS Show parameters for the selected algorithm.
 
             % Active image supplying data and object membership for this operation.
             image = obj.Project.ActiveImage;
 
-            % Project strategy currently selected for new segmentation runs.
-            strategy = obj.Settings.Segmentation.Strategy;
+            % Project algorithm currently selected for new segmentation runs.
+            algorithm = obj.Settings.Segmentation.Algorithm;
 
-            % Whether the active image has a committed recipe matching that strategy.
+            % Whether the active image has a committed recipe matching that algorithm.
             ready = ~isempty(image) && ~isempty(image.SegmentationParameters) && ...
-                image.SegmentationParameters.Strategy == strategy;
+                image.SegmentationParameters.Algorithm == algorithm;
 
             % Accordion item grid that owns the controls being created or updated.
             pane = obj.SettingsAccordion.getItem("Mask").Pane;
 
-            % Whether the selected strategy exposes any adjustable parameters.
+            % Whether the selected algorithm exposes any adjustable parameters.
             adjustable = false;
 
-            % Synchronize parameter controls for every strategy in the catalog.
-            for definition = oops.analysis.segment.strategies()
+            % Synchronize parameter controls for every algorithm in the catalog.
+            definitions = oops.analysis.segment.algorithms();
 
-                % Show and populate only the selected strategy's adjustable controls.
-                for parameter = definition.Parameters
+            for definitionIndex = 1:numel(definitions)
+
+                definition = definitions(definitionIndex);
+
+                % Valid structure field containing this algorithm's controls.
+                algorithmField = matlab.lang.makeValidName(definition.ID);
+
+                % Show and populate only the selected algorithm's adjustable controls.
+                parameters = definition.ParameterDefinitions;
+
+                for k = 1:numel(parameters)
+                    parameter = parameters(k);
 
                     if ~parameter.Adjustable
                         continue;
                     end
 
                     % Bound UI component being constructed or synchronized.
-                    control = obj.SegmentationUI.(definition.Name).(parameter.Name);
+                    control = obj.SegmentationUI.(algorithmField).(parameter.Name);
 
-                    % Whether this parameter control belongs to the selected strategy.
-                    visible = definition.Name == strategy;
+                    % Whether this parameter control belongs to the selected algorithm.
+                    visible = definition.ID == algorithm;
                     control.Visible = matlab.lang.OnOffSwitchState(visible);
 
                     if visible
@@ -1397,7 +1413,17 @@ classdef GUI < handle
 
                 % Image-local segmentation snapshot used for parameter display or adjustment.
                 recipe = image.SegmentationParameters;
-                status.Text = sprintf('%s: %d of %d objects retained',recipe.Mode,recipe.RetainedCount,recipe.CandidateCount);
+                retained = numel(image.Objects);
+
+                if isfield(image.MaskProvenance.Diagnostics,'CandidateCount')
+                    candidates = ...
+                        image.MaskProvenance.Diagnostics.CandidateCount;
+                    status.Text = sprintf('%s: %d of %d objects retained', ...
+                        recipe.Mode,retained,candidates);
+                else
+                    status.Text = sprintf('%s: %d objects retained', ...
+                        recipe.Mode,retained);
+                end
             else
                 status.Text = 'Run segmentation to adjust parameters.';
             end
@@ -1410,11 +1436,11 @@ classdef GUI < handle
             % Active image supplying data and object membership for this operation.
             image = obj.Project.ActiveImage;
 
-            % Control metadata identifying the target domain/strategy and setting name.
+            % Control metadata identifying the target algorithm and parameter name.
             binding = control.UserData;
 
             if isempty(image) || isempty(image.SegmentationParameters) || ...
-                    image.SegmentationParameters.Strategy ~= binding.Strategy
+                    image.SegmentationParameters.Algorithm ~= binding.Algorithm
                 obj.refreshSegmentationControls();
                 return;
             end
@@ -1432,15 +1458,16 @@ classdef GUI < handle
                 % Image-local segmentation snapshot used for parameter display or adjustment.
                 recipe = image.SegmentationParameters.withParameter(binding.Name,control.Value);
 
-                % Strategy metadata defining its algorithm and adjustable controls.
-                definition = oops.analysis.segment.strategies(binding.Strategy);
+                % Algorithm metadata defining its implementation and adjustable controls.
+                definition = oops.analysis.segment.algorithms(binding.Algorithm);
 
-                if isempty(definition.Preview)
+                if isempty(definition.PreviewFcn)
                     return;
                 end
 
                 % Unfiltered preview foreground produced from cached enhancement.
-                candidate = definition.Preview(image.Results.Segmentation,recipe);
+                candidate = definition.PreviewFcn( ...
+                    image.Results.Segmentation,recipe);
 
                 % Filtered preview mask displayed without committing model membership.
                 preview = oops.analysis.segment.filter(candidate,image.Results.AverageIntensity,recipe);
@@ -1997,13 +2024,15 @@ classdef GUI < handle
                 'Text','Import auxiliary channels...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseAuxiliaryChannels()));
 
-            % Analysis menu containing explicit segmentation and FPM actions.
-            analysis = uimenu(obj.Fig,'Text','Analysis');
-            obj.MenuUI.Analysis = analysis;
-            uimenu(analysis,'Text','Segment selected / active images','MenuSelectedFcn', ...
-                @(~,~) obj.runCallback(@() obj.runAnalysis("Segment")));
-            uimenu(analysis,'Text','Order/orientation for selected / active images','MenuSelectedFcn', ...
-                @(~,~) obj.runCallback(@() obj.runAnalysis("FPM")));
+            % Run menu exposing the complete pipeline and its individual stages.
+            run = uimenu(obj.Fig,'Text','Run');
+            obj.MenuUI.Run = run;
+            uimenu(run,'Text','All','MenuSelectedFcn', ...
+                @(~,~) obj.runCallback(@() obj.runAnalysis("All")));
+            uimenu(run,'Text','Object detection','Separator','on','MenuSelectedFcn', ...
+                @(~,~) obj.runCallback(@() obj.runAnalysis("ObjectDetection")));
+            uimenu(run,'Text','Polarization analysis','MenuSelectedFcn', ...
+                @(~,~) obj.runCallback(@() obj.runAnalysis("Polarization")));
 
             % View menu populated from the graphics-free preset catalog.
             view = uimenu(obj.Fig,'Text','View');
@@ -2590,7 +2619,7 @@ classdef GUI < handle
         function onSettingEdited(obj,control)
         %ONSETTINGEDITED Apply a binding through config setters, restoring UI on rejection.
 
-            % Control metadata identifying the target domain/strategy and setting name.
+            % Control metadata identifying the target algorithm and parameter name.
             binding = control.UserData;
 
             % Settings object supplying the values for this operation.
@@ -5409,7 +5438,7 @@ classdef GUI < handle
         end
 
         function runAnalysis(obj,stage)
-        %RUNANALYSIS Run one explicit stage with optional UI progress, using model targets.
+        %RUNANALYSIS Run selected processing stages for the current model targets.
 
             % Resolved image targets for the requested batch pipeline stage.
             images = obj.analysisTargets();
@@ -5419,12 +5448,22 @@ classdef GUI < handle
                 return;
             end
 
-            if stage == "Segment"
-
-                % Initial progress-dialog message identifying segmentation or FPM analysis.
-                message = "Segmenting images and detecting objects...";
-            else
-                message = "Calculating order and orientation statistics...";
+            switch stage
+                case "All"
+                    message = "Running all processing steps...";
+                    stages = ["Polarization","ObjectDetection"];
+                    skipCurrentPolarization = true;
+                case "ObjectDetection"
+                    message = "Detecting objects...";
+                    stages = "ObjectDetection";
+                    skipCurrentPolarization = false;
+                case "Polarization"
+                    message = "Calculating polarization results...";
+                    stages = "Polarization";
+                    skipCurrentPolarization = false;
+                otherwise
+                    error('oops:app:UnknownProcessingStage', ...
+                        'Unknown processing command: %s',stage);
             end
 
             % Operation progress dialog and its exception-safe cleanup guard.
@@ -5435,11 +5474,9 @@ classdef GUI < handle
             % Cleanup guard restoring the temporary callback/processing state.
             guard = onCleanup(@() obj.endProcessing());
 
-            if stage == "Segment"
-                oops.analysis.Analyzer.segmentImages(images,obj.Settings,Progress=progress);
-            else
-                oops.analysis.Analyzer.analyzeImages(images,obj.Settings,Progress=progress);
-            end
+            oops.analysis.Analyzer.processImages( ...
+                images,obj.Settings,stages,Progress=progress, ...
+                SkipCurrentPolarization=skipCurrentPolarization);
 
             oops.runtime.updateProgress(progress,"Updating viewers...",[]);
             obj.Processing = false;

@@ -3,129 +3,143 @@
 % SPDX-License-Identifier: GPL-3.0-or-later
 
 classdef MaskProvenance
-%MASKPROVENANCE Describe how object membership was defined and its dependencies.
+%MASKPROVENANCE Record how membership was defined and its upstream inputs.
+% Diagnostics remains a small scalar structure for now and may become a
+% dedicated class as segmentation algorithms expose richer durable outcomes.
 
     properties (SetAccess=private)
-        Method (1,1) string = "Unknown"
-        InputDomain (1,1) string = "Unknown"
-        CalibrationIDs (:,1) string = strings(0,1)
-        Source (1,1) struct = struct()
+        Method (1,1) string = "Unknown" % Mechanism used to define object membership.
+        Parameters (:,1) oops.analysis.segment.Parameters = ...
+            oops.analysis.segment.Parameters.empty(0,1) % Segmentation inputs captured with an algorithmic mask.
+        Correction (1,1) oops.model.CorrectionProvenance = ...
+            oops.model.CorrectionProvenance.raw() % Upstream intensity correction used for segmentation.
+        Diagnostics (1,1) struct = struct() % Small durable outcomes from mask generation.
+        Source (1,1) struct = struct() % External source metadata for imported membership.
+    end
+
+    properties (Dependent, SetAccess=private)
+        Algorithm % Segmentation algorithm ID, or empty for non-algorithmic masks.
     end
 
     methods
-
-        function obj = MaskProvenance(method,inputDomain,calibrationIDs,source)
-        %MASKPROVENANCE Construct an immutable mask-definition description.
-
-            if nargin == 0
-                return;
+        function obj = MaskProvenance( ...
+                method,parameters,correction,diagnostics,source)
+        %MASKPROVENANCE Construct immutable mask-definition metadata.
+            arguments
+                method (1,1) string = "Unknown"
+                parameters (:,1) oops.analysis.segment.Parameters = ...
+                    oops.analysis.segment.Parameters.empty(0,1)
+                correction (1,1) oops.model.CorrectionProvenance = ...
+                    oops.model.CorrectionProvenance.raw()
+                diagnostics (1,1) struct = struct()
+                source (1,1) struct = struct()
             end
-
-            method = string(method);
-            inputDomain = string(inputDomain);
-
             if ~ismember(method,["Unknown","Segmentation","Imported","Manual"])
                 error('oops:model:InvalidMaskMethod', ...
                     'Unknown mask provenance method: %s',method);
             end
-
-            if ~ismember(inputDomain, ...
-                    ["Unknown","CorrectedIntensity","RawIntensity","ExternalMask"])
-                error('oops:model:InvalidMaskInputDomain', ...
-                    'Unknown mask input domain: %s',inputDomain);
+            if numel(parameters) > 1
+                error('oops:model:InvalidParameters', ...
+                    'Mask provenance accepts at most one segmentation parameter set.');
             end
-
             obj.Method = method;
-            obj.InputDomain = inputDomain;
-            obj.CalibrationIDs = string(calibrationIDs(:));
+            obj.Parameters = parameters;
+            obj.Correction = correction;
+            obj.Diagnostics = diagnostics;
             obj.Source = source;
         end
 
-        function tf = isCurrent(obj,correction)
-        %ISCURRENT Compare only the correction dependency declared by this mask.
+        function value = get.Algorithm(obj)
+        %GET.ALGORITHM Return the algorithm that generated this mask, if any.
 
-            arguments
-                obj
-                correction (1,1) oops.model.CorrectionProvenance
+            if obj.Method == "Segmentation" && ~isempty(obj.Parameters)
+                value = obj.Parameters.Algorithm;
+            else
+                value = "";
             end
+        end
 
-            switch obj.InputDomain
-                case "RawIntensity"
-                    tf = correction.Method == "Raw";
-                case "CorrectedIntensity"
-                    tf = correction.Method == "FlatField" && ...
-                        isequal(obj.CalibrationIDs,correction.CalibrationIDs);
-                case "ExternalMask"
-                    tf = true;
-                otherwise
-                    tf = false;
+        function tf = isCurrent(obj,correction)
+        %ISCURRENT Compare the correction dependency declared by this mask.
+            if obj.Method == "Segmentation"
+                tf = obj.Correction.matches(correction);
+            elseif ismember(obj.Method,["Imported","Manual"])
+                tf = true;
+            else
+                tf = false;
             end
         end
 
         function S = toStruct(obj)
         %TOSTRUCT Return the durable mask-definition description.
-
-            S = struct( ...
-                'Method',obj.Method, ...
-                'InputDomain',obj.InputDomain, ...
-                'CalibrationIDs',obj.CalibrationIDs, ...
+            parameters = struct.empty(0,1);
+            if ~isempty(obj.Parameters)
+                parameters = obj.Parameters.toStruct();
+            end
+            S = struct('Method',obj.Method, ...
+                'Parameters',parameters, ...
+                'Correction',obj.Correction.toStruct(), ...
+                'Diagnostics',obj.Diagnostics, ...
                 'Source',obj.Source);
         end
-
     end
 
     methods (Static)
-
         function obj = unknown()
-        %UNKNOWN Describe a mask whose origin predates provenance tracking.
-
+        %UNKNOWN Describe a mask whose origin is not known.
             obj = oops.model.MaskProvenance();
         end
 
-        function obj = segmented(correction)
-        %SEGMENTED Describe segmentation from the current raw or corrected intensity.
-
+        function obj = segmented(correction,parameters,diagnostics)
+        %SEGMENTED Describe an algorithmic mask and its corrected input.
             arguments
                 correction (1,1) oops.model.CorrectionProvenance
+                parameters (1,1) oops.analysis.segment.Parameters = ...
+                    oops.analysis.segment.Parameters()
+                diagnostics (1,1) struct = struct()
             end
-
-            if correction.Method == "FlatField"
-                domain = "CorrectedIntensity";
-                ids = correction.CalibrationIDs;
-            else
-                domain = "RawIntensity";
-                ids = strings(0,1);
-            end
-
             obj = oops.model.MaskProvenance( ...
-                "Segmentation",domain,ids,struct());
+                "Segmentation",parameters,correction,diagnostics,struct());
         end
 
         function obj = imported(source)
-        %IMPORTED Describe externally supplied membership independent of correction.
-
+        %IMPORTED Describe externally supplied membership.
             arguments
                 source (1,1) struct = struct()
             end
-
             obj = oops.model.MaskProvenance( ...
-                "Imported","ExternalMask",strings(0,1),source);
+                "Imported",oops.analysis.segment.Parameters.empty(0,1), ...
+                oops.model.CorrectionProvenance.raw(),struct(),source);
         end
 
         function obj = manual()
-        %MANUAL Describe user-defined membership independent of correction.
-
+        %MANUAL Describe user-defined membership.
             obj = oops.model.MaskProvenance( ...
-                "Manual","ExternalMask",strings(0,1),struct());
+                "Manual",oops.analysis.segment.Parameters.empty(0,1), ...
+                oops.model.CorrectionProvenance.raw(),struct(),struct());
         end
 
         function obj = fromStruct(S)
-        %FROMSTRUCT Restore mask provenance from a project snapshot.
-
+        %FROMSTRUCT Restore current or earlier mask provenance.
+            if isfield(S,'Parameters') && ~isempty(S.Parameters)
+                parameters = oops.analysis.segment.Parameters.fromStruct(S.Parameters);
+            else
+                parameters = oops.analysis.segment.Parameters.empty(0,1);
+            end
+            if isfield(S,'Correction')
+                correction = oops.model.CorrectionProvenance.fromStruct(S.Correction);
+            elseif isfield(S,'CalibrationIDs') && ~isempty(S.CalibrationIDs)
+                correction = oops.model.CorrectionProvenance.flatField(string(S.CalibrationIDs));
+            else
+                correction = oops.model.CorrectionProvenance.raw();
+            end
+            if isfield(S,'Diagnostics')
+                diagnostics = S.Diagnostics;
+            else
+                diagnostics = struct();
+            end
             obj = oops.model.MaskProvenance( ...
-                string(S.Method),string(S.InputDomain), ...
-                string(S.CalibrationIDs),S.Source);
+                string(S.Method),parameters,correction,diagnostics,S.Source);
         end
-
     end
 end

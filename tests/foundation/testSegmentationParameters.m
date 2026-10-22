@@ -3,7 +3,7 @@
 % SPDX-License-Identifier: GPL-3.0-or-later
 
 function tests = testSegmentationParameters
-%TESTSEGMENTATIONPARAMETERS Verify recipe provenance and strategy-independent pruning.
+%TESTSEGMENTATIONPARAMETERS Verify recipe provenance and algorithm-independent pruning.
 tests = functiontests(localfunctions);
 end
 function setupOnce(t)
@@ -28,7 +28,7 @@ t.verifyGreaterThan(numel(allLists),2); t.verifyEqual(numel(lists),2);
 t.verifyEqual(limited.Threshold,graythresh(limited.Enhanced));
 t.verifyEqual(limited.Threshold,full.Threshold);
 t.verifyEqual(sort(vertcat(lists{:})),find(mask));
-t.verifyEqual(limited.Parameters.CandidateCount,numel(allLists));
+t.verifyEqual(limited.CandidateCount,numel(allLists));
 end
 function testBrightestMeanAndStableTies(t)
 s = oops.config.Segmentation(); s.BorderWidth = 0; s.MinimumArea = 1; s.MaxObjects = 2;
@@ -37,9 +37,10 @@ candidate = false(20,30); average = zeros(20,30);
 candidate(3:4,3:4) = true; average(3:4,3:4) = 10;
 candidate(3:5,12:14) = true; average(3:5,12:14) = 20;
 candidate(10:11,23:24) = true; average(10:11,23:24) = 20;
-[mask,lists,recipe] = oops.analysis.segment.filter(candidate,average,recipe);
+[mask,lists,diagnostics] = oops.analysis.segment.filter(candidate,average,recipe);
 t.verifyFalse(any(mask(3:4,3:4),'all')); t.verifyEqual(numel(lists),2);
-t.verifyEqual(recipe.CandidateCount,3); t.verifyEqual(recipe.RetainedCount,2);
+t.verifyEqual(diagnostics.CandidateCount,3);
+t.verifyEqual(diagnostics.RetainedCount,2);
 s.MaxObjects = 1;
 [mask,~,~] = oops.analysis.segment.filter(candidate,average,oops.analysis.segment.Parameters(s));
 t.verifyTrue(all(mask(3:5,12:14),'all')); t.verifyFalse(any(mask(10:11,23:24),'all'));
@@ -50,24 +51,37 @@ I = zeros(60); I(20:24,20:24) = 100;
 im = g.addImage(matlabx.image.Image5D.fromComponents({I,I,I,I}));
 oops.analysis.Analyzer.segmentImages(im,p.Settings);
 automatic = im.SegmentationParameters; threshold = automatic.Values.Threshold;
-p.Settings.Segmentation.MinimumArea = 1000; p.Settings.Segmentation.Strategy = "Filaments";
+t.verifyEqual(im.MaskProvenance.Diagnostics.RetainedCount,numel(im.Objects));
+restoredProvenance = oops.model.MaskProvenance.fromStruct( ...
+    im.MaskProvenance.toStruct());
+t.verifyEqual(restoredProvenance.Algorithm,"Puncta/1");
+t.verifyEqual(restoredProvenance.Diagnostics, ...
+    im.MaskProvenance.Diagnostics);
+p.Settings.Segmentation.MinimumArea = 1000; p.Settings.Segmentation.Algorithm = "Filaments/1";
 oops.analysis.Analyzer.adjustSegmentation(im,"Threshold",threshold,p.Settings);
 t.verifyEqual(im.SegmentationParameters.Mode,"Manual");
 t.verifyEqual(automatic.Mode,"Automatic",'Recipes must have value semantics.');
-t.verifyEqual(im.SegmentationParameters.Common.MinimumArea,automatic.Common.MinimumArea);
-t.verifyEqual(im.SegmentationParameters.Strategy,"Puncta"); t.verifyNotEmpty(im.Objects);
+t.verifyEqual(im.SegmentationParameters.Filtering.MinimumArea, ...
+    automatic.Filtering.MinimumArea);
+t.verifyEqual(im.SegmentationParameters.Algorithm,"Puncta/1"); t.verifyNotEmpty(im.Objects);
 oops.analysis.Analyzer.adjustSegmentation(im,"Automatic",[],p.Settings);
 t.verifyEqual(im.SegmentationParameters.Mode,"Automatic");
 t.verifyEqual(im.SegmentationParameters.Values.Threshold,threshold);
-im.setCorrectionResults(I,strings(0,1)); t.verifyEmpty(im.SegmentationParameters);
+im.setCorrectionResults(I,strings(0,1));
+t.verifyNotEmpty(im.SegmentationParameters);
+t.verifyTrue(im.MaskProvenance.isCurrent(im.CorrectionProvenance));
 end
 function testParameterValidationAndCatalog(t)
-definitions = oops.analysis.segment.strategies(); t.verifyEqual([definitions.Name],["Puncta","Filaments"]);
+definitions = oops.analysis.segment.algorithms();
+t.verifyEqual([definitions.ID],["Puncta/1","Filaments/1"]);
+t.verifyEqual([definitions.Label],["Puncta","Filaments"]);
+t.verifyClass(definitions(1).ParameterDefinitions, ...
+    'oops.analysis.ParameterDefinition');
 s = oops.config.Segmentation(); recipe = oops.analysis.segment.Parameters(s);
 t.verifyError(@() recipe.withParameter("Threshold",2),'MATLAB:notLessEqual');
 t.verifyError(@() recipe.withParameter("Sensitivity",.5),'oops:analysis:UnknownParameter');
-t.verifyError(@() oops.analysis.segment.strategies("Missing"),'oops:analysis:UnknownStrategy');
-s.Strategy = "Filaments"; recipe = oops.analysis.segment.Parameters(s);
+t.verifyError(@() oops.analysis.segment.algorithms("Missing"),'oops:analysis:UnknownAlgorithm');
+s.Algorithm = "Filaments/1"; recipe = oops.analysis.segment.Parameters(s);
 t.verifyError(@() recipe.withParameter("Threshold",.5),'oops:analysis:UnknownParameter');
 end
 function testDisplayLimitsDoNotOverwriteManualValues(t)
@@ -162,8 +176,10 @@ im = g.addImage(matlabx.image.Image5D.fromComponents({I,I,I,I}));
 oops.analysis.Analyzer.segmentImages(im,p.Settings);
 cal = p.addCalibration(matlabx.image.Image5D.fromComponents({ones(60),ones(60),ones(60),ones(60)}));
 g.setCalibrations(cal.ID);
-t.verifyError(@() oops.analysis.Analyzer.adjustSegmentation(im,"Threshold",.5,p.Settings),'oops:analysis:NoSegmentation');
-t.verifyEmpty(im.SegmentationParameters); t.verifyEmpty(im.Mask);
+oops.analysis.Analyzer.adjustSegmentation(im,"Threshold",.5,p.Settings);
+t.verifyNotEmpty(im.SegmentationParameters);
+t.verifyNotEmpty(im.Mask);
+t.verifyTrue(im.MaskProvenance.isCurrent(im.CorrectionProvenance));
 end
 
 function testAdjustmentUsesCachedEnhancementAndMatchesPreview(t)
@@ -173,17 +189,19 @@ image = g.addImage(matlabx.image.Image5D.fromComponents({I,I,I,I}));
 oops.analysis.Analyzer.segmentImages(image,p.Settings);
 cached = image.Results.Segmentation; average = image.Results.AverageIntensity;
 recipe = image.SegmentationParameters.withParameter("Threshold",.4);
-definition = oops.analysis.segment.strategies(recipe.Strategy);
-expected = oops.analysis.segment.filter(definition.Preview(cached,recipe),average,recipe);
+definition = oops.analysis.segment.algorithms(recipe.Algorithm);
+expected = oops.analysis.segment.filter( ...
+    definition.PreviewFcn(cached,recipe),average,recipe);
 profile clear; profile on;
 profileCleanup = onCleanup(@() profile('off'));
 oops.analysis.Analyzer.adjustSegmentation(image,"Threshold",.4,p.Settings);
 profile off; stats = profile('info');
 names = string({stats.FunctionTable.FunctionName});
-t.verifyFalse(any(contains(names,"puncta")),"Commit must not repeat enhancement/Otsu.");
+t.verifyFalse(any(endsWith(names,"oops.analysis.segment.puncta")), ...
+    "Commit must not repeat enhancement/Otsu.");
 t.verifyFalse(any(contains(names,"readStack")),"Commit must not reread input frames.");
 t.verifyEqual(image.Mask,expected);
 t.verifyEqual(image.Results.Segmentation.Enhanced,cached.Enhanced);
 t.verifyEqual(image.Results.AverageIntensity,average);
-t.verifyEqual(image.SegmentationParameters.AutomaticParameters,recipe.AutomaticParameters);
+t.verifyEqual(image.SegmentationParameters.Automatic,recipe.Automatic);
 end

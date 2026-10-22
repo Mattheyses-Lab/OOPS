@@ -70,12 +70,12 @@ s = oops.config.Settings();
 [state,l] = capture(s,'Changed');
 cleanup = onCleanup(@() delete(l));
 try
-    s.Segmentation.Strategy = "unknown";
-    t.assertFail('Unsupported strategy was accepted.');
+    s.Segmentation.Algorithm = "unknown";
+    t.assertFail('Unsupported algorithm was accepted.');
 catch e
     t.verifyNotEqual(e.identifier,'matlab.unittest:AssertionFailed');
 end
-t.verifyEqual(s.Segmentation.Strategy,"Puncta");
+t.verifyEqual(s.Segmentation.Algorithm,"Puncta/1");
 t.verifyEqual(state('count'),0);
 end
 

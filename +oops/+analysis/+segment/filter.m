@@ -2,13 +2,13 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-function [mask,lists,parameters] = filter(candidate,average,parameters)
+function [mask,lists,diagnostics] = filter(candidate,average,parameters)
 %FILTER Apply common component filters after any segmentation algorithm.
-% Ranking uses the original average input, not strategy-specific enhancement.
+% Ranking uses the original average input, not algorithm-specific enhancement.
 % Zero maximum means unlimited. Stable component order resolves brightness ties.
 
-% Strategy-independent object filters stored in the committed recipe.
-settings = parameters.Common;
+% Algorithm-independent object filters stored in the committed recipe.
+settings = parameters.Filtering;
 
 % Border exclusion width, clipped to the available image dimensions.
 width = min(settings.BorderWidth,min(size(candidate)));
@@ -32,6 +32,11 @@ count = cc.NumObjects;
 keep = true(1,count);
 
 if settings.MaxObjects > 0 && count > settings.MaxObjects
+
+    if settings.Ranking ~= "MeanIntensity"
+        error('oops:analysis:UnknownObjectRanking', ...
+            'Unsupported object-ranking measurement: %s',settings.Ranking);
+    end
 
     % Mean original-input intensity for each candidate component.
     brightness = zeros(count,1);
@@ -68,5 +73,8 @@ for k = 1:numel(lists)
     mask(lists{k}) = true;
 end
 
-parameters = parameters.withCounts(count,numel(lists));
+% Component counts produced by filtering, kept separate from input parameters.
+diagnostics = struct( ...
+    'CandidateCount',count, ...
+    'RetainedCount',numel(lists));
 end

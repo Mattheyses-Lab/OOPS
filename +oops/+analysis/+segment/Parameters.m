@@ -3,97 +3,110 @@
 % SPDX-License-Identifier: GPL-3.0-or-later
 
 classdef Parameters
-%PARAMETERS Value snapshot of the recipe that produced an image's final mask.
-% Project settings are defaults for new runs. A stored recipe never changes
-% when those defaults change, and contains no numerical image buffers or UI.
+%PARAMETERS Durable inputs controlling one segmentation algorithm run.
+% Catalog defaults, image-derived automatic choices, and explicit user
+% overrides remain separate so the effective values and their origin are clear.
 
     properties (SetAccess=private)
-        Strategy (1,1) string = "Puncta"
-        Common (1,1) struct = struct()
-        Values (1,1) struct = struct()
-        AutomaticParameters (1,1) struct = struct()
-        Mode (1,1) string = "Automatic"
-        CandidateCount (1,1) double = 0
-        RetainedCount (1,1) double = 0
-        Ranking (1,1) string = "MeanIntensity"
+        Algorithm (1,1) string = "Puncta/1" % Versioned identifier of the selected segmentation algorithm.
+        Filtering (1,1) struct = struct() % Algorithm-independent object-filtering values.
+        Defaults (1,1) struct = struct() % Starting values declared by the algorithm definition.
+        Automatic (1,1) struct = struct() % Image-dependent values selected by the original algorithm run.
+        Manual (1,1) struct = struct() % Explicit user overrides applied after automatic selection.
+    end
+
+    properties (Dependent, SetAccess=private)
+        Values % Effective algorithm values after applying defaults, automatic choices, and manual overrides.
+        Mode % Whether the effective values include any manual overrides.
     end
 
     methods
 
         function obj = Parameters(settings)
-        %PARAMETERS Capture common filters and strategy-specific initial values.
+        %PARAMETERS Capture filtering values and catalog defaults for an algorithm.
 
             if nargin == 0
                 settings = oops.config.Segmentation();
             end
 
-            % Catalog metadata supplying initial values for the selected segmentation strategy.
-            definition = oops.analysis.segment.strategies(settings.Strategy);
-            obj.Strategy = definition.Name;
-            obj.Common = rmfield(settings.toStruct(),'Strategy');
+            % Catalog metadata supplying defaults for the selected algorithm.
+            definition = oops.analysis.segment.algorithms(settings.Algorithm);
+            obj.Algorithm = definition.ID;
 
-            % Copy each catalog parameter's initial value into this recipe snapshot.
-            for p = definition.Parameters
-                obj.Values.(p.Name) = p.Default;
+            % Post-segmentation component filtering shared by every algorithm.
+            obj.Filtering = rmfield(settings.toStruct(),'Algorithm');
+            obj.Filtering.Ranking = "MeanIntensity";
+
+            % Catalog-defined starting values keyed by parameter name.
+            parameters = definition.ParameterDefinitions;
+
+            for k = 1:numel(parameters)
+                obj.Defaults.(parameters(k).Name) = parameters(k).Default;
             end
 
+        end
+
+        function values = get.Values(obj)
+        %GET.VALUES Resolve effective values in increasing order of precedence.
+
+            values = obj.mergeValues(obj.Defaults,obj.Automatic);
+            values = obj.mergeValues(values,obj.Manual);
+        end
+
+        function mode = get.Mode(obj)
+        %GET.MODE Report whether explicit user overrides are currently active.
+
+            if isempty(fieldnames(obj.Manual))
+                mode = "Automatic";
+            else
+                mode = "Manual";
+            end
         end
 
         function obj = withAutomatic(obj,values)
-        %WITHAUTOMATIC Record algorithm choices without overwriting manual values.
+        %WITHAUTOMATIC Record image-derived values without changing manual overrides.
 
-            obj.AutomaticParameters = values;
-
-            if obj.Mode == "Automatic"
-                obj.Values = values;
-            end
-
+            obj.Automatic = values;
         end
 
         function obj = withParameter(obj,name,value)
-        %WITHPARAMETER Validate an adjustable parameter and explicitly mark manual use.
+        %WITHPARAMETER Validate and store one explicit user override.
 
-            % Strategy metadata used to validate the requested adjustable parameter.
-            definition = oops.analysis.segment.strategies(obj.Strategy);
+            % Algorithm metadata used to validate the requested adjustable parameter.
+            definition = oops.analysis.segment.algorithms(obj.Algorithm);
 
             % Parameter definition matching the requested name and its allowed range.
-            p = definition.Parameters;
+            parameter = definition.ParameterDefinitions;
 
-            if ~isempty(p)
-                p = p([p.Name] == string(name));
+            if ~isempty(parameter)
+                parameter = parameter([parameter.Name] == string(name));
             end
 
-            if isempty(p) || ~p.Adjustable
-                error('oops:analysis:UnknownParameter','Parameter %s is not adjustable for %s.',name,obj.Strategy);
+            if isempty(parameter) || ~parameter.Adjustable
+                error('oops:analysis:UnknownParameter', ...
+                    'Parameter %s is not adjustable for %s.',name,obj.Algorithm);
             end
 
-            validateattributes(value,{'double'},{'scalar','real','finite','>=',p.Limits(1),'<=',p.Limits(2)});
-            obj.Values.(name) = value;
-            obj.Mode = "Manual";
+            validateattributes(value,{'double'}, ...
+                {'scalar','real','finite','>=',parameter.Limits(1), ...
+                '<=',parameter.Limits(2)});
+            obj.Manual.(name) = value;
         end
 
-        function obj = automatic(obj)
-        %AUTOMATIC Restore algorithm-derived values while retaining the recipe snapshot.
+        function obj = resetToAutomatic(obj)
+        %RESETTOAUTOMATIC Clear overrides while preserving automatic values.
 
-            obj.Values = obj.AutomaticParameters;
-            obj.Mode = "Automatic";
-        end
-
-        function obj = withCounts(obj,candidates,retained)
-        %WITHCOUNTS Record the effect of component filtering for inspection/export.
-
-            obj.CandidateCount = candidates;
-            obj.RetainedCount = retained;
+            obj.Manual = struct();
         end
 
         function S = toStruct(obj)
-        %TOSTRUCT Serialize only the small recipe and its provenance.
+        %TOSTRUCT Serialize the parameter layers without dependent values.
 
-            % Serializable recipe snapshot containing common filters, values, and provenance.
-            S = struct('Strategy',obj.Strategy,'Common',obj.Common, ...
-                'Values',obj.Values,'AutomaticParameters',obj.AutomaticParameters, ...
-                'Mode',obj.Mode,'CandidateCount',obj.CandidateCount, ...
-                'RetainedCount',obj.RetainedCount,'Ranking',obj.Ranking);
+            S = struct('Algorithm',obj.Algorithm, ...
+                'Filtering',obj.Filtering, ...
+                'Defaults',obj.Defaults, ...
+                'Automatic',obj.Automatic, ...
+                'Manual',obj.Manual);
         end
 
     end
@@ -101,17 +114,30 @@ classdef Parameters
     methods (Static)
 
         function obj = fromStruct(S)
-        %FROMSTRUCT Restore a stored segmentation recipe without rerunning analysis.
+        %FROMSTRUCT Restore a stored segmentation parameter snapshot.
 
             obj = oops.analysis.segment.Parameters();
 
-            for name = ["Strategy","Common","Values","AutomaticParameters", ...
-                    "Mode","CandidateCount","RetainedCount","Ranking"]
+            for name = ["Algorithm","Filtering","Defaults","Automatic","Manual"]
 
                 if isfield(S,name)
                     obj.(name) = S.(name);
                 end
 
+            end
+        end
+
+    end
+
+    methods (Static, Access=private)
+
+        function values = mergeValues(values,overrides)
+        %MERGEVALUES Replace matching fields and append newly supplied values.
+
+            names = fieldnames(overrides);
+
+            for k = 1:numel(names)
+                values.(names{k}) = overrides.(names{k});
             end
         end
 

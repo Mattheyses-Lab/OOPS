@@ -3,12 +3,12 @@
 % SPDX-License-Identifier: GPL-3.0-or-later
 
 classdef Segmentation < handle
-%SEGMENTATION Mask strategy and object-partition parameters; processing is separate.
+%SEGMENTATION Mask algorithm and object-partition parameters; processing is separate.
 % Events carry Domain, Name, OldValue, and NewValue like DesmoSTORM.
 
     properties (Access=private)
-        % A strategy name is configuration, not an implementation registry.
-        Strategy_ (1,1) string = "Puncta"
+        % An algorithm ID is configuration, not an implementation registry.
+        Algorithm_ (1,1) string = "Puncta/1"
         Connectivity_ (1,1) double {mustBeMember(Connectivity_,[4 8])} = 4
         MinimumArea_ (1,1) double {mustBeFinite,mustBeInteger,mustBePositive} = 10
         BorderWidth_ (1,1) double {mustBeFinite,mustBeInteger,mustBeNonnegative} = 10
@@ -17,7 +17,7 @@ classdef Segmentation < handle
     end
 
     properties (Dependent)
-        Strategy
+        Algorithm
         Connectivity
         MinimumArea
         BorderWidth
@@ -31,16 +31,16 @@ classdef Segmentation < handle
 
     methods
 
-        function v = get.Strategy(obj)
-        %GET.STRATEGY Return the stored Strategy setting.
+        function v = get.Algorithm(obj)
+        %GET.ALGORITHM Return the stored segmentation algorithm ID.
 
-            v = obj.Strategy_;
+            v = obj.Algorithm_;
         end
 
-        function set.Strategy(obj,v)
-        %SET.STRATEGY Validate, store, and notify a Segmentation setting change.
+        function set.Algorithm(obj,v)
+        %SET.ALGORITHM Validate, store, and notify a Segmentation setting change.
 
-            obj.setValue("Strategy",v);
+            obj.setValue("Algorithm",v);
         end
 
         function v = get.Connectivity(obj)
@@ -95,7 +95,7 @@ classdef Segmentation < handle
         %TOSTRUCT Serialize values without listeners or graphics objects.
 
             % Plain settings snapshot containing values only, without listeners.
-            S = struct('Strategy',obj.Strategy, ...
+            S = struct('Algorithm',obj.Algorithm, ...
                 'Connectivity',obj.Connectivity, ...
                 'MinimumArea',obj.MinimumArea, ...
                 'BorderWidth',obj.BorderWidth, ...
@@ -130,8 +130,8 @@ classdef Segmentation < handle
 
             try
 
-                if name == "Strategy"
-                    oops.analysis.segment.strategies(string(value));
+                if name == "Algorithm"
+                    oops.analysis.segment.algorithms(string(value));
                 end
 
                 % Private storage property corresponding to the public setting name.

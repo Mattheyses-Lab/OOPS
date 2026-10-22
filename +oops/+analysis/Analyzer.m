@@ -21,7 +21,7 @@ classdef Analyzer
         end
 
         function [mask,lists,diagnostics] = segment(average,settings)
-        %SEGMENT Delegate the configured strategy to the segmentation package.
+        %SEGMENT Delegate the configured algorithm to the segmentation package.
 
             [mask,lists,diagnostics] = oops.analysis.segment.mask(average,settings);
         end
@@ -238,48 +238,8 @@ classdef Analyzer
                 settings (1,1) oops.config.Settings
                 opts.Progress = []
             end
-            try
-
-                % Segment each target image and measure the objects in its committed mask.
-                for k = 1:numel(images)
-
-                    % Current target image receiving mask, object membership, and scalar
-                    % measurements.
-                    image = images(k);
-
-                    % Image counter/name prefix shared by progress messages for this target.
-                    prefix = sprintf('Image %d/%d: %s\n',k,numel(images),image.Name);
-
-                    % Batch progress fraction before processing the current image.
-                    fraction = (k-1)/numel(images);
-                    oops.runtime.updateProgress(opts.Progress, ...
-                        prefix + "Segmenting image and detecting objects...",fraction);
-                    oops.Log.INFO("Segmenting " + image.Name + " using " + settings.Segmentation.Strategy + ".");
-
-                    % Current corrected stack, or raw input when no calibration is assigned.
-                    stack = oops.analysis.Analyzer.workingStack(image);
-
-                    % Segmented mask, retained object pixel lists, and cached strategy diagnostics.
-                    [mask,lists,diagnostics] = oops.analysis.Analyzer.segment(mean(stack,3),settings.Segmentation);
-                    provenance = oops.model.MaskProvenance.segmented( ...
-                        image.CorrectionProvenance);
-                    image.setMask(mask,lists,diagnostics.Parameters,provenance);
-
-                    % Copy of stored outputs updated with average intensity and segmentation cache.
-                    results = image.Results;
-                    results.AverageIntensity = mean(stack,3);
-                    results.Segmentation = rmfield(diagnostics,'Parameters');
-                    image.setResults(results);
-                    oops.runtime.updateProgress(opts.Progress, ...
-                        prefix + "Measuring objects and local S/B...",fraction);
-                    oops.analysis.Analyzer.measureObjects(image,settings);
-                end
-
-                oops.runtime.updateProgress(opts.Progress,"Segmentation complete",1);
-            catch ME
-                oops.Log.EXCEPTION(ME);
-                rethrow(ME);
-            end
+            oops.analysis.Analyzer.processImages( ...
+                images,settings,"ObjectDetection",Progress=opts.Progress);
         end
 
         function adjustSegmentation(image,name,value,settings)
@@ -307,7 +267,7 @@ classdef Analyzer
                 oops.analysis.Analyzer.ensureSegmentationCache(image);
 
                 if string(name) == "Automatic"
-                    recipe = recipe.automatic();
+                    recipe = recipe.resetToAutomatic();
                 else
                     recipe = recipe.withParameter(name,value);
                 end
@@ -315,7 +275,12 @@ classdef Analyzer
                 % Mask and object membership regenerated from cached enhancement.
                 [mask,lists,diagnostics] = oops.analysis.segment.adjust( ...
                     image.Results.AverageIntensity,image.Results.Segmentation,recipe);
-                image.setMask(mask,lists,diagnostics.Parameters,image.MaskProvenance);
+                summary = struct( ...
+                    'CandidateCount',diagnostics.CandidateCount, ...
+                    'RetainedCount',diagnostics.RetainedCount);
+                provenance = oops.model.MaskProvenance.segmented( ...
+                    image.CorrectionProvenance,diagnostics.Parameters,summary);
+                image.setMask(mask,lists,provenance);
 
                 % Copy of image outputs updated with the committed segmentation cache.
                 results = image.Results;
@@ -346,8 +311,8 @@ classdef Analyzer
                 isequal(size(image.Results.AverageIntensity), ...
                 [image.Input.SizeY,image.Input.SizeX]);
             hasEnhancement = isfield(image.Results,'Segmentation') && ...
-                isfield(image.Results.Segmentation,'Strategy') && ...
-                string(image.Results.Segmentation.Strategy) == recipe.Strategy && ...
+                isfield(image.Results.Segmentation,'Algorithm') && ...
+                string(image.Results.Segmentation.Algorithm) == recipe.Algorithm && ...
                 isfield(image.Results.Segmentation,'Enhanced') && ...
                 isequal(size(image.Results.Segmentation.Enhanced), ...
                 [image.Input.SizeY,image.Input.SizeX]);
@@ -360,7 +325,7 @@ classdef Analyzer
             stack = oops.analysis.Analyzer.workingStack(image);
             average = mean(stack,3);
 
-            % Run the stored strategy only to recover its disposable enhancement.
+            % Run the stored algorithm only to recover its disposable enhancement.
             % The returned mask and membership are intentionally not committed.
             [~,~,diagnostics] = oops.analysis.Analyzer.segment(average,recipe);
             image.setSegmentationCache(average,rmfield(diagnostics,'Parameters'));
@@ -376,50 +341,113 @@ classdef Analyzer
                 settings (1,1) oops.config.Settings
                 opts.Progress = []
             end
+            oops.analysis.Analyzer.processImages( ...
+                images,settings,"Polarization",Progress=opts.Progress);
+        end
+
+        function processImages(images,settings,stages,opts)
+        %PROCESSIMAGES Run requested stages while sharing each image's working stack.
+
+            arguments
+                images (:,1) oops.model.Image
+                settings (1,1) oops.config.Settings
+                stages (1,:) string
+                opts.Progress = []
+                opts.SkipCurrentPolarization (1,1) logical = false
+            end
+
+            % Small fixed stage vocabulary keeps dispatch explicit while allowing
+            % later processing steps to join this per-image pipeline.
+            stages = unique(stages,'stable');
+            supported = ["Polarization","ObjectDetection"];
+
+            if any(~ismember(stages,supported))
+                error('oops:analysis:UnknownProcessingStage', ...
+                    'Unknown processing stage: %s',stages(find(~ismember(stages,supported),1)));
+            end
+
+            runPolarization = ismember("Polarization",stages);
+            runObjectDetection = ismember("ObjectDetection",stages);
+
             try
 
-                % Compute order/orientation and refresh scalar object measurements per image.
+                % Process each image completely before releasing its working stack.
                 for k = 1:numel(images)
-
-                    % Current target image receiving order, azimuth, and object summaries.
                     image = images(k);
-
-                    % Image counter/name prefix shared by progress messages for this target.
                     prefix = sprintf('Image %d/%d: %s\n',k,numel(images),image.Name);
-
-                    % Batch progress fraction before processing the current image.
-                    fraction = (k-1)/numel(images);
+                    fraction = (k-1)/max(1,numel(images));
                     oops.runtime.updateProgress(opts.Progress, ...
-                        prefix + "Calculating order and orientation statistics...",fraction);
+                        prefix + "Reading analysis input...",fraction);
 
-                    % Current corrected stack, or raw input when no calibration is assigned.
+                    % Corrected four-angle data and its mean are shared by every
+                    % requested stage for this image.
                     stack = oops.analysis.Analyzer.workingStack(image);
+                    average = mean(stack,3);
+                    polarizationChanged = false;
 
-                    if ~isempty(image.Objects) && ...
-                            ~image.MaskProvenance.isCurrent(image.CorrectionProvenance)
-                        oops.Log.WARN("Objects in " + image.Name + ...
-                            " were defined from a different intensity correction; " + ...
-                            "preserving membership and updating measurements.");
+                    if runPolarization
+                        polarizationCurrent = ...
+                            oops.model.internal.hasCurrentPolarization(image);
+
+                        if opts.SkipCurrentPolarization && polarizationCurrent
+                            oops.Log.INFO("Polarization analysis is current for " + ...
+                                image.Name + "; keeping existing results.");
+                        else
+                            oops.runtime.updateProgress(opts.Progress, ...
+                                prefix + "Calculating order and orientation...",fraction);
+                            oops.Log.INFO("Computing order/orientation for " + image.Name + ".");
+                            parameters = oops.analysis.polarization.Parameters();
+                            result = oops.analysis.polarization.analyze( ...
+                                stack,parameters);
+                            image.setPolarizationResults( ...
+                                average,result,parameters);
+                            polarizationChanged = true;
+                        end
                     end
 
-                    oops.Log.INFO("Computing order/orientation for " + image.Name + ".");
+                    if runObjectDetection
+                        oops.runtime.updateProgress(opts.Progress, ...
+                            prefix + "Segmenting image and detecting objects...",fraction);
+                        oops.Log.INFO("Segmenting " + image.Name + " using " + ...
+                            settings.Segmentation.Algorithm + ".");
+                        [mask,lists,diagnostics] = ...
+                            oops.analysis.Analyzer.segment(average,settings.Segmentation);
+                        summary = struct( ...
+                            'CandidateCount',diagnostics.CandidateCount, ...
+                            'RetainedCount',diagnostics.RetainedCount);
+                        provenance = oops.model.MaskProvenance.segmented( ...
+                            image.CorrectionProvenance,diagnostics.Parameters,summary);
+                        image.setMask(mask,lists,provenance);
 
-                    % Per-pixel modulation order and axial orientation in radians.
-                    [order,azimuth] = oops.analysis.Analyzer.orderOrientation(stack);
+                        % Preserve any polarization results committed above while
+                        % retaining the reconstructible segmentation diagnostics.
+                        results = image.Results;
+                        results.AverageIntensity = average;
+                        results.Segmentation = rmfield(diagnostics,'Parameters');
+                        image.setResults(results);
+                    end
 
-                    % Copy of stored outputs updated with the new FPM images and mean intensity.
-                    results = image.Results;
-                    results.Order = order;
-                    results.Azimuth = azimuth;
-                    results.AverageIntensity = mean(stack,3);
-                    image.setResults(results);
-                    oops.runtime.updateProgress(opts.Progress, ...
-                        prefix + "Measuring objects and local S/B...",fraction);
-                    oops.analysis.Analyzer.measureObjects(image,settings);
-                    oops.Log.INFO("Order/orientation analysis complete for " + image.Name + ".");
+                    if runObjectDetection || polarizationChanged
+
+                        if ~runObjectDetection && ~isempty(image.Objects) && ...
+                                ~image.MaskProvenance.isCurrent(image.CorrectionProvenance)
+                            oops.Log.WARN("Objects in " + image.Name + ...
+                                " were defined from a different intensity correction; " + ...
+                                "preserving membership and updating measurements.");
+                        end
+
+                        oops.runtime.updateProgress(opts.Progress, ...
+                            prefix + "Measuring objects and local S/B...",fraction);
+                        oops.analysis.Analyzer.measureObjects(image,settings);
+                    end
+
+                    if polarizationChanged
+                        oops.Log.INFO("Order/orientation analysis complete for " + ...
+                            image.Name + ".");
+                    end
                 end
 
-                oops.runtime.updateProgress(opts.Progress,"Order/orientation analysis complete",1);
+                oops.runtime.updateProgress(opts.Progress,"Processing complete",1);
             catch ME
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
@@ -478,12 +506,15 @@ classdef Analyzer
                     image.setCorrectionResults(mean(stack,3),strings(0,1));
                 end
             else
+                % Acquire the corrected stack once. When durable correction
+                % metadata is stale, commit its average from this same array
+                % instead of invoking a separate correction pass first.
+                stack = oops.analysis.Analyzer.correctedStack(image);
 
                 if ~oops.model.internal.hasCurrentCorrection(image)
-                    oops.analysis.Analyzer.correctImage(image);
+                    image.setCorrectionResults( ...
+                        mean(stack,3),image.Parent.CalibrationIDs);
                 end
-
-                stack = oops.analysis.Analyzer.correctedStack(image);
             end
 
         end

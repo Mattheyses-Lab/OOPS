@@ -1,0 +1,33 @@
+% Object-Oriented Polarization Software (OOPS)
+% Copyright (C) 2026 William Dean
+% SPDX-License-Identifier: GPL-3.0-or-later
+
+function definitions = algorithms(id)
+%ALGORITHMS Describe available polarization algorithms and their outputs.
+
+arguments
+    id (1,1) string = ""
+end
+
+outputs = [ ...
+    struct('Name',"Order",'Label',"Order",'Meaning',"Modulation magnitude", ...
+        'Units',"",'Range',[0 1],'Circular',false,'Period',NaN), ...
+    struct('Name',"Azimuth",'Label',"Azimuth",'Meaning',"Axial orientation", ...
+        'Units',"radians",'Range',[-pi/2 pi/2],'Circular',true,'Period',pi)];
+
+definitions = oops.analysis.polarization.Algorithm( ...
+    ID="FourAngleStokes/1", ...
+    Label="Four-angle Stokes", ...
+    Description="Derives modulation order and axial azimuth from 0, 45, 90, and 135 degree intensities.", ...
+    RunFcn=@oops.analysis.polarization.fourAngleStokes, ...
+    Outputs=outputs);
+
+if id ~= ""
+    definitions = definitions([definitions.ID] == id);
+
+    if isempty(definitions)
+        error('oops:analysis:UnknownPolarizationAlgorithm', ...
+            'Unsupported polarization algorithm: %s',id);
+    end
+end
+end

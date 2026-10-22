@@ -24,9 +24,10 @@ classdef Image < handle
         Results (1,1) struct = struct()
         CorrectionProvenance (1,1) oops.model.CorrectionProvenance = ...
             oops.model.CorrectionProvenance.raw()
+        PolarizationProvenance (1,1) oops.model.PolarizationProvenance = ...
+            oops.model.PolarizationProvenance()
         MaskProvenance (1,1) oops.model.MaskProvenance = ...
             oops.model.MaskProvenance.unknown()
-        SegmentationParameters (:,1) oops.analysis.segment.Parameters = oops.analysis.segment.Parameters.empty(0,1)
         IntensityDisplayRange double = []
         OrderDisplayRange (1,2) double = [0 1]
         AuxiliaryChannels (:,1) oops.model.AuxiliaryChannelAssignment = ...
@@ -53,6 +54,7 @@ classdef Image < handle
         PrimaryChannel
         Order
         Azimuth
+        SegmentationParameters
     end
 
     %% Model events
@@ -115,12 +117,6 @@ classdef Image < handle
             end
 
             objectData = arrayfun(@(item) item.toStruct(),obj.Objects);
-            parameters = struct.empty(0,1);
-
-            if ~isempty(obj.SegmentationParameters)
-                parameters = obj.SegmentationParameters.toStruct();
-            end
-
             auxiliaryChannels = arrayfun( ...
                 @(item) item.toStruct(projectFolder),obj.AuxiliaryChannels);
 
@@ -133,10 +129,10 @@ classdef Image < handle
                 'FrameLocations',obj.FrameLocations, ...
                 'AuxiliaryChannels',auxiliaryChannels, ...
                 'Objects',objectData, ...
-                'FPMCalculated',~isempty(obj.Order) && ~isempty(obj.Azimuth), ...
+                'FPMCalculated',oops.model.internal.hasCurrentPolarization(obj), ...
                 'CorrectionProvenance',obj.CorrectionProvenance.toStruct(), ...
+                'PolarizationProvenance',obj.PolarizationProvenance.toStruct(), ...
                 'MaskProvenance',obj.MaskProvenance.toStruct(), ...
-                'SegmentationParameters',parameters, ...
                 'IntensityDisplayRange',obj.IntensityDisplayRange, ...
                 'OrderDisplayRange',obj.OrderDisplayRange, ...
                 'ActiveObjectID',obj.ActiveObjectID, ...
@@ -167,6 +163,12 @@ classdef Image < handle
                     oops.model.CorrectionProvenance.flatField(assignedCalibrationIDs);
             end
 
+            if isfield(S,'PolarizationProvenance')
+                obj.PolarizationProvenance = ...
+                    oops.model.PolarizationProvenance.fromStruct( ...
+                        S.PolarizationProvenance);
+            end
+
             if isfield(S,'MaskProvenance')
                 provenance = oops.model.MaskProvenance.fromStruct(S.MaskProvenance);
             elseif ~isempty(S.Objects)
@@ -184,13 +186,7 @@ classdef Image < handle
                     mask(lists{k}) = true;
                 end
 
-                parameters = oops.analysis.segment.Parameters.empty(0,1);
-
-                if ~isempty(S.SegmentationParameters)
-                    parameters = oops.analysis.segment.Parameters.fromStruct(S.SegmentationParameters);
-                end
-
-                obj.setMask(mask,lists,parameters,provenance);
+                obj.setMask(mask,lists,provenance);
 
                 for k = 1:numel(obj.Objects)
                     obj.Objects(k).restoreStruct(S.Objects(k));
@@ -383,6 +379,12 @@ classdef Image < handle
     %% Stored analysis outputs
     methods
 
+        function parameters = get.SegmentationParameters(obj)
+        %GET.SEGMENTATIONPARAMETERS Return parameters owned by mask provenance.
+
+            parameters = obj.MaskProvenance.Parameters;
+        end
+
         function values = get.Order(obj)
         %GET.ORDER Return numeric per-pixel order without creating display images.
 
@@ -455,6 +457,14 @@ classdef Image < handle
                         results.Order,[0 1]);
                 end
 
+                % Order and azimuth are valid for the correction active when
+                % both full-image outputs are committed together.
+                if isfield(results,'Order') && isfield(results,'Azimuth')
+                    obj.PolarizationProvenance = ...
+                        oops.model.PolarizationProvenance.calculated( ...
+                            obj.CorrectionProvenance);
+                end
+
                 % Reset stored intensity and polarization measurements on each
                 % existing object, leaving its morphology measurements unchanged.
                 for k = 1:numel(obj.Objects)
@@ -466,6 +476,26 @@ classdef Image < handle
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
             end
+        end
+
+        function setPolarizationResults(obj,average,result,parameters)
+        %SETPOLARIZATIONRESULTS Commit named outputs with their analysis recipe.
+
+            arguments
+                obj
+                average (:,:) double
+                result (1,1) struct
+                parameters (1,1) oops.analysis.polarization.Parameters
+            end
+
+            results = obj.Results;
+            results.AverageIntensity = average;
+            results.Order = result.Order;
+            results.Azimuth = result.Azimuth;
+            obj.setResults(results);
+            obj.PolarizationProvenance = ...
+                oops.model.PolarizationProvenance.calculated( ...
+                    obj.CorrectionProvenance,parameters);
         end
 
         function setSegmentationCache(obj,average,cache)
@@ -502,7 +532,6 @@ classdef Image < handle
             oldIDs = oops.model.internal.ids(old);
             delete(obj.ObjectListeners);
             obj.ObjectListeners = event.listener.empty();
-            obj.SegmentationParameters = oops.analysis.segment.Parameters.empty(0,1);
             obj.MaskProvenance = oops.model.MaskProvenance.unknown();
             obj.Mask = false(0,0);
             obj.Objects = oops.model.Object.empty(0,1);
@@ -515,7 +544,7 @@ classdef Image < handle
             notify(obj,'DataChanged',oops.model.events.DataChanged(obj.ID,"Mask"));
         end
 
-        function setMask(obj,mask,pixelLists,parameters,provenance)
+        function setMask(obj,mask,pixelLists,provenance)
         %SETMASK Validate and replace mask membership and its owned object collection.
 
             % Analysis supplies the partition; the model only validates/stores it.
@@ -523,7 +552,6 @@ classdef Image < handle
                 obj
                 mask (:,:) logical
                 pixelLists (1,:) cell
-                parameters (:,1) oops.analysis.segment.Parameters = oops.analysis.segment.Parameters.empty(0,1)
                 provenance (1,1) oops.model.MaskProvenance = oops.model.MaskProvenance.unknown()
             end
 
@@ -556,10 +584,6 @@ classdef Image < handle
                     error( ...
                     'oops:model:InvalidObjectPartition', ...
                     'Object pixel lists must partition the mask without omissions or overlaps.');
-                end
-
-                if numel(parameters) > 1
-                    error('oops:model:InvalidParameters','Expected at most one segmentation recipe.');
                 end
 
                 % Replacement objects, built from the validated pixel lists before
@@ -602,7 +626,6 @@ classdef Image < handle
                 % Commit membership, then publish events against the new state.
                 delete(obj.ObjectListeners);
                 obj.ObjectListeners = nextListeners;
-                obj.SegmentationParameters = parameters;
                 obj.MaskProvenance = provenance;
                 obj.Mask = mask;
                 obj.Objects = next;
@@ -659,13 +682,8 @@ classdef Image < handle
                 obj.setSelectedObjects(obj.SelectedObjectIDs(~ismember(obj.SelectedObjectIDs,ids)));
                 delete(removed);
 
-                % Surviving object IDs used to update counts and notify observers.
+                % Surviving object IDs used to notify observers.
                 newIDs = oops.model.internal.ids(obj.Objects);
-
-                if ~isempty(obj.SegmentationParameters)
-                    obj.SegmentationParameters = obj.SegmentationParameters.withCounts( ...
-                        obj.SegmentationParameters.CandidateCount,numel(newIDs));
-                end
 
                 notify(obj,'ObjectsChanged',oops.model.events.ObjectsChanged(obj.ID,newIDs,oldIDs));
                 notify(obj,'DataChanged',oops.model.events.DataChanged(obj.ID,"Mask"));
@@ -934,13 +952,6 @@ classdef Image < handle
                 assignedCalibrationIDs = obj.Parent.CalibrationIDs;
             end
 
-            % Stored segmentation recipe, empty for imported/manual/unknown masks.
-            segmentation = struct();
-
-            if ~isempty(obj.SegmentationParameters)
-                segmentation = obj.SegmentationParameters.toStruct();
-            end
-
             % Result field names communicate availability without copying raster values.
             resultFields = string(fieldnames(obj.Results));
             correctionMatches = obj.CorrectionProvenance.matchesAssignments( ...
@@ -961,10 +972,8 @@ classdef Image < handle
             end
 
             % Semantic assignments summarized without reading their source planes.
-            % Use named fields in a scalar structure so the generic pretty
-            % printer expands every assignment instead of collapsing a
-            % nonscalar structure array to "[struct]".
-            auxiliary = struct('Count',numel(obj.AuxiliaryChannels));
+            auxiliary = struct('ChannelID',{},'ChannelName',{},'SourceChannel',{}, ...
+                'ComponentIndex',{},'FilePath',{},'DisplayRange',{});
 
             for k = 1:numel(obj.AuxiliaryChannels)
                 assignment = obj.AuxiliaryChannels(k);
@@ -985,17 +994,13 @@ classdef Image < handle
                     filePath = string(assignment.Input.Source.FilePath);
                 end
 
-                channel = struct( ...
+                auxiliary(end+1) = struct( ... %#ok<AGROW>
                     'ChannelID',assignment.ChannelID, ...
                     'ChannelName',channelName, ...
                     'SourceChannel',assignment.Input.getComponentName(assignment.ComponentIndex), ...
                     'ComponentIndex',assignment.ComponentIndex, ...
                     'FilePath',filePath, ...
                     'DisplayRange',assignment.DisplayRange);
-
-                % Stable ordinal field used only to present this assignment.
-                fieldName = sprintf('Channel%d',k);
-                auxiliary.(fieldName) = channel;
             end
 
             info = struct( ...
@@ -1025,13 +1030,15 @@ classdef Image < handle
                 'Mask',struct( ...
                     'Provenance',obj.MaskProvenance.toStruct(), ...
                     'CurrentAgainstCorrection',maskCurrent, ...
-                    'SegmentationParameters',segmentation, ...
                     'ForegroundPixels',nnz(obj.Mask), ...
                     'ObjectCount',numel(obj.Objects)), ...
                 'Analysis',struct( ...
                     'ResultFields',resultFields, ...
                     'OrderAvailable',isfield(obj.Results,'Order'), ...
-                    'AzimuthAvailable',isfield(obj.Results,'Azimuth')), ...
+                    'AzimuthAvailable',isfield(obj.Results,'Azimuth'), ...
+                    'CurrentAgainstCorrection', ...
+                        oops.model.internal.hasCurrentPolarization(obj), ...
+                    'Provenance',obj.PolarizationProvenance.toStruct()), ...
                 'Display',struct( ...
                     'IntensityRange',obj.IntensityDisplayRange, ...
                     'OrderRange',obj.OrderDisplayRange), ...
@@ -1071,10 +1078,10 @@ classdef Image < handle
             recipe = obj.SegmentationParameters;
 
             if ~isempty(recipe)
-                names(end+1) = "Mask strategy";
-                values{end+1} = recipe.Strategy;
+                names(end+1) = "Mask algorithm";
+                values{end+1} = recipe.Algorithm;
 
-                % Append the committed value of each strategy-specific segmentation parameter.
+                % Append each parameter committed by the selected segmentation algorithm.
                 for parameter = string(fieldnames(recipe.Values))'
                     names(end+1) = "Mask " + parameter; %#ok<AGROW>
                     values{end+1} = recipe.Values.(parameter); %#ok<AGROW>

@@ -14,7 +14,8 @@ counts = zeros(1,3);
 for image = reshape(images,1,[])
     counts(1) = counts(1) + oops.model.internal.hasCurrentCorrection(image);
     counts(2) = counts(2) + ~isempty(image.Mask);
-    counts(3) = counts(3) + (~isempty(image.Order) && ~isempty(image.Azimuth));
+    counts(3) = counts(3) + ...
+        oops.model.internal.hasCurrentPolarization(image);
 end
 
 values = arrayfun(@(count) sprintf('%d / %d images',count,numel(images)), ...

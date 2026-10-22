@@ -478,7 +478,7 @@ t.verifyTrue(any(log.level == "ERROR"));
 end
 function testDropdownsAndHiddenDeveloperSettings(t)
 ui = t.TestData.GUI;
-t.verifyClass(ui.SettingsUI.Segmentation.Strategy,'matlab.ui.control.DropDown');
+t.verifyClass(ui.SettingsUI.Segmentation.Algorithm,'matlab.ui.control.DropDown');
 t.verifyClass(ui.SettingsUI.Segmentation.Connectivity,'matlab.ui.control.DropDown');
 t.verifyEqual(ui.SettingsUI.Segmentation.Connectivity.ItemsData,[4 8]);
 t.verifyEqual(ui.Project.Settings.Segmentation.Connectivity,4);
@@ -568,9 +568,9 @@ end
 function testProcessingMenusRunWithoutCalibration(t)
 ui = t.TestData.GUI; ui.Fig.Visible = 'on'; drawnow;
 menus = findall(ui.Fig,'Type','uimenu');
-segment = menus(strcmp(string({menus.Text}),"Segment selected / active images"));
-fpm = menus(strcmp(string({menus.Text}),"Order/orientation for selected / active images"));
-segment.MenuSelectedFcn(segment,[]); fpm.MenuSelectedFcn(fpm,[]);
+runMenu = menus(strcmp(string({menus.Text}),"Run"));
+runAll = runMenu.Children(strcmp(string({runMenu.Children.Text}),"All"));
+runAll.MenuSelectedFcn(runAll,[]);
 t.verifyEqual(size(ui.Project.ActiveImage.Mask),[20 30]);
 t.verifyEqual(size(ui.Project.ActiveImage.Order),[20 30]);
 t.verifyEqual(size(ui.Project.ActiveImage.Azimuth),[20 30]);
@@ -616,14 +616,14 @@ end
 
 function testMaskControlChronologyAndVisibility(t)
 ui = t.TestData.GUI; controls = ui.SettingsUI.Segmentation;
-slider = ui.SegmentationUI.Puncta.Threshold;
+slider = ui.SegmentationUI.Puncta_1.Threshold;
 t.verifyEqual(slider.ValueMode,"scalar"); t.verifyEqual(string(slider.Visible),"on");
-t.verifyLessThan(controls.Strategy.Layout.Row,slider.Layout.Row);
+t.verifyLessThan(controls.Algorithm.Layout.Row,slider.Layout.Row);
 t.verifyLessThan(slider.Layout.Row,controls.MinimumArea.Layout.Row);
 t.verifyLessThan(controls.MinimumArea.Layout.Row,controls.MaxObjects.Layout.Row);
 pane = ui.SettingsAccordion.getItem("Mask").Pane;
 labels = findall(pane,'Type','uilabel'); t.verifyTrue(any(string({labels.Text}) == "Object filtering"));
-ui.Project.Settings.Segmentation.Strategy = "Filaments";
+ui.Project.Settings.Segmentation.Algorithm = "Filaments/1";
 t.verifyEqual(string(slider.Visible),"off"); t.verifyEqual(pane.RowHeight{slider.Layout.Row},0);
 end
 function testImageLocalThresholdPreviewAndCommit(t)
@@ -631,7 +631,7 @@ ui = t.TestData.GUI; p = ui.Project; image = p.ActiveImage;
 p.Settings.Segmentation.BorderWidth = 0; p.Settings.Segmentation.MinimumArea = 1;
 oops.analysis.Analyzer.segmentImages(image,p.Settings);
 p.Settings.View.RightSource = "Mask";
-slider = ui.SegmentationUI.Puncta.Threshold;
+slider = ui.SegmentationUI.Puncta_1.Threshold;
 oldIDs = oops.model.internal.ids(image.Objects); oldMask = image.Mask;
 slider.Value = .9; slider.ValueChangingFcn(slider,[]);
 t.verifyEqual(image.Mask,oldMask); t.verifyEqual(oops.model.internal.ids(image.Objects),oldIDs);

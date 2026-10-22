@@ -37,8 +37,7 @@ for g = [a b]
     im = g.addImage(input(truth.*calStack));
     mask = false(40,50); mask(12:16,12:18) = true;
     provenance = oops.model.MaskProvenance.segmented(im.CorrectionProvenance);
-    im.setMask(mask,oops.analysis.segment.objectsFromMask(mask), ...
-        oops.analysis.segment.Parameters.empty(0,1),provenance);
+    im.setMask(mask,oops.analysis.segment.objectsFromMask(mask),provenance);
     im.setResults(struct('Order',ones(40,50)));
 end
 objectID = a.Images(1).Objects(1).ID;
@@ -186,7 +185,7 @@ t.verifyTrue(any(contains(messages,"Computing flat field")));
 t.verifyTrue(any(contains(messages,"Performing flat-field correction")));
 t.verifyTrue(any(contains(messages,"Image 2/2: Second")));
 t.verifyTrue(any(contains(messages,"Segmenting image and detecting objects")));
-t.verifyTrue(any(contains(messages,"Calculating order and orientation statistics")));
+t.verifyTrue(any(contains(messages,"Calculating order and orientation")));
 t.verifyEqual(sum(contains(messages,"Measuring objects and local S/B")),4);
 t.verifyEqual(fractions{end},1);
 

@@ -28,6 +28,6 @@ else
     candidate = false(size(input));
 end
 
-% Recipe snapshot for this strategy, which currently has no adjustable values.
+% Recipe snapshot for this algorithm, which currently has no adjustable values.
 parameters = recipe.withAutomatic(struct());
 end

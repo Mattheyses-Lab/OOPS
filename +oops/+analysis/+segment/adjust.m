@@ -4,7 +4,7 @@
 
 function [mask,lists,diagnostics] = adjust(average,cached,recipe)
 %ADJUST Reapply adjustable segmentation parameters to existing enhancement data.
-% Preview and commit use the same strategy callback and component filters.
+% Preview and commit use the same algorithm callback and component filters.
 % Automatic reset uses the original algorithm-selected parameters in the recipe.
 
 arguments
@@ -14,29 +14,32 @@ arguments
 end
 try
 
-    % Catalog entry supplying this strategy's cached-preview callback.
-    definition = oops.analysis.segment.strategies(recipe.Strategy);
+    % Catalog entry supplying this algorithm's cached-preview callback.
+    definition = oops.analysis.segment.algorithms(recipe.Algorithm);
 
-    if isempty(definition.Preview)
-        % A future strategy without a cached rethresholding operation can still
+    if isempty(definition.PreviewFcn)
+        % A future algorithm without a cached rethresholding operation can still
         % use its full algorithm; currently Puncta supplies the cached path.
         [mask,lists,diagnostics] = oops.analysis.segment.mask(average,recipe);
         return;
     end
 
-    if ~isfield(cached,'Strategy') || string(cached.Strategy) ~= recipe.Strategy || ...
+    if ~isfield(cached,'Algorithm') || string(cached.Algorithm) ~= recipe.Algorithm || ...
             ~isfield(cached,'Enhanced') || ~isequal(size(cached.Enhanced),size(average))
         error('oops:analysis:InvalidSegmentationCache','Run segmentation again before adjusting parameters.');
     end
 
     % Foreground generated from cached enhancement using the adjusted recipe.
-    candidate = definition.Preview(cached,recipe);
+    candidate = definition.PreviewFcn(cached,recipe);
 
-    % Filtered foreground, retained objects, and updated recipe counts.
-    [mask,lists,recipe] = oops.analysis.segment.filter(candidate,average,recipe);
+    % Filtered foreground, retained objects, and component-count diagnostics.
+    [mask,lists,filtering] = ...
+        oops.analysis.segment.filter(candidate,average,recipe);
 
     % Copy of the existing enhancement cache to pair with the new recipe.
     diagnostics = cached;
+    diagnostics.CandidateCount = filtering.CandidateCount;
+    diagnostics.RetainedCount = filtering.RetainedCount;
     diagnostics.Parameters = recipe;
 
     if isfield(recipe.Values,'Threshold')
