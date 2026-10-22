@@ -63,7 +63,6 @@ classdef PolarizationProvenance
 
             S = struct( ...
                 'Calculated',obj.Calculated, ...
-                'Algorithm',obj.Algorithm, ...
                 'Parameters',obj.Parameters.toStruct(), ...
                 'Correction',obj.Correction.toStruct());
         end
@@ -88,7 +87,7 @@ classdef PolarizationProvenance
         function obj = fromStruct(S)
         %FROMSTRUCT Restore a saved polarization-analysis description.
 
-            if ~isfield(S,'Calculated') || ~logical(S.Calculated)
+            if ~logical(S.Calculated)
                 obj = oops.model.PolarizationProvenance();
                 return;
             end

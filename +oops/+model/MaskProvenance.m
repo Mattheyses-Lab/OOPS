@@ -120,26 +120,15 @@ classdef MaskProvenance
         end
 
         function obj = fromStruct(S)
-        %FROMSTRUCT Restore current or earlier mask provenance.
-            if isfield(S,'Parameters') && ~isempty(S.Parameters)
+        %FROMSTRUCT Restore mask provenance from the current schema.
+            if ~isempty(S.Parameters)
                 parameters = oops.analysis.segment.Parameters.fromStruct(S.Parameters);
             else
                 parameters = oops.analysis.segment.Parameters.empty(0,1);
             end
-            if isfield(S,'Correction')
-                correction = oops.model.CorrectionProvenance.fromStruct(S.Correction);
-            elseif isfield(S,'CalibrationIDs') && ~isempty(S.CalibrationIDs)
-                correction = oops.model.CorrectionProvenance.flatField(string(S.CalibrationIDs));
-            else
-                correction = oops.model.CorrectionProvenance.raw();
-            end
-            if isfield(S,'Diagnostics')
-                diagnostics = S.Diagnostics;
-            else
-                diagnostics = struct();
-            end
+            correction = oops.model.CorrectionProvenance.fromStruct(S.Correction);
             obj = oops.model.MaskProvenance( ...
-                string(S.Method),parameters,correction,diagnostics,S.Source);
+                string(S.Method),parameters,correction,S.Diagnostics,S.Source);
         end
     end
 end

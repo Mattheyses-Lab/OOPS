@@ -129,7 +129,6 @@ classdef Image < handle
                 'FrameLocations',obj.FrameLocations, ...
                 'AuxiliaryChannels',auxiliaryChannels, ...
                 'Objects',objectData, ...
-                'FPMCalculated',oops.model.internal.hasCurrentPolarization(obj), ...
                 'CorrectionProvenance',obj.CorrectionProvenance.toStruct(), ...
                 'PolarizationProvenance',obj.PolarizationProvenance.toStruct(), ...
                 'MaskProvenance',obj.MaskProvenance.toStruct(), ...
@@ -139,12 +138,8 @@ classdef Image < handle
                 'SelectedObjectIDs',obj.SelectedObjectIDs);
         end
 
-        function restoreStruct(obj,S,assignedCalibrationIDs)
+        function restoreStruct(obj,S)
         %RESTORESTRUCT Restore compact state after the source has been reopened.
-
-            if nargin < 3
-                assignedCalibrationIDs = strings(0,1);
-            end
 
             obj.ID = string(S.ID);
             obj.setPrimaryChannel(string(S.PrimaryChannelID));
@@ -153,29 +148,12 @@ classdef Image < handle
             obj.IntensityDisplayRange = double(S.IntensityDisplayRange);
             obj.OrderDisplayRange = double(S.OrderDisplayRange);
 
-            if isfield(S,'CorrectionProvenance')
-                obj.CorrectionProvenance = ...
-                    oops.model.CorrectionProvenance.fromStruct(S.CorrectionProvenance);
-            else
-                % Projects saved before provenance tracking used the group's
-                % assigned calibration whenever corrected results were generated.
-                obj.CorrectionProvenance = ...
-                    oops.model.CorrectionProvenance.flatField(assignedCalibrationIDs);
-            end
-
-            if isfield(S,'PolarizationProvenance')
-                obj.PolarizationProvenance = ...
-                    oops.model.PolarizationProvenance.fromStruct( ...
-                        S.PolarizationProvenance);
-            end
-
-            if isfield(S,'MaskProvenance')
-                provenance = oops.model.MaskProvenance.fromStruct(S.MaskProvenance);
-            elseif ~isempty(S.Objects)
-                provenance = oops.model.MaskProvenance.segmented(obj.CorrectionProvenance);
-            else
-                provenance = oops.model.MaskProvenance.unknown();
-            end
+            obj.CorrectionProvenance = ...
+                oops.model.CorrectionProvenance.fromStruct(S.CorrectionProvenance);
+            obj.PolarizationProvenance = ...
+                oops.model.PolarizationProvenance.fromStruct( ...
+                    S.PolarizationProvenance);
+            provenance = oops.model.MaskProvenance.fromStruct(S.MaskProvenance);
 
             if ~isempty(S.Objects)
                 lists = arrayfun(@(item) double(item.PixelIdxList(:)),S.Objects, ...
@@ -898,6 +876,69 @@ classdef Image < handle
 
     methods (Static, Access=private)
 
+        function info = correctionInfo(provenance)
+        %CORRECTIONINFO Return concise correction metadata for human display.
+
+            info = struct('Algorithm',provenance.Algorithm);
+            values = provenance.Parameters.Values;
+
+            if ~isempty(fieldnames(values))
+                info.Parameters = values;
+            end
+
+            info.CalibrationIDs = provenance.CalibrationIDs;
+        end
+
+        function info = maskInfo(provenance)
+        %MASKINFO Return mask provenance without serialization-only repetition.
+
+            info = struct('Method',provenance.Method);
+
+            if ~isempty(provenance.Parameters)
+                parameters = provenance.Parameters.toStruct();
+                info.Algorithm = parameters.Algorithm;
+                parameters = rmfield(parameters,'Algorithm');
+
+                for name = string(fieldnames(parameters))'
+                    value = parameters.(name);
+                    if ~isstruct(value) || ~isempty(fieldnames(value))
+                        info.(name) = value;
+                    end
+                end
+            end
+
+            info.Correction = oops.model.Image.correctionInfo( ...
+                provenance.Correction);
+
+            if ~isempty(fieldnames(provenance.Diagnostics))
+                info.Diagnostics = provenance.Diagnostics;
+            end
+
+            if ~isempty(fieldnames(provenance.Source))
+                info.Source = provenance.Source;
+            end
+        end
+
+        function info = polarizationInfo(provenance)
+        %POLARIZATIONINFO Return concise polarization-analysis provenance.
+
+            info = struct('Calculated',provenance.Calculated);
+
+            if ~provenance.Calculated
+                return;
+            end
+
+            info.Algorithm = provenance.Algorithm;
+            values = provenance.Parameters.Values;
+
+            if ~isempty(fieldnames(values))
+                info.Parameters = values;
+            end
+
+            info.Correction = oops.model.Image.correctionInfo( ...
+                provenance.Correction);
+        end
+
         function statistics = calculateDisplayStatistics(values,fallback)
         %CALCULATEDISPLAYSTATISTICS Scan one result when generated, not per refresh.
 
@@ -952,12 +993,31 @@ classdef Image < handle
                 assignedCalibrationIDs = obj.Parent.CalibrationIDs;
             end
 
-            % Result field names communicate availability without copying raster values.
-            resultFields = string(fieldnames(obj.Results));
             correctionMatches = obj.CorrectionProvenance.matchesAssignments( ...
                 assignedCalibrationIDs);
             maskCurrent = ~isempty(obj.Mask) && ...
                 obj.MaskProvenance.isCurrent(obj.CorrectionProvenance);
+
+            % Human-facing provenance omits algorithm IDs duplicated inside
+            % durable parameter snapshots while retaining every dependency.
+            correction = oops.model.Image.correctionInfo( ...
+                obj.CorrectionProvenance);
+            correction.AssignedCalibrationIDs = assignedCalibrationIDs;
+            correction.MatchesAssignment = correctionMatches;
+            correction.AverageIntensityAvailable = ...
+                isfield(obj.Results,'AverageIntensity');
+
+            mask = oops.model.Image.maskInfo(obj.MaskProvenance);
+            mask.CurrentAgainstCorrection = maskCurrent;
+            mask.ForegroundPixels = nnz(obj.Mask);
+            mask.ObjectCount = numel(obj.Objects);
+
+            polarization = oops.model.Image.polarizationInfo( ...
+                obj.PolarizationProvenance);
+            polarization.CurrentAgainstCorrection = ...
+                oops.model.internal.hasCurrentPolarization(obj);
+            polarization.OrderAvailable = isfield(obj.Results,'Order');
+            polarization.AzimuthAvailable = isfield(obj.Results,'Azimuth');
 
             % Primary semantic identity remains distinct from acquisition metadata.
             primary = struct( ...
@@ -1022,23 +1082,9 @@ classdef Image < handle
                     'FrameLocations',obj.FrameLocations, ...
                     'Loaded',obj.IsLoaded), ...
                 'AuxiliaryChannels',auxiliary, ...
-                'Correction',struct( ...
-                    'Provenance',obj.CorrectionProvenance.toStruct(), ...
-                    'AssignedCalibrationIDs',assignedCalibrationIDs, ...
-                    'MatchesAssignment',correctionMatches, ...
-                    'AverageIntensityAvailable',isfield(obj.Results,'AverageIntensity')), ...
-                'Mask',struct( ...
-                    'Provenance',obj.MaskProvenance.toStruct(), ...
-                    'CurrentAgainstCorrection',maskCurrent, ...
-                    'ForegroundPixels',nnz(obj.Mask), ...
-                    'ObjectCount',numel(obj.Objects)), ...
-                'Analysis',struct( ...
-                    'ResultFields',resultFields, ...
-                    'OrderAvailable',isfield(obj.Results,'Order'), ...
-                    'AzimuthAvailable',isfield(obj.Results,'Azimuth'), ...
-                    'CurrentAgainstCorrection', ...
-                        oops.model.internal.hasCurrentPolarization(obj), ...
-                    'Provenance',obj.PolarizationProvenance.toStruct()), ...
+                'Correction',correction, ...
+                'Mask',mask, ...
+                'Polarization',polarization, ...
                 'Display',struct( ...
                     'IntensityRange',obj.IntensityDisplayRange, ...
                     'OrderRange',obj.OrderDisplayRange), ...

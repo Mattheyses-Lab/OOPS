@@ -52,8 +52,7 @@ classdef CorrectionProvenance
 
         function S = toStruct(obj)
         %TOSTRUCT Return the durable correction description.
-            S = struct('Algorithm',obj.Algorithm, ...
-                'Parameters',obj.Parameters.toStruct(), ...
+            S = struct('Parameters',obj.Parameters.toStruct(), ...
                 'CalibrationIDs',obj.CalibrationIDs);
         end
     end
@@ -77,14 +76,8 @@ classdef CorrectionProvenance
         end
 
         function obj = fromStruct(S)
-        %FROMSTRUCT Restore current or earlier correction metadata.
-            if isfield(S,'Parameters')
-                parameters = oops.analysis.correction.Parameters.fromStruct(S.Parameters);
-            elseif isfield(S,'Method') && string(S.Method) == "Raw"
-                parameters = oops.analysis.correction.Parameters("Identity/1");
-            else
-                parameters = oops.analysis.correction.Parameters();
-            end
+        %FROMSTRUCT Restore correction metadata from the current schema.
+            parameters = oops.analysis.correction.Parameters.fromStruct(S.Parameters);
             obj = oops.model.CorrectionProvenance( ...
                 parameters,string(S.CalibrationIDs));
         end

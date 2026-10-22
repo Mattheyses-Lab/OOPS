@@ -152,6 +152,17 @@ classdef Project < handle
                 error('oops:project:InvalidFile','The selected file is not an OOPS project.');
             end
 
+            if ~isfield(S,'SchemaVersion') || ...
+                    string(S.SchemaVersion) ~= oops.Info.ProjectSchemaVersion
+                found = "missing";
+                if isfield(S,'SchemaVersion')
+                    found = string(S.SchemaVersion);
+                end
+                error('oops:project:IncompatibleSchema', ...
+                    'Project schema %s is incompatible with required schema %s.', ...
+                    found,oops.Info.ProjectSchemaVersion);
+            end
+
             % Resolve every external source before allocating a partial model.
             resolution = oops.io.project.resolveSources( ...
                 S,projectFolder,searchRoot,Progress=opts.Progress);
@@ -183,10 +194,8 @@ classdef Project < handle
 
                 for i = 1:numel(S.Groups(g).Images)
 
-                    if isfield(S.Groups(g).Images(i),'AuxiliaryChannels')
-                        auxiliaryCount = auxiliaryCount + ...
-                            numel(S.Groups(g).Images(i).AuxiliaryChannels);
-                    end
+                    auxiliaryCount = auxiliaryCount + ...
+                        numel(S.Groups(g).Images(i).AuxiliaryChannels);
 
                 end
             end
@@ -232,34 +241,29 @@ classdef Project < handle
                         string(imageData.PrimaryChannelID));
                     image = group.addImage( ...
                         input,string(imageData.Name),primaryChannel);
-                    image.restoreStruct(imageData,string(data.CalibrationIDs));
+                    image.restoreStruct(imageData);
                     restoredImages(end+1,1) = image; %#ok<AGROW>
 
-                    if isfield(imageData,'FPMCalculated') && ...
-                            logical(imageData.FPMCalculated)
+                    if image.PolarizationProvenance.Calculated
                         fpmImages(end+1,1) = image; %#ok<AGROW>
                     end
 
-                    if isfield(imageData,'AuxiliaryChannels')
+                    for a = 1:numel(imageData.AuxiliaryChannels)
+                        assignmentData = imageData.AuxiliaryChannels(a);
+                        auxiliaryPath = resolution.AuxiliaryChannels{g}{i}(a);
 
-                        for a = 1:numel(imageData.AuxiliaryChannels)
-                            assignmentData = imageData.AuxiliaryChannels(a);
-                            auxiliaryPath = resolution.AuxiliaryChannels{g}{i}(a);
+                        sourceIndex = sourceIndex+1;
+                        reportSourceProgress(opts.Progress,"Loading auxiliary channel", ...
+                            assignmentData.ChannelID,sourceIndex,sourceCount);
 
-                            sourceIndex = sourceIndex+1;
-                            reportSourceProgress(opts.Progress,"Loading auxiliary channel", ...
-                                assignmentData.ChannelID,sourceIndex,sourceCount);
-
-                            auxiliaryInput = matlabx.image.Image5D.fromFile( ...
-                                auxiliaryPath, ...
-                                SeriesIndex=assignmentData.Source.SeriesIndex);
-                            image.addAuxiliaryChannel( ...
-                                string(assignmentData.ChannelID), ...
-                                auxiliaryInput, ...
-                                double(assignmentData.ComponentIndex), ...
-                                double(assignmentData.DisplayRange));
-                        end
-
+                        auxiliaryInput = matlabx.image.Image5D.fromFile( ...
+                            auxiliaryPath, ...
+                            SeriesIndex=assignmentData.Source.SeriesIndex);
+                        image.addAuxiliaryChannel( ...
+                            string(assignmentData.ChannelID), ...
+                            auxiliaryInput, ...
+                            double(assignmentData.ComponentIndex), ...
+                            double(assignmentData.DisplayRange));
                     end
                 end
 

@@ -325,30 +325,18 @@ classdef LabelRegistry < handle
 
             obj = oops.model.LabelRegistry();
 
-            if isfield(S,'Labels')
-
-                for k = 1:numel(S.Labels)
-                    entry = S.Labels(k);
-                    createdAt = datetime('now');
-
-                    if isfield(entry,'CreatedAt') && ~isempty(entry.CreatedAt)
-                        createdAt = entry.CreatedAt;
-                    end
-
-                    obj.add(string(entry.Name), ...
-                        ID=string(entry.ID),Hotkey=string(entry.Hotkey), ...
-                        Color=double(entry.Color),CreatedAt=createdAt);
-                end
-
+            for k = 1:numel(S.Labels)
+                entry = S.Labels(k);
+                obj.add(string(entry.Name), ...
+                    ID=string(entry.ID),Hotkey=string(entry.Hotkey), ...
+                    Color=double(entry.Color),CreatedAt=entry.CreatedAt);
             end
 
-            if isfield(S,'Order') && ~isempty(S.Order)
+            if ~isempty(S.Order)
                 obj.Order = string(S.Order);
             end
 
-            if isfield(S,'ActiveLabelID')
-                obj.setActiveByID(string(S.ActiveLabelID));
-            end
+            obj.setActiveByID(string(S.ActiveLabelID));
         end
 
     end
