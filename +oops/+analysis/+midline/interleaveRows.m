@@ -11,8 +11,9 @@ if ~isequal(size(a),size(b)) || ndims(a) > 2 || any(size(a) == 0)
     error('oops:analysis:InvalidInterleaveInput','Interleaved arrays must be matching, nonempty 2-D arrays.');
 end
 
-% Preallocated output with two rows for each input edge.
-output = zeros(2*size(a,1),size(a,2),'like',a);
+% Duplicate the first endpoint rows to preserve numeric, string, categorical,
+% or cell node-name storage without assuming a type supported by zeros(...,'like').
+output = a(ceil((1:2*size(a,1))/2),:);
 output(1:2:end,:) = a;
 output(2:2:end,:) = b;
 

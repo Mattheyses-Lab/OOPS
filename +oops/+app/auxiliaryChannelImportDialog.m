@@ -219,13 +219,9 @@ auxiliaryViewerGrid = uigridlayout(auxiliaryViewerPanel,[1 1], ...
     'RowHeight',{'1x'},'ColumnWidth',{'1x'});
 auxiliaryPreview = matlabx.ui.axes.ImageAxes(auxiliaryViewerGrid, ...
     'Name','AuxiliaryChannelPreview', ...
-    'ImageData',sources(1), ...
     'Tools',{'Zoom','Colorbar'}, ...
     'ComponentColorMode','colors', ...
     'Colormap',gray(256));
-syncPreviewColors(1);
-oops.runtime.updateProgress(progress,"Preparing the target preview...",.92);
-showTarget(1);
 
 % A full-width panel lets the table fill its allocation without manual sizing.
 mappingHost = uigridlayout(layout,[1 1], ...
@@ -280,19 +276,25 @@ resizeUpdatePending = false;
 
 % Size after all children exist so web-control positions are current.
 dialog.SizeChangedFcn = @(src,~) resizeDialogContent(src);
-drawnow;
 resizeDialogContent(dialog);
-oops.runtime.updateProgress(progress,"Auxiliary import dialog ready.",1);
-delete(progressCleanup);
-closeProgress(progress);
-dialog.Visible = 'on';
-drawnow;
-resizeDialogContent(dialog);
-oops.Log.INFO("Auxiliary channel import dialog ready.");
 
 % Empty output distinguishes cancellation from a confirmed import plan.
-plan = struct( ...
-    'Image',{},'Input',{},'ComponentIndex',{},'ChannelName',{},'ChannelColor',{});
+plan = struct('Image',{},'Input',{},'ComponentIndex',{},'ChannelName',{},'ChannelColor',{});
+
+% Run a complete initial selection update after all dependent controls exist.
+% This matches the primary dialog and primes both ImageAxes event paths.
+oops.runtime.updateProgress(progress,"Preparing the target preview...",.9);
+showTarget(1);
+oops.runtime.updateProgress(progress,"Preparing the auxiliary preview...",.95);
+showFile(1);
+oops.runtime.updateProgress(progress,"Auxiliary import dialog ready.",1);
+
+delete(progressCleanup);
+closeProgress(progress);
+
+dialog.Visible = 'on';
+pause(1)
+oops.Log.INFO("Auxiliary channel import dialog ready.");
 uiwait(dialog);
 
     function index = currentImageIndex()

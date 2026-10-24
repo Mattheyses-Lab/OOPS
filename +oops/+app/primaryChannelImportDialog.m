@@ -17,6 +17,15 @@ if numel(inputs) ~= numel(imageNames)
         'Every primary input needs one image name.');
 end
 
+% Report preparation consistently with the auxiliary-channel workflow while
+% mappings and the initial preview are built offscreen.
+oops.Log.INFO(sprintf('Preparing primary import for %d image(s).',numel(inputs)));
+progress = uiprogressdlg(parent, ...
+    'Title','Import primary channels', ...
+    'Message','Preparing primary inputs...', ...
+    'Value',0);
+progressCleanup = onCleanup(@() closeProgress(progress));
+
 % ImageAxes categorical colors and existing semantic identities constrain
 % the editable table values without coupling the model to UI controls.
 allowedColors = string(matlabx.ui.axes.ImageAxes.getColorNames());
@@ -28,6 +37,10 @@ channelChoices = ["New channel..." existingNames];
 mappings = cell(numel(inputs),1);
 
 for inputIndex = 1:numel(inputs)
+    oops.runtime.updateProgress(progress,sprintf( ...
+        'Image %d/%d: %s\nPreparing channel mapping...', ...
+        inputIndex,numel(inputs),imageNames(inputIndex)), ...
+        .75*(inputIndex-1)/max(1,numel(inputs)));
     [sourceName,sourceColor] = sourceChannelMetadata(inputs(inputIndex));
     definition = registry.findByName(sourceName);
 
@@ -145,13 +158,21 @@ confirm.Layout.Column = 4;
 
 resizeUpdatePending = false;
 dialog.SizeChangedFcn = @(src,~) resizeDialogContent(src);
+resizeDialogContent(dialog);
 
 % Empty output distinguishes cancellation from a confirmed mapping plan.
 plan = struct('Input',{},'ImageName',{},'ChannelName',{},'ChannelColor',{});
+
+oops.runtime.updateProgress(progress,"Loading the first primary preview...",.8);
 showInput(1);
-drawnow;
-resizeDialogContent(dialog);
+oops.runtime.updateProgress(progress,"Primary import dialog ready.",1);
+
+delete(progressCleanup);
+closeProgress(progress);
+
 dialog.Visible = 'on';
+pause(1)
+oops.Log.INFO("Primary channel import dialog ready.");
 uiwait(dialog);
 
     function inputChanged(~,~)
@@ -376,4 +397,12 @@ if isinteger(stack)
 end
 
 data = matlabx.image.Image5D.fromComponents(values,Names="Average intensity");
+end
+
+function closeProgress(progress)
+%CLOSEPROGRESS Close a still-valid preparation dialog during every exit path.
+
+if ~isempty(progress) && isvalid(progress)
+    close(progress);
+end
 end

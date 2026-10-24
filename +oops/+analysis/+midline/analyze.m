@@ -10,6 +10,19 @@ function result = analyze(mask)
 % Ordered centerline coordinates calculated by the legacy Voronoi algorithm.
 coordinates = oops.analysis.midline.trace(mask);
 
+% The legacy tracer signals failure with [NaN NaN]. Normalize that sentinel
+% before it reaches the model or graphics while retaining unavailable scalars.
+if isempty(coordinates) || any(~isfinite(coordinates(:)))
+    result = struct( ...
+        'Coordinates',zeros(0,2), ...
+        'Tangents',zeros(0,1), ...
+        'PixelTangents',zeros(0,1), ...
+        'Length',NaN, ...
+        'Tortuosity',NaN, ...
+        'OrientationMean',NaN);
+    return;
+end
+
 % Axial tangent at each sampled coordinate along the centerline.
 tangents = oops.analysis.midline.tangent(coordinates);
 

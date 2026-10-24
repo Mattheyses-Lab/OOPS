@@ -247,7 +247,8 @@ classdef Object < handle
         %SETMIDLINERESULT Store traced geometry and its scalar measurements.
 
             try
-                validateattributes(coordinates,{'numeric'},{'2d','ncols',2,'real'});
+                validateattributes(coordinates,{'numeric'}, ...
+                    {'2d','ncols',2,'real','finite'});
 
                 % Normalize a failed trace's [] result to the declared 0-by-1 shape.
                 pixelTangents = pixelTangents(:);

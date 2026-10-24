@@ -3049,6 +3049,10 @@ classdef GUI < handle
 
                 if info.Available
 
+                    % Clear any prior unavailability reason retained by this
+                    % reused panel when an active image/source becomes available.
+                    obj.ViewerPanels(k).Title = char(names(k));
+
                     % Whether the viewer already represents this same image/source pair.
                     sameSource = obj.ViewerKeys(k) == key;
 
@@ -3518,10 +3522,13 @@ classdef GUI < handle
 
             % Convert the stored parent-image [x y] midline into this crop.
             midline = region.Midline;
+            hasMidline = ~isempty(midline) && all(isfinite(midline),'all');
 
-            if ~isempty(midline)
+            if hasMidline
                 localRC = geometry.toLocal(midline(:,[2 1]));
                 midline = localRC(:,[2 1]);
+            else
+                midline = zeros(0,2);
             end
 
             % Sample analytical values only at this object's local pixels.
@@ -3605,7 +3612,7 @@ classdef GUI < handle
                 midlineContent.setStyle(midlineColor,1);
                 midlineContent.setData(midline);
                 obj.ObjectViewerMidlineTools{k}.setAvailable( ...
-                    available && ~isempty(midline));
+                    available && hasMidline);
             end
         end
 
