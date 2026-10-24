@@ -11,18 +11,28 @@ classdef Colormaps < handle
         Order_ (1,1) string = "parula"
         % Use a cyclic colormap for axial angle display.
         Azimuth_ (1,1) string = "hsv"
+        Mask_ (1,1) string = "gray"
+        OrderColor_ (1,1) string = "gray"
+        AzimuthColor_ (1,1) string = "gray"
+        MaskColor_ (1,1) string = "gray"
         IntensityCategory_ (1,1) string = "MATLAB"
         OrderCategory_ (1,1) string = "MATLAB"
         AzimuthCategory_ (1,1) string = "MATLAB"
+        MaskCategory_ (1,1) string = "MATLAB"
     end
 
     properties (Dependent)
         Intensity
         Order
         Azimuth
+        Mask
+        OrderColor
+        AzimuthColor
+        MaskColor
         IntensityCategory
         OrderCategory
         AzimuthCategory
+        MaskCategory
     end
 
     events
@@ -68,6 +78,15 @@ classdef Colormaps < handle
             obj.setValue("Azimuth",v);
         end
 
+        function v = get.Mask(obj), v = obj.Mask_; end
+        function set.Mask(obj,v), obj.setValue("Mask",v); end
+        function v = get.OrderColor(obj), v = obj.OrderColor_; end
+        function set.OrderColor(obj,v), obj.setColor("OrderColor",v); end
+        function v = get.AzimuthColor(obj), v = obj.AzimuthColor_; end
+        function set.AzimuthColor(obj,v), obj.setColor("AzimuthColor",v); end
+        function v = get.MaskColor(obj), v = obj.MaskColor_; end
+        function set.MaskColor(obj,v), obj.setColor("MaskColor",v); end
+
         function v = get.IntensityCategory(obj)
         %GET.INTENSITYCATEGORY Return this domain's registry category.
 
@@ -104,6 +123,9 @@ classdef Colormaps < handle
             obj.setValue("AzimuthCategory",v);
         end
 
+        function v = get.MaskCategory(obj), v = obj.MaskCategory_; end
+        function set.MaskCategory(obj,v), obj.setValue("MaskCategory",v); end
+
         function S = toStruct(obj)
         %TOSTRUCT Serialize values without listeners or graphics objects.
 
@@ -111,9 +133,14 @@ classdef Colormaps < handle
             S = struct('Intensity',obj.Intensity, ...
                 'Order',obj.Order, ...
                 'Azimuth',obj.Azimuth, ...
+                'Mask',obj.Mask, ...
+                'OrderColor',obj.OrderColor, ...
+                'AzimuthColor',obj.AzimuthColor, ...
+                'MaskColor',obj.MaskColor, ...
                 'IntensityCategory',obj.IntensityCategory, ...
                 'OrderCategory',obj.OrderCategory, ...
-                'AzimuthCategory',obj.AzimuthCategory);
+                'AzimuthCategory',obj.AzimuthCategory, ...
+                'MaskCategory',obj.MaskCategory);
         end
 
         function setMap(obj,domain,name,category)
@@ -130,7 +157,7 @@ classdef Colormaps < handle
                 % Requested registry category, normalized to string.
                 category = string(category);
 
-                if ~ismember(domain,["Intensity","Order","Azimuth"]) || ...
+                if ~ismember(domain,["Intensity","Order","Azimuth","Mask"]) || ...
                         ~matlabx.colors.maps.Registry.has(name,category)
                     error('oops:config:UnknownColormap','Unknown colormap/domain: %s (%s).',name,category);
                 end
@@ -176,7 +203,7 @@ classdef Colormaps < handle
             validateattributes(S,{'struct'},{'scalar'});
 
             % Apply serialized fields through their validated public setting setters.
-            for domain = ["Intensity","Order","Azimuth"]
+            for domain = ["Intensity","Order","Azimuth","Mask"]
 
                 % Display domain being restored from the serialized map assignments.
                 name = obj.(domain);
@@ -195,11 +222,25 @@ classdef Colormaps < handle
                 obj.setMap(domain,name,category);
             end
 
+
+            for name = ["OrderColor","AzimuthColor","MaskColor"]
+                if isfield(S,name)
+                    obj.(name) = string(S.(name));
+                end
+            end
+
         end
 
     end
 
     methods (Access=private)
+
+        function setColor(obj,name,value)
+        %SETCOLOR Normalize an ImageAxes component color before storage.
+
+            value = string(matlabx.ui.axes.ImageAxes.canonicalComponentColorName(value));
+            obj.setValue(name,value);
+        end
 
         function setValue(obj,name,value)
         %SETVALUE Validate the backing property before emitting change events.

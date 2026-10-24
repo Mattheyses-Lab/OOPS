@@ -273,7 +273,7 @@ ui.Project.Settings.View.LeftSource = "Average intensity";
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
 t.verifyEqual(string(ui.LeftViewer.ComponentColors{1}),"gray");
 t.verifyEqual(string(ui.ColormapDomain.Items{1}),"Primary intensity");
-t.verifyEqual(string(ui.ColormapDomain.ItemsData{1}),"Intensity");
+t.verifyEqual(string(ui.ColormapDomain.ItemsData{1}),"PrimaryIntensity");
 end
 
 function testAuxiliaryChannelViewerUsesProjectSemanticOrder(t)

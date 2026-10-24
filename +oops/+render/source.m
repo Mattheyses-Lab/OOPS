@@ -58,9 +58,7 @@ try
             % Numeric source planes to wrap as Image5D without altering model outputs.
             values = oops.analysis.Analyzer.calibration(group.Parent,group.CalibrationIDs);
             info.Title = group.Name + " — Calibration (normalized mean)";
-            data = matlabx.image.Image5D.fromComponents( ...
-                arrayfun(@(k) values(:,:,k),1:4,'UniformOutput',false), ...
-                Names=["0 deg","45 deg","90 deg","135 deg"]);
+            data = oops.render.polarizationStack(image,values);
             info.CLim = [0 1];
         case "Corrected"
             % Corrected data are a disposable runtime product, calculated on demand.
@@ -100,6 +98,7 @@ try
 
             data = matlabx.image.Image5D.fromComponents(image.Mask,Names="Mask");
             info.CLim = [0 1];
+            domain = "Mask";
         case {"Order","Azimuth"}
             values = image.(name);
 
@@ -150,16 +149,26 @@ try
         % channel across its raw, corrected, and averaged representations.
         color = primaryComponentColor(image);
 
-        if color ~= ""
-            info.ComponentColorMode = "colors";
-            info.ComponentColors = repmat({char(color)},1,data.NumComponents);
+        info.ComponentColorMode = settings.Display.PrimaryIntensityColorMode;
+        info.ComponentColors = repmat({char(color)},1,data.NumComponents);
+
+        if ~isempty(image.PrimaryChannel)
+            map = matlabx.colors.maps.Registry.map( ...
+                image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
+            info.ComponentColormaps = repmat({map},1,data.NumComponents);
         end
     elseif name == "Order"
         info.Domain = "Order";
+        info.ComponentColorMode = settings.Display.OrderColorMode;
+        info.ComponentColors = {char(settings.Colormaps.OrderColor)};
     elseif name == "Azimuth"
         info.Domain = "Azimuth";
+        info.ComponentColorMode = settings.Display.AzimuthColorMode;
+        info.ComponentColors = {char(settings.Colormaps.AzimuthColor)};
     elseif name == "Mask"
         info.Domain = "Mask";
+        info.ComponentColorMode = settings.Display.MaskColorMode;
+        info.ComponentColors = {char(settings.Colormaps.MaskColor)};
     end
 
     if domain == "Azimuth"
@@ -237,7 +246,6 @@ function [data,info] = auxiliaryChannels(image)
     colormaps = repmat({gray(256)},1,numel(definitions));
     available = false(1,numel(definitions));
     sourceClasses = strings(1,numel(definitions));
-    colorsCompatible = true;
 
     % Read assigned planes in their native classes. The common display class
     % cannot be selected until every available source has been inspected.
@@ -248,15 +256,9 @@ function [data,info] = auxiliaryChannels(image)
         metadataColors{k} = definition.Color;
         color = oops.render.canonicalComponentColor(definition.Color);
 
-        if color == ""
-            % Arbitrary RGB definitions use equivalent monochromatic LUTs.
-            colorsCompatible = false;
-            colors{k} = [];
-            metadataColors{k} = [];
-            colormaps{k} = linspace(0,1,256)'.*definition.Color;
-        else
-            colors{k} = char(color);
-        end
+        colors{k} = char(color);
+        colormaps{k} = matlabx.colors.maps.Registry.map( ...
+            definition.Colormap,definition.ColormapCategory);
 
         if isempty(assignment)
             continue;
@@ -322,11 +324,7 @@ function [data,info] = auxiliaryChannels(image)
     end
 
     info.Reason = "";
-    if colorsCompatible
-        info.ComponentColorMode = "colors";
-    else
-        info.ComponentColorMode = "luts";
-    end
+    info.ComponentColorMode = image.Parent.Parent.Settings.Display.AuxiliaryColorMode;
     info.ComponentCLims = limits;
     info.ComponentColors = colors;
     info.ComponentColormaps = colormaps;

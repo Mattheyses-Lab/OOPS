@@ -15,6 +15,11 @@ classdef Display < handle
         LockedDisplayRangeOrder_ double = []
         OrderAutoScaleMethod_ (1,1) string {mustBeMember(OrderAutoScaleMethod_, ...
             ["Contrast","Zero to max","Data range"])} = "Contrast"
+        PrimaryIntensityColorMode_ (1,1) string {mustBeMember(PrimaryIntensityColorMode_,["colors","luts"])} = "colors"
+        AuxiliaryColorMode_ (1,1) string {mustBeMember(AuxiliaryColorMode_,["colors","luts"])} = "colors"
+        OrderColorMode_ (1,1) string {mustBeMember(OrderColorMode_,["colors","luts"])} = "luts"
+        AzimuthColorMode_ (1,1) string {mustBeMember(AzimuthColorMode_,["colors","luts"])} = "luts"
+        MaskColorMode_ (1,1) string {mustBeMember(MaskColorMode_,["colors","luts"])} = "luts"
         Theme_ (1,1) string = "Dark"
         BackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor_,0,1)} = [0.0 0.0 0.0]
         ForegroundColor_ (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor_,0,1)} = [1.0 1.0 1.0]
@@ -32,6 +37,11 @@ classdef Display < handle
         LockedDisplayRangeIntensity
         LockedDisplayRangeOrder
         OrderAutoScaleMethod
+        PrimaryIntensityColorMode
+        AuxiliaryColorMode
+        OrderColorMode
+        AzimuthColorMode
+        MaskColorMode
 
         % Deprecated aliases retained while older callers move to Keep Auto.
         AutoScaleDisplayIntensity
@@ -135,6 +145,17 @@ classdef Display < handle
 
             obj.setValue("OrderAutoScaleMethod",string(v));
         end
+
+        function v = get.PrimaryIntensityColorMode(obj), v = obj.PrimaryIntensityColorMode_; end
+        function set.PrimaryIntensityColorMode(obj,v), obj.setValue("PrimaryIntensityColorMode",string(v)); end
+        function v = get.AuxiliaryColorMode(obj), v = obj.AuxiliaryColorMode_; end
+        function set.AuxiliaryColorMode(obj,v), obj.setValue("AuxiliaryColorMode",string(v)); end
+        function v = get.OrderColorMode(obj), v = obj.OrderColorMode_; end
+        function set.OrderColorMode(obj,v), obj.setValue("OrderColorMode",string(v)); end
+        function v = get.AzimuthColorMode(obj), v = obj.AzimuthColorMode_; end
+        function set.AzimuthColorMode(obj,v), obj.setValue("AzimuthColorMode",string(v)); end
+        function v = get.MaskColorMode(obj), v = obj.MaskColorMode_; end
+        function set.MaskColorMode(obj,v), obj.setValue("MaskColorMode",string(v)); end
 
         function v = get.AutoScaleDisplayIntensity(obj)
         %GET.AUTOSCALEDISPLAYINTENSITY Return the legacy alias for Keep Auto.
@@ -258,6 +279,11 @@ classdef Display < handle
                 'LockedDisplayRangeIntensity',obj.LockedDisplayRangeIntensity, ...
                 'LockedDisplayRangeOrder',obj.LockedDisplayRangeOrder, ...
                 'OrderAutoScaleMethod',obj.OrderAutoScaleMethod, ...
+                'PrimaryIntensityColorMode',obj.PrimaryIntensityColorMode, ...
+                'AuxiliaryColorMode',obj.AuxiliaryColorMode, ...
+                'OrderColorMode',obj.OrderColorMode, ...
+                'AzimuthColorMode',obj.AzimuthColorMode, ...
+                'MaskColorMode',obj.MaskColorMode, ...
                 'Theme',obj.Theme, ...
                 'BackgroundColor',obj.BackgroundColor, ...
                 'ForegroundColor',obj.ForegroundColor, ...

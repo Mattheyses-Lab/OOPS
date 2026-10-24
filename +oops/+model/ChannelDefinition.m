@@ -9,6 +9,8 @@ classdef ChannelDefinition < handle
         ID (1,1) string = ""
         Name (1,1) string = "Channel"
         Color (1,3) double {mustBeFinite,mustBeInRange(Color,0,1)} = [1 1 1]
+        Colormap (1,1) string = "gray"
+        ColormapCategory (1,1) string = "MATLAB"
         IsPrimary (1,1) logical = false
         IsAuxiliary (1,1) logical = false
     end
@@ -51,11 +53,40 @@ classdef ChannelDefinition < handle
             obj.IsAuxiliary = true;
         end
 
+        function setColor(obj,color)
+        %SETCOLOR Store the canonical RGB display color for this signal.
+
+            arguments
+                obj
+                color (1,3) double {mustBeFinite,mustBeInRange(color,0,1)}
+            end
+            obj.Color = color;
+        end
+
+        function setColormap(obj,name,category)
+        %SETCOLORMAP Store the registered LUT used to display this signal.
+
+            arguments
+                obj
+                name (1,1) string
+                category (1,1) string
+            end
+
+            if ~matlabx.colors.maps.Registry.has(name,category)
+                error('oops:model:UnknownChannelColormap', ...
+                    'Unknown channel colormap: %s (%s).',name,category);
+            end
+
+            obj.Colormap = name;
+            obj.ColormapCategory = category;
+        end
+
         function S = toStruct(obj)
         %TOSTRUCT Capture the persistent semantic identity and display color.
 
             S = struct( ...
                 'ID',obj.ID,'Name',obj.Name,'Color',obj.Color, ...
+                'Colormap',obj.Colormap,'ColormapCategory',obj.ColormapCategory, ...
                 'IsPrimary',obj.IsPrimary,'IsAuxiliary',obj.IsAuxiliary);
         end
 
@@ -78,6 +109,10 @@ classdef ChannelDefinition < handle
 
             obj = oops.model.ChannelDefinition( ...
                 string(S.Name),double(S.Color),string(S.ID),roles);
+
+            if isfield(S,'Colormap') && isfield(S,'ColormapCategory')
+                obj.setColormap(string(S.Colormap),string(S.ColormapCategory));
+            end
         end
 
     end

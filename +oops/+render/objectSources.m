@@ -42,9 +42,7 @@ info = repmat(struct( ...
     'ComponentColorMode',"luts",'ComponentColors',{{}}),1,4);
 
 % Corrected four-angle crop used by the order/orientation analysis.
-sources{1} = matlabx.image.Image5D.fromComponents( ...
-    arrayfun(@(k) intensity(:,:,k),1:4,'UniformOutput',false), ...
-    Names=string(image.PolarizationAngles) + " deg");
+sources{1} = oops.render.polarizationStack(image,intensity);
 info(1) = sourceInfo("Corrected intensity",true,"", ...
     oops.render.colormap(settings.Colormaps,"Intensity"), ...
     oops.render.displayLimits(image,"Intensity",settings));
@@ -62,8 +60,12 @@ if color == ""
     color = "gray";
 end
 
-info(1).ComponentColorMode = "colors";
-info(1).ComponentColors = repmat({char(color)},1,4);
+info(1).ComponentColorMode = settings.Display.PrimaryIntensityColorMode;
+info(1).ComponentColors = repmat({char(color)},1,sources{1}.NumComponents);
+if ~isempty(image.PrimaryChannel)
+    info(1).Colormap = matlabx.colors.maps.Registry.map( ...
+        image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
+end
 
 % Order crop remains unavailable until the parent analysis has run.
 if isempty(image.Order)
@@ -76,10 +78,15 @@ else
         oops.render.colormap(settings.Colormaps,"Order"), ...
         oops.render.displayLimits(image,"Order",settings));
 end
+info(2).ComponentColorMode = settings.Display.OrderColorMode;
+info(2).ComponentColors = {char(settings.Colormaps.OrderColor)};
 
 % Object membership mask excludes neighboring segmented objects in the crop.
 sources{3} = matlabx.image.Image5D.fromComponents(objectMask,Names="Mask");
-info(3) = sourceInfo("Mask",true,"",gray(256),[0 1]);
+info(3) = sourceInfo("Mask",true,"", ...
+    oops.render.colormap(settings.Colormaps,"Mask"),[0 1]);
+info(3).ComponentColorMode = settings.Display.MaskColorMode;
+info(3).ComponentColors = {char(settings.Colormaps.MaskColor)};
 
 % Preserve signed analytical azimuths in degrees for display and inspection.
 if isempty(image.Azimuth)
@@ -91,6 +98,8 @@ else
     info(4) = sourceInfo("Azimuth (degrees)",true,"", ...
         oops.render.azimuthImageColormap(settings.Colormaps),[-90 90]);
 end
+info(4).ComponentColorMode = settings.Display.AzimuthColorMode;
+info(4).ComponentColors = {char(settings.Colormaps.AzimuthColor)};
 end
 
 function info = sourceInfo(title,available,reason,colormap,limits)

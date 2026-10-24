@@ -43,7 +43,14 @@ classdef GUI < handle
         LogTextArea
         ColormapTree
         ColormapDomain
+        ColormapChannel
+        ColormapMode
+        ColormapColor
         ColormapPreview
+        ColormapTypeLabel
+        ColormapChannelLabel
+        ColormapModeLabel
+        ColormapAppearanceLabel
         SettingsUI struct = struct()
         SegmentationUI struct = struct()
         DisplayLimitUI struct = struct()
@@ -549,6 +556,9 @@ classdef GUI < handle
 
             obj.bindEvents();
             obj.refreshSettingsControls();
+            % Image Display owns custom model-backed controls outside SettingsUI;
+            % rebuild their channel choices against the newly attached project.
+            obj.refreshColormapControls();
             obj.reconcileActive();
             obj.refreshNavigation();
             obj.refreshLabels();
@@ -602,6 +612,7 @@ classdef GUI < handle
             obj.ViewerKeys(:) = "";
             obj.PanelContentNames(:) = "";
             obj.ObjectViewerKey = "";
+            obj.refreshColormapControls();
 
             viewers = {obj.LeftViewer,obj.RightViewer};
 
@@ -2273,6 +2284,12 @@ classdef GUI < handle
                 return;
             end
 
+            % Semantic channel assignments alter the Image Display channel list
+            % even when the displayed pixels and navigation hierarchy are unchanged.
+            if ismember(e.Name,["PrimaryChannelID","AuxiliaryChannels"])
+                obj.refreshColormapControls();
+            end
+
             % Per-object measurement events need only the Object summary.
             % Collection/image outputs also affect project/group status counts.
             if e.ObjectID == "" || string(obj.SummaryDomain.Value) == "Object"
@@ -3172,6 +3189,11 @@ classdef GUI < handle
                 return;
             end
 
+            if ismember(event.Property,["ComponentColorMode","ComponentColors","ComponentColormaps"])
+                obj.persistViewerColoring(viewer,event);
+                return;
+            end
+
             if event.Property ~= "ComponentCLims"
                 return;
             end
@@ -3237,6 +3259,85 @@ classdef GUI < handle
             obj.applyDisplayRangeToViewers(domain,value);
             obj.refreshDisplayLimits();
             clear processingGuard;
+        end
+
+        function persistViewerColoring(obj,viewer,event)
+        %PERSISTVIEWERCOLORING Commit native ImageAxes appearance edits.
+
+            source = "";
+            if viewer == obj.LeftViewer
+                source = obj.Settings.View.LeftSource;
+            elseif viewer == obj.RightViewer
+                source = obj.Settings.View.RightSource;
+            end
+
+            image = obj.Project.ActiveImage;
+            if isempty(image)
+                return;
+            end
+
+            if ismember(source,["Input","Corrected","Average intensity"])
+                modeProperty = "PrimaryIntensityColorMode";
+                definitions = image.PrimaryChannel;
+                mapDomain = "";
+            elseif source == "Auxiliary channels"
+                modeProperty = "AuxiliaryColorMode";
+                definitions = obj.Project.Channels.Channels;
+                definitions = definitions([definitions.IsAuxiliary]);
+                mapDomain = "";
+            elseif ismember(source,["Order","Azimuth","Mask"])
+                modeProperty = source + "ColorMode";
+                definitions = oops.model.ChannelDefinition.empty(0,1);
+                mapDomain = source;
+            else
+                return;
+            end
+
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
+
+            if event.Property == "ComponentColorMode"
+                obj.Settings.Display.(modeProperty) = string(viewer.ComponentColorMode);
+            elseif event.Property == "ComponentColors"
+                indices = event.ComponentIdx;
+                if isempty(indices), indices = 1:viewer.NumComponents; end
+                colors = viewer.ComponentColors;
+
+                if mapDomain ~= ""
+                    obj.Settings.Colormaps.(mapDomain+"Color") = string(colors{indices(1)});
+                else
+                    for index = reshape(indices,1,[])
+                        definitionIndex = min(index,numel(definitions));
+                        if definitionIndex < 1, continue; end
+                        [~,rgb] = matlabx.image.normalizeComponentColor(colors{index});
+                        definitions(definitionIndex).setColor(rgb);
+                    end
+                end
+            elseif event.Property == "ComponentColormaps"
+                indices = event.ComponentIdx;
+                if isempty(indices), indices = 1:viewer.NumComponents; end
+                maps = viewer.ComponentColormaps;
+
+                for index = reshape(indices,1,[])
+                    [name,category] = oops.render.identifyColormap(maps{index});
+                    if name == "", continue; end
+
+                    if mapDomain ~= ""
+                        obj.Settings.Colormaps.setMap(mapDomain,name,category);
+                        break;
+                    end
+
+                    definitionIndex = min(index,numel(definitions));
+                    if definitionIndex >= 1
+                        definitions(definitionIndex).setColormap(name,category);
+                    end
+                end
+            end
+
+            obj.refreshColormapControls();
+            clear guard;
+            obj.refreshViewers(true);
         end
 
         function persistAuxiliaryDisplayRanges(obj,viewer,event)
@@ -4672,18 +4773,52 @@ classdef GUI < handle
 
             % Accordion item grid that owns the controls being created or updated.
             pane = obj.SettingsAccordion.getItem("Image Display").Pane;
-            set(pane,'ColumnWidth',{'1x'},'RowHeight',{24,24,200},'Padding',5,'RowSpacing',5);
+            set(pane,'ColumnWidth',{70,'1x'},'RowHeight',{24,24,24,24,200}, ...
+                'Padding',5,'RowSpacing',5,'ColumnSpacing',5);
+            obj.ColormapTypeLabel = uilabel(pane,'Text','Type','FontColor',[.85 .85 .85]);
+            obj.ColormapTypeLabel.Layout.Row = 1;
+            obj.ColormapTypeLabel.Layout.Column = 1;
             obj.ColormapDomain = uidropdown(pane, ...
-                'Items',{'Primary intensity','Order','Azimuth'}, ...
-                'ItemsData',{'Intensity','Order','Azimuth'}, ...
-                'Value','Intensity','BackgroundColor',[.3 .3 .3],'FontColor',[.9 .9 .9], ...
+                'Items',{'Primary intensity','Auxiliary channels','Order','Azimuth','Mask'}, ...
+                'ItemsData',{'PrimaryIntensity','Auxiliary','Order','Azimuth','Mask'}, ...
+                'Value','PrimaryIntensity','BackgroundColor',[.3 .3 .3],'FontColor',[.9 .9 .9], ...
                 'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.refreshColormapControls()));
             obj.ColormapDomain.Layout.Row = 1;
+            obj.ColormapDomain.Layout.Column = 2;
+            obj.ColormapChannelLabel = uilabel(pane,'Text','Channel','FontColor',[.85 .85 .85]);
+            obj.ColormapChannelLabel.Layout.Row = 2;
+            obj.ColormapChannelLabel.Layout.Column = 1;
+            obj.ColormapChannel = uidropdown(pane,'Items',{'All primary channels'}, ...
+                'ItemsData',{'__all__'},'BackgroundColor',[.3 .3 .3], ...
+                'FontColor',[.9 .9 .9], ...
+                'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.refreshColormapControls()));
+            obj.ColormapChannel.Layout.Row = 2;
+            obj.ColormapChannel.Layout.Column = 2;
+            obj.ColormapModeLabel = uilabel(pane,'Text','Mode','FontColor',[.85 .85 .85]);
+            obj.ColormapModeLabel.Layout.Row = 3;
+            obj.ColormapModeLabel.Layout.Column = 1;
+            obj.ColormapMode = uidropdown(pane,'Items',{'Colors','LUTs'}, ...
+                'ItemsData',{'colors','luts'},'BackgroundColor',[.3 .3 .3], ...
+                'FontColor',[.9 .9 .9], ...
+                'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.onColorModeChosen()));
+            obj.ColormapMode.Layout.Row = 3;
+            obj.ColormapMode.Layout.Column = 2;
+            obj.ColormapAppearanceLabel = uilabel(pane,'Text','Color','FontColor',[.85 .85 .85]);
+            obj.ColormapAppearanceLabel.Layout.Row = 4;
+            obj.ColormapAppearanceLabel.Layout.Column = 1;
+            obj.ColormapColor = uidropdown(pane, ...
+                'Items',matlabx.ui.axes.ImageAxes.getColorNames(), ...
+                'BackgroundColor',[.3 .3 .3],'FontColor',[.9 .9 .9], ...
+                'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.onDisplayColorChosen()));
+            obj.ColormapColor.Layout.Row = 4;
+            obj.ColormapColor.Layout.Column = 2;
             obj.ColormapPreview = uiimage(pane,'ScaleMethod','stretch');
-            obj.ColormapPreview.Layout.Row = 2;
+            obj.ColormapPreview.Layout.Row = 4;
+            obj.ColormapPreview.Layout.Column = 2;
             obj.ColormapTree = uitree(pane,'BackgroundColor',[.18 .18 .18],'FontColor',[.9 .9 .9], ...
                 'SelectionChangedFcn',@(src,~) obj.runCallback(@() obj.onColormapChosen(src)));
-            obj.ColormapTree.Layout.Row = 3;
+            obj.ColormapTree.Layout.Row = 5;
+            obj.ColormapTree.Layout.Column = [1 2];
 
             % Registered colormap categories to create as tree branches.
             categories = matlabx.colors.maps.Registry.categories();
@@ -4721,8 +4856,41 @@ classdef GUI < handle
             % Internal settings key for the selected user-facing display domain.
             domain = string(obj.ColormapDomain.Value);
 
+            channelDomain = ismember(domain,["PrimaryIntensity","Auxiliary"]);
+            obj.ColormapChannel.Visible = matlab.lang.OnOffSwitchState(channelDomain);
+            obj.ColormapChannelLabel.Visible = matlab.lang.OnOffSwitchState(channelDomain);
+            definitions = obj.displayChannels(domain);
+
+            if channelDomain
+                previousChannel = string(obj.ColormapChannel.Value);
+                prefix = "All "+lower(strrep(domain,"PrimaryIntensity","primary"))+" channels";
+                obj.ColormapChannel.Items = cellstr([prefix string({definitions.Name})]);
+                obj.ColormapChannel.ItemsData = cellstr(["__all__" string({definitions.ID})]);
+                if ismember(previousChannel,string(obj.ColormapChannel.ItemsData))
+                    obj.ColormapChannel.Value = char(previousChannel);
+                else
+                    obj.ColormapChannel.Value = '__all__';
+                end
+            end
+
+            modeProperty = domain + "ColorMode";
+            obj.ColormapMode.Value = char(obj.Settings.Display.(modeProperty));
+
             % Project-wide map/category assignments for all display domains.
             maps = obj.Settings.Colormaps;
+            [mapName,mapCategory,colorName] = obj.displayAppearance(domain,definitions);
+            obj.ColormapColor.Value = char(colorName);
+            colorsMode = string(obj.ColormapMode.Value) == "colors";
+            if colorsMode
+                obj.ColormapAppearanceLabel.Text = 'Color';
+            else
+                obj.ColormapAppearanceLabel.Text = 'LUT';
+            end
+            obj.ColormapColor.Visible = matlab.lang.OnOffSwitchState(colorsMode);
+            obj.ColormapTree.Visible = matlab.lang.OnOffSwitchState(~colorsMode);
+            obj.ColormapPreview.Visible = matlab.lang.OnOffSwitchState(~colorsMode);
+            pane = obj.SettingsAccordion.getItem("Image Display").Pane;
+            pane.RowHeight = {24,24*double(channelDomain),24,24,200*double(~colorsMode)};
 
             % All category/map nodes inspected to restore the assigned map highlight.
             nodes = findall(obj.ColormapTree,'Type','uitreenode');
@@ -4734,7 +4902,7 @@ classdef GUI < handle
                 % Node/source metadata read for the current UI update.
                 data = nodes(k).NodeData;
 
-                if isstruct(data) && data.Name == maps.(domain) && data.Category == maps.(domain+"Category")
+                if isstruct(data) && data.Name == mapName && data.Category == mapCategory
                     obj.ColormapTree.SelectedNodes = nodes(k);
                     expand(nodes(k).Parent);
                     break;
@@ -4743,7 +4911,10 @@ classdef GUI < handle
             end
 
             % Selected lookup table rendered as the preview image.
-            map = oops.render.colormap(maps,domain);
+            map = matlabx.colors.maps.Registry.map(mapName,mapCategory);
+            if domain == "Azimuth"
+                map = oops.render.colormap(maps,"Azimuth");
+            end
             obj.ColormapPreview.ImageSource = permute(repmat(map,1,1,16),[3 1 2]);
         end
 
@@ -4771,10 +4942,88 @@ classdef GUI < handle
 
             % Cleanup guard releasing the temporary refresh/processing state.
             cleaner = onCleanup(@() obj.endProcessing());
-            maps.setMap(domain,data.Name,data.Category);
+            definitions = obj.displayChannels(domain);
+            if ismember(domain,["PrimaryIntensity","Auxiliary"])
+                definitions = obj.selectedDisplayChannels(definitions);
+                for definition = reshape(definitions,1,[])
+                    definition.setColormap(data.Name,data.Category);
+                end
+            else
+                maps.setMap(domain,data.Name,data.Category);
+            end
             obj.Processing = false;
             obj.refreshColormapControls();
             obj.refreshViewers(true);
+        end
+
+        function onColorModeChosen(obj)
+        %ONCOLORMODECHOSEN Store the selected viewer/domain coloring policy.
+
+            domain = string(obj.ColormapDomain.Value);
+            obj.Settings.Display.(domain+"ColorMode") = string(obj.ColormapMode.Value);
+            obj.refreshColormapControls();
+            obj.refreshViewers(true);
+        end
+
+        function onDisplayColorChosen(obj)
+        %ONDISPLAYCOLORCHOSEN Apply a canonical color to a domain or channels.
+
+            domain = string(obj.ColormapDomain.Value);
+            color = string(obj.ColormapColor.Value);
+            if ismember(domain,["PrimaryIntensity","Auxiliary"])
+                definitions = obj.selectedDisplayChannels(obj.displayChannels(domain));
+                [~,rgb] = matlabx.image.normalizeComponentColor(color);
+                for definition = reshape(definitions,1,[])
+                    definition.setColor(rgb);
+                end
+            else
+                obj.Settings.Colormaps.(domain+"Color") = color;
+            end
+            obj.refreshViewers(true);
+        end
+
+        function definitions = displayChannels(obj,domain)
+        %DISPLAYCHANNELS Return definitions participating in one channel domain.
+
+            definitions = oops.model.ChannelDefinition.empty(0,1);
+            if isempty(obj.Project), return; end
+            definitions = obj.Project.Channels.Channels;
+            if domain == "PrimaryIntensity"
+                definitions = definitions([definitions.IsPrimary]);
+            elseif domain == "Auxiliary"
+                definitions = definitions([definitions.IsAuxiliary]);
+            else
+                definitions = oops.model.ChannelDefinition.empty(0,1);
+            end
+        end
+
+        function definitions = selectedDisplayChannels(obj,definitions)
+        %SELECTEDDISPLAYCHANNELS Resolve the current channel or the All target.
+
+            id = string(obj.ColormapChannel.Value);
+            if id ~= "__all__"
+                definitions = definitions(string({definitions.ID}) == id);
+            end
+        end
+
+        function [name,category,color] = displayAppearance(obj,domain,definitions)
+        %DISPLAYAPPEARANCE Resolve the selected channel/domain appearance.
+
+            if ismember(domain,["PrimaryIntensity","Auxiliary"])
+                selected = obj.selectedDisplayChannels(definitions);
+                if isempty(selected), selected = definitions; end
+                if isempty(selected)
+                    name = "gray"; category = "MATLAB"; color = "gray";
+                    return;
+                end
+                name = selected(1).Colormap;
+                category = selected(1).ColormapCategory;
+                color = oops.render.canonicalComponentColor(selected(1).Color);
+            else
+                name = obj.Settings.Colormaps.(domain);
+                category = obj.Settings.Colormaps.(domain+"Category");
+                color = obj.Settings.Colormaps.(domain+"Color");
+            end
         end
 
         function menu = navigationMenu(obj,title,id)
@@ -5556,6 +5805,7 @@ classdef GUI < handle
             obj.Processing = false;
             try
                 obj.refreshNavigation();
+                obj.refreshColormapControls();
                 obj.refreshViewers(false);
             catch ME
                 oops.Log.EXCEPTION(ME); % cleanup must preserve the original exception
