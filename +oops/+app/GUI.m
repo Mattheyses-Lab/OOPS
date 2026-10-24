@@ -5753,50 +5753,74 @@ classdef GUI < handle
         function selectObjectsWithLabel(obj,labelID)
         %SELECTOBJECTSWITHLABEL Add every matching object to its image selection.
 
-            for image = reshape(obj.projectImages(),1,[])
+            images = obj.projectImages();
+            selections = cell(numel(images),1);
+
+            for k = 1:numel(images)
+                image = images(k);
                 matches = image.Objects([image.Objects.LabelID] == labelID);
-                ids = unique([image.SelectedObjectIDs; ...
+                selections{k} = unique([image.SelectedObjectIDs; ...
                     oops.model.internal.ids(matches)],'stable');
-                image.setSelectedObjects(ids);
             end
+
+            obj.runObjectBatch( ...
+                @() obj.setObjectSelectionsByImage(images,selections),"Selection");
         end
 
         function applyLabelToSelection(obj,labelID)
         %APPLYLABELTOSELECTION Apply one label across all remembered selections.
 
-            for image = reshape(obj.projectImages(),1,[])
-                image.setObjectLabels(image.SelectedObjectIDs,labelID);
-            end
+            images = obj.projectImages();
+            ids = arrayfun(@(image) image.SelectedObjectIDs,images, ...
+                'UniformOutput',false);
+            obj.runObjectBatch( ...
+                @() obj.setObjectLabelsByImage(images,ids,labelID),"Labels");
         end
 
         function deleteObjectsWithLabel(obj,labelID)
         %DELETEOBJECTSWITHLABEL Delete every project object using one label.
 
-            for image = reshape(obj.projectImages(),1,[])
-                matches = image.Objects([image.Objects.LabelID] == labelID);
-                image.removeObjects(matches);
+            images = obj.projectImages();
+            ids = cell(numel(images),1);
+
+            for k = 1:numel(images)
+                matches = images(k).Objects([images(k).Objects.LabelID] == labelID);
+                ids{k} = oops.model.internal.ids(matches);
             end
+
+            obj.runObjectBatch( ...
+                @() obj.removeObjectsByImage(images,ids),"Objects");
         end
 
         function applyObjectSelectionAction(obj,action,scope)
         %APPLYOBJECTSELECTIONACTION Mutate selections within one model scope.
 
             images = obj.objectScopeImages(scope);
+            ids = cell(numel(images),1);
 
-            for image = reshape(images,1,[])
+            for k = 1:numel(images)
+                image = images(k);
                 allIDs = oops.model.internal.ids(image.Objects);
 
                 switch action
                     case "Select"
-                        image.setSelectedObjects(allIDs);
+                        ids{k} = allIDs;
                     case "Clear"
-                        image.setSelectedObjects(strings(0,1));
+                        ids{k} = strings(0,1);
                     case "Invert"
-                        image.setSelectedObjects(allIDs( ...
-                            ~ismember(allIDs,image.SelectedObjectIDs)));
+                        ids{k} = allIDs( ...
+                            ~ismember(allIDs,image.SelectedObjectIDs));
                     case "Delete"
-                        image.removeObjects(image.SelectedObjectIDs);
+                        ids{k} = image.SelectedObjectIDs;
                 end
+            end
+
+            if action == "Delete"
+                obj.runObjectBatch( ...
+                    @() obj.removeObjectsByImage(images,ids),"Objects");
+            else
+                obj.runObjectBatch( ...
+                    @() obj.setObjectSelectionsByImage(images,ids),"Selection");
             end
         end
 
@@ -5812,13 +5836,16 @@ classdef GUI < handle
 
             [images,ids,count] = obj.objectsMatchingFilters(filters);
             added = 0;
+            selections = cell(numel(images),1);
 
             for k = 1:numel(images)
                 old = images(k).SelectedObjectIDs;
-                next = unique([old;ids{k}],'stable');
-                added = added + numel(next)-numel(old);
-                images(k).setSelectedObjects(next);
+                selections{k} = unique([old;ids{k}],'stable');
+                added = added + numel(selections{k})-numel(old);
             end
+
+            obj.runObjectBatch( ...
+                @() obj.setObjectSelectionsByImage(images,selections),"Selection");
 
             uialert(obj.Fig,sprintf('%d objects were added to the selection.',added), ...
                 'Object selection','Icon','info');
@@ -5874,9 +5901,8 @@ classdef GUI < handle
                 labelID = labels(names == string(params.Label)).ID;
             end
 
-            for k = 1:numel(images)
-                images(k).setObjectLabels(ids{k},labelID);
-            end
+            obj.runObjectBatch( ...
+                @() obj.setObjectLabelsByImage(images,ids,labelID),"Labels");
 
             uialert(obj.Fig,sprintf('%d objects were labeled.',count), ...
                 'Label by property','Icon','info');
@@ -5905,9 +5931,103 @@ classdef GUI < handle
                 'DefaultOption','Cancel','CancelOption','Cancel','Icon','warning');
 
             if strcmp(answer,'Delete')
-                for k = 1:numel(images)
-                    images(k).removeObjects(ids{k});
+                obj.runObjectBatch( ...
+                    @() obj.removeObjectsByImage(images,ids),"Objects");
+            end
+        end
+
+        function runObjectBatch(obj,operation,kind)
+        %RUNOBJECTBATCH Suppress per-image responses and refresh once by mutation kind.
+
+            arguments
+                obj
+                operation (1,1) function_handle
+                kind (1,1) string {mustBeMember(kind,["Selection","Labels","Objects"])}
+            end
+
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.finishObjectBatch(previous,kind));
+            operation();
+        end
+
+        function finishObjectBatch(obj,previous,kind)
+        %FINISHOBJECTBATCH Restore callbacks and apply the deferred UI response.
+
+            if kind == "Objects"
+                try
+                    obj.reconcileActive();
+                    names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
+                    obj.ViewerKeys(names == "Mask") = "";
+                    obj.ObjectViewerKey = "";
+                catch ME
+                    oops.Log.EXCEPTION(ME);
                 end
+            end
+
+            obj.Processing = previous;
+
+            if previous
+                return;
+            end
+
+            try
+                switch kind
+                    case "Selection"
+                        obj.refreshNavigation();
+                        obj.syncOverlayState();
+                    case "Labels"
+                        obj.refreshSummary();
+
+                        if any(ismember([obj.Settings.View.LeftSource, ...
+                                obj.Settings.View.RightSource], ...
+                                ["Scatterplot","Swarmplot","Polar histogram"]))
+                            obj.refreshPlots();
+                        end
+
+                        obj.refreshOverlayAppearance();
+
+                        if obj.Settings.View.RightSource == "Objects"
+                            obj.refreshObjectViewerOverlays();
+                        end
+                    case "Objects"
+                        obj.refreshSummary();
+                        obj.refreshNavigation();
+
+                        if any(ismember([obj.Settings.View.LeftSource, ...
+                                obj.Settings.View.RightSource], ...
+                                ["Scatterplot","Swarmplot","Polar histogram"]))
+                            obj.refreshPlots();
+                        end
+
+                        obj.refreshViewers(false,false);
+                end
+            catch ME
+                oops.Log.EXCEPTION(ME);
+            end
+        end
+
+        function setObjectSelectionsByImage(~,images,ids)
+        %SETOBJECTSELECTIONSBYIMAGE Apply one prepared selection per image.
+
+            for k = 1:numel(images)
+                images(k).setSelectedObjects(ids{k});
+            end
+        end
+
+        function setObjectLabelsByImage(~,images,ids,labelID)
+        %SETOBJECTLABELSBYIMAGE Apply one label to prepared memberships by image.
+
+            for k = 1:numel(images)
+                images(k).setObjectLabels(ids{k},labelID);
+            end
+        end
+
+        function removeObjectsByImage(~,images,ids)
+        %REMOVEOBJECTSBYIMAGE Remove prepared object memberships from each image.
+
+            for k = 1:numel(images)
+                images(k).removeObjects(ids{k});
             end
         end
 
