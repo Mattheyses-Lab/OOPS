@@ -2,21 +2,21 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-classdef (ConstructOnLoad) ImageAdded < event.EventData
+classdef (ConstructOnLoad) ImagesAdded < event.EventData
 
     %% Event payload
     properties (SetAccess=private)
-        ImageID string
+        ImageIDs (:,1) string
         GroupID string
     end
 
     %% Construction
     methods
 
-        function obj = ImageAdded(imageID, groupID)
-        %IMAGEADDED Construct the domain event identity payload.
+        function obj = ImagesAdded(imageIDs,groupID)
+        %IMAGESADDED Construct the aggregate domain event identity payload.
 
-            obj.ImageID = imageID;
+            obj.ImageIDs = string(imageIDs(:));
             obj.GroupID = groupID;
         end
 

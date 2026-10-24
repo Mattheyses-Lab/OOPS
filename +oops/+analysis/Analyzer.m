@@ -138,12 +138,43 @@ classdef Analyzer
                 flat = oops.analysis.Analyzer.calibration(group.Parent,group.CalibrationIDs,Progress=opts.Progress);
             end
 
-            % Correct each owned image while reporting its group/name and batch position.
-            for k = 1:numel(group.Images)
+            oops.analysis.Analyzer.correctImages( ...
+                group.Images,Progress=opts.Progress,Calibration=flat);
+        end
+
+        function correctImages(images,opts)
+        %CORRECTIMAGES Correct one same-group image batch with one shared response.
+
+            arguments
+                images (:,1) oops.model.Image
+                opts.Progress = []
+                opts.Calibration = []
+            end
+
+            if isempty(images)
+                return;
+            end
+
+            group = images(1).Parent;
+
+            if any(arrayfun(@(image) image.Parent ~= group,images))
+                error('oops:analysis:MixedCorrectionGroups', ...
+                    'A correction batch must belong to one group.');
+            end
+
+            flat = opts.Calibration;
+
+            if isempty(flat) && ~isempty(group.CalibrationIDs)
+                flat = oops.analysis.Analyzer.calibration( ...
+                    group.Parent,group.CalibrationIDs,Progress=opts.Progress);
+            end
+
+            for k = 1:numel(images)
                 oops.runtime.updateProgress(opts.Progress, ...
                     sprintf('Group: %s\nImage %d/%d: %s\nPerforming flat-field correction...', ...
-                        group.Name,k,numel(group.Images),group.Images(k).Name),(k-1)/max(1,numel(group.Images)));
-                oops.analysis.Analyzer.correctImage(group.Images(k),Calibration=flat);
+                        group.Name,k,numel(images),images(k).Name), ...
+                    (k-1)/max(1,numel(images)));
+                oops.analysis.Analyzer.correctImage(images(k),Calibration=flat);
             end
 
             oops.runtime.updateProgress(opts.Progress,"Correction complete",1);

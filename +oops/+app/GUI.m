@@ -206,17 +206,24 @@ classdef GUI < handle
                 return;
             end
 
+            % Commit model membership and correction as one guarded batch so
+            % collection/data events produce one final interface refresh.
+            [progress,cleanupProgress] = obj.createProgressDialog( ...
+                "Importing primary images..."); %#ok<ASGLU>
+            names = string({plan.ImageName})';
+            channels = oops.model.ChannelDefinition.empty(0,1);
+
             for k = 1:numel(plan)
-                definition = obj.Project.Channels.findOrAdd( ...
+                channels(k,1) = obj.Project.Channels.findOrAdd( ...
                     plan(k).ChannelName,plan(k).ChannelColor);
-                image = group.addImage( ...
-                    plan(k).Input,plan(k).ImageName,definition);
-                images(end+1,1) = image; %#ok<AGROW>
             end
 
-            if ~isempty(images)
-                obj.Project.setActiveImage(images(1));
-            end
+            obj.Processing = true;
+            refreshGuard = onCleanup(@() obj.endProcessing());
+            images = group.addImages(vertcat(plan.Input),names,channels);
+            oops.analysis.Analyzer.correctImages(images,Progress=progress);
+            obj.Project.setActiveImage(images(1));
+            oops.runtime.updateProgress(progress,"Updating interface...",1);
 
         end
 
@@ -2127,7 +2134,7 @@ classdef GUI < handle
         %BINDEVENTS Keep all settings and model subscriptions in the controller.
 
             % Subscribe once to project collection events used to reconcile navigation.
-            for name = ["GroupAdded","GroupRemoved","ImageAdded","ImageRemoved","ObjectsChanged"]
+            for name = ["GroupAdded","GroupRemoved","ImageRemoved","ObjectsChanged"]
                 obj.Listeners(end+1) = addlistener(obj.Project,char(name), ...
                     @(~,~) obj.runCallback(@() obj.onCollectionChanged()));
             end
@@ -2136,8 +2143,8 @@ classdef GUI < handle
                 @(~,e) obj.runCallback(@() obj.onCalibrationChanged(e)));
             obj.Listeners(end+1) = addlistener(obj.Project,'GroupChanged', ...
                 @(~,~) obj.runCallback(@() obj.onGroupChanged()));
-            obj.Listeners(end+1) = addlistener(obj.Project,'ImageAdded', ...
-                @(~,e) obj.runCallback(@() obj.onImageAdded(e)));
+            obj.Listeners(end+1) = addlistener(obj.Project,'ImagesAdded', ...
+                @(~,e) obj.runCallback(@() obj.onImagesAdded(e)));
             obj.Listeners(end+1) = addlistener(obj.Project,'NavigationChanged', ...
                 @(~,e) obj.runCallback(@() obj.onNavigationChanged(e)));
             obj.Listeners(end+1) = addlistener(obj.Project,'DataChanged', ...
@@ -5389,8 +5396,12 @@ classdef GUI < handle
             obj.refreshViewers(true);
         end
 
-        function onImageAdded(obj,e)
-        %ONIMAGEADDED Cache the durable average using raw or calibrated input.
+        function onImagesAdded(obj,e)
+        %ONIMAGESADDED Initialize a newly attached batch and refresh once.
+
+            if obj.Processing
+                return;
+            end
 
             % Active/target group supplying its owned images and bookmarks.
             group = oops.model.internal.resolve(obj.Project.Groups,e.GroupID);
@@ -5399,9 +5410,26 @@ classdef GUI < handle
                 return;
             end
 
-            % Active image supplying data and object membership for this operation.
-            image = oops.model.internal.resolve(group.Images,e.ImageID);
-            oops.analysis.Analyzer.correctImage(image);
+            images = oops.model.Image.empty(0,1);
+
+            for imageID = reshape(e.ImageIDs,1,[])
+                image = oops.model.internal.resolve(group.Images,imageID);
+
+                if ~isempty(image)
+                    images(end+1,1) = image; %#ok<AGROW>
+                end
+            end
+
+            if isempty(images)
+                return;
+            end
+
+            obj.Processing = true;
+            cleaner = onCleanup(@() obj.endProcessing());
+            obj.reconcileActive();
+            [progress,cleanupProgress] = obj.createProgressDialog( ...
+                "Initializing added images..."); %#ok<ASGLU>
+            oops.analysis.Analyzer.correctImages(images,Progress=progress);
         end
 
         function images = analysisTargets(obj)

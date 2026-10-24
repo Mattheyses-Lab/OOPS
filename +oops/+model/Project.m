@@ -47,7 +47,7 @@ classdef Project < handle
         GroupAdded
         GroupRemoved
         GroupChanged
-        ImageAdded
+        ImagesAdded
         ImageRemoved
         ObjectsChanged
         DataChanged
@@ -330,7 +330,7 @@ classdef Project < handle
                 listeners = event.listener.empty();
 
                 % Subscribe to each group event that the project forwards to consumers.
-                for eventName = ["ImageAdded","ImageRemoved","ObjectsChanged","DataChanged", ...
+                for eventName = ["ImagesAdded","ImageRemoved","ObjectsChanged","DataChanged", ...
                         "NavigationChanged","CalibrationChanged","GroupChanged"]
                     listeners(end+1) = addlistener(group,char(eventName), ...
                         @(~,e) obj.forward(eventName,e)); %#ok<AGROW>

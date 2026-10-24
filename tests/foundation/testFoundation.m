@@ -82,14 +82,14 @@ end
 function testHierarchyAndEvents(t)
 p = oops.model.Project('Experiment');
 cleanup = onCleanup(@() delete(p));
-[added,l1] = capture(p,'ImageAdded');
+[added,l1] = capture(p,'ImagesAdded');
 [removed,l2] = capture(p,'ImageRemoved');
 listeners = onCleanup(@() delete([l1,l2]));
 g = p.addGroup('Any user-defined collection');
 im = g.addImage(memoryInput(),'Replicate');
 t.verifyEqual(g.Parent,p);
 t.verifyEqual(im.Parent,g);
-t.verifyEqual(added('last').ImageID,im.ID);
+t.verifyEqual(added('last').ImageIDs,im.ID);
 t.verifyEqual(added('last').GroupID,g.ID);
 p.setActiveImage(im);
 g.removeImage(im);
@@ -99,6 +99,35 @@ t.verifyEmpty(g.Images);
 t.verifyEqual(removed('last').ImageID,im.ID);
 t.verifyTrue(isvalid(im),'Removal detaches; it does not delete the image.');
 delete(im);
+end
+
+function testBatchImageAdditionEmitsOnce(t)
+p = oops.model.Project('Experiment');
+cleanup = onCleanup(@() delete(p));
+g = p.addGroup('Batch');
+[added,listener] = capture(p,'ImagesAdded');
+listenerCleanup = onCleanup(@() delete(listener));
+inputs(1,1) = memoryInput();
+inputs(2,1) = memoryInput();
+images = g.addImages(inputs,["First";"Second"]);
+t.verifyEqual(numel(images),2);
+t.verifyEqual(added('count'),1);
+t.verifyEqual(added('last').ImageIDs,[images.ID]');
+t.verifyEqual(added('last').GroupID,g.ID);
+end
+
+function testInvalidImageBatchIsAtomic(t)
+p = oops.model.Project('Experiment');
+cleanup = onCleanup(@() delete(p));
+g = p.addGroup('Batch');
+[added,listener] = capture(p,'ImagesAdded');
+listenerCleanup = onCleanup(@() delete(listener));
+inputs(1,1) = memoryInput();
+inputs(2,1) = matlabx.image.Image5D.fromComponents(ones(10,12));
+t.verifyError(@() g.addImages(inputs,["Valid";"Invalid"]), ...
+    'oops:io:InvalidFourAngleInput');
+t.verifyEmpty(g.Images);
+t.verifyEqual(added('count'),0);
 end
 
 function testGroupRemovalClearsSelection(t)
@@ -173,7 +202,7 @@ function testInvalidInputsDoNotAddImages(t)
 p = oops.model.Project();
 cleanup = onCleanup(@() delete(p));
 g = p.addGroup('Group');
-[state,l] = capture(p,'ImageAdded');
+[state,l] = capture(p,'ImagesAdded');
 listener = onCleanup(@() delete(l));
 inputs = {matlabx.image.Image5D.fromComponents(ones(10,12)), ...
     matlabx.image.Image5D.fromComponents({ones(10,12,3),ones(10,12,3),ones(10,12,3),ones(10,12,3)}), ...

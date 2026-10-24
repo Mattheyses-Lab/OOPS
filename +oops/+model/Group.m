@@ -37,7 +37,7 @@ classdef Group < handle
         CalibrationChanged
         GroupChanged
         NavigationChanged
-        ImageAdded
+        ImagesAdded
         ImageRemoved
         ObjectsChanged
         DataChanged
@@ -121,60 +121,103 @@ classdef Group < handle
                     oops.model.ChannelDefinition.empty(0,1)
             end
 
+            image = obj.addImages(input,name,primaryChannel);
+        end
+
+        function images = addImages(obj,inputs,names,primaryChannels)
+        %ADDIMAGES Validate and attach a complete batch before notifying observers.
+
+            arguments
+                obj
+                inputs (:,1) matlabx.image.Image5D
+                names (:,1) string = strings(0,1)
+                primaryChannels (:,1) oops.model.ChannelDefinition = ...
+                    oops.model.ChannelDefinition.empty(0,1)
+            end
+
             try
-                oops.io.fourAngleLocations(input);
+                count = numel(inputs);
 
-                % A buffer must have one owner so unloading one image cannot
-                % silently unload another image sharing the same source.
+                if count == 0
+                    images = oops.model.Image.empty(0,1);
+                    return;
+                end
 
-                % Groups to inspect for an existing owner of the supplied input source.
+                if isempty(names)
+                    names = repmat("Image",count,1);
+                elseif numel(names) ~= count
+                    error('oops:model:ImageBatchSizeMismatch', ...
+                        'Supply one name for every image input.');
+                end
+
+                if ~isempty(primaryChannels) && numel(primaryChannels) ~= count
+                    error('oops:model:ImageBatchSizeMismatch', ...
+                        'Supply one primary channel for every image input.');
+                end
+
+                % Validate layouts and unique source ownership before modifying
+                % the group or creating any image model.
                 groups = obj;
 
                 if ~isempty(obj.Parent)
                     groups = obj.Parent.Groups;
                 end
 
-                % Check each project group for an image already owning this input source.
-                for g = 1:numel(groups)
+                for k = 1:count
+                    oops.io.fourAngleLocations(inputs(k));
 
-                    % Compare the supplied source against every image in this group.
-                    for i = 1:numel(groups(g).Images)
-
-                        if groups(g).Images(i).Input.Source == input.Source
-                            error( ...
-                            'oops:model:InputAlreadyOwned', ...
-                            'Create a separate Image5D source for each image.');
+                    for g = 1:numel(groups)
+                        for i = 1:numel(groups(g).Images)
+                            if groups(g).Images(i).Input.Source == inputs(k).Source
+                                error('oops:model:InputAlreadyOwned', ...
+                                    'Create a separate Image5D source for each image.');
+                            end
                         end
-
                     end
 
+                    for previous = 1:k-1
+                        if inputs(previous).Source == inputs(k).Source
+                            error('oops:model:InputAlreadyOwned', ...
+                                'Create a separate Image5D source for each image.');
+                        end
+                    end
                 end
 
-                % Metadata supplies a deterministic semantic default for
-                % programmatic imports that do not use the assignment dialog.
-                if isempty(primaryChannel)
-                    primaryChannel = obj.defaultPrimaryChannel(input);
+                if isempty(primaryChannels)
+                    primaryChannels = oops.model.ChannelDefinition.empty(0,1);
+
+                    for k = 1:count
+                        primaryChannels(k,1) = obj.defaultPrimaryChannel(inputs(k)); %#ok<AGROW>
+                    end
                 end
 
-                if ~isscalar(primaryChannel) || isempty(obj.Parent.Channels.findByID(primaryChannel.ID))
-                    error('oops:model:UnknownPrimaryChannel', ...
-                        'The primary channel must belong to this project.');
+                for k = 1:count
+                    if isempty(obj.Parent.Channels.findByID(primaryChannels(k).ID))
+                        error('oops:model:UnknownPrimaryChannel', ...
+                            'Every primary channel must belong to this project.');
+                    end
                 end
 
-                % Attach the model and its subscriptions before announcing it.
+                images = oops.model.Image.empty(0,1);
+                listenersByImage = cell(count,1);
 
-                % New image model attached to this group after input validation.
-                image = oops.model.Image(obj,input,name);
-                image.setPrimaryChannel(primaryChannel);
-                obj.Images(end+1,1) = image;
+                for k = 1:count
+                    image = oops.model.Image(obj,inputs(k),names(k));
+                    image.setPrimaryChannel(primaryChannels(k));
+                    images(k,1) = image;
+                    listeners(1) = addlistener(image,'ObjectsChanged',@(~,e) notify(obj,'ObjectsChanged',e));
+                    listeners(2) = addlistener(image,'DataChanged',@(~,e) notify(obj,'DataChanged',e));
+                    listeners(3) = addlistener(image,'NavigationChanged',@(~,e) notify(obj,'NavigationChanged',e));
+                    listenersByImage{k} = listeners;
+                end
 
-                % Subscriptions forwarding object, data, and navigation changes from this image.
-                listeners(1) = addlistener(image,'ObjectsChanged',@(~,e) notify(obj,'ObjectsChanged',e));
-                listeners(2) = addlistener(image,'DataChanged',@(~,e) notify(obj,'DataChanged',e));
-                listeners(3) = addlistener(image,'NavigationChanged',@(~,e) notify(obj,'NavigationChanged',e));
-                obj.ImageListeners{end+1} = listeners;
-                notify(obj,'ImageAdded',oops.model.events.ImageAdded(image.ID,obj.ID));
-                oops.Log.INFO("Added image: " + image.Name);
+                obj.Images = [obj.Images; images];
+                obj.ImageListeners = [obj.ImageListeners reshape(listenersByImage,1,[])];
+                notify(obj,'ImagesAdded',oops.model.events.ImagesAdded([images.ID],obj.ID));
+
+                for image = reshape(images,1,[])
+                    oops.Log.INFO("Added image: " + image.Name);
+                end
             catch ME
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
