@@ -38,7 +38,7 @@ classdef Group < handle
         GroupChanged
         NavigationChanged
         ImagesAdded
-        ImageRemoved
+        ImagesRemoved
         ObjectsChanged
         DataChanged
     end
@@ -225,30 +225,69 @@ classdef Group < handle
         end
 
         function removeImage(obj,image)
-        %REMOVEIMAGE Unload and detach an image, removing forwarded listeners.
+        %REMOVEIMAGE Detach one image through the aggregate removal path.
+
+            obj.removeImages(image);
+        end
+
+        function removeImages(obj,images)
+        %REMOVEIMAGES Validate and detach a complete image batch before notifying.
+
+            arguments
+                obj
+                images (:,1) oops.model.Image
+            end
 
             try
-
-                % Index of this member in its owning collection; empty if not found.
-                idx = find(obj.Images == image,1);
-
-                if isempty(idx)
-                    error('oops:model:UnknownImage','Image does not belong to this group.');
+                if isempty(images)
+                    return;
                 end
 
-                % Release residency before detaching the parent relationship.
-                image.unloadInput();
-                delete(obj.ImageListeners{idx});
-                obj.ImageListeners(idx) = [];
-                obj.Images(idx) = [];
-                image.Parent = oops.model.Group.empty(0,1);
-                obj.setSelectedImages(obj.SelectedImageIDs(obj.SelectedImageIDs ~= image.ID));
+                indices = zeros(numel(images),1);
 
-                if obj.ActiveImageID == image.ID
+                for k = 1:numel(images)
+                    index = find(obj.Images == images(k),1);
+
+                    if isempty(index)
+                        error('oops:model:UnknownImage', ...
+                            'Every image must belong to this group.');
+                    end
+
+                    indices(k) = index;
+                end
+
+                if numel(unique(indices)) ~= numel(indices)
+                    error('oops:model:DuplicateImageRemoval', ...
+                        'Each image may appear only once in a removal batch.');
+                end
+
+                ids = [images.ID]';
+
+                % Release residency and forwarded subscriptions before detaching
+                % the complete validated set from the owned collection.
+                for k = 1:numel(images)
+                    images(k).unloadInput();
+                    delete(obj.ImageListeners{indices(k)});
+                end
+
+                keep = true(numel(obj.Images),1);
+                keep(indices) = false;
+                obj.Images = obj.Images(keep);
+                obj.ImageListeners = obj.ImageListeners(reshape(keep,1,[]));
+
+                for image = reshape(images,1,[])
+                    image.Parent = oops.model.Group.empty(0,1);
+                end
+
+                obj.setSelectedImages(obj.SelectedImageIDs( ...
+                    ~ismember(obj.SelectedImageIDs,ids)));
+
+                if ismember(obj.ActiveImageID,ids)
                     obj.setActiveImage("");
                 end
 
-                notify(obj,'ImageRemoved',oops.model.events.ImageRemoved(image.ID,obj.ID));
+                notify(obj,'ImagesRemoved', ...
+                    oops.model.events.ImagesRemoved(ids,obj.ID));
             catch ME
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);

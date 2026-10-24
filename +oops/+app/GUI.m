@@ -2134,7 +2134,7 @@ classdef GUI < handle
         %BINDEVENTS Keep all settings and model subscriptions in the controller.
 
             % Subscribe once to project collection events used to reconcile navigation.
-            for name = ["GroupAdded","GroupRemoved","ImageRemoved","ObjectsChanged"]
+            for name = ["GroupAdded","GroupRemoved","ImagesRemoved","ObjectsChanged"]
                 obj.Listeners(end+1) = addlistener(obj.Project,char(name), ...
                     @(~,~) obj.runCallback(@() obj.onCollectionChanged()));
             end
@@ -5011,24 +5011,25 @@ classdef GUI < handle
                     ids = group.SelectedImageIDs;
                 end
 
-                % Remove each target image from its parent group.
+                images = oops.model.Image.empty(0,1);
+
                 for k = 1:numel(ids)
                     image = oops.model.internal.resolve(group.Images,ids(k));
-
                     if isempty(image)
                         continue;
                     end
 
-                    group.removeImage(image);
-                    delete(image);
+                    images(end+1,1) = image; %#ok<AGROW>
+                end
+
+                if ~isempty(images)
+                    group.removeImages(images);
+                    delete(images);
                 end
 
             end
 
-            obj.Processing = false;
             obj.reconcileActive();
-            obj.refreshNavigation();
-            obj.refreshViewers(false);
         end
 
         function chooseAuxiliaryChannels(obj)

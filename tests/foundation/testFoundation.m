@@ -83,7 +83,7 @@ function testHierarchyAndEvents(t)
 p = oops.model.Project('Experiment');
 cleanup = onCleanup(@() delete(p));
 [added,l1] = capture(p,'ImagesAdded');
-[removed,l2] = capture(p,'ImageRemoved');
+[removed,l2] = capture(p,'ImagesRemoved');
 listeners = onCleanup(@() delete([l1,l2]));
 g = p.addGroup('Any user-defined collection');
 im = g.addImage(memoryInput(),'Replicate');
@@ -96,7 +96,7 @@ g.removeImage(im);
 t.verifyEmpty(im.Parent);
 t.verifyEmpty(p.ActiveImage);
 t.verifyEmpty(g.Images);
-t.verifyEqual(removed('last').ImageID,im.ID);
+t.verifyEqual(removed('last').ImageIDs,im.ID);
 t.verifyTrue(isvalid(im),'Removal detaches; it does not delete the image.');
 delete(im);
 end
@@ -114,6 +114,29 @@ t.verifyEqual(numel(images),2);
 t.verifyEqual(added('count'),1);
 t.verifyEqual(added('last').ImageIDs,[images.ID]');
 t.verifyEqual(added('last').GroupID,g.ID);
+end
+
+function testBatchImageRemovalEmitsOnce(t)
+p = oops.model.Project('Experiment');
+cleanup = onCleanup(@() delete(p));
+g = p.addGroup('Batch');
+inputs(1,1) = memoryInput();
+inputs(2,1) = memoryInput();
+inputs(3,1) = memoryInput();
+images = g.addImages(inputs,["First";"Second";"Third"]);
+g.setSelectedImages([images(1).ID;images(2).ID]);
+g.setActiveImage(images(1));
+[removed,listener] = capture(p,'ImagesRemoved');
+listenerCleanup = onCleanup(@() delete(listener));
+g.removeImages(images(1:2));
+t.verifyEqual(removed('count'),1);
+t.verifyEqual(removed('last').ImageIDs,[images(1:2).ID]');
+t.verifyEqual(g.Images,images(3));
+t.verifyEmpty(g.SelectedImageIDs);
+t.verifyEmpty(g.ActiveImageID);
+t.verifyEmpty(images(1).Parent);
+t.verifyEmpty(images(2).Parent);
+delete(images(1:2));
 end
 
 function testInvalidImageBatchIsAtomic(t)
@@ -166,11 +189,14 @@ other = oops.model.Project();
 cleanup = onCleanup(@() delete([p,other]));
 g = p.addGroup('Here');
 foreign = other.addGroup('Elsewhere');
+local = g.addImage(memoryInput());
 im = foreign.addImage(memoryInput());
 t.verifyError(@() p.setActiveImage(im),'oops:model:UnknownImage');
 t.verifyError(@() g.removeImage(im),'oops:model:UnknownImage');
+t.verifyError(@() g.removeImages([local;im]),'oops:model:UnknownImage');
 t.verifyError(@() p.removeGroup(foreign),'oops:model:UnknownGroup');
 t.verifyEmpty(p.ActiveImage);
+t.verifyEqual(g.Images,local);
 t.verifyEqual(im.Parent,foreign);
 end
 

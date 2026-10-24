@@ -2,21 +2,21 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-classdef (ConstructOnLoad) ImageRemoved < event.EventData
+classdef (ConstructOnLoad) ImagesRemoved < event.EventData
 
     %% Event payload
     properties (SetAccess=private)
-        ImageID string
+        ImageIDs (:,1) string
         GroupID string
     end
 
     %% Construction
     methods
 
-        function obj = ImageRemoved(imageID, groupID)
-        %IMAGEREMOVED Construct the domain event identity payload.
+        function obj = ImagesRemoved(imageIDs,groupID)
+        %IMAGESREMOVED Construct the aggregate domain event identity payload.
 
-            obj.ImageID = imageID;
+            obj.ImageIDs = string(imageIDs(:));
             obj.GroupID = groupID;
         end
 

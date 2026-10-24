@@ -48,7 +48,7 @@ classdef Project < handle
         GroupRemoved
         GroupChanged
         ImagesAdded
-        ImageRemoved
+        ImagesRemoved
         ObjectsChanged
         DataChanged
         LabelsChanged
@@ -330,7 +330,7 @@ classdef Project < handle
                 listeners = event.listener.empty();
 
                 % Subscribe to each group event that the project forwards to consumers.
-                for eventName = ["ImagesAdded","ImageRemoved","ObjectsChanged","DataChanged", ...
+                for eventName = ["ImagesAdded","ImagesRemoved","ObjectsChanged","DataChanged", ...
                         "NavigationChanged","CalibrationChanged","GroupChanged"]
                     listeners(end+1) = addlistener(group,char(eventName), ...
                         @(~,e) obj.forward(eventName,e)); %#ok<AGROW>
@@ -357,11 +357,9 @@ classdef Project < handle
                     error('oops:model:UnknownGroup','Group does not belong to this project.');
                 end
 
-                % Image removal events and active-image clearing precede GroupRemoved.
-
-                % Detach each child image before removing the group itself.
-                while ~isempty(group.Images)
-                    group.removeImage(group.Images(1));
+                % Image removal and active-image clearing precede GroupRemoved.
+                if ~isempty(group.Images)
+                    group.removeImages(group.Images);
                 end
 
                 % Keep listener slots aligned with the surviving group array.
@@ -765,8 +763,10 @@ classdef Project < handle
         function forward(obj,name,e)
         %FORWARD Bubble child events and maintain the global active-image cache.
 
-            if name == "ImageRemoved"
-                obj.CacheManager.removeImage(e.ImageID);
+            if name == "ImagesRemoved"
+                for imageID = reshape(e.ImageIDs,1,[])
+                    obj.CacheManager.removeImage(imageID);
+                end
                 obj.syncActiveImage();
             elseif name == "CalibrationChanged"
 
