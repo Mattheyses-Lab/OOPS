@@ -2679,6 +2679,20 @@ classdef GUI < handle
                 end
 
                 settings.(binding.Name) = control.Value;
+
+                % Common filtering controls serve as both defaults for future
+                % runs and immediate edits to the active segmented image.
+                filtering = ["Connectivity","MinimumArea","BorderWidth","MaxObjects"];
+
+                if binding.Domain == "Segmentation" && ...
+                        ismember(binding.Name,filtering)
+                    image = obj.Project.ActiveImage;
+
+                    if ~isempty(image) && ~isempty(image.SegmentationParameters)
+                        obj.commitSegmentationAdjustment( ...
+                            image,binding.Name,control.Value);
+                    end
+                end
             catch ME
                 control.Value = settings.(binding.Name);
                 rethrow(ME);

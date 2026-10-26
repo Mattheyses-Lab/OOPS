@@ -71,6 +71,26 @@ im.setCorrectionResults(I,strings(0,1));
 t.verifyNotEmpty(im.SegmentationParameters);
 t.verifyTrue(im.MaskProvenance.isCurrent(im.CorrectionProvenance));
 end
+
+function testCommonFilteringCanBeAdjustedOnCommittedMask(t)
+%TESTCOMMONFILTERINGCANBEADJUSTEDONCOMMITTEDMASK Re-filter cached membership.
+
+p = oops.model.Project(); cleaner = onCleanup(@() delete(p)); %#ok<NASGU>
+g = p.addGroup("A");
+I = zeros(40); I(10:12,10:12) = 100; I(25:31,25:31) = 100;
+im = g.addImage(matlabx.image.Image5D.fromComponents({I,I,I,I}));
+p.Settings.Segmentation.BorderWidth = 0;
+p.Settings.Segmentation.MinimumArea = 1;
+oops.analysis.Analyzer.segmentImages(im,p.Settings);
+initialCount = numel(im.Objects);
+t.verifyGreaterThan(initialCount,0);
+
+oops.analysis.Analyzer.adjustSegmentation( ...
+    im,"MinimumArea",20,p.Settings);
+t.verifyLessThan(numel(im.Objects),initialCount);
+t.verifyEqual(im.SegmentationParameters.Filtering.MinimumArea,20);
+t.verifyEqual(im.MaskProvenance.Diagnostics.RetainedCount,numel(im.Objects));
+end
 function testParameterValidationAndCatalog(t)
 definitions = oops.analysis.segment.algorithms();
 t.verifyEqual([definitions.ID],["Puncta/1","Filaments/1"]);

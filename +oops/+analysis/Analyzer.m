@@ -275,7 +275,7 @@ classdef Analyzer
 
         function adjustSegmentation(image,name,value,settings)
         %ADJUSTSEGMENTATION Commit an image-local override or restore automatic values.
-        % Common filters come from the stored recipe, not subsequently edited defaults.
+        % Algorithm controls and common filters both update the stored image recipe.
 
             try
                 % Pending calibration invalidates enhancement and its recipe.
@@ -299,6 +299,8 @@ classdef Analyzer
 
                 if string(name) == "Automatic"
                     recipe = recipe.resetToAutomatic();
+                elseif isfield(recipe.Filtering,string(name))
+                    recipe = recipe.withFiltering(name,value);
                 else
                     recipe = recipe.withParameter(name,value);
                 end

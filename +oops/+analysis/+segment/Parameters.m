@@ -93,6 +93,43 @@ classdef Parameters
             obj.Manual.(name) = value;
         end
 
+        function obj = withFiltering(obj,name,value)
+        %WITHFILTERING Validate and replace one common object-filtering value.
+
+            name = string(name);
+
+            if ~isfield(obj.Filtering,name)
+                error('oops:analysis:UnknownFilter', ...
+                    'Unknown segmentation filter: %s.',name);
+            end
+
+            switch name
+                case "Connectivity"
+                    validateattributes(value,{'numeric'}, ...
+                        {'scalar','real','finite','integer'});
+
+                    if ~ismember(value,[4 8])
+                        error('oops:analysis:InvalidConnectivity', ...
+                            'Connectivity must be 4 or 8.');
+                    end
+                case "MinimumArea"
+                    validateattributes(value,{'numeric'}, ...
+                        {'scalar','real','finite','integer','positive'});
+                case {"BorderWidth","MaxObjects"}
+                    validateattributes(value,{'numeric'}, ...
+                        {'scalar','real','finite','integer','nonnegative'});
+                case "Ranking"
+                    value = string(value);
+
+                    if value ~= "MeanIntensity"
+                        error('oops:analysis:UnknownObjectRanking', ...
+                            'Unsupported object-ranking measurement: %s',value);
+                    end
+            end
+
+            obj.Filtering.(name) = value;
+        end
+
         function obj = resetToAutomatic(obj)
         %RESETTOAUTOMATIC Clear overrides while preserving automatic values.
 
