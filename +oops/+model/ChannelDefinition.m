@@ -63,6 +63,26 @@ classdef ChannelDefinition < handle
             obj.Color = color;
         end
 
+        function setProperties(obj,name,color)
+        %SETPROPERTIES Update the channel's user-facing name and color.
+
+            arguments
+                obj
+                name (1,1) string
+                color (1,3) double {mustBeFinite,mustBeInRange(color,0,1)}
+            end
+
+            name = strtrim(name);
+
+            if name == ""
+                error('oops:model:EmptyChannelName', ...
+                    'Channel names cannot be empty.');
+            end
+
+            obj.Name = name;
+            obj.Color = color;
+        end
+
         function setColormap(obj,name,category)
         %SETCOLORMAP Store the registered LUT used to display this signal.
 

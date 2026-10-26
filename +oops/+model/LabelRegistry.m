@@ -221,6 +221,32 @@ classdef LabelRegistry < handle
             notify(obj,'LabelsChanged');
         end
 
+        function move(obj,id,offset)
+        %MOVE Change one user label's persistent display order.
+
+            id = string(id);
+
+            if id == "unlabeled"
+                return;
+            end
+
+            index = find(obj.Order == id,1);
+
+            if isempty(index)
+                error('oops:model:UnknownLabel','Unknown object label ID: %s',id);
+            end
+
+            target = index+offset;
+
+            % Unlabeled remains the permanent first entry.
+            if target < 2 || target > numel(obj.Order) || target == index
+                return;
+            end
+
+            obj.Order([index target]) = obj.Order([target index]);
+            notify(obj,'LabelsChanged');
+        end
+
         function setActiveByID(obj,id)
         %SETACTIVEBYID Store the active label independently of object selection.
 

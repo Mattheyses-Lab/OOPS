@@ -380,6 +380,27 @@ classdef Project < handle
             end
         end
 
+        function moveGroup(obj,id,offset)
+        %MOVEGROUP Move one group within the project's persistent display order.
+
+            id = string(id);
+            index = find(string({obj.Groups.ID}) == id,1);
+
+            if isempty(index)
+                error('oops:model:UnknownGroup','Unknown group ID: %s',id);
+            end
+
+            target = index+offset;
+
+            if target < 1 || target > numel(obj.Groups) || target == index
+                return;
+            end
+
+            obj.Groups([index target]) = obj.Groups([target index]);
+            obj.GroupListeners([index target]) = obj.GroupListeners([target index]);
+            notify(obj,'GroupChanged');
+        end
+
     end
 
     %% Object label registry

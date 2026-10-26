@@ -224,6 +224,23 @@ classdef Image < handle
                 oops.model.events.DataChanged(obj.ID,"AuxiliaryChannels"));
         end
 
+        function removeAuxiliaryChannel(obj,channelID)
+        %REMOVEAUXILIARYCHANNEL Remove one optional semantic channel assignment.
+
+            ids = string({obj.AuxiliaryChannels.ChannelID});
+            index = find(ids == string(channelID),1);
+
+            if isempty(index)
+                return;
+            end
+
+            assignment = obj.AuxiliaryChannels(index);
+            obj.AuxiliaryChannels(index) = [];
+            delete(assignment);
+            notify(obj,'DataChanged', ...
+                oops.model.events.DataChanged(obj.ID,"AuxiliaryChannels"));
+        end
+
         function setPrimaryChannel(obj,channel)
         %SETPRIMARYCHANNEL Assign the semantic identity of the polarization input.
 

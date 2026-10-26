@@ -38,6 +38,19 @@ function testDefaultRegistrySupportsStableLookups(t)
         'oops:model:DuplicateLabelHotkey');
 end
 
+function testUserLabelsCanBeReorderedBelowUnlabeled(t)
+%TESTUSERLABELSCANBEREORDEREDBELOWUNLABELED Preserve the reserved first entry.
+
+registry = oops.model.LabelRegistry.default();
+cleanup = onCleanup(@() delete(registry)); %#ok<NASGU>
+registry.add("First",ID="first",Hotkey="1");
+registry.add("Second",ID="second",Hotkey="2");
+registry.move("second",-1);
+t.verifyEqual(registry.ids(),["unlabeled" "second" "first"]);
+registry.move("second",-1);
+t.verifyEqual(registry.ids(),["unlabeled" "second" "first"]);
+end
+
 function testImageAppliesOneLabelToSelectedObjectBatch(t)
 %TESTIMAGEAPPLIESONELABELTOSELECTEDOBJECTBATCH Preserve unselected labels.
 

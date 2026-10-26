@@ -183,6 +183,27 @@ t.verifyEqual(first.Name,"Renamed");
 t.verifyEqual(first.Color,[0.1 0.2 0.3]);
 end
 
+function testOrderedGroupsAndChannelsCanBeManaged(t)
+%TESTORDEREDGROUPSANDCHANNELSCANBEMANAGED Persist manager-driven collection order.
+
+p = oops.model.Project();
+cleanup = onCleanup(@() delete(p)); %#ok<NASGU>
+first = p.addGroup("First");
+second = p.addGroup("Second");
+p.moveGroup(second.ID,-1);
+t.verifyEqual(string({p.Groups.Name}),["Second" "First"]);
+
+green = p.Channels.add("Green",[0 1 0]);
+red = p.Channels.add("Red",[1 0 0]);
+p.Channels.move(red.ID,-1);
+t.verifyEqual(string({p.Channels.Channels.Name}),["Red" "Green"]);
+p.Channels.edit(green.ID,"Emerald",[0 .5 .2]);
+t.verifyEqual(green.Name,"Emerald");
+t.verifyEqual(green.Color,[0 .5 .2]);
+p.Channels.remove(red.ID);
+t.verifyEqual(p.Channels.Channels,green);
+end
+
 function testForeignSelectionAndRemovalAreRejected(t)
 p = oops.model.Project();
 other = oops.model.Project();

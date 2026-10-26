@@ -117,6 +117,7 @@ classdef GUI < handle
 
                 obj.UICal = matlabx.UICal.get();
                 obj.buildWindow();
+                oops.app.centerDialog(obj.Fig);
                 obj.CommandRouter = matlabx.ui.interaction.CommandRouter('Parent',obj.Fig);
                 obj.buildAccordion();
                 obj.buildViewers();
@@ -640,7 +641,7 @@ classdef GUI < handle
             obj.Grid.Visible = state;
 
             for name = ["Close","Save","SaveAs","LoadImages","Calibration", ...
-                    "AuxiliaryChannels","Run","View","Objects","RuntimeStatus"]
+                    "AuxiliaryChannels","Edit","Run","View","Objects","RuntimeStatus"]
 
                 if isfield(obj.MenuUI,name)
                     obj.MenuUI.(name).Enable = state;
@@ -2044,6 +2045,16 @@ classdef GUI < handle
             obj.MenuUI.AuxiliaryChannels = uimenu(file, ...
                 'Text','Import auxiliary channels...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseAuxiliaryChannels()));
+
+            % Edit menu manages ordered project-wide model collections.
+            edit = uimenu(obj.Fig,'Text','Edit');
+            obj.MenuUI.Edit = edit;
+            uimenu(edit,'Text','Groups...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.manageCollection("Groups")));
+            uimenu(edit,'Text','Labels...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.manageCollection("Labels")));
+            uimenu(edit,'Text','Channels...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.manageCollection("Channels")));
 
             % Run menu exposing the complete pipeline and its individual stages.
             run = uimenu(obj.Fig,'Text','Run');
@@ -5842,6 +5853,234 @@ classdef GUI < handle
             end
         end
 
+        function manageCollection(obj,kind)
+        %MANAGECOLLECTION Open a shared flat-tree editor for model registries.
+
+            actions = struct();
+
+            switch kind
+                case "Groups"
+                    itemsFcn = @() obj.collectionItems("Groups");
+                    actions.New = @(~,~) obj.promptGroup();
+                    actions.Edit = @(id,~) obj.promptGroup(id);
+                    actions.Delete = @(id,parent) obj.deleteManagedGroup(id,parent);
+                    actions.Move = @(id,offset,~) obj.Project.moveGroup(id,offset);
+                    hint = "Checked groups are reserved for future batch actions.";
+
+                case "Labels"
+                    itemsFcn = @() obj.collectionItems("Labels");
+                    actions.New = @(~,~) obj.promptLabel();
+                    actions.Edit = @(id,~) obj.promptLabel(id);
+                    actions.Delete = @(id,parent) obj.deleteLabel(id,parent);
+                    actions.Move = @(id,offset,~) obj.Project.Labels.move(id,offset);
+                    hint = "Checked labels are reserved for future merge and batch actions.";
+
+                case "Channels"
+                    itemsFcn = @() obj.collectionItems("Channels");
+                    actions.New = @(~,~) obj.promptChannel();
+                    actions.Edit = @(id,~) obj.promptChannel(id);
+                    actions.Delete = @(id,parent) obj.deleteChannel(id,parent);
+                    actions.Move = @(id,offset,~) obj.moveChannel(id,offset);
+                    hint = "Checked channels are reserved for future batch actions.";
+            end
+
+            oops.app.collectionManagerDialog( ...
+                obj.Fig,"Edit "+lower(kind),itemsFcn,actions,Hint=hint);
+            obj.focusWindow();
+        end
+
+        function items = collectionItems(obj,kind)
+        %COLLECTIONITEMS Describe ordered manager nodes without exposing handles.
+
+            items = repmat(struct('ID',"",'Name',"",'Color',[1 1 1], ...
+                'Protected',false),0,1);
+
+            switch kind
+                case "Groups"
+                    values = obj.Project.Groups;
+                case "Labels"
+                    values = obj.Project.Labels.labels();
+                case "Channels"
+                    values = obj.Project.Channels.Channels;
+            end
+
+            for k = 1:numel(values)
+                name = values(k).Name;
+
+                if kind == "Labels" && values(k).Hotkey ~= ""
+                    name = name + "  [" + values(k).Hotkey + "]";
+                end
+
+                items(k,1) = struct( ...
+                    'ID',values(k).ID,'Name',name,'Color',values(k).Color, ...
+                    'Protected',kind == "Labels" && values(k).ID == "unlabeled"); %#ok<AGROW>
+            end
+        end
+
+        function deleteManagedGroup(obj,id,parent)
+        %DELETEMANAGEDGROUP Confirm the complete hierarchy removed with a group.
+
+            if nargin < 3
+                parent = obj.Fig;
+            end
+
+            group = oops.model.internal.resolve(obj.Project.Groups,id);
+
+            if isempty(group)
+                return;
+            end
+
+            objectCount = sum(arrayfun(@(image) numel(image.Objects),group.Images));
+            message = sprintf('Delete "%s" with %d images and %d objects?', ...
+                group.Name,numel(group.Images),objectCount);
+            answer = uiconfirm(parent,message,'Delete group?', ...
+                'Options',{'Delete','Cancel'},'DefaultOption','Cancel', ...
+                'CancelOption','Cancel','Icon','warning');
+
+            if strcmp(answer,'Delete')
+                obj.deleteNavigation("Groups",id);
+            end
+        end
+
+        function promptChannel(obj,channelID)
+        %PROMPTCHANNEL Create or edit a semantic channel definition.
+
+            if nargin < 2
+                channelID = "";
+            end
+
+            if channelID == ""
+                title = "New channel";
+                channel = oops.model.ChannelDefinition.empty(0,1);
+                number = numel(obj.Project.Channels.Channels)+1;
+                name = "Channel "+number;
+                colors = get(groot,'defaultAxesColorOrder');
+                color = colors(mod(number-1,size(colors,1))+1,:);
+            else
+                title = "Edit channel";
+                channel = obj.Project.Channels.findByID(channelID);
+
+                if isempty(channel)
+                    error('oops:app:UnknownChannel', ...
+                        'The selected channel no longer exists.');
+                end
+
+                name = channel.Name;
+                color = channel.Color;
+            end
+
+            params = matlabx.app.ParamsDialog.prompt(title, ...
+                {'Name','Name','string',name, ...
+                    @(value) obj.channelNameAvailable(value,channelID), ...
+                    'Name must be nonempty and unique.'}, ...
+                {'Color','Color','color',color});
+
+            if isempty(params)
+                return;
+            end
+
+            if isempty(channel)
+                obj.Project.Channels.add(strtrim(string(params.Name)),params.Color);
+            else
+                obj.Project.Channels.edit(channelID, ...
+                    strtrim(string(params.Name)),params.Color);
+            end
+
+            obj.refreshChannelsAfterEdit();
+        end
+
+        function available = channelNameAvailable(obj,name,ownerID)
+        %CHANNELNAMEAVAILABLE Validate a trimmed channel name for parameter dialogs.
+
+            name = strtrim(string(name));
+            channels = obj.Project.Channels.Channels;
+            ids = string({channels.ID});
+            names = string({channels.Name});
+            available = name ~= "" && ...
+                ~any(strcmpi(name,names(ids ~= string(ownerID))));
+        end
+
+        function deleteChannel(obj,id,parent)
+        %DELETECHANNEL Remove an unused semantic channel definition.
+
+            if nargin < 3
+                parent = obj.Fig;
+            end
+
+            channel = obj.Project.Channels.findByID(id);
+
+            if isempty(channel)
+                return;
+            end
+
+            [primaryReferences,auxiliaryReferences] = obj.channelReferenceCounts(id);
+
+            if primaryReferences > 0
+                uialert(parent,sprintf( ...
+                    'This channel is the primary channel for %d images and cannot be deleted.', ...
+                    primaryReferences), ...
+                    'Channel is in use','Icon','warning');
+                return;
+            end
+
+            message = "Delete channel """+channel.Name+"""?";
+
+            if auxiliaryReferences > 0
+                message = message+newline+sprintf( ...
+                    'Its assignments will be removed from %d images.',auxiliaryReferences);
+            end
+
+            answer = uiconfirm(parent,message, ...
+                'Delete channel?','Options',{'Delete','Cancel'}, ...
+                'DefaultOption','Cancel','CancelOption','Cancel','Icon','warning');
+
+            if strcmp(answer,'Delete')
+                previous = obj.Processing;
+                obj.Processing = true;
+                guard = onCleanup(@() obj.restoreProcessing(previous));
+
+                for group = reshape(obj.Project.Groups,1,[])
+                    for image = reshape(group.Images,1,[])
+                        image.removeAuxiliaryChannel(id);
+                    end
+                end
+
+                obj.Project.Channels.remove(id);
+                clear guard;
+                obj.refreshChannelsAfterEdit();
+            end
+        end
+
+        function [primary,auxiliary] = channelReferenceCounts(obj,id)
+        %CHANNELREFERENCECOUNTS Count primary and auxiliary image assignments.
+
+            primary = 0;
+            auxiliary = 0;
+
+            for group = reshape(obj.Project.Groups,1,[])
+                for image = reshape(group.Images,1,[])
+                    primary = primary+double(image.PrimaryChannelID == id);
+                    auxiliary = auxiliary+double( ...
+                        any(string({image.AuxiliaryChannels.ChannelID}) == id));
+                end
+            end
+        end
+
+        function moveChannel(obj,id,offset)
+        %MOVECHANNEL Reorder channels and refresh channel-dependent displays.
+
+            obj.Project.Channels.move(id,offset);
+            obj.refreshChannelsAfterEdit();
+        end
+
+        function refreshChannelsAfterEdit(obj)
+        %REFRESHCHANNELSAFTEREDIT Reconcile controls and visible channel sources.
+
+            obj.refreshColormapControls();
+            obj.ViewerKeys(:) = "";
+            obj.refreshViewers(true);
+        end
+
         function promptGroup(obj,groupID)
         %PROMPTGROUP Create or edit a group's name and identifying color.
 
@@ -5960,8 +6199,12 @@ classdef GUI < handle
             end
         end
 
-        function deleteLabel(obj,labelID)
+        function deleteLabel(obj,labelID,parent)
         %DELETELABEL Confirm removal and return affected objects to Unlabeled.
+
+            if nargin < 3
+                parent = obj.Fig;
+            end
 
             label = obj.Project.Labels.getByID(labelID);
 
@@ -5969,7 +6212,7 @@ classdef GUI < handle
                 error('oops:app:UnknownLabel','The selected label no longer exists.');
             end
 
-            answer = uiconfirm(obj.Fig, ...
+            answer = uiconfirm(parent, ...
                 "Objects using this label will be reassigned to Unlabeled.", ...
                 "Delete " + label.Name + "?", ...
                 'Options',{'Delete','Cancel'},'DefaultOption','Cancel', ...

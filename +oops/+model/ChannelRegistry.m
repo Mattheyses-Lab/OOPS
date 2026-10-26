@@ -5,6 +5,10 @@
 classdef ChannelRegistry < handle
 %CHANNELREGISTRY Own ordered project-wide semantic channel definitions.
 
+    events
+        ChannelsChanged
+    end
+
     properties (SetAccess=private)
         Channels (:,1) oops.model.ChannelDefinition = ...
             oops.model.ChannelDefinition.empty(0,1)
@@ -38,6 +42,7 @@ classdef ChannelRegistry < handle
 
             channel = oops.model.ChannelDefinition(name,color);
             obj.Channels(end+1,1) = channel;
+            notify(obj,'ChannelsChanged');
         end
 
         function channel = findByID(obj,id)
@@ -80,6 +85,61 @@ classdef ChannelRegistry < handle
             if isempty(channel)
                 channel = obj.add(name,color);
             end
+        end
+
+        function edit(obj,id,name,color)
+        %EDIT Update a channel after validating its project-wide name.
+
+            channel = obj.findByID(id);
+
+            if isempty(channel)
+                error('oops:model:UnknownChannel','Unknown channel ID: %s',id);
+            end
+
+            ids = string({obj.Channels.ID});
+            other = obj.Channels(ids ~= channel.ID);
+
+            if any(strcmpi(strtrim(name),string({other.Name})))
+                error('oops:model:DuplicateChannelName', ...
+                    'A channel named "%s" already exists.',name);
+            end
+
+            channel.setProperties(name,color);
+            notify(obj,'ChannelsChanged');
+        end
+
+        function remove(obj,id)
+        %REMOVE Delete an unreferenced channel definition from the registry.
+
+            index = find(string({obj.Channels.ID}) == string(id),1);
+
+            if isempty(index)
+                error('oops:model:UnknownChannel','Unknown channel ID: %s',id);
+            end
+
+            channel = obj.Channels(index);
+            obj.Channels(index) = [];
+            delete(channel);
+            notify(obj,'ChannelsChanged');
+        end
+
+        function move(obj,id,offset)
+        %MOVE Change one channel's persistent registry order.
+
+            index = find(string({obj.Channels.ID}) == string(id),1);
+
+            if isempty(index)
+                error('oops:model:UnknownChannel','Unknown channel ID: %s',id);
+            end
+
+            target = index+offset;
+
+            if target < 1 || target > numel(obj.Channels) || target == index
+                return;
+            end
+
+            obj.Channels([index target]) = obj.Channels([target index]);
+            notify(obj,'ChannelsChanged');
         end
 
         function S = toStruct(obj)
