@@ -2,13 +2,13 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-function [data,info] = source(image,name,settings)
+function [data,info] = source(image,sourceID,settings)
 %SOURCE Wrap numerical sources for ImageAxes/exports without changing model data.
 % Azimuth remains scalar degrees with a cyclic LUT so inspection reports angles.
 
 arguments
     image (:,1) oops.model.Image
-    name (1,1) string
+    sourceID (1,1) string
     settings (1,1) oops.config.Settings
 end
 
@@ -20,14 +20,19 @@ if ~isempty(image)
     imageLabel = image.Name;
 end
 
-oops.Log.DEBUG("Resolving display source '" + name + "' for image '" + imageLabel + "'.");
-traceGuard = onCleanup(@() logSourceTiming(name,imageLabel,started)); %#ok<NASGU>
+if ~ismember(sourceID,oops.config.View.sources())
+    error('oops:render:UnknownSource','Unknown image source: %s',sourceID);
+end
+
+label = oops.config.View.sourceLabels(sourceID);
+oops.Log.DEBUG("Resolving display source '" + sourceID + "' for image '" + imageLabel + "'.");
+traceGuard = onCleanup(@() logSourceTiming(sourceID,imageLabel,started)); %#ok<NASGU>
 
 % Empty display source until the requested image data are available.
 data = matlabx.image.Image5D.empty(0,1);
 
 % Source title, availability, colormap, and display-limit metadata for the caller.
-info = struct('Title',name,'Available',false,'Reason',"No active image", ...
+info = struct('Title',label,'Available',false,'Reason',"No active image", ...
     'Colormap',gray(256),'CLim',[],'Domain',"", ...
     'ComponentColorMode',"luts",'ComponentCLims',{{}}, ...
     'ComponentColors',{{}},'ComponentColormaps',{{}});
@@ -37,12 +42,12 @@ try
         return;
     end
 
-    info.Title = image.Name + " — " + name;
+    info.Title = image.Name + " — " + label;
 
     % Display domain selecting the intensity, order, or azimuth colormap.
     domain = "Intensity";
 
-    switch name
+    switch sourceID
         case "Input"
             data = image.Input;
         case "Calibration"
@@ -69,14 +74,14 @@ try
             data = matlabx.image.Image5D.fromComponents( ...
                 arrayfun(@(k) values(:,:,k),1:4,'UniformOutput',false), ...
                 Names=["0 deg","45 deg","90 deg","135 deg"]);
-        case "Average intensity"
+        case "AverageIntensity"
             % Reconstruct an omitted durable average once, then reuse it.
             values = oops.analysis.Analyzer.ensureAverageIntensity(image);
 
             % Quantize only the display copy; the durable analytical average remains double.
             values = oops.render.intensityDisplayValues(image,values);
             data = matlabx.image.Image5D.fromComponents(values,Names="Average intensity");
-        case "Auxiliary channels"
+        case "AuxiliaryChannels"
             [data,channelInfo] = auxiliaryChannels(image);
 
             if isempty(data)
@@ -100,17 +105,17 @@ try
             info.CLim = [0 1];
             domain = "Mask";
         case {"Order","Azimuth"}
-            values = image.(name);
+            values = image.(sourceID);
 
             if isempty(values)
-                info.Reason = name + " has not been produced";
+                info.Reason = label + " has not been produced";
                 return;
             end
 
             validateattributes(values,{'numeric'},{'real','2d','size',[image.Input.SizeY image.Input.SizeX]});
-            domain = name;
+            domain = sourceID;
 
-            if name == "Azimuth"
+            if sourceID == "Azimuth"
                 % Preserve the analytical axial convention for inspection:
                 % one-half atan2 spans signed orientations from -90 to 90 degrees.
                 values = rad2deg(values);
@@ -120,17 +125,39 @@ try
                 info.CLim = oops.render.displayLimits(image,"Order",settings);
             end
 
-            data = matlabx.image.Image5D.fromComponents(values,Names=name);
+            data = matlabx.image.Image5D.fromComponents(values,Names=label);
+        case {"IntensityWeightedOrder","IntensityWeightedAzimuth", ...
+                "AzimuthOrderIntensityHSV"}
+
+            needsOrder = ismember(sourceID,["IntensityWeightedOrder", ...
+                "AzimuthOrderIntensityHSV"]);
+            needsAzimuth = ismember(sourceID,["IntensityWeightedAzimuth", ...
+                "AzimuthOrderIntensityHSV"]);
+
+            if needsOrder && isempty(image.Order)
+                info.Reason = "Order has not been produced";
+                return;
+            end
+
+            if needsAzimuth && isempty(image.Azimuth)
+                info.Reason = "Azimuth has not been produced";
+                return;
+            end
+
+            values = oops.render.derivedVisualization(image,sourceID,settings);
+            data = matlabx.image.Image5D.fromComponents( ...
+                values,Names=label,Kinds="rgb");
+            domain = "Derived";
         otherwise
-            error('oops:render:UnknownSource','Unknown image source: %s',name);
+            error('oops:render:UnknownSource','Unknown image source: %s',sourceID);
     end
 
-    if ismember(name,["Input","Corrected","Average intensity"])
+    if ismember(sourceID,["Input","Corrected","AverageIntensity"])
         info.CLim = oops.render.displayLimits(image,"Intensity",settings);
 
         % Limit integer display copies to their representable detector range.
         % The percentile-derived limits otherwise remain unchanged.
-        if ismember(name,["Corrected","Average intensity"])
+        if ismember(sourceID,["Corrected","AverageIntensity"])
             [detectorLimits,~] = oops.analysis.detectorRange(image.Input);
 
             if ~isempty(detectorLimits)
@@ -157,21 +184,26 @@ try
                 image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
             info.ComponentColormaps = repmat({map},1,data.NumComponents);
         end
-    elseif name == "Order"
+    elseif sourceID == "Order"
         info.Domain = "Order";
         info.ComponentColorMode = settings.Display.OrderColorMode;
         info.ComponentColors = {char(settings.Colormaps.OrderColor)};
-    elseif name == "Azimuth"
+    elseif sourceID == "Azimuth"
         info.Domain = "Azimuth";
         info.ComponentColorMode = settings.Display.AzimuthColorMode;
         info.ComponentColors = {char(settings.Colormaps.AzimuthColor)};
-    elseif name == "Mask"
+    elseif sourceID == "Mask"
         info.Domain = "Mask";
         info.ComponentColorMode = settings.Display.MaskColorMode;
         info.ComponentColors = {char(settings.Colormaps.MaskColor)};
+    elseif ismember(sourceID,["IntensityWeightedOrder","IntensityWeightedAzimuth", ...
+            "AzimuthOrderIntensityHSV"])
+        info.Domain = "Derived";
     end
 
-    if domain == "Azimuth"
+    if domain == "Derived"
+        info.Colormap = gray(256);
+    elseif domain == "Azimuth"
         info.Colormap = oops.render.azimuthImageColormap(settings.Colormaps);
     else
         info.Colormap = oops.render.colormap(settings.Colormaps,domain);

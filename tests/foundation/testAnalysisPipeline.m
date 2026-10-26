@@ -113,7 +113,7 @@ t.verifyEqual(limits,[0 65535]);
 
 % Corrected and averaged display copies use the detector storage class and clip.
 [corrected,correctedInfo] = oops.render.source(image,"Corrected",p.Settings);
-[average,averageInfo] = oops.render.source(image,"Average intensity",p.Settings);
+[average,averageInfo] = oops.render.source(image,"AverageIntensity",p.Settings);
 t.verifyClass(corrected.getPlane(1,1,1),'uint16');
 t.verifyClass(average.getPlane(1,1,1),'uint16');
 correctedPlane = corrected.getPlane(1,1,1);

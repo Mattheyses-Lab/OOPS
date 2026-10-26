@@ -7,8 +7,8 @@ classdef View < handle
 % Events carry Domain, Name, OldValue, and NewValue like DesmoSTORM.
 
     properties (Access=private)
-        LeftSource_ (1,1) string {mustBeMember(LeftSource_,["Empty","Input","Calibration","Corrected","Average intensity","Auxiliary channels","Mask","Order","Azimuth","Scatterplot","Swarmplot","Polar histogram"])} = "Input"
-        RightSource_ (1,1) string {mustBeMember(RightSource_,["Empty","Input","Calibration","Corrected","Average intensity","Auxiliary channels","Mask","Order","Azimuth","Scatterplot","Swarmplot","Polar histogram","Objects"])} = "Corrected"
+        LeftSource_ (1,1) string = "Input"
+        RightSource_ (1,1) string = "Corrected"
     end
 
     properties (Dependent)
@@ -80,6 +80,18 @@ classdef View < handle
 
             try
 
+                value = string(value);
+                allowed = oops.config.View.sources();
+
+                if name == "LeftSource"
+                    allowed(allowed == "Objects") = [];
+                end
+
+                if ~isscalar(value) || ~ismember(value,allowed)
+                    error('oops:config:InvalidViewSource', ...
+                        '%s must be one of: %s.',name,strjoin(allowed,', '));
+                end
+
                 % Private storage property corresponding to the public setting name.
                 property = char(name + "_");
 
@@ -132,9 +144,53 @@ classdef View < handle
         function values = sources()
         %SOURCES List content identities supported by either main panel.
 
-            values = ["Empty","Input","Calibration","Corrected", ...
-                "Average intensity","Auxiliary channels","Mask","Order","Azimuth", ...
-                "Scatterplot","Swarmplot","Polar histogram","Objects"];
+            definitions = oops.config.View.sourceDefinitions();
+            values = [definitions.ID];
+        end
+
+        function definitions = sourceDefinitions()
+        %SOURCEDEFINITIONS Map stable source identities to display labels.
+
+            definitions = [ ...
+                struct('ID',"Empty",'Label',"Empty"), ...
+                struct('ID',"Input",'Label',"Input"), ...
+                struct('ID',"Calibration",'Label',"Calibration"), ...
+                struct('ID',"Corrected",'Label',"Corrected"), ...
+                struct('ID',"AverageIntensity",'Label',"Average intensity"), ...
+                struct('ID',"AuxiliaryChannels",'Label',"Auxiliary channels"), ...
+                struct('ID',"Mask",'Label',"Mask"), ...
+                struct('ID',"Order",'Label',"Order"), ...
+                struct('ID',"Azimuth",'Label',"Azimuth"), ...
+                struct('ID',"IntensityWeightedOrder",'Label',"Intensity-weighted order"), ...
+                struct('ID',"IntensityWeightedAzimuth",'Label',"Intensity-weighted azimuth"), ...
+                struct('ID',"AzimuthOrderIntensityHSV",'Label',"Azimuth–order–intensity HSV"), ...
+                struct('ID',"Scatterplot",'Label',"Scatterplot"), ...
+                struct('ID',"Swarmplot",'Label',"Swarmplot"), ...
+                struct('ID',"PolarHistogram",'Label',"Polar histogram"), ...
+                struct('ID',"Objects",'Label',"Objects")];
+        end
+
+        function labels = sourceLabels(ids)
+        %SOURCELABELS Resolve stable source identities for user-facing display.
+
+            arguments
+                ids string
+            end
+
+            definitions = oops.config.View.sourceDefinitions();
+            knownIDs = [definitions.ID];
+            labels = strings(size(ids));
+
+            for k = 1:numel(ids)
+                index = find(knownIDs == ids(k),1);
+
+                if isempty(index)
+                    error('oops:config:UnknownViewSource', ...
+                        'Unknown view source identity: %s',ids(k));
+                end
+
+                labels(k) = definitions(index).Label;
+            end
         end
 
     end

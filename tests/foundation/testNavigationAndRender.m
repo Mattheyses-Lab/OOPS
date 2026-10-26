@@ -109,6 +109,56 @@ t.verifyEqual(image.Results.Azimuth,azimuth);
 t.verifyEqual(data.getPlane(1,1,1),image.Mask); t.verifyEqual(info.CLim,[0 1]);
 t.verifyError(@() oops.render.source(image,"Unknown",p.Settings),'oops:render:UnknownSource');
 end
+
+function testRenderDerivedPolarizationVisualizations(t)
+%TESTRENDERDERIVEDPOLARIZATIONVISUALIZATIONS Compose RGB views at render time.
+
+p = project(); cleaner = onCleanup(@() delete(p));
+image = p.Groups(1).Images(1);
+average = reshape(linspace(10,100,120),10,12);
+order = reshape(linspace(0,1,120),10,12);
+azimuth = reshape(linspace(-pi/2,pi/2,120),10,12);
+image.setResults(struct('AverageIntensity',average,'Order',order,'Azimuth',azimuth));
+image.setDisplayRange("Intensity",[10 100]);
+image.setDisplayRange("Order",[0 1]);
+
+for name = ["IntensityWeightedOrder","IntensityWeightedAzimuth", ...
+        "AzimuthOrderIntensityHSV"]
+    [data,info] = oops.render.source(image,name,p.Settings);
+    t.verifyTrue(info.Available);
+    t.verifyEqual(string(data.Components(1).Kind),"rgb");
+    rgb = data.getPlane(1,1,1);
+    t.verifySize(rgb,[10 12 3]);
+    t.verifyGreaterThanOrEqual(min(rgb,[],'all'),0);
+    t.verifyLessThanOrEqual(max(rgb,[],'all'),1);
+end
+end
+
+function testViewSourcesKeepStableIDsSeparateFromLabels(t)
+%TESTVIEWSOURCESKEEPSTABLEIDSSEPARATEFROMLABELS Persist IDs and present labels.
+
+view = oops.config.View();
+cleaner = onCleanup(@() delete(view)); %#ok<NASGU>
+view.LeftSource = "AverageIntensity";
+view.RightSource = "AzimuthOrderIntensityHSV";
+
+snapshot = view.toStruct();
+t.verifyEqual(snapshot.LeftSource,"AverageIntensity");
+t.verifyEqual(snapshot.RightSource,"AzimuthOrderIntensityHSV");
+t.verifyEqual(oops.config.View.sourceLabels(snapshot.LeftSource), ...
+    "Average intensity");
+t.verifyEqual(oops.config.View.sourceLabels(snapshot.RightSource), ...
+    "Azimuth–order–intensity HSV");
+t.verifyError(@() assignLeftSource(view,"Average intensity"), ...
+    'oops:config:InvalidViewSource');
+end
+
+function assignLeftSource(view,value)
+%ASSIGNLEFTSOURCE Exercise the dependent-property setter from a function handle.
+
+view.LeftSource = value;
+end
+
 function p = project()
 p = oops.model.Project();
 for k = 1:2

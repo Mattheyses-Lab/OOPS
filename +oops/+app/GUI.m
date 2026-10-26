@@ -838,6 +838,9 @@ classdef GUI < handle
             sources = oops.config.View.sources();
             obj.addSetting("View","Left","View","LeftSource",sources(sources ~= "Objects"));
             obj.addSetting("View","Right","View","RightSource",sources);
+            labels = oops.config.View.sourceLabels(sources);
+            obj.SettingsUI.View.LeftSource.Items = cellstr(labels(sources ~= "Objects"));
+            obj.SettingsUI.View.RightSource.Items = cellstr(labels);
 
             % Segmentation catalog used to populate the algorithm selector and controls.
             definitions = oops.analysis.segment.algorithms();
@@ -2216,7 +2219,7 @@ classdef GUI < handle
             obj.refreshNavigation();
 
             if any(ismember([obj.Settings.View.LeftSource, ...
-                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot","Polar histogram"]))
+                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot","PolarHistogram"]))
                 obj.refreshPlots();
             end
         end
@@ -2301,14 +2304,14 @@ classdef GUI < handle
 
             if isempty(image) || image.ID ~= e.ImageID
                 if any(ismember([obj.Settings.View.LeftSource, ...
-                        obj.Settings.View.RightSource],["Scatterplot","Swarmplot","Polar histogram"]))
+                        obj.Settings.View.RightSource],["Scatterplot","Swarmplot","PolarHistogram"]))
                     obj.refreshPlots();
                 end
                 return;
             end
 
             if any(ismember([obj.Settings.View.LeftSource, ...
-                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot","Polar histogram"]))
+                    obj.Settings.View.RightSource],["Scatterplot","Swarmplot","PolarHistogram"]))
                 obj.refreshPlots();
             end
 
@@ -3039,7 +3042,7 @@ classdef GUI < handle
             % Resolve and update each panel only when forced or its source key changes.
             for k = 1:2
 
-                if ismember(names(k),["Empty","Scatterplot","Swarmplot","Polar histogram","Objects"])
+                if ismember(names(k),["Empty","Scatterplot","Swarmplot","PolarHistogram","Objects"])
                     oops.Log.DEBUG(sprintf( ...
                         'Panel %d uses non-image source %s; skipping ImageAxes update.', ...
                         k,names(k)));
@@ -3075,7 +3078,8 @@ classdef GUI < handle
 
                     % Clear any prior unavailability reason retained by this
                     % reused panel when an active image/source becomes available.
-                    obj.ViewerPanels(k).Title = char(names(k));
+                    obj.ViewerPanels(k).Title = char( ...
+                        oops.config.View.sourceLabels(names(k)));
 
                     % Whether the viewer already represents this same image/source pair.
                     sameSource = obj.ViewerKeys(k) == key;
@@ -3125,7 +3129,8 @@ classdef GUI < handle
                     viewer.CData = [];
                     viewer.ImageVisible = 'off';
                     viewer.AxesVisible = 'off';
-                    obj.ViewerPanels(k).Title = char(names(k) + " — " + info.Reason);
+                    label = oops.config.View.sourceLabels(names(k));
+                    obj.ViewerPanels(k).Title = char(label + " — " + info.Reason);
                 end
 
                 obj.ViewerKeys(k) = key;
@@ -3137,7 +3142,7 @@ classdef GUI < handle
                 obj.setLargeViewerViewportLink(true);
             end
 
-            if any(ismember(names,["Scatterplot","Swarmplot","Polar histogram"]))
+            if any(ismember(names,["Scatterplot","Swarmplot","PolarHistogram"]))
                 stage = tic;
                 obj.refreshPlots();
                 oops.Log.DEBUG(sprintf('Refreshed plots in %.3f s.',toc(stage)));
@@ -3206,11 +3211,11 @@ classdef GUI < handle
                 source = obj.Settings.View.RightSource;
             end
 
-            if ismember(source,["Input","Corrected","Average intensity"])
+            if ismember(source,["Input","Corrected","AverageIntensity"])
                 domain = "Intensity";
             elseif source == "Order"
                 domain = "Order";
-            elseif source == "Auxiliary channels"
+            elseif source == "AuxiliaryChannels"
                 obj.persistAuxiliaryDisplayRanges(viewer,event);
                 return;
             else
@@ -3276,11 +3281,11 @@ classdef GUI < handle
                 return;
             end
 
-            if ismember(source,["Input","Corrected","Average intensity"])
+            if ismember(source,["Input","Corrected","AverageIntensity"])
                 modeProperty = "PrimaryIntensityColorMode";
                 definitions = image.PrimaryChannel;
                 mapDomain = "";
-            elseif source == "Auxiliary channels"
+            elseif source == "AuxiliaryChannels"
                 modeProperty = "AuxiliaryColorMode";
                 definitions = obj.Project.Channels.Channels;
                 definitions = definitions([definitions.IsAuxiliary]);
@@ -3384,7 +3389,7 @@ classdef GUI < handle
             viewers = {obj.LeftViewer,obj.RightViewer};
 
             if domain == "Intensity"
-                affected = ismember(names,["Input","Corrected","Average intensity"]);
+                affected = ismember(names,["Input","Corrected","AverageIntensity"]);
             else
                 affected = names == "Order";
             end
@@ -3394,6 +3399,30 @@ classdef GUI < handle
                 currentViewer.CLimMode = 'manual';
                 currentViewer.ComponentCLims = ...
                     repmat({value},1,currentViewer.NumComponents);
+            end
+
+            % RGB derived views bake both domains into their pixels, so live
+            % slider previews rebuild only the visible dependent composites.
+            derived = ["IntensityWeightedOrder","IntensityWeightedAzimuth", ...
+                "AzimuthOrderIntensityHSV"];
+            image = obj.Project.ActiveImage;
+
+            for k = find(ismember(names,derived))
+                if domain == "Order" && names(k) == "IntensityWeightedAzimuth"
+                    continue;
+                end
+
+                if domain == "Intensity"
+                    rgb = oops.render.derivedVisualization( ...
+                        image,names(k),obj.Settings,IntensityLimits=value);
+                else
+                    rgb = oops.render.derivedVisualization( ...
+                        image,names(k),obj.Settings,OrderLimits=value);
+                end
+
+                label = oops.config.View.sourceLabels(names(k));
+                viewers{k}.ImageData = matlabx.image.Image5D.fromComponents( ...
+                    rgb,Names=label,Kinds="rgb");
             end
 
             % Object crops share their parent image's intensity and order limits.
@@ -3431,7 +3460,8 @@ classdef GUI < handle
             end
 
             for k = 1:2
-                obj.ViewerPanels(k).Title = char(names(k));
+                obj.ViewerPanels(k).Title = char( ...
+                    oops.config.View.sourceLabels(names(k)));
 
                 switch names(k)
                     case "Scatterplot"
@@ -3444,7 +3474,7 @@ classdef GUI < handle
                         plotAxes{k}.Visible = 'on';
                         plotAxes{k}.mount(obj.SwarmRenderer);
 
-                    case "Polar histogram"
+                    case "PolarHistogram"
                         viewers{k}.Visible = 'off';
                         plotAxes{k}.Visible = 'on';
                         plotAxes{k}.mount(obj.PolarHistogramRenderer);
@@ -3802,7 +3832,7 @@ classdef GUI < handle
                 obj.refreshSwarmPlot();
             end
 
-            if any(names == "Polar histogram")
+            if any(names == "PolarHistogram")
                 obj.refreshPolarHistogram();
             end
         end
@@ -4308,7 +4338,7 @@ classdef GUI < handle
 
                 % The first implementation is intentionally limited to the
                 % average-intensity source and requires completed FPM analysis.
-                available = names(k) == "Average intensity" && ...
+                available = names(k) == "AverageIntensity" && ...
                     ~isempty(image) && ~isempty(image.Order) && ~isempty(image.Azimuth);
 
                 if ~available
@@ -5364,8 +5394,8 @@ classdef GUI < handle
 
             % Show the first imported image and its stable registry-ordered stack.
             obj.Project.setActiveImage(plan(1).Image);
-            obj.Settings.View.LeftSource = "Average intensity";
-            obj.Settings.View.RightSource = "Auxiliary channels";
+            obj.Settings.View.LeftSource = "AverageIntensity";
+            obj.Settings.View.RightSource = "AuxiliaryChannels";
             clear guard;
             obj.ViewerKeys(:) = "";
             obj.refreshViewers(true);
@@ -6231,7 +6261,7 @@ classdef GUI < handle
 
                         if any(ismember([obj.Settings.View.LeftSource, ...
                                 obj.Settings.View.RightSource], ...
-                                ["Scatterplot","Swarmplot","Polar histogram"]))
+                                ["Scatterplot","Swarmplot","PolarHistogram"]))
                             obj.refreshPlots();
                         end
 
@@ -6246,7 +6276,7 @@ classdef GUI < handle
 
                         if any(ismember([obj.Settings.View.LeftSource, ...
                                 obj.Settings.View.RightSource], ...
-                                ["Scatterplot","Swarmplot","Polar histogram"]))
+                                ["Scatterplot","Swarmplot","PolarHistogram"]))
                             obj.refreshPlots();
                         end
 

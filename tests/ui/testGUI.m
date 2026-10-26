@@ -95,7 +95,7 @@ function testImageNavigationPreservesContentPanelTitles(t)
 %TESTIMAGENAVIGATIONPRESERVESCONTENTPANELTITLES Keep source-only titles.
 
 ui = t.TestData.GUI;
-ui.Project.Settings.View.LeftSource = "Average intensity";
+ui.Project.Settings.View.LeftSource = "AverageIntensity";
 ui.Project.Settings.View.RightSource = "Mask";
 
 % Use the same tree callback path as an interactive image activation.
@@ -181,7 +181,7 @@ settings = ui.Project.Settings.View;
 
 % Two image sources form one bidirectional viewport link group.
 settings.LeftSource = "Input";
-settings.RightSource = "Average intensity";
+settings.RightSource = "AverageIntensity";
 t.verifyTrue(ui.LeftViewer.hasLinks);
 t.verifyTrue(ui.RightViewer.hasLinks);
 
@@ -251,7 +251,7 @@ ui.Project.Settings.View.LeftSource = "Input";
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
 t.verifyTrue(all(string(ui.LeftViewer.ComponentColors) == "green"));
 
-ui.Project.Settings.View.LeftSource = "Average intensity";
+ui.Project.Settings.View.LeftSource = "AverageIntensity";
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
 t.verifyEqual(string(ui.LeftViewer.ComponentColors{1}),"green");
 
@@ -268,7 +268,7 @@ component = image.FrameLocations(1,1);
 image.Input.Components(component).Color = [];
 
 ui.Project.Settings.View.LeftSource = "Mask";
-ui.Project.Settings.View.LeftSource = "Average intensity";
+ui.Project.Settings.View.LeftSource = "AverageIntensity";
 
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
 t.verifyEqual(string(ui.LeftViewer.ComponentColors{1}),"gray");
@@ -289,7 +289,7 @@ source = matlabx.image.Image5D.fromComponents( ...
     {uint16(9*ones(20,30)),uint16(17*ones(20,30))}, ...
     Names=["Actin","DAPI"]);
 image.addAuxiliaryChannel(actin.ID,source,1);
-p.Settings.View.RightSource = "Auxiliary channels";
+p.Settings.View.RightSource = "AuxiliaryChannels";
 
 t.verifyEqual(ui.RightViewer.ImageData.NumComponents,2);
 t.verifyEqual([ui.RightViewer.ImageData.Components.Name],["DAPI" "Actin"]);
@@ -307,12 +307,12 @@ ui.RightViewer.ShowComposite = 'on';
 t.verifyEqual(ui.RightViewer.ShowComposite,matlab.lang.OnOffSwitchState.on);
 
 % Moving unlike sources between viewers must replace their complete color state.
-p.Settings.View.LeftSource = "Auxiliary channels";
+p.Settings.View.LeftSource = "AuxiliaryChannels";
 p.Settings.View.RightSource = "Mask";
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
 t.verifyEqual(string(ui.RightViewer.ComponentColorMode),"luts");
 p.Settings.View.LeftSource = "Mask";
-p.Settings.View.RightSource = "Auxiliary channels";
+p.Settings.View.RightSource = "AuxiliaryChannels";
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"luts");
 t.verifyEqual(string(ui.RightViewer.ComponentColorMode),"colors");
 
@@ -341,7 +341,7 @@ image.setResults(struct( ...
     'Order',0.5*ones(20,30), ...
     'Azimuth',(pi/6)*ones(20,30)));
 ui.Project.Settings.AzimuthDisplay.ScaleDownFactor = 4;
-ui.Project.Settings.View.LeftSource = "Average intensity";
+ui.Project.Settings.View.LeftSource = "AverageIntensity";
 
 tool = ui.OrientationFieldTools{1};
 field = ui.OrientationFields{1};
@@ -373,7 +373,7 @@ t.verifyEqual(string(field.Graphic.Parent.Visible),"off");
 
 ui.Project.Settings.View.LeftSource = "Mask";
 t.verifyFalse(tool.Available);
-ui.Project.Settings.View.LeftSource = "Average intensity";
+ui.Project.Settings.View.LeftSource = "AverageIntensity";
 t.verifyTrue(tool.Available);
 t.verifyEqual(string(field.Graphic.Parent.Visible),"off");
 
@@ -484,10 +484,14 @@ t.verifyEqual(ui.SettingsUI.Segmentation.Connectivity.ItemsData,[4 8]);
 t.verifyEqual(ui.Project.Settings.Segmentation.Connectivity,4);
 t.verifyClass(ui.SettingsUI.View.LeftSource,'matlab.ui.control.DropDown');
 sources = oops.config.View.sources();
+labels = oops.config.View.sourceLabels(sources);
 t.verifyEqual(string(ui.SettingsUI.View.LeftSource.Items), ...
+    labels(sources ~= "Objects"));
+t.verifyEqual(string(ui.SettingsUI.View.LeftSource.ItemsData), ...
     sources(sources ~= "Objects"));
 t.verifyEqual(string(ui.SettingsUI.View.RightSource.Items), ...
-    sources);
+    labels);
+t.verifyEqual(string(ui.SettingsUI.View.RightSource.ItemsData),sources);
 t.verifyTrue(ui.SettingsAccordion.hasItem("Scatterplot"));
 t.verifyTrue(ui.SettingsAccordion.hasItem("Swarmplot"));
 t.verifyTrue(ui.SettingsAccordion.hasItem("Orientation Lines"));
@@ -658,7 +662,7 @@ function testIndependentDisplayLimitPolicies(t)
 ui = t.TestData.GUI; p = ui.Project; image = p.ActiveImage;
 t.verifyEqual(ui.DisplayLimitUI.Intensity.ValueDisplayFormat,'%.2f');
 t.verifyEqual(ui.DisplayLimitUI.Order.ValueDisplayFormat,'%.2f');
-p.Settings.View.LeftSource = "Average intensity";
+p.Settings.View.LeftSource = "AverageIntensity";
 p.Settings.View.RightSource = "Input";
 slider = ui.DisplayLimitUI.Intensity; slider.Value = [.2 .8];
 slider.ValueChangingFcn(slider,[]);
@@ -888,7 +892,7 @@ end
 function testMasksAndPolygonsFollowCommittedMembership(t)
 %TESTMASKSANDPOLYGONSFOLLOWCOMMITTEDMEMBERSHIP Keep geometry and mask in both viewers.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
-ui.Project.Settings.View.RightSource = "Average intensity";
+ui.Project.Settings.View.RightSource = "AverageIntensity";
 ui.LeftViewer.enableTool("ObjectBoundaries");
 ui.RightViewer.enableTool("ObjectBoundaries");
 ids = oops.model.internal.ids(image.Objects);
@@ -911,7 +915,7 @@ end
 function testPolygonActivationAndSelectionStayIndependent(t)
 %TESTPOLYGONACTIVATIONANDSELECTIONSTAYINDEPENDENT Sync viewer edits and checkbox edits.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
-ui.Project.Settings.View.RightSource = "Average intensity";
+ui.Project.Settings.View.RightSource = "AverageIntensity";
 ids = oops.model.internal.ids(image.Objects);
 
 % Generic polygon interaction is installed headlessly. OOPS supplies the

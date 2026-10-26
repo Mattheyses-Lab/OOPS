@@ -325,7 +325,7 @@ auxiliary = matlabx.image.Image5D.fromComponents( ...
 % File component order does not determine the project-wide semantic order.
 im.addAuxiliaryChannel(actin.ID,auxiliary,1);
 t.verifyTrue(actin.IsAuxiliary);
-[data,info] = oops.render.source(im,"Auxiliary channels",p.Settings);
+[data,info] = oops.render.source(im,"AuxiliaryChannels",p.Settings);
 t.verifyTrue(info.Available);
 t.verifyEqual(data.NumComponents,2);
 t.verifyEqual([data.Components.Name],["DAPI" "Actin"]);
@@ -336,7 +336,7 @@ t.verifyEqual(string(info.ComponentColors),["blue" "red"]);
 % Heterogeneous source classes use one single-precision display stack.
 dapiSource = matlabx.image.Image5D.fromComponents(uint8(7*ones(10,12)));
 im.addAuxiliaryChannel(dapi.ID,dapiSource,1);
-mixed = oops.render.source(im,"Auxiliary channels",p.Settings);
+mixed = oops.render.source(im,"AuxiliaryChannels",p.Settings);
 t.verifyEqual(mixed.getPlane(1),single(7*ones(10,12)));
 t.verifyEqual(mixed.getPlane(2),single(11*ones(10,12)));
 end

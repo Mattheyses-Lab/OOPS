@@ -92,7 +92,7 @@ im.setResults(struct('AverageIntensity',I*10,'Order',reshape(linspace(0,1,100),1
 im.setDisplayRange("Intensity",[20 50]); im.setDisplayRange("Order",[.2 .8]);
 [~,a] = oops.render.source(im,"Input",p.Settings); [~,b] = oops.render.source(im,"Corrected",p.Settings);
 t.verifyEqual(b.CLim,a.CLim);
-[~,average] = oops.render.source(im,"Average intensity",p.Settings);
+[~,average] = oops.render.source(im,"AverageIntensity",p.Settings);
 t.verifyEqual(average.CLim,b.CLim);
 t.verifyEqual(im.IntensityDisplayRange,[20 50]);
 t.verifyEqual(im.OrderDisplayRange,[.2 .8]);
@@ -142,7 +142,7 @@ im.setResults(struct('AverageIntensity',average));
 im.setDisplayRange("Intensity",[10 21]);
 
 [value,bounds,ranges] = oops.render.displayLimits(im,"Intensity",p.Settings);
-[display,info] = oops.render.source(im,"Average intensity",p.Settings);
+[display,info] = oops.render.source(im,"AverageIntensity",p.Settings);
 displayPlane = display.getPlane(1);
 
 t.verifyClass(displayPlane,'uint8');
@@ -162,7 +162,7 @@ singleImage = g.addImage(matlabx.image.Image5D.fromComponents( ...
 singleImage.setResults(struct('AverageIntensity',average));
 singleImage.setDisplayRange("Intensity",[10.2 20.8]);
 [singleDisplay,singleInfo] = oops.render.source( ...
-    singleImage,"Average intensity",p.Settings);
+    singleImage,"AverageIntensity",p.Settings);
 
 t.verifyClass(singleDisplay.getPlane(1),'single');
 t.verifyEqual(singleDisplay.getPlane(1),single(average));
