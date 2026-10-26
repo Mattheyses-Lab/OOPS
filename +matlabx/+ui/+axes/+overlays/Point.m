@@ -31,14 +31,14 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
         % Normal point appearance.
         Marker (1,:) char = '+'
         MarkerSize (1,1) double {mustBePositive} = 8
-        MarkerEdgeColor = [1 1 1]
-        MarkerFaceColor = [0 0 0]
+        MarkerEdgeColor {mustBePointMarkerColor} = [1 1 1]
+        MarkerFaceColor {mustBePointMarkerColor} = 'none'
         LineWidth (1,1) double {mustBePositive} = 1
 
         % Hover appearance.
         HoverMarkerSize (1,1) double {mustBePositive} = 11
-        HoverMarkerEdgeColor = [1 1 1]
-        HoverMarkerFaceColor = [0 0 0]
+        HoverMarkerEdgeColor = []
+        HoverMarkerFaceColor = []
         HoverLineWidth (1,1) double {mustBePositive} = 1.5
 
         % Selection appearance.
@@ -56,8 +56,8 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
         HandleMarkerSize (1,1) double {mustBePositive} = 4
         HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
         HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
-        HandleMarkerEdgeColor = [0 0 0]
-        HandleMarkerFaceColor = [1 1 1]
+        HandleMarkerEdgeColor (1,3) double {mustBeBetween(HandleMarkerEdgeColor,0,1)} = [0 0 0]
+        HandleMarkerFaceColor (1,3) double {mustBeBetween(HandleMarkerFaceColor,0,1)} = [1 1 1]
     end
 
     properties (Access=private, Transient, NonCopyable)
@@ -87,20 +87,20 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
                 opts.SelectionMarkerSize (1,1) double {mustBePositive} = 8
                 opts.HandleMarkerSize (1,1) double {mustBePositive} = 4
                 opts.HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
-                opts.MarkerEdgeColor = [1 1 1]
-                opts.MarkerFaceColor = [0 0 0]
+                opts.MarkerEdgeColor {mustBePointMarkerColor} = [1 1 1]
+                opts.MarkerFaceColor {mustBePointMarkerColor} = 'none'
                 opts.LineWidth (1,1) double {mustBePositive} = 1
                 opts.HoverLineWidth (1,1) double {mustBePositive} = 1.5
                 opts.SelectionLineWidth (1,1) double {mustBePositive} = 1
                 opts.ActiveLineWidth (1,1) double {mustBePositive} = 1
                 opts.HandleMarkerStyle (1,:) char = 's'
                 opts.HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
-                opts.HoverMarkerEdgeColor = [1 1 1]
-                opts.HoverMarkerFaceColor = [0 0 0]
+                opts.HoverMarkerEdgeColor = []
+                opts.HoverMarkerFaceColor = []
                 opts.SelectionMarkerEdgeColor = [1 1 0]
                 opts.SelectionMarkerFaceColor = [0.15 0.15 0]
-                opts.HandleMarkerEdgeColor = [0 0 0]
-                opts.HandleMarkerFaceColor = [1 1 1]
+                opts.HandleMarkerEdgeColor (1,3) double {mustBeBetween(opts.HandleMarkerEdgeColor,0,1)} = [0 0 0]
+                opts.HandleMarkerFaceColor (1,3) double {mustBeBetween(opts.HandleMarkerFaceColor,0,1)} = [1 1 1]
             end
 
             obj@matlabx.ui.axes.ImageAxesOverlay(host, ...
@@ -294,6 +294,17 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
                 faceColor = obj.MarkerFaceColor;
                 lineWidth = obj.LineWidth;
             end
+            edgeColor = obj.resolveStateColor(obj.MarkerEdgeColor, ...
+                obj.SelectionMarkerEdgeColor, obj.HoverMarkerEdgeColor);
+            faceColor = obj.resolveStateColor(obj.MarkerFaceColor, ...
+                obj.SelectionMarkerFaceColor, obj.HoverMarkerFaceColor);
+        end
+
+        function color = resolveStateColor(obj, baseColor, selectionColor, hoverColor)
+        %RESOLVESTATECOLOR Apply each defined color in state-precedence order.
+            color = baseColor;
+            if obj.Selected && ~isempty(selectionColor), color = selectionColor; end
+            if obj.Hovered && ~isempty(hoverColor), color = hoverColor; end
         end
 
         function queueGeometryUpdate(obj)
@@ -308,4 +319,19 @@ classdef Point < matlabx.ui.axes.ImageAxesOverlay
             obj.PendingUpdate = false;
         end
     end
+end
+
+function mustBePointMarkerColor(value)
+%MUSTBEPOINTMARKERCOLOR Accept an RGB triplet or MATLAB's "none" value.
+    if (ischar(value) || (isstring(value) && isscalar(value))) ...
+            && strcmpi(string(value), "none")
+        return
+    end
+
+    if ~isnumeric(value) || ~isreal(value) || ~isequal(size(value), [1 3])
+        error("matlabx:ui:axes:overlays:Point:InvalidMarkerColor", ...
+            "Point marker colors must be a 1-by-3 RGB triplet or 'none'.");
+    end
+    mustBeFinite(value);
+    mustBeBetween(value, 0, 1);
 end

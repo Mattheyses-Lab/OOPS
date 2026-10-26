@@ -156,7 +156,10 @@ function testPolygonAppearanceAndHandleMarker(testCase)
     patch = findobj(ax.getAxes(), 'Tag', 'OverlayPolygon');
     marker = findobj(ax.getAxes(), 'Tag', 'OverlayPolygonHandle');
     verifyEqual(testCase, marker.Marker, 'square');
-    verifyEqual(testCase, [marker.XData marker.YData], p.Center);
+    verifyEqual(testCase, string(marker.HitTest), "on");
+    verifyEqual(testCase, string(marker.PickableParts), "visible");
+    verifyEqual(testCase, ax.Overlays.overlayForTarget(marker), p);
+    verifyEqual(testCase, [marker.XData(:) marker.YData(:)], vertices);
     verifyEqual(testCase, string(marker.Visible), "off");
     verifyEqual(testCase, patch.FaceAlpha, p.FaceAlpha);
 
@@ -167,8 +170,8 @@ function testPolygonAppearanceAndHandleMarker(testCase)
     verifyEqual(testCase, patch.LineWidth, p.SelectionLineWidth);
 
     p.Active = true;
-    verifyEqual(testCase, patch.EdgeColor, p.SelectionEdgeColor);
-    verifyEqual(testCase, patch.FaceColor, p.SelectionFaceColor);
+    verifyEqual(testCase, patch.EdgeColor, p.ActiveEdgeColor);
+    verifyEqual(testCase, patch.FaceColor, p.ActiveFaceColor);
     verifyEqual(testCase, patch.FaceAlpha, p.SelectionFaceAlpha);
     verifyEqual(testCase, patch.LineWidth, p.ActiveLineWidth);
     verifyEqual(testCase, string(marker.Visible), "on");
@@ -182,7 +185,7 @@ function testPolygonAppearanceAndHandleMarker(testCase)
     verifyEqual(testCase, marker.MarkerSize, p.HoverHandleMarkerSize);
 
     p.Vertices = vertices + 10;
-    verifyEqual(testCase, [marker.XData marker.YData], p.Center);
+    verifyEqual(testCase, [marker.XData(:) marker.YData(:)], vertices + 10);
     p.Visible = 'off';
     verifyEqual(testCase, string(patch.Visible), "off");
     verifyEqual(testCase, string(marker.Visible), "off");
@@ -253,6 +256,96 @@ function testUnifiedLineAndPointMarkers(testCase)
     verifyEqual(testCase, pointMarker.MarkerSize, pointOverlay.HandleMarkerSize);
 end
 
+function testOverlayStateColorsFallBackToBase(testCase)
+    ax = testCase.TestData.Axes;
+
+    polygon = ax.Overlays.add('Polygon', 'ID', 'polygon-color-fallback', ...
+        'Vertices', [1 1; 4 1; 4 4; 1 4], ...
+        'EdgeColor', [0.2 0.4 0.6], 'FaceColor', [0.1 0.3 0.5]);
+    polygonPatch = findobj(ax.getAxes(), 'Tag', 'OverlayPolygon');
+    polygon.ActiveEdgeColor = [];
+    polygon.ActiveFaceColor = [];
+    polygon.Active = true;
+    verifyEqual(testCase, polygonPatch.EdgeColor, polygon.EdgeColor);
+    verifyEqual(testCase, polygonPatch.FaceColor, polygon.FaceColor);
+
+    selectionEdgeColor = [0.9 0.7 0.1];
+    selectionFaceColor = [0.8 0.6 0.2];
+    polygon.SelectionEdgeColor = selectionEdgeColor;
+    polygon.SelectionFaceColor = selectionFaceColor;
+    polygon.Selected = true;
+    verifyEqual(testCase, polygonPatch.EdgeColor, selectionEdgeColor);
+    verifyEqual(testCase, polygonPatch.FaceColor, selectionFaceColor);
+
+    polygon.HoverEdgeColor = [];
+    polygon.HoverFaceColor = [];
+    polygon.Hovered = true;
+    verifyEqual(testCase, polygonPatch.EdgeColor, selectionEdgeColor);
+    verifyEqual(testCase, polygonPatch.FaceColor, selectionFaceColor);
+
+    hoverEdgeColor = [0.2 0.9 0.4];
+    hoverFaceColor = [0.3 0.8 0.5];
+    polygon.HoverEdgeColor = hoverEdgeColor;
+    polygon.HoverFaceColor = hoverFaceColor;
+    verifyEqual(testCase, polygonPatch.EdgeColor, hoverEdgeColor);
+    verifyEqual(testCase, polygonPatch.FaceColor, hoverFaceColor);
+
+    rectangle = ax.Overlays.add('Rectangle', 'ID', 'rectangle-color-fallback', ...
+        'Position', [5 5 3 2], ...
+        'EdgeColor', [0.6 0.4 0.2], 'FaceColor', [0.5 0.3 0.1]);
+    rectanglePatch = findobj(ax.getAxes(), 'Tag', 'OverlayRectangle');
+    rectangle.HoverEdgeColor = [];
+    rectangle.HoverFaceColor = [];
+    rectangle.SelectionEdgeColor = [0.9 0.8 0.1];
+    rectangle.SelectionFaceColor = [0.8 0.7 0.2];
+    rectangle.Selected = true;
+    rectangle.Hovered = true;
+    verifyEqual(testCase, rectanglePatch.EdgeColor, rectangle.SelectionEdgeColor);
+    verifyEqual(testCase, rectanglePatch.FaceColor, rectangle.SelectionFaceColor);
+
+    lineOverlay = ax.Overlays.add('Line', 'ID', 'line-color-fallback', ...
+        'Endpoints', [1 8; 5 8], 'LineColor', [0.3 0.5 0.7]);
+    lineGraphic = findobj(ax.getAxes(), 'Tag', 'OverlayLine');
+    lineOverlay.HoverLineColor = [];
+    lineOverlay.ActiveLineColor = [];
+    lineOverlay.SelectionLineColor = [0.9 0.8 0.2];
+    lineOverlay.Selected = true;
+    lineOverlay.Active = true;
+    lineOverlay.Hovered = true;
+    verifyEqual(testCase, lineGraphic.Color(1:3), lineOverlay.SelectionLineColor);
+
+    point = ax.Overlays.add('Point', 'ID', 'point-color-fallback', ...
+        'Position', [8 8], ...
+        'MarkerEdgeColor', [0.7 0.5 0.3], ...
+        'MarkerFaceColor', [0.2 0.3 0.4]);
+    pointGraphic = findobj(ax.getAxes(), 'Tag', 'OverlayPoint');
+    point.HoverMarkerEdgeColor = [];
+    point.HoverMarkerFaceColor = [];
+    point.SelectionMarkerEdgeColor = [0.8 0.7 0.1];
+    point.SelectionMarkerFaceColor = [0.7 0.6 0.2];
+    point.Selected = true;
+    point.Hovered = true;
+    verifyEqual(testCase, pointGraphic.MarkerEdgeColor, point.SelectionMarkerEdgeColor);
+    verifyEqual(testCase, pointGraphic.MarkerFaceColor, point.SelectionMarkerFaceColor);
+end
+
+function testPointAcceptsNoneMarkerColors(testCase)
+    ax = testCase.TestData.Axes;
+    ax.loadTool('Point');
+    ax.installTool('Point');
+    pointTool = ax.Tools.Point;
+    pointTool.Marker = 'o';
+    pointTool.MarkerEdgeColor = 'none';
+    pointTool.addPoint('unfilled-point', [5 5]);
+    point = ax.Overlays.get('unfilled-point');
+    pointGraphic = findobj(ax.getAxes(), 'Tag', 'OverlayPoint');
+
+    verifyEqual(testCase, string(point.MarkerEdgeColor), "none");
+    verifyEqual(testCase, string(point.MarkerFaceColor), "none");
+    verifyEqual(testCase, string(pointGraphic.MarkerEdgeColor), "none");
+    verifyEqual(testCase, string(pointGraphic.MarkerFaceColor), "none");
+end
+
 function testPolygonSelectionAndDeletion(testCase)
     ax = testCase.TestData.Axes;
     tool = ax.Tools.Polygon;
@@ -289,9 +382,30 @@ function testPolygonClickAndMarqueeRouting(testCase)
     ax.Overlays.clearActive();
     ax.Tools.RectangleSelect.enable();
     E = matlabx.ui.interaction.HubEvent(testCase.TestData.Figure,target,'Down',[]);
-    ax.Tools.Polygon.onPassiveDown(E);
-    verifyFalse(testCase, E.StopPropagation);
+    ax.routeEventToTools(E);
+    verifyTrue(testCase, E.StopPropagation);
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "a");
+
+    E = matlabx.ui.interaction.HubEvent(testCase.TestData.Figure,target,'Down',[]);
+    ax.routeEventToTools(E);
+    verifyTrue(testCase, E.StopPropagation);
     verifyEqual(testCase, ax.Overlays.getActiveID(), "");
+
+    E = matlabx.ui.interaction.HubEvent(testCase.TestData.Figure,target,'Down',[]);
+    ax.routeEventToTools(E);
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "a");
+
+    moveEvent = matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,target,'Move',[]);
+    ax.Tools.Polygon.onPassiveMove(moveEvent);
+    verifyEqual(testCase, ax.Overlays.getHoverID(Type="Polygon"), "a");
+
+    backgroundEvent = matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,ax.getAxes(),'Down',[]);
+    ax.Tools.Polygon.onPassiveDown(backgroundEvent);
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "a");
+    verifyFalse(testCase, backgroundEvent.StopPropagation);
+
     ax.Tools.Polygon.PolygonSelectionChangedFcn = ...
         @(~,data) setappdata(ax,'MarqueeSelection',data.IDs);
     % Exercise the manager query and selection used by RectangleSelect.
@@ -299,6 +413,56 @@ function testPolygonClickAndMarqueeRouting(testCase)
     ax.Overlays.setSelected(ids, Type="Polygon");
     verifyEqual(testCase, ax.Tools.Polygon.getSelectedPolygonIDs(), "a");
     verifyEqual(testCase, getappdata(ax,'MarqueeSelection'), "a");
+end
+
+function testPassiveBackgroundClickClearsActiveDrawableOverlay(testCase)
+    ax = testCase.TestData.Axes;
+    ax.loadTools({'Line','Point','Rectangle','Box'});
+    ax.installTools({'Line','Point','Rectangle','Box'});
+    tools = ax.Tools;
+    background = ax.getAxes();
+
+    tools.Line.addLine('line-background-clear', [1 1; 3 3]);
+    tools.Line.setActiveLineID('line-background-clear');
+    tools.Line.onPassiveDown(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,background,'Down',[]));
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "");
+
+    tools.Point.addPoint('point-background-clear', [4 4]);
+    tools.Point.setActivePointID('point-background-clear');
+    pointTarget = findobj(ax.getAxes(),'Tag','OverlayPoint');
+    tools.Point.onPassiveDown(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,pointTarget,'Down',[]));
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "");
+    tools.Point.setActivePointID('point-background-clear');
+    tools.Point.onPassiveDown(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,background,'Down',[]));
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "");
+
+    tools.Point.enable();
+    tools.Point.onPassiveDown(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,pointTarget,'Down',[]));
+    tools.Point.onPassiveUp(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,pointTarget,'Up',[]));
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "point-background-clear");
+    tools.Point.onPassiveDown(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,pointTarget,'Down',[]));
+    tools.Point.onPassiveUp(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,pointTarget,'Up',[]));
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "");
+    tools.Point.disable();
+
+    tools.Rectangle.addRectangle('rectangle-background-clear', [5 5 2 2]);
+    tools.Rectangle.setActiveRectangleID('rectangle-background-clear');
+    tools.Rectangle.onPassiveDown(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,background,'Down',[]));
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "");
+
+    tools.Box.addBox('box-background-clear', [8 8], 2);
+    tools.Box.setActiveBoxID('box-background-clear');
+    tools.Box.onPassiveDown(matlabx.ui.interaction.HubEvent( ...
+        testCase.TestData.Figure,background,'Down',[]));
+    verifyEqual(testCase, ax.Overlays.getActiveID(), "");
 end
 
 function testToolRemovalPreservesPolygons(testCase)

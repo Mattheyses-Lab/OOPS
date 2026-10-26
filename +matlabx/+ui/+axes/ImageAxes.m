@@ -4587,9 +4587,48 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             I = matlabx.image.Image5D.demo();
             ax = matlabx.app.quickshow(I,...
                 "Title","Overlay Demo", ...
-                "Tools",{'Zoom','Line','Point','Rectangle','Box','RectangleSelect'}, ...
+                "Tools",{'Zoom','Line','Point','Rectangle','Polygon','Box','RectangleSelect'}, ...
                 "ComponentColorMode","colors", ...
                 "Location","center");
+        end
+
+        function [ax,fig,boundaries] = demoBoundaryCollection(opts)
+        %DEMOBOUNDARYCOLLECTION Display selectable rice boundaries in four patches.
+        %
+        %   The numeric label matrix is used only for fast hit testing. Public
+        %   overlay identity remains the stable string IDs registered with the
+        %   ImageAxes overlay manager. Requires Image Processing Toolbox.
+            arguments
+                opts.Visible (1,1) matlab.lang.OnOffSwitchState = "on"
+            end
+
+            I=imread("rice.png");
+            background=imopen(I,strel('disk',15,0));
+            mask=imbinarize(I-background);
+            mask=bwareaopen(mask,50,8);
+            mask=imfill(mask,'holes');
+            components=bwconncomp(mask,8);
+            labelMatrix=uint32(labelmatrix(components));
+            n=components.NumObjects;
+            ids="rice-"+(1:n);
+            vertices=cell(1,n);
+            for i=1:n
+                component=false(size(mask));
+                component(components.PixelIdxList{i})=true;
+                loop=bwboundaries(component,8,'noholes','TraceStyle','pixeledge');
+                vertices{i}=loop{1}(:,[2 1]);
+            end
+
+            [ax,fig]=matlabx.app.quickshow(I,Title="Boundary Collection Demo", ...
+                Tools={'Zoom','Overlays','Boundaries','RectangleSelect'}, ...
+                WindowStyle="normal",Visible="off");
+            boundaries=ax.Overlays.createBoundaryCollection();
+            colors=hsv(max(n,1));
+            boundaries.setData(ids,vertices,HitMap=labelMatrix,Colors=colors(1:n,:));
+            ax.Tools.RectangleSelect.TargetTypes="Boundary";
+            ax.Tools.Boundaries.enable();
+            movegui(fig,"center");
+            fig.Visible=opts.Visible;
         end
 
 

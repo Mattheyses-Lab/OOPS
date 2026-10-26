@@ -56,6 +56,7 @@ classdef Line < matlabx.ui.axes.AxesTool
         DrawingLineID (1,1) string = ""
         PendingDragPart (1,1) string = ""
         DragStartFigurePoint (1,2) double = [NaN NaN]
+        DeactivateOnClickRelease (1,1) logical = false
         DragStartCursor (1,2) double = [NaN NaN]
         DragStartEndpoints (2,2) double = [NaN NaN; NaN NaN]
         DragStartUnitVector (1,2) double = [NaN NaN]
@@ -188,7 +189,8 @@ classdef Line < matlabx.ui.axes.AxesTool
             B = struct( ...
                 "ToggleTool", obj.ToggleHotkey, ...
                 "CreateLine", "click-drag image background while Line is enabled", ...
-                "Activate", "click line", ...
+                "DeactivateOnBackground", "click image background without dragging", ...
+                "Activate", "click to toggle active state; drag a handle to edit", ...
                 "ToggleSelection", "shift+extendclick line", ...
                 "ClearSelection", "shift+doubleclick image background", ...
                 "Deactivate", "alt+click line body", ...
@@ -260,6 +262,7 @@ classdef Line < matlabx.ui.axes.AxesTool
                     return
                 end
 
+                obj.DeactivateOnClickRelease = false;
                 obj.startDraggingLine();
                 return
             end
@@ -276,6 +279,8 @@ classdef Line < matlabx.ui.axes.AxesTool
                 if strlength(id) > 0
                     obj.previewDrawLine();
                     obj.emitMoveCommitted(id);
+                else
+                    obj.deactivateActive();
                 end
                 obj.setMode('DrawingLine', false);
                 obj.setDrawingLineHandlesVisible("off");
@@ -286,6 +291,11 @@ classdef Line < matlabx.ui.axes.AxesTool
             end
 
             if obj.Mode.PrimedForDrag
+                if obj.DeactivateOnClickRelease
+                    obj.DeactivateOnClickRelease = false;
+                    obj.deactivateActive();
+                    return
+                end
                 obj.setMode('PrimedForDrag', false);
                 obj.PendingDragPart = "";
                 obj.clearDragStart();
@@ -293,6 +303,7 @@ classdef Line < matlabx.ui.axes.AxesTool
             end
 
             if obj.isDragging()
+                obj.DeactivateOnClickRelease = false;
                 id = obj.activeLineId();
                 obj.dragActiveLine();
                 obj.clearDragModes();
@@ -305,8 +316,15 @@ classdef Line < matlabx.ui.axes.AxesTool
     methods
         function onPassiveDown(obj, E)
         %ONPASSIVEDOWN Handle clicks on existing Line overlays.
-            overlay = obj.lineOverlayForTarget(E.Target);
-            if isempty(overlay) || ~obj.hasLine(overlay.ID)
+            overlay = obj.Host.Overlays.overlayForTarget(E.Target);
+            if isempty(overlay)
+                if E.MouseChord == "click" && ~obj.Enabled ...
+                        && ~obj.Host.toolEnabled("RectangleSelect")
+                    obj.deactivateActive();
+                end
+                return
+            end
+            if ~isa(overlay, 'matlabx.ui.axes.overlays.Line') || ~obj.hasLine(overlay.ID)
                 return
             end
 
@@ -490,8 +508,15 @@ classdef Line < matlabx.ui.axes.AxesTool
 
             switch E.MouseChord
                 case "click"
-                    obj.setActive(id);
-                    if obj.Enabled && any(part == ["midpoint", "endpoint1", "endpoint2"])
+                    wasActive = obj.activeLineId() == id;
+                    draggablePart = any(part == ["midpoint", "endpoint1", "endpoint2"]);
+                    obj.DeactivateOnClickRelease = obj.Enabled && wasActive && draggablePart;
+                    if wasActive && (~obj.Enabled || ~draggablePart)
+                        obj.deactivateActive();
+                    else
+                        obj.setActive(id);
+                    end
+                    if obj.Enabled && draggablePart
                         obj.primeDrag(part, E);
                     end
 
@@ -535,6 +560,7 @@ classdef Line < matlabx.ui.axes.AxesTool
 
         function deactivateActive(obj)
         %DEACTIVATEACTIVE Clear active line state and emit empty activation.
+            obj.DeactivateOnClickRelease = false;
             if strlength(obj.activeLineId()) == 0
                 return
             end

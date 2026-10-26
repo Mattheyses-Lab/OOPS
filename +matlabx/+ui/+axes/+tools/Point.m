@@ -53,6 +53,7 @@ classdef Point < matlabx.ui.axes.AxesTool
         PointIds (1,:) string = string.empty(1,0)
         PointPositions (:,2) double = zeros(0,2)
         DragStartFigurePoint (1,2) double = [NaN NaN]
+        DeactivateOnClickRelease (1,1) logical = false
     end
 
     methods
@@ -162,7 +163,8 @@ classdef Point < matlabx.ui.axes.AxesTool
             B = struct( ...
                 "ToggleTool", obj.ToggleHotkey, ...
                 "CreatePoint", "click image background while Point is enabled", ...
-                "ActivateAndDrag", "click point, then drag", ...
+                "DeactivateOnBackground", "click image background while Point is disabled", ...
+                "ActivateAndDrag", "click to toggle active state; drag to move", ...
                 "ToggleSelection", "shift+extendclick point", ...
                 "ClearSelection", "shift+doubleclick image background while Point is enabled", ...
                 "Deactivate", "alt+click point", ...
@@ -218,8 +220,15 @@ classdef Point < matlabx.ui.axes.AxesTool
     methods
         function onPassiveDown(obj, E)
         %ONPASSIVEDOWN Handle clicks on existing Point overlays.
-            overlay = obj.pointOverlayForTarget(E.Target);
-            if isempty(overlay) || ~obj.hasPoint(overlay.ID)
+            overlay = obj.Host.Overlays.overlayForTarget(E.Target);
+            if isempty(overlay)
+                if E.MouseChord == "click" && ~obj.Enabled ...
+                        && ~obj.Host.toolEnabled("RectangleSelect")
+                    obj.deactivateActive();
+                end
+                return
+            end
+            if ~isa(overlay, 'matlabx.ui.axes.overlays.Point') || ~obj.hasPoint(overlay.ID)
                 return
             end
 
@@ -234,6 +243,7 @@ classdef Point < matlabx.ui.axes.AxesTool
                     return
                 end
 
+                obj.DeactivateOnClickRelease = false;
                 obj.startDraggingPoint(obj.activePointIdx());
                 return
             end
@@ -255,12 +265,18 @@ classdef Point < matlabx.ui.axes.AxesTool
         function onPassiveUp(obj,~)
         %ONPASSIVEUP Commit or cancel point drag state on mouse release.
             if obj.Mode.PrimedForDrag
+                if obj.DeactivateOnClickRelease
+                    obj.DeactivateOnClickRelease = false;
+                    obj.deactivateActive();
+                    return
+                end
                 obj.setMode('PrimedForDrag', false);
                 obj.clearDragStart();
                 return
             end
 
             if obj.Mode.DragPoint
+                obj.DeactivateOnClickRelease = false;
                 obj.stopDraggingPoint(obj.activePointIdx());
             end
         end
@@ -399,8 +415,14 @@ classdef Point < matlabx.ui.axes.AxesTool
                     obj.toggleSelection(id, Emit=true);
 
                 case "click"
-                    obj.setActive(id);
-                    obj.primeDrag(E);
+                    wasActive = obj.activePointId() == id;
+                    obj.DeactivateOnClickRelease = obj.Enabled && wasActive;
+                    if ~obj.Enabled && wasActive
+                        obj.deactivateActive();
+                    else
+                        obj.setActive(id);
+                        obj.primeDrag(E);
+                    end
             end
         end
 
@@ -417,6 +439,7 @@ classdef Point < matlabx.ui.axes.AxesTool
 
         function deactivateActive(obj)
         %DEACTIVATEACTIVE Clear active point state and emit empty activation.
+            obj.DeactivateOnClickRelease = false;
             if strlength(obj.activePointId()) == 0
                 return
             end

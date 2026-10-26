@@ -109,6 +109,18 @@ function testBatchManagerMethods(t)
     t.verifyEqual(t.TestData.Count,2);
 end
 
+function testTypeRestrictedClearPreservesOtherTypes(t)
+    manager = t.TestData.Axes.Overlays;
+    manager.add('Polygon','ID','polygon','Vertices',[10 10; 12 10; 11 12]);
+    manager.setSelected(["a" "box" "polygon"]);
+    resetCount(t);
+
+    manager.clearSelection(Type=["Point" "Box"]);
+
+    t.verifyEqual(manager.getSelectedIDs(), "polygon");
+    t.verifyEqual(t.TestData.Count, 1);
+end
+
 function select(t,mode,rect)
     t.TestData.Axes.Overlays.selectInsideRectangle(rect,Mode=mode);
 end
