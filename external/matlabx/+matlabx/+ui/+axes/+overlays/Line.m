@@ -38,13 +38,13 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
 
     properties (SetObservable, AbortSet)
         % Normal line appearance.
-        LineColor = [1 1 1]
+        LineColor (1,3) double {mustBeBetween(LineColor,0,1)} = [1 1 1]
         LineAlpha (1,1) double {mustBeGreaterThanOrEqual(LineAlpha,0), mustBeLessThanOrEqual(LineAlpha,1)} = 1
         LineWidth (1,1) double {mustBePositive} = 1
         LineStyle (1,:) char = '-'
 
         % Hover appearance.
-        HoverLineColor = [1 1 1]
+        HoverLineColor = []
         HoverLineAlpha (1,1) double {mustBeGreaterThanOrEqual(HoverLineAlpha,0), mustBeLessThanOrEqual(HoverLineAlpha,1)} = 1
         HoverLineWidth (1,1) double {mustBePositive} = 1
 
@@ -54,7 +54,7 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
         SelectionLineWidth (1,1) double {mustBePositive} = 1
 
         % Active appearance.
-        ActiveLineColor = [1 1 1]
+        ActiveLineColor = []
         ActiveLineAlpha (1,1) double {mustBeGreaterThanOrEqual(ActiveLineAlpha,0), mustBeLessThanOrEqual(ActiveLineAlpha,1)} = 1
         ActiveLineWidth (1,1) double {mustBePositive} = 1
 
@@ -63,8 +63,8 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
         HandleMarkerSize (1,1) double {mustBePositive} = 4
         HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
         HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
-        HandleMarkerEdgeColor = [0 0 0]
-        HandleMarkerFaceColor = [1 1 1]
+        HandleMarkerEdgeColor (1,3) double {mustBeBetween(HandleMarkerEdgeColor,0,1)} = [0 0 0]
+        HandleMarkerFaceColor (1,3) double {mustBeBetween(HandleMarkerFaceColor,0,1)} = [1 1 1]
         HitAreaWidth (1,1) double {mustBePositive} = 10
 
         HandlesVisible (1,1) matlab.lang.OnOffSwitchState = "on"
@@ -94,25 +94,25 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
                 opts.ButtonDownFcn = []
                 opts.ID (1,1) string = ""
                 opts.Label (1,1) string = ""
-                opts.LineColor = [1 1 1]
+                opts.LineColor (1,3) double {mustBeBetween(opts.LineColor,0,1)} = [1 1 1]
                 opts.LineAlpha (1,1) double {mustBeGreaterThanOrEqual(opts.LineAlpha,0), mustBeLessThanOrEqual(opts.LineAlpha,1)} = 1
                 opts.LineWidth (1,1) double {mustBePositive} = 1
                 opts.LineStyle (1,:) char = '-'
-                opts.HoverLineColor = [1 1 1]
+                opts.HoverLineColor = []
                 opts.HoverLineAlpha (1,1) double {mustBeBetween(opts.HoverLineAlpha,0,1)} = 1
                 opts.HoverLineWidth (1,1) double {mustBePositive} = 1
                 opts.SelectionLineColor = [1 1 0]
                 opts.SelectionLineAlpha (1,1) double {mustBeBetween(opts.SelectionLineAlpha,0,1)} = 1
                 opts.SelectionLineWidth (1,1) double {mustBePositive} = 1
-                opts.ActiveLineColor = [1 1 1]
+                opts.ActiveLineColor = []
                 opts.ActiveLineAlpha (1,1) double {mustBeBetween(opts.ActiveLineAlpha,0,1)} = 1
                 opts.ActiveLineWidth (1,1) double {mustBePositive} = 1
                 opts.HandleMarkerStyle (1,:) char = 's'
                 opts.HandleMarkerSize (1,1) double {mustBePositive} = 4
                 opts.HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
                 opts.HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
-                opts.HandleMarkerEdgeColor = [0 0 0]
-                opts.HandleMarkerFaceColor = [1 1 1]
+                opts.HandleMarkerEdgeColor (1,3) double {mustBeBetween(opts.HandleMarkerEdgeColor,0,1)} = [0 0 0]
+                opts.HandleMarkerFaceColor (1,3) double {mustBeBetween(opts.HandleMarkerFaceColor,0,1)} = [1 1 1]
                 opts.HitAreaWidth (1,1) double {mustBePositive} = 10
                 opts.C = "all"
                 opts.Z = "all"
@@ -414,6 +414,16 @@ classdef Line < matlabx.ui.axes.ImageAxesOverlay
                 lineAlpha = obj.LineAlpha;
                 lineWidth = obj.LineWidth;
             end
+            lineColor = obj.resolveStateColor(obj.LineColor, obj.SelectionLineColor, ...
+                obj.ActiveLineColor, obj.HoverLineColor);
+        end
+
+        function color = resolveStateColor(obj, baseColor, selectionColor, activeColor, hoverColor)
+        %RESOLVESTATECOLOR Apply each defined color in state-precedence order.
+            color = baseColor;
+            if obj.Selected && ~isempty(selectionColor), color = selectionColor; end
+            if obj.Active && ~isempty(activeColor), color = activeColor; end
+            if obj.Hovered && ~isempty(hoverColor), color = hoverColor; end
         end
 
         function [x,y] = hitPatchCoordinates(obj, p1, p2)

@@ -1,9 +1,12 @@
 classdef ImageAxesOverlayManager < handle
 %IMAGEAXESOVERLAYMANAGER Registry and state manager for ImageAxes overlays.
 %
-%   The manager owns overlay lifetime and cross-overlay state such as active,
-%   hovered, and selected IDs. Tools remain controllers: they decide when to
-%   create, drag, select, activate, or delete overlays.
+%   The manager owns overlay lifetime and cross-overlay state. Active and
+%   hover state are global: at most one overlay of any type can be active and
+%   one can be hovered. Selection can contain overlays of multiple types.
+%   Type arguments filter these states; they do not create per-type active or
+%   hover slots. Tools remain controllers: they decide when to create, drag,
+%   select, activate, or delete overlays.
 
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
@@ -27,6 +30,7 @@ classdef ImageAxesOverlayManager < handle
 
     properties (Access=private)
         Registry
+        BoundaryCollections cell = {}
         ActiveID (1,1) string = ""
         HoverID (1,1) string = ""
         SelectedIDs (1,:) string = string.empty(1,0)
@@ -45,6 +49,44 @@ classdef ImageAxesOverlayManager < handle
         %IMAGEAXESOVERLAYMANAGER Create an overlay manager for one host.
             obj.Host = host;
             obj.Registry = containers.Map('KeyType', 'char', 'ValueType', 'any');
+        end
+
+        function delete(obj)
+        %DELETE Release shared renderers owned by this manager.
+            for i=numel(obj.BoundaryCollections):-1:1
+                collection=obj.BoundaryCollections{i};
+                if ~isempty(collection) && isvalid(collection), delete(collection); end
+            end
+            obj.BoundaryCollections={};
+        end
+
+        function collection = createBoundaryCollection(obj)
+        %CREATEBOUNDARYCOLLECTION Create and retain a shared boundary renderer.
+            collection=matlabx.ui.axes.BoundaryCollection(obj.Host);
+            obj.BoundaryCollections{end+1}=collection;
+        end
+
+        function collections = getBoundaryCollections(obj)
+        %GETBOUNDARYCOLLECTIONS Return valid shared boundary renderers.
+            keep=cellfun(@(x) ~isempty(x)&&isvalid(x),obj.BoundaryCollections);
+            obj.BoundaryCollections=obj.BoundaryCollections(keep);
+            collections=obj.BoundaryCollections;
+        end
+
+        function collection = boundaryCollectionForTarget(obj,target)
+        %BOUNDARYCOLLECTIONFORTARGET Resolve a shared patch target.
+            collection=[];
+            collections=obj.getBoundaryCollections();
+            for i=1:numel(collections)
+                if collections{i}.ownsTarget(target), collection=collections{i}; return; end
+            end
+        end
+
+        function setBoundaryCollectionsVisible(obj,value)
+        %SETBOUNDARYCOLLECTIONSVISIBLE Set independent collection visibility.
+            value=matlab.lang.OnOffSwitchState(value);
+            collections=obj.getBoundaryCollections();
+            for i=1:numel(collections), collections{i}.Visible=value; end
         end
 
         function overlay = add(obj, typeOrOverlay, varargin)
@@ -215,7 +257,7 @@ classdef ImageAxesOverlayManager < handle
         end
 
         function setActive(obj, id)
-        %SETACTIVE Make one overlay active and clear prior active state.
+        %SETACTIVE Make one overlay globally active and clear the prior active overlay.
             id = obj.normalizeId(id);
             if strlength(id) > 0 && ~obj.has(id)
                 return
@@ -310,7 +352,7 @@ classdef ImageAxesOverlayManager < handle
             arguments
                 obj
                 ids
-                opts.Type (1,1) string = ""
+                opts.Type (1,:) string = ""
             end
 
             ids = unique(obj.normalizeIds(ids), "stable");
@@ -381,7 +423,7 @@ classdef ImageAxesOverlayManager < handle
         %CLEARSELECTION Clear selected overlays, optionally filtered by Type.
             arguments
                 obj
-                opts.Type (1,1) string = ""
+                opts.Type (1,:) string = ""
             end
 
             obj.setSelected(string.empty(1,0), Type=opts.Type);
@@ -391,7 +433,7 @@ classdef ImageAxesOverlayManager < handle
         %GETSELECTEDIDS Return selected overlay IDs, optionally filtered by Type.
             arguments
                 obj
-                opts.Type (1,1) string = ""
+                opts.Type (1,:) string = ""
             end
 
             ids = obj.filterIDsByType(obj.SelectedIDs, opts.Type);

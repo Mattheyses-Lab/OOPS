@@ -53,6 +53,7 @@ classdef Box < matlabx.ui.axes.AxesTool
         % track box IDs in parallel with overlay handles
         BoxIds (1,:) string = string.empty(1,0)
         DragStartFigurePoint (1,2) double = [NaN NaN]
+        DeactivateOnClickRelease (1,1) logical = false
     end
 
     % Box Settings/Info
@@ -177,7 +178,8 @@ classdef Box < matlabx.ui.axes.AxesTool
             B = struct( ...
                 "ToggleTool", obj.ToggleHotkey, ...
                 "CreateBox", "click image background while Box is enabled", ...
-                "ActivateAndDrag", "click box, then drag", ...
+                "DeactivateOnBackground", "click image background while Box is disabled", ...
+                "ActivateAndDrag", "click to toggle active state; drag to move", ...
                 "ToggleSelection", "shift+extendclick box", ...
                 "Deactivate", "alt+click box", ...
                 "DeleteBox", "control+contextclick box");
@@ -243,10 +245,16 @@ classdef Box < matlabx.ui.axes.AxesTool
 
             % Box overlay clicks handled by overlay lookup (drag/delete)
             overlay = obj.Host.Overlays.overlayForTarget(E.Target);
-            if isa(overlay, 'matlabx.ui.axes.overlays.Box') && obj.hasBox(overlay.ID)
-                obj.boxClickedById(overlay.ID,E);
-                E.stop();
+            if isempty(overlay)
+                if E.MouseChord == "click" && ~obj.Enabled ...
+                        && ~obj.Host.toolEnabled("RectangleSelect")
+                    obj.deactivateActive();
+                end
+                return
             end
+            if ~isa(overlay, 'matlabx.ui.axes.overlays.Box') || ~obj.hasBox(overlay.ID), return; end
+            obj.boxClickedById(overlay.ID,E);
+            E.stop();
         end
 
         function onPassiveMove(obj,E)
@@ -258,6 +266,7 @@ classdef Box < matlabx.ui.axes.AxesTool
                     return
                 end
 
+                obj.DeactivateOnClickRelease = false;
                 % start dragging once the cursor has moved far enough on screen
                 obj.startDraggingBox(obj.activeBoxIdx());
                 return
@@ -286,6 +295,11 @@ classdef Box < matlabx.ui.axes.AxesTool
         %ONPASSIVEUP Commit or cancel box drag state on mouse release.
 
             if obj.Mode.PrimedForDrag
+                if obj.DeactivateOnClickRelease
+                    obj.DeactivateOnClickRelease = false;
+                    obj.deactivateActive();
+                    return
+                end
                 % no longer primed for drag
                 obj.setMode('PrimedForDrag',false);
                 obj.clearDragStart();
@@ -293,6 +307,7 @@ classdef Box < matlabx.ui.axes.AxesTool
             end
 
             if obj.Mode.DragBox
+                obj.DeactivateOnClickRelease = false;
                 obj.stopDraggingBox(obj.activeBoxIdx());
             end
         end
@@ -466,8 +481,14 @@ classdef Box < matlabx.ui.axes.AxesTool
                     obj.toggleSelection(id, 'Emit', true);
 
                 case "click"
-                    obj.setActive(id);
-                    obj.primeDrag(E);
+                    wasActive = obj.activeBoxId() == id;
+                    obj.DeactivateOnClickRelease = obj.Enabled && wasActive;
+                    if ~obj.Enabled && wasActive
+                        obj.deactivateActive();
+                    else
+                        obj.setActive(id);
+                        obj.primeDrag(E);
+                    end
             end
         end
 
@@ -492,6 +513,7 @@ classdef Box < matlabx.ui.axes.AxesTool
 
         function deactivateActive(obj)
         %DEACTIVATEACTIVE Clear active box state and emit empty activation.
+            obj.DeactivateOnClickRelease = false;
             if strlength(obj.activeBoxId()) == 0
                 return
             end

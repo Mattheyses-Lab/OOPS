@@ -39,31 +39,31 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
 
     properties (SetObservable, AbortSet)
         % Normal rectangle appearance.
-        EdgeColor = [1 1 1]
+        EdgeColor (1,3) double {mustBeBetween(EdgeColor,0,1)} = [1 1 1]
         EdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(EdgeAlpha,0), mustBeLessThanOrEqual(EdgeAlpha,1)} = 1
-        FaceColor = [1 1 1]
+        FaceColor (1,3) double {mustBeBetween(FaceColor,0,1)} = [1 1 1]
         FaceAlpha (1,1) double {mustBeGreaterThanOrEqual(FaceAlpha,0), mustBeLessThanOrEqual(FaceAlpha,1)} = 0
         LineWidth (1,1) double {mustBePositive} = 1
         LineStyle (1,:) char = '-'
 
         % Hover appearance.
-        HoverEdgeColor = [1 1 1]
+        HoverEdgeColor = []
         HoverEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(HoverEdgeAlpha,0), mustBeLessThanOrEqual(HoverEdgeAlpha,1)} = 1
-        HoverFaceColor = [1 1 1]
+        HoverFaceColor = []
         HoverFaceAlpha (1,1) double {mustBeGreaterThanOrEqual(HoverFaceAlpha,0), mustBeLessThanOrEqual(HoverFaceAlpha,1)} = 0
         HoverLineWidth (1,1) double {mustBePositive} = 1
 
         % Selection appearance.
         SelectionEdgeColor = [1 1 0]
         SelectionEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(SelectionEdgeAlpha,0), mustBeLessThanOrEqual(SelectionEdgeAlpha,1)} = 1
-        SelectionFaceColor = [1 1 1]
+        SelectionFaceColor = []
         SelectionFaceAlpha (1,1) double {mustBeGreaterThanOrEqual(SelectionFaceAlpha,0), mustBeLessThanOrEqual(SelectionFaceAlpha,1)} = 0
         SelectionLineWidth (1,1) double {mustBePositive} = 1
 
         % Active appearance.
-        ActiveEdgeColor = [1 1 1]
+        ActiveEdgeColor = []
         ActiveEdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(ActiveEdgeAlpha,0), mustBeLessThanOrEqual(ActiveEdgeAlpha,1)} = 1
-        ActiveFaceColor = [1 1 1]
+        ActiveFaceColor = []
         ActiveFaceAlpha (1,1) double {mustBeGreaterThanOrEqual(ActiveFaceAlpha,0), mustBeLessThanOrEqual(ActiveFaceAlpha,1)} = 0
         ActiveLineWidth (1,1) double {mustBePositive} = 1
 
@@ -72,8 +72,8 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
         HandleMarkerSize (1,1) double {mustBePositive} = 4
         HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
         HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
-        HandleMarkerEdgeColor = [0 0 0]
-        HandleMarkerFaceColor = [1 1 1]
+        HandleMarkerEdgeColor (1,3) double {mustBeBetween(HandleMarkerEdgeColor,0,1)} = [0 0 0]
+        HandleMarkerFaceColor (1,3) double {mustBeBetween(HandleMarkerFaceColor,0,1)} = [1 1 1]
 
         HandlesVisible (1,1) matlab.lang.OnOffSwitchState = "on"
         % Internal drawing override used before a new overlay becomes active.
@@ -97,33 +97,33 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
                 opts.ButtonDownFcn = []
                 opts.ID (1,1) string = ""
                 opts.Label (1,1) string = ""
-                opts.EdgeColor = [1 1 1]
+                opts.EdgeColor (1,3) double {mustBeBetween(opts.EdgeColor,0,1)} = [1 1 1]
                 opts.EdgeAlpha (1,1) double {mustBeGreaterThanOrEqual(opts.EdgeAlpha,0), mustBeLessThanOrEqual(opts.EdgeAlpha,1)} = 1
                 opts.LineWidth (1,1) double {mustBePositive} = 1
                 opts.LineStyle (1,:) char = '-'
-                opts.FaceColor = [1 1 1]
+                opts.FaceColor (1,3) double {mustBeBetween(opts.FaceColor,0,1)} = [1 1 1]
                 opts.FaceAlpha (1,1) double {mustBeGreaterThanOrEqual(opts.FaceAlpha,0), mustBeLessThanOrEqual(opts.FaceAlpha,1)} = 0
-                opts.HoverEdgeColor = [1 1 1]
+                opts.HoverEdgeColor = []
                 opts.HoverEdgeAlpha (1,1) double {mustBeBetween(opts.HoverEdgeAlpha,0,1)} = 1
-                opts.HoverFaceColor = [1 1 1]
+                opts.HoverFaceColor = []
                 opts.HoverFaceAlpha (1,1) double {mustBeBetween(opts.HoverFaceAlpha,0,1)} = 0
                 opts.HoverLineWidth (1,1) double {mustBePositive} = 1
                 opts.SelectionEdgeColor = [1 1 0]
                 opts.SelectionEdgeAlpha (1,1) double {mustBeBetween(opts.SelectionEdgeAlpha,0,1)} = 1
-                opts.SelectionFaceColor = [1 1 1]
+                opts.SelectionFaceColor = []
                 opts.SelectionFaceAlpha (1,1) double {mustBeBetween(opts.SelectionFaceAlpha,0,1)} = 0
                 opts.SelectionLineWidth (1,1) double {mustBePositive} = 1
-                opts.ActiveEdgeColor = [1 1 1]
+                opts.ActiveEdgeColor = []
                 opts.ActiveEdgeAlpha (1,1) double {mustBeBetween(opts.ActiveEdgeAlpha,0,1)} = 1
-                opts.ActiveFaceColor = [1 1 1]
+                opts.ActiveFaceColor = []
                 opts.ActiveFaceAlpha (1,1) double {mustBeBetween(opts.ActiveFaceAlpha,0,1)} = 0
                 opts.ActiveLineWidth (1,1) double {mustBePositive} = 1
                 opts.HandleMarkerStyle (1,:) char = 's'
                 opts.HandleMarkerSize (1,1) double {mustBePositive} = 4
                 opts.HoverHandleMarkerSize (1,1) double {mustBePositive} = 5
                 opts.HandleMarkerLineWidth (1,1) double {mustBePositive} = 0.5
-                opts.HandleMarkerEdgeColor = [0 0 0]
-                opts.HandleMarkerFaceColor = [1 1 1]
+                opts.HandleMarkerEdgeColor (1,3) double {mustBeBetween(opts.HandleMarkerEdgeColor,0,1)} = [0 0 0]
+                opts.HandleMarkerFaceColor (1,3) double {mustBeBetween(opts.HandleMarkerFaceColor,0,1)} = [1 1 1]
                 opts.C = "all"
                 opts.Z = "all"
                 opts.T = "all"
@@ -451,6 +451,18 @@ classdef Rectangle < matlabx.ui.axes.ImageAxesOverlay
                 faceAlpha = obj.FaceAlpha;
                 lineWidth = obj.LineWidth;
             end
+            edgeColor = obj.resolveStateColor(obj.EdgeColor, obj.SelectionEdgeColor, ...
+                obj.ActiveEdgeColor, obj.HoverEdgeColor);
+            faceColor = obj.resolveStateColor(obj.FaceColor, obj.SelectionFaceColor, ...
+                obj.ActiveFaceColor, obj.HoverFaceColor);
+        end
+
+        function color = resolveStateColor(obj, baseColor, selectionColor, activeColor, hoverColor)
+        %RESOLVESTATECOLOR Apply each defined color in state-precedence order.
+            color = baseColor;
+            if obj.Selected && ~isempty(selectionColor), color = selectionColor; end
+            if obj.Active && ~isempty(activeColor), color = activeColor; end
+            if obj.Hovered && ~isempty(hoverColor), color = hoverColor; end
         end
 
         function value = normalizedPosition(~, value)

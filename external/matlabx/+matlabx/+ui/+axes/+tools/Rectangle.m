@@ -56,6 +56,7 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
         HoverPart (1,1) string = ""
         PendingDragPart (1,1) string = ""
         DragStartFigurePoint (1,2) double = [NaN NaN]
+        DeactivateOnClickRelease (1,1) logical = false
         DragStartCursor (1,2) double = [NaN NaN]
         DragStartPosition (1,4) double = [NaN NaN NaN NaN]
     end
@@ -175,7 +176,8 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
             B = struct( ...
                 "ToggleTool", obj.ToggleHotkey, ...
                 "CreateRectangle", "click-drag image background while Rectangle is enabled", ...
-                "Activate", "click rectangle", ...
+                "DeactivateOnBackground", "click image background without dragging", ...
+                "Activate", "click to toggle active state; drag to edit", ...
                 "ToggleSelection", "shift+extendclick rectangle", ...
                 "ClearSelection", "shift+doubleclick image background", ...
                 "Deactivate", "alt+click rectangle", ...
@@ -238,6 +240,7 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
                     return
                 end
 
+                obj.DeactivateOnClickRelease = false;
                 obj.startDraggingRectangle();
                 return
             end
@@ -254,6 +257,8 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
                 if strlength(id) > 0
                     obj.previewDrawRectangle(E);
                     obj.emitMoveCommitted(id);
+                else
+                    obj.deactivateActive();
                 end
                 obj.setMode('DrawingRectangle', false);
                 obj.setDrawingRectangleHandlesVisible("off");
@@ -264,6 +269,11 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
             end
 
             if obj.Mode.PrimedForDrag
+                if obj.DeactivateOnClickRelease
+                    obj.DeactivateOnClickRelease = false;
+                    obj.deactivateActive();
+                    return
+                end
                 obj.setMode('PrimedForDrag', false);
                 obj.PendingDragPart = "";
                 obj.clearDragStart();
@@ -271,6 +281,7 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
             end
 
             if obj.isDragging()
+                obj.DeactivateOnClickRelease = false;
                 id = obj.activeRectangleId();
                 obj.dragActiveRectangle(E);
                 obj.clearDragModes();
@@ -283,8 +294,15 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
     methods
         function onPassiveDown(obj, E)
         %ONPASSIVEDOWN Handle clicks on existing Rectangle overlays.
-            overlay = obj.rectangleOverlayForTarget(E.Target);
-            if isempty(overlay) || ~obj.hasRectangle(overlay.ID)
+            overlay = obj.Host.Overlays.overlayForTarget(E.Target);
+            if isempty(overlay)
+                if E.MouseChord == "click" && ~obj.Enabled ...
+                        && ~obj.Host.toolEnabled("RectangleSelect")
+                    obj.deactivateActive();
+                end
+                return
+            end
+            if ~isa(overlay, 'matlabx.ui.axes.overlays.Rectangle') || ~obj.hasRectangle(overlay.ID)
                 return
             end
 
@@ -462,7 +480,13 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
 
             switch E.MouseChord
                 case "click"
-                    obj.setActive(id);
+                    wasActive = obj.activeRectangleId() == id;
+                    obj.DeactivateOnClickRelease = obj.Enabled && wasActive;
+                    if ~obj.Enabled && wasActive
+                        obj.deactivateActive();
+                    else
+                        obj.setActive(id);
+                    end
                     if obj.Enabled
                         obj.primeDrag(part, E);
                     end
@@ -491,6 +515,7 @@ classdef Rectangle < matlabx.ui.axes.AxesTool
 
         function deactivateActive(obj)
         %DEACTIVATEACTIVE Clear active rectangle state and emit empty activation.
+            obj.DeactivateOnClickRelease = false;
             if strlength(obj.activeRectangleId()) == 0
                 return
             end
