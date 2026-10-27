@@ -34,8 +34,7 @@ classdef GUI < handle
         ObjectViewerMidlineTools cell = {}
         OrientationFields cell = {}
         OrientationFieldTools cell = {}
-        PolygonTools cell = {}
-        ObjectBoundaryTools cell = {}
+        ObjectBoundaryCollections cell = {}
         ScatterRenderer matlabx.ui.axes.plot.ScatterRenderer
         SwarmRenderer matlabx.ui.axes.plot.ViolinRenderer
         PolarHistogramRenderer oops.plot.PolarHistogramRenderer
@@ -443,17 +442,11 @@ classdef GUI < handle
                     end
                 end
 
-                % Object-facing facades release callbacks before their borrowed
-                % headless Polygon controllers are destroyed.
-                for tool = obj(k).ObjectBoundaryTools
-                    if ~isempty(tool{1}) && isvalid(tool{1})
-                        delete(tool{1});
-                    end
-                end
-
-                for tool = obj(k).PolygonTools
-                    if ~isempty(tool{1}) && isvalid(tool{1})
-                        delete(tool{1});
+                % Batched boundary renderers release their logical overlays and
+                % shared graphics while the ImageAxes hierarchy is still alive.
+                for collection = obj(k).ObjectBoundaryCollections
+                    if ~isempty(collection{1}) && isvalid(collection{1})
+                        delete(collection{1});
                     end
                 end
 
@@ -810,14 +803,28 @@ classdef GUI < handle
             % Object overlay geometry and appearance settings.
             obj.addSetting("Object Selection","Shape","ObjectSelection", ...
                 "BoxType",["Boundary","Box"]);
-            obj.addSetting("Object Selection","Color by","ObjectSelection", ...
-                "ColorMode",["Custom","Label"]);
-            obj.buildObjectSelectionColor();
-            obj.addSetting("Object Selection","Line width","ObjectSelection","LineWidth");
-            obj.addSetting("Object Selection","Selected width", ...
-                "ObjectSelection","SelectedLineWidth");
+            obj.addModeColorSetting("Object Selection","Base color", ...
+                "ObjectSelection","ColorMode","Color", ...
+                ["Label","Custom"],"Custom");
+            obj.addSetting("Object Selection","Base width", ...
+                "ObjectSelection","LineWidth");
+            obj.addModeColorSetting("Object Selection","Active color", ...
+                "ObjectSelection","ActiveColorMode","ActiveColor", ...
+                ["Auto","Custom"],"Custom");
             obj.addSetting("Object Selection","Active width", ...
                 "ObjectSelection","ActiveLineWidth");
+            obj.addModeColorSetting("Object Selection","Selected color", ...
+                "ObjectSelection","SelectedColorMode","SelectedColor", ...
+                ["Auto","Custom"],"Custom");
+            obj.addSetting("Object Selection","Selected width", ...
+                "ObjectSelection","SelectedLineWidth");
+            obj.addModeColorSetting("Object Selection","Hover color", ...
+                "ObjectSelection","HoverColorMode","HoverColor", ...
+                ["Auto","Custom"],"Custom");
+            obj.addSetting("Object Selection","Hover width", ...
+                "ObjectSelection","HoverLineWidth");
+            obj.addSetting("Object Selection","Show active when selected", ...
+                "ObjectSelection","ShowActiveWhenSelected");
 
             % Axial orientation-field appearance and spatial sampling controls.
             obj.addSetting("Orientation Lines","Color by","AzimuthDisplay", ...
@@ -1094,30 +1101,6 @@ classdef GUI < handle
                 'Highlight to activate a label; check labels for merge operations.';
             obj.LabelsTree.ContextMenu = obj.labelMenu("");
             obj.refreshLabels();
-        end
-
-        function buildObjectSelectionColor(obj)
-        %BUILDOBJECTSELECTIONCOLOR Add the RGB picker omitted by generic scalar settings.
-
-            % Accordion grid receiving the custom color row.
-            pane = obj.SettingsAccordion.getItem("Object Selection").Pane;
-
-            % Next grid row allocated for the label and color picker.
-            row = numel(pane.RowHeight)+1;
-            pane.RowHeight{row} = 'fit';
-
-            text = uilabel(pane,'Text','Custom color','FontColor',[.85 .85 .85]);
-            text.Layout.Row = row;
-            text.Layout.Column = 1;
-
-            % Native color picker bound to the project-wide custom overlay color.
-            control = uicolorpicker(pane, ...
-                'Value',obj.Settings.ObjectSelection.Color, ...
-                'ValueChangedFcn',@(src,~) obj.runCallback(@() obj.onSettingEdited(src)));
-            control.Layout.Row = row;
-            control.Layout.Column = 2;
-            control.UserData = struct('Domain','ObjectSelection','Name','Color');
-            obj.SettingsUI.ObjectSelection.Color = control;
         end
 
         function tree = buildTree(obj,title,height)
@@ -1818,32 +1801,28 @@ classdef GUI < handle
 
                 % Persistent ImageAxes created for the current panel.
                 viewer = matlabx.ui.axes.ImageAxes(grid,'Name',char(side+"Viewer"), ...
-                    'CData',[],'Tools',{'Zoom','Mask','RectangleSelect','Colorbar','DisplayLimits'},'Colormap',gray(256), ...
+                    'CData',[],'Tools',{'Zoom','Mask','Boundaries','RectangleSelect','Colorbar','DisplayLimits'},'Colormap',gray(256), ...
                     'CLim',[0 1],'FontSize',12);
-                viewer.Tools.RectangleSelect.TargetTypes = "Polygon";
+                viewer.Tools.RectangleSelect.TargetTypes = "Boundary";
 
-                % Generic polygon interaction remains installed without its
-                % MATLABX-facing toolbar or context-menu terminology.
-                polygonTool = matlabx.ui.axes.tools.Polygon(viewer);
-                polygonTool.ContributeToolbar = false;
-                polygonTool.ContributeContextMenu = false;
-                viewer.installTool(polygonTool);
+                % One collection batches all model-object geometry while the
+                % native tool owns activation, selection, and deletion gestures.
+                collection = viewer.Overlays.createBoundaryCollection();
+                boundaryTool = viewer.Tools.Boundaries;
+                boundaryTool.BoundaryActivatedFcn = ...
+                    @(~,d) obj.runCallback(@() obj.onObjectBoundaryActivated(d));
+                boundaryTool.BoundarySelectionChangedFcn = ...
+                    @(~,d) obj.runCallback(@() obj.onObjectBoundarySelectionChanged(d));
+                boundaryTool.BoundariesDeleteRequestedFcn = ...
+                    @(~,d) obj.runCallback(@() obj.onObjectBoundariesDeleteRequested(d));
 
-                % OOPS contributes the visible object-facing controls and
-                % delegates their behavior to the headless Polygon controller.
-                boundaryTool = oops.ui.axes.tools.ObjectBoundaries(viewer,polygonTool);
-                boundaryTool.ObjectActivatedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundaryActivated(d));
-                boundaryTool.ObjectSelectionChangedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundarySelectionChanged(d));
-                boundaryTool.ObjectsDeleteRequestedFcn = @(~,d) obj.runCallback(@() obj.onObjectBoundariesDeleteRequested(d));
-                boundaryTool.RefreshRequestedFcn = @(~,~) ...
-                    obj.runCallback(@() obj.refreshViewerRegions());
-
-                % Establish the initial hidden state before installation so the
-                % tool's first host-state synchronization cannot request model UI.
-                viewer.OverlaysVisible = 'off';
-                viewer.installTool(boundaryTool);
-                obj.PolygonTools{k} = polygonTool;
-                obj.ObjectBoundaryTools{k} = boundaryTool;
+                % Boundaries start hidden. Turning the collection back on asks
+                % OOPS to populate the current image before it is displayed.
+                viewer.disableTool("Boundaries");
+                obj.ViewerListeners(end+1) = addlistener(collection,'Visible','PostSet', ...
+                    @(~,~) obj.runCallback(@() ...
+                    obj.onBoundaryCollectionVisibilityChanged(collection)));
+                obj.ObjectBoundaryCollections{k} = collection;
 
                 % Passive axial field uses MATLABX's application-overlay layer.
                 field = oops.render.OrientationField();
@@ -4435,7 +4414,7 @@ classdef GUI < handle
         end
 
         function refreshViewerRegions(obj)
-        %REFRESHVIEWERREGIONS Reconcile polygon membership without rebuilding survivors.
+        %REFRESHVIEWERREGIONS Reconcile masks and batched object boundaries.
         %
         % Mask and object coordinates belong to the active input image. They
         % apply to all four frames, but not to unavailable sources or a
@@ -4459,10 +4438,10 @@ classdef GUI < handle
             % Left and right ImageAxes handles in panel order.
             viewers = {obj.LeftViewer,obj.RightViewer};
 
-            % Per-refresh boundary cache shared by both viewers for each object ID.
-            geometry = containers.Map('KeyType','char','ValueType','any');
+            % Boundary data are derived at most once and shared by both viewers.
+            payload = [];
 
-            % Reconcile the active image's mask and object polygons in each viewer.
+            % Reconcile the active image's mask and object boundaries in each viewer.
             for k = 1:2
 
                 % ImageAxes for the current left/right panel.
@@ -4480,15 +4459,10 @@ classdef GUI < handle
                         viewer.ImageData.SizeX == image.Input.SizeX;
                 end
 
-                % Object IDs to represent with one polygon each in the current viewer.
-                ids = strings(0,1);
-
                 % Committed parent-image mask supplied to the viewer's mask tool.
                 mask = [];
 
                 if ready
-                    ids = oops.model.internal.ids(image.Objects);
-
                     if ~isempty(image.Mask)
                         mask = image.Mask;
                     end
@@ -4501,43 +4475,28 @@ classdef GUI < handle
                     viewer.Mask = mask;
                 end
 
-                % Keep the mask current independently, but defer all polygon
-                % registry and geometry work while object boundaries are hidden.
-                if ~viewer.Tools.ObjectBoundaries.Enabled
+                % Keep the mask current independently, but defer boundary
+                % extraction and hit-map construction while boundaries are hidden.
+                if ~viewer.Tools.Boundaries.Enabled
                     continue;
                 end
 
-                % Remove obsolete overlays in one consistent registry update.
-                % This is model reconciliation, not a user deletion request.
+                collection = obj.ObjectBoundaryCollections{k};
+                obj.configureBoundaryCollection(collection);
 
-                % Polygon IDs already registered in this viewer.
-                existing = viewer.Overlays.ids(Type="Polygon");
-                viewer.Overlays.removeMany(existing(~ismember(existing,ids)));
-
-                if ready
-
-                    % Add or update each object polygon using geometry shared by both viewers.
-                    for region = image.Objects'
-
-                        % Current object ID used for both the geometry cache and overlay registry.
-                        key = char(region.ID);
-
-                        if ~isKey(geometry,key)
-                            geometry(key) = obj.objectOverlayGeometry(region);
-                        end
-
-                        if viewer.Overlays.has(region.ID)
-                            overlay = viewer.Overlays.get(region.ID);
-                            overlay.Vertices = geometry(key);
-                        else
-                            overlay = viewer.Tools.ObjectBoundaries.addBoundary( ...
-                                region.ID,geometry(key),'Label',region.Name);
-                        end
-
-                        obj.applyOverlayAppearance(overlay,region);
-                    end
-
+                if ~ready
+                    collection.setData(strings(1,0),{}, ...
+                        HitMap=[],Colors=zeros(0,3),Labels=strings(1,0));
+                    continue;
                 end
+
+                if isempty(payload)
+                    payload = obj.objectBoundaryPayload(image);
+                end
+
+                collection.setData(payload.IDs,payload.Vertices, ...
+                    HitMap=payload.HitMap,Colors=payload.Colors, ...
+                    Labels=payload.Labels);
 
             end
 
@@ -4547,63 +4506,78 @@ classdef GUI < handle
             obj.syncOverlayState();
         end
 
-        function geometry = objectOverlayGeometry(obj,region)
-        %OBJECTOVERLAYGEOMETRY Resolve the configured boundary or bounding rectangle.
-
-            if obj.Settings.ObjectSelection.BoxType == "Box"
-                box = region.BoundingBox;
-                x = box(1);
-                y = box(2);
-                width = box(3);
-                height = box(4);
-                geometry = [x y; x+width y; x+width y+height; x y+height];
-            else
-                geometry = region.getBoundaryVertices();
-            end
-        end
-
         function refreshOverlayAppearance(obj)
-        %REFRESHOVERLAYAPPEARANCE Restyle existing polygons without rebuilding graphics.
+        %REFRESHOVERLAYAPPEARANCE Reconcile shared and per-object boundary styles.
 
-            image = obj.Project.ActiveImage;
-
-            if isempty(image)
-                return;
-            end
-
-            for viewer = {obj.LeftViewer,obj.RightViewer}
-                axes = viewer{1};
-
-                for region = image.Objects'
-
-                    if axes.Overlays.has(region.ID)
-                        obj.applyOverlayAppearance(axes.Overlays.get(region.ID),region);
-                    end
-
-                end
-
-            end
+            obj.refreshViewerRegions();
         end
 
-        function applyOverlayAppearance(obj,overlay,region)
-        %APPLYOVERLAYAPPEARANCE Apply config widths and custom/label color.
+        function configureBoundaryCollection(obj,collection)
+        %CONFIGUREBOUNDARYCOLLECTION Apply shared geometry and state appearance.
 
             settings = obj.Settings.ObjectSelection;
-            color = settings.Color;
+            if settings.BoxType == "Box"
+                collection.DisplayGeometry = "boundingbox";
+            else
+                collection.DisplayGeometry = "boundary";
+            end
+            collection.UsePerBoundaryColors = settings.ColorMode == "Label";
+            collection.EdgeColor = settings.Color;
+            collection.LineWidth = settings.LineWidth;
+            collection.SelectionLineWidth = settings.SelectedLineWidth;
+            collection.ActiveLineWidth = settings.ActiveLineWidth;
+            collection.HoverLineWidth = settings.HoverLineWidth;
+            collection.ShowActiveEdgeWhenSelected = ...
+                settings.ShowActiveWhenSelected;
 
-            if settings.ColorMode == "Label"
-                label = region.Label;
-
-                if ~isempty(label)
-                    color = label.Color;
-                end
+            collection.SelectionEdgeColor = [];
+            if settings.SelectedColorMode == "Custom"
+                collection.SelectionEdgeColor = settings.SelectedColor;
             end
 
-            overlay.EdgeColor = color;
-            overlay.FaceColor = color;
-            overlay.LineWidth = settings.LineWidth;
-            overlay.SelectionLineWidth = settings.SelectedLineWidth;
-            overlay.ActiveLineWidth = settings.ActiveLineWidth;
+            collection.ActiveEdgeColor = [];
+            if settings.ActiveColorMode == "Custom"
+                collection.ActiveEdgeColor = settings.ActiveColor;
+            end
+
+            collection.HoverEdgeColor = [];
+            if settings.HoverColorMode == "Custom"
+                collection.HoverEdgeColor = settings.HoverColor;
+            end
+        end
+
+        function payload = objectBoundaryPayload(obj,image)
+        %OBJECTBOUNDARYPAYLOAD Build one collection update from model objects.
+
+            regions = image.Objects;
+            count = numel(regions);
+            payload.IDs = reshape(oops.model.internal.ids(regions),1,[]);
+            payload.Vertices = cell(1,count);
+            payload.Colors = repmat(obj.Settings.ObjectSelection.Color,count,1);
+            payload.Labels = strings(1,count);
+            payload.HitMap = zeros(image.Input.SizeY,image.Input.SizeX,'uint32');
+
+            for index = 1:count
+                region = regions(index);
+                payload.Vertices{index} = region.getBoundaryVertices();
+                payload.Labels(index) = region.Name;
+                payload.HitMap(region.PixelIdxList) = uint32(index);
+
+                if obj.Settings.ObjectSelection.ColorMode == "Label"
+                    label = region.Label;
+                    if ~isempty(label)
+                        payload.Colors(index,:) = label.Color;
+                    end
+                end
+            end
+        end
+
+        function onBoundaryCollectionVisibilityChanged(obj,collection)
+        %ONBOUNDARYCOLLECTIONVISIBILITYCHANGED Populate a newly shown collection.
+
+            if collection.Visible == "on" && ~obj.SyncingOverlays && ~obj.Closing
+                obj.refreshViewerRegions();
+            end
         end
 
         function syncOverlayState(obj)
@@ -4621,17 +4595,17 @@ classdef GUI < handle
             % Active image supplying data and object membership for this operation.
             image = obj.Project.ActiveImage;
 
-            % Copy model active/selected IDs into each viewer's available polygon set.
+            % Copy model active/selected IDs into each viewer's boundary set.
             for viewer = {obj.LeftViewer,obj.RightViewer}
 
                 % Left and right viewer handles whose overlay navigation is synchronized.
                 axes = viewer{1};
 
-                if ~axes.Tools.ObjectBoundaries.Enabled
+                if ~axes.Tools.Boundaries.Enabled
                     continue;
                 end
 
-                % Selected model IDs restricted to the polygons available in this viewer.
+                % Selected model IDs restricted to boundaries available in this viewer.
                 ids = strings(0,1);
 
                 % Model active-object ID restricted to overlays available in this viewer.
@@ -4639,8 +4613,8 @@ classdef GUI < handle
 
                 if ~isempty(image)
 
-                    % Model object IDs currently represented by polygons in this viewer.
-                    available = axes.Overlays.ids(Type="Polygon");
+                    % Model object IDs currently represented in this viewer.
+                    available = axes.Overlays.ids(Type="Boundary");
                     ids = image.SelectedObjectIDs(ismember(image.SelectedObjectIDs,available));
 
                     if ismember(image.ActiveObjectID,available)
@@ -4649,14 +4623,21 @@ classdef GUI < handle
 
                 end
 
-                % Model active-object ID, cleared when this viewer has no matching polygon.
-                current = axes.Tools.ObjectBoundaries.getSelectedObjectIDs();
+                % Model active-object ID, cleared when this viewer has no matching boundary.
+                current = axes.Overlays.getSelectedIDs(Type="Boundary");
                 % The manager's selection setter repaints even unchanged sets.
                 if ~isequal(current(:),ids(:))
-                    axes.Tools.ObjectBoundaries.setSelectedObjectIDs(ids);
+                    axes.Overlays.setSelected(ids,Type="Boundary");
                 end
 
-                axes.Tools.ObjectBoundaries.setActiveObjectID(active);
+                currentActive = axes.Overlays.getActiveID(Type="Boundary");
+                if currentActive ~= active
+                    if strlength(active) > 0
+                        axes.Overlays.setActive(active);
+                    elseif strlength(currentActive) > 0
+                        axes.Overlays.clearActive();
+                    end
+                end
             end
 
         end

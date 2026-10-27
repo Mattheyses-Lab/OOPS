@@ -3,15 +3,17 @@
 % SPDX-License-Identifier: GPL-3.0-or-later
 
 function data = polarizationStack(image,values)
-%POLARIZATIONSTACK Wrap four polarization planes using the input CZT layout.
+%POLARIZATIONSTACK Wrap four full-size or cropped planes using the input CZT layout.
 
 arguments
     image (1,1) oops.model.Image
     values {mustBeNumeric,mustBeReal}
 end
 
-validateattributes(values,{'numeric'}, ...
-    {'size',[image.Input.SizeY image.Input.SizeX 4]});
+if ndims(values) ~= 3 || size(values,3) ~= 4
+    error('oops:render:InvalidPolarizationStack', ...
+        'Polarization values must be a Y-by-X-by-4 numeric array.');
+end
 
 locations = image.FrameLocations;
 sizeCZT = [image.Input.NumComponents image.Input.SizeZ image.Input.SizeT];
@@ -22,13 +24,21 @@ if size(locations,1) == 4 && all(locations(:) >= 1) && ...
         all(locations(:,2) <= sizeCZT(2)) && ...
         all(locations(:,3) <= sizeCZT(3)) && ...
         size(unique(locations,'rows'),1) == 4
-    stack = zeros([size(values,1) size(values,2) sizeCZT],'like',values);
+    components = cell(1,sizeCZT(1));
 
-    for k = 1:4
-        stack(:,:,locations(k,1),locations(k,2),locations(k,3)) = values(:,:,k);
+    for component = 1:sizeCZT(1)
+        components{component} = zeros( ...
+            size(values,1),size(values,2),1,sizeCZT(2),sizeCZT(3), ...
+            'like',values);
     end
 
-    data = matlabx.image.Image5D.fromComponents(stack);
+    for k = 1:4
+        component = locations(k,1);
+        components{component}(:,:,1,locations(k,2),locations(k,3)) = ...
+            values(:,:,k);
+    end
+
+    data = matlabx.image.Image5D.fromComponents(components);
     return;
 end
 

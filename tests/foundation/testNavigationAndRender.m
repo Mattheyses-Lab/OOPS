@@ -97,6 +97,27 @@ t.verifyEqual(data.getPlane(4,1,1),stack(:,:,4));
 t.verifyEmpty(data); t.verifyFalse(info.Available);
 t.verifyEmpty(image.Order,'Rendering must not run FPM analysis.');
 end
+
+function testCroppedPolarizationStackPreservesInputAxes(t)
+%TESTCROPPEDPOLARIZATIONSTACKPRESERVESINPUTAXES Allow local object geometry.
+
+p = oops.model.Project(); cleaner = onCleanup(@() delete(p));
+group = p.addGroup("Time series");
+raw = reshape(1:(10*12*4),10,12,1,1,4);
+image = group.addImage(matlabx.image.Image5D.fromComponents(raw),"Image");
+values = oops.analysis.readStack(image.Input);
+values = values(2:6,3:9,:);
+
+data = oops.render.polarizationStack(image,values);
+t.verifyEqual([data.SizeY data.SizeX],[5 7]);
+t.verifyEqual(data.NumComponents,1);
+t.verifyEqual(data.SizeT,4);
+
+for frame = 1:4
+    t.verifyEqual(data.getPlane(1,1,frame),values(:,:,frame));
+end
+end
+
 function testRenderNumericalOutputs(t)
 p = project(); cleaner = onCleanup(@() delete(p));
 image = p.Groups(1).Images(1);

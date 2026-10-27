@@ -69,7 +69,7 @@ function testImageActivationRunsOneLazyViewerRefresh(t)
 
 ui = t.TestData.GUI;
 group = ui.Project.ActiveGroup;
-t.verifyFalse(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
+t.verifyFalse(ui.LeftViewer.Tools.Boundaries.Enabled);
 t.verifyFalse(ui.OrientationFieldTools{1}.Enabled);
 
 profile clear;
@@ -87,8 +87,8 @@ if ~isempty(entry)
 end
 
 % Deferred object overlays are populated only if their visibility tool is enabled.
-t.verifyEmpty(ui.LeftViewer.Overlays.ids(Type="Polygon"));
-t.verifyEmpty(ui.RightViewer.Overlays.ids(Type="Polygon"));
+t.verifyEmpty(ui.LeftViewer.Overlays.ids(Type="Boundary"));
+t.verifyEmpty(ui.RightViewer.Overlays.ids(Type="Boundary"));
 end
 
 function testImageNavigationPreservesContentPanelTitles(t)
@@ -408,9 +408,9 @@ t.verifyEqual(string(ui.LabelsTree.SelectedNodes.NodeData),"object");
 ui.SettingsUI.ObjectSelection.ColorMode.Value = 'Label';
 ui.SettingsUI.ObjectSelection.ColorMode.ValueChangedFcn( ...
     ui.SettingsUI.ObjectSelection.ColorMode,[]);
-ui.LeftViewer.enableTool("ObjectBoundaries");
+ui.LeftViewer.enableTool("Boundaries");
 overlay = ui.LeftViewer.Overlays.get(image.Objects(2).ID);
-t.verifyEqual(overlay.EdgeColor,[0.2 0.8 0.2]);
+t.verifyEqual(overlay.Color,[0.2 0.8 0.2]);
 end
 
 function testLabelCheckTreeAndExpandedMenus(t)
@@ -889,18 +889,18 @@ if data.SetupHadPreference, oops.Preferences.set("SetupVersion",data.SetupPrevio
 else, oops.Preferences.remove("SetupVersion"); end
 end
 
-function testMasksAndPolygonsFollowCommittedMembership(t)
-%TESTMASKSANDPOLYGONSFOLLOWCOMMITTEDMEMBERSHIP Keep geometry and mask in both viewers.
+function testMasksAndBoundariesFollowCommittedMembership(t)
+%TESTMASKSANDBOUNDARIESFOLLOWCOMMITTEDMEMBERSHIP Keep geometry and mask in both viewers.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
 ui.Project.Settings.View.RightSource = "AverageIntensity";
-ui.LeftViewer.enableTool("ObjectBoundaries");
-ui.RightViewer.enableTool("ObjectBoundaries");
+ui.LeftViewer.enableTool("Boundaries");
+ui.RightViewer.enableTool("Boundaries");
 ids = oops.model.internal.ids(image.Objects);
 for viewer = {ui.LeftViewer,ui.RightViewer}
     axes = viewer{1};
     axes.enableTool("Mask");
     t.verifyEqual(axes.Mask,image.Mask);
-    actual = axes.Overlays.ids(Type="Polygon");
+    actual = axes.Overlays.ids(Type="Boundary");
     t.verifyEqual(sort(actual(:)),sort(ids));
 end
 survivor = ui.LeftViewer.Overlays.get(ids(2));
@@ -912,78 +912,78 @@ t.verifyEqual(ui.LeftViewer.Mask,image.Mask);
 t.verifyEqual(ui.RightViewer.Mask,image.Mask);
 end
 
-function testPolygonActivationAndSelectionStayIndependent(t)
-%TESTPOLYGONACTIVATIONANDSELECTIONSTAYINDEPENDENT Sync viewer edits and checkbox edits.
+function testBoundaryActivationAndSelectionStayIndependent(t)
+%TESTBOUNDARYACTIVATIONANDSELECTIONSTAYINDEPENDENT Sync viewers and checkboxes.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
 ui.Project.Settings.View.RightSource = "AverageIntensity";
 ids = oops.model.internal.ids(image.Objects);
 
-% Generic polygon interaction is installed headlessly. OOPS supplies the
-% visible object-facing toolbar and context-menu contributions.
+% OOPS uses MATLABX's dedicated boundary tool directly.
 t.verifyEmpty(findall(ui.LeftViewer.getAxes().Toolbar, ...
     'Tooltip','Polygon regions (help)'));
 t.verifyNumElements(findall(ui.LeftViewer.getAxes().Toolbar, ...
-    'Tooltip','Show/Hide Objects'),1);
+    'Tooltip','Show/Hide Boundaries'),1);
 t.verifyEmpty(findall(ui.LeftViewer.getAxes().Toolbar, ...
     'Tooltip','Show/Hide Overlays'));
 t.verifyFalse(isfield(ui.LeftViewer.Tools,'Overlays'));
 texts = string({ui.LeftViewer.ContextMenu.Children.Text});
 t.verifyFalse(any(texts == "Polygon"));
-t.verifyTrue(any(texts == "Objects"));
-objectsMenu = ui.LeftViewer.ContextMenu.Children(texts == "Objects");
-showItem = objectsMenu.Children(string({objectsMenu.Children.Text}) == "Show");
-t.verifyNumElements(showItem,1);
-t.verifyEqual(string(showItem.Checked),"off");
+t.verifyTrue(any(texts == "Boundaries"));
 
-% The application tool toggles native object boundaries without changing
-% membership or the independent application-overlay layer.
-polygon = findobj(ui.LeftViewer.getAxes(),'Tag','OverlayPolygon');
+% The native tool toggles only the batched boundary collection.
+collection = ui.ObjectBoundaryCollections{1};
 applicationLayer = findobj(ui.LeftViewer.getAxes(),'Tag','ApplicationOverlayLayer');
-t.verifyFalse(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
-t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"off");
-t.verifyEmpty(polygon);
+t.verifyFalse(ui.LeftViewer.Tools.Boundaries.Enabled);
+t.verifyEqual(string(collection.Visible),"off");
+t.verifyEmpty(ui.LeftViewer.Overlays.ids(Type="Boundary"));
 t.verifyEqual(string(applicationLayer.Visible),"on");
-showItem.MenuSelectedFcn(showItem,[]);
-t.verifyTrue(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
-t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"on");
-polygon = findobj(ui.LeftViewer.getAxes(),'Tag','OverlayPolygon');
-t.verifyNotEmpty(polygon);
-ui.LeftViewer.enableTool("ObjectBoundaries");
-t.verifyEqual(string(ui.LeftViewer.OverlaysVisible),"on");
-t.verifyTrue(all(string({polygon.Visible}) == "on"));
-ui.LeftViewer.OverlaysVisible = 'off';
-t.verifyFalse(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
-ui.LeftViewer.OverlaysVisible = 'on';
-t.verifyTrue(ui.LeftViewer.Tools.ObjectBoundaries.Enabled);
-ui.RightViewer.enableTool("ObjectBoundaries");
+ui.LeftViewer.enableTool("Boundaries");
+t.verifyTrue(ui.LeftViewer.Tools.Boundaries.Enabled);
+t.verifyEqual(string(collection.Visible),"on");
+actual = ui.LeftViewer.Overlays.ids(Type="Boundary");
+t.verifyEqual(sort(actual(:)),sort(ids(:)));
+t.verifyEqual(ui.LeftViewer.Tools.RectangleSelect.TargetTypes,"Boundary");
+[row,column] = ind2sub(size(image.Mask),image.Objects(1).PixelIdxList(1));
+t.verifyEqual(collection.idAt([column row]),image.Objects(1).ID);
 
-ui.LeftViewer.Tools.ObjectBoundaries.setActiveObjectID(ids(2));
-ui.LeftViewer.Tools.ObjectBoundaries.setSelectedObjectIDs(ids(1));
+ui.Project.Settings.ObjectSelection.BoxType = "Box";
+t.verifyEqual(collection.DisplayGeometry,"boundingbox");
+ui.Project.Settings.ObjectSelection.BoxType = "Boundary";
+t.verifyEqual(collection.DisplayGeometry,"boundary");
+ui.LeftViewer.disableTool("Boundaries");
+t.verifyFalse(ui.LeftViewer.Tools.Boundaries.Enabled);
+ui.LeftViewer.enableTool("Boundaries");
+t.verifyTrue(ui.LeftViewer.Tools.Boundaries.Enabled);
+ui.RightViewer.enableTool("Boundaries");
+
+ui.LeftViewer.Overlays.setActive(ids(2));
+ui.LeftViewer.Overlays.setSelected(ids(1),Type="Boundary");
 t.verifyEqual(image.ActiveObjectID,ids(2));
 t.verifyEqual(image.SelectedObjectIDs,ids(1));
 t.verifyEqual(ui.ObjectsTree.SelectedNodes.NodeData,ids(2));
 t.verifyEqual(ui.ObjectsTree.CheckedNodes.NodeData,ids(1));
-t.verifyEqual(ui.RightViewer.Overlays.getActiveID(Type="Polygon"),ids(2));
-selected = ui.RightViewer.Tools.ObjectBoundaries.getSelectedObjectIDs();
+t.verifyEqual(ui.RightViewer.Overlays.getActiveID(Type="Boundary"),ids(2));
+selected = ui.RightViewer.Overlays.getSelectedIDs(Type="Boundary");
 t.verifyEqual(selected(:),ids(1));
 ui.ObjectsTree.CheckedNodes = ui.ObjectsTree.Children(2);
 ui.ObjectsTree.CheckedNodesChangedFcn(ui.ObjectsTree,[]);
 t.verifyEqual(image.SelectedObjectIDs,ids(2));
-selected = ui.LeftViewer.Tools.ObjectBoundaries.getSelectedObjectIDs();
+selected = ui.LeftViewer.Overlays.getSelectedIDs(Type="Boundary");
 t.verifyEqual(selected(:),ids(2));
 t.verifyEqual(image.ActiveObjectID,ids(2));
 end
 
-function testPolygonDeletionRemovesModelObjectAndMaskPixels(t)
-%TESTPOLYGONDELETIONREMOVESMODELOBJECTANDMASKPIXELS Commit app-owned tool deletion.
+function testBoundaryDeletionRemovesModelObjectAndMaskPixels(t)
+%TESTBOUNDARYDELETIONREMOVESMODELOBJECTANDMASKPIXELS Commit tool deletion.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
 ui.Project.Settings.View.RightSource = "Mask";
-ui.LeftViewer.enableTool("ObjectBoundaries");
-ui.RightViewer.enableTool("ObjectBoundaries");
+ui.LeftViewer.enableTool("Boundaries");
+ui.RightViewer.enableTool("Boundaries");
 removed = image.Objects(1); id = removed.ID; pixels = removed.PixelIdxList;
 survivor = image.Objects(2); mask = image.Mask; mask(pixels) = false;
 image.setActiveObject(removed); image.setSelectedObjects(image.Objects);
-ui.LeftViewer.Tools.ObjectBoundaries.removeBoundary(id);
+ui.LeftViewer.Overlays.setActive(id);
+ui.LeftViewer.Tools.Boundaries.deleteActive();
 t.verifyFalse(isvalid(removed));
 t.verifyEqual(image.Objects,survivor);
 t.verifyEqual(image.Mask,mask);
@@ -1021,12 +1021,12 @@ for region = image.Objects'
 end
 end
 
-function testBatchDeletionRetainsSurvivingNodesAndPolygons(t)
-%TESTBATCHDELETIONRETAINSSURVIVINGNODESANDPOLYGONS One request keeps unrelated UI intact.
+function testBatchDeletionRetainsSurvivingNodesAndBoundaries(t)
+%TESTBATCHDELETIONRETAINSSURVIVINGNODESANDBOUNDARIES Preserve unrelated UI.
 ui = t.TestData.GUI; image = ui.Project.ActiveImage;
 ui.Project.Settings.View.RightSource = "Mask";
-ui.LeftViewer.enableTool("ObjectBoundaries");
-ui.RightViewer.enableTool("ObjectBoundaries");
+ui.LeftViewer.enableTool("Boundaries");
+ui.RightViewer.enableTool("Boundaries");
 mask = false(20,30);
 mask(2:3,2:3) = true; mask(2:3,8:9) = true; mask(2:3,14:15) = true;
 image.setMask(mask,oops.analysis.segment.objectsFromMask(mask));
@@ -1038,7 +1038,7 @@ image.setActiveObject(survivor); image.setSelectedObjects(removed);
 image.setDisplayRange("Intensity",[.1 .9]);
 [events,listener] = observeObjectChanges(image);
 cleanup = onCleanup(@() delete(listener));
-ui.LeftViewer.Tools.ObjectBoundaries.deleteSelected();
+ui.LeftViewer.Tools.Boundaries.deleteSelected();
 t.verifyEqual(events(),1,'Batch deletion must emit one collection change.');
 t.verifyFalse(any(isvalid(removed)));
 t.verifyEqual(image.Objects,survivor);
@@ -1069,7 +1069,7 @@ menu.MenuSelectedFcn(menu,[]);
 t.verifyEqual(events(),1);
 t.verifyEmpty(image.Objects); t.verifyEmpty(ui.ObjectsTree.Children);
 t.verifyFalse(any(image.Mask,'all'));
-t.verifyEmpty(ui.LeftViewer.Overlays.ids(Type="Polygon"));
+t.verifyEmpty(ui.LeftViewer.Overlays.ids(Type="Boundary"));
 end
 
 function [read,listener] = observeObjectChanges(image)
