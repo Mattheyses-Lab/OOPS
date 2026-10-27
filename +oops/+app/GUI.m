@@ -637,7 +637,7 @@ classdef GUI < handle
             obj.Grid.Visible = state;
 
             for name = ["Close","Save","SaveAs","LoadImages","Calibration", ...
-                    "AuxiliaryChannels","Edit","Run","View","Objects","RuntimeStatus"]
+                    "AuxiliaryChannels","Export","Edit","Run","View","Objects","RuntimeStatus"]
 
                 if isfield(obj.MenuUI,name)
                     obj.MenuUI.(name).Enable = state;
@@ -752,6 +752,24 @@ classdef GUI < handle
             end
 
             obj.saveProject(string(fullfile(folder,file)));
+        end
+
+        function exportSummaryTables(obj)
+        %EXPORTSUMMARYTABLES Collect a destination and write the project workbook.
+
+            if isempty(obj.Project)
+                return;
+            end
+
+            [progress,cleanupProgress] = obj.createProgressDialog( ...
+                "Preparing summary-table export..."); %#ok<ASGLU>
+            success = oops.export.Exporter.exportSummaryTables( ...
+                obj.Project,Progress=progress);
+            obj.focusWindow();
+
+            if ~success
+                oops.Log.INFO("Summary-table export cancelled.");
+            end
         end
 
         function buildWindow(obj)
@@ -2027,6 +2045,9 @@ classdef GUI < handle
             obj.MenuUI.AuxiliaryChannels = uimenu(file, ...
                 'Text','Import auxiliary channels...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseAuxiliaryChannels()));
+            obj.MenuUI.Export = uimenu(file,'Text','Export','Separator','on');
+            uimenu(obj.MenuUI.Export,'Text','Summary tables (.xlsx)...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.exportSummaryTables()));
 
             % Edit menu manages ordered project-wide model collections.
             edit = uimenu(obj.Fig,'Text','Edit');

@@ -158,6 +158,50 @@ classdef ObjectMeasurements
             end
         end
 
+        function labels = exportLabels(names,project)
+        %EXPORTLABELS Add measurement units to human-readable export headings.
+
+            arguments
+                names string
+                project = oops.model.Project.empty(0,1)
+            end
+
+            labels = oops.model.ObjectMeasurements.labels(names,project);
+
+            for k = 1:numel(names)
+                unit = oops.model.ObjectMeasurements.unit(names(k));
+                if unit ~= ""
+                    labels(k) = labels(k)+" ("+unit+")";
+                end
+            end
+        end
+
+        function unit = unit(name)
+        %UNIT Return the defined storage unit for one fixed measurement.
+
+            name = string(name);
+            area = ["Area","ConvexArea","FilledArea"];
+            distance = ["EquivDiameter","MajorAxisLength","MinorAxisLength", ...
+                "Perimeter","MaxFeretDiameter","MinFeretDiameter", ...
+                "CentroidX","CentroidY","MidlineLength"];
+            angle = ["AzimuthMean","AzimuthCircularStandardDeviation", ...
+                "AzimuthCircularAngularDeviation","MidlineRelativeAzimuthMean", ...
+                "NormalRelativeAzimuthMean","MidlineOrientationMean"];
+            intensity = ["MeanSignalIntensity","MeanBackgroundIntensity"];
+
+            if ismember(name,area)
+                unit = "px²";
+            elseif ismember(name,distance)
+                unit = "px";
+            elseif ismember(name,angle)
+                unit = "°";
+            elseif ismember(name,intensity)
+                unit = "A.U.";
+            else
+                unit = "";
+            end
+        end
+
     end
 
     methods (Static, Access=private)
