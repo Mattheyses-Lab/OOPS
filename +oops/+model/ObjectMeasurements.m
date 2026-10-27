@@ -27,8 +27,8 @@ classdef ObjectMeasurements
                 "MinFeretDiameter" ...
                 "CentroidX" ...
                 "CentroidY" ...
-                "SignalMean" ...
-                "BackgroundMean" ...
+                "MeanSignalIntensity" ...
+                "MeanBackgroundIntensity" ...
                 "SignalToBackgroundRatio" ...
                 "OrderMean" ...
                 "OrderStandardDeviation" ...
@@ -54,6 +54,8 @@ classdef ObjectMeasurements
                 "MinFeretDiameter" ...
                 "CentroidX" ...
                 "CentroidY" ...
+                "MeanSignalIntensity" ...
+                "MeanBackgroundIntensity" ...
                 "SignalToBackgroundRatio"];
 
             displayLabels = ["Equivalent diameter" ...
@@ -61,16 +63,73 @@ classdef ObjectMeasurements
                 "Minimum Feret diameter" ...
                 "Centroid X" ...
                 "Centroid Y" ...
-                "Signal/background ratio"];
+                "Mean signal intensity" ...
+                "Mean BG intensity" ...
+                "S/B ratio"];
 
             overrides = dictionary(internalNames,displayLabels);
         end
 
-        function label = label(name)
+        function names = plottableNames(project)
+        %PLOTTABLENAMES Return fixed measurements plus project auxiliary channels.
+
+            names = oops.model.ObjectMeasurements.names();
+
+            if nargin < 1 || isempty(project)
+                return;
+            end
+
+            % Semantic auxiliary roles define the available channel measurements.
+            % Registry order keeps the corresponding plot menus predictable.
+            channels = project.Channels.Channels;
+            channels = channels([channels.IsAuxiliary]);
+
+            for channel = reshape(channels,1,[])
+                names(end+1) = oops.model.ObjectMeasurements.auxiliaryName(channel.ID); %#ok<AGROW>
+            end
+        end
+
+        function name = auxiliaryName(channelID)
+        %AUXILIARYNAME Build a stable plot-variable ID from a semantic channel ID.
+
+            name = "AuxiliarySignalMean:" + string(channelID);
+        end
+
+        function [tf,channelID] = isAuxiliary(name)
+        %ISAUXILIARY Identify and decode an auxiliary signal-mean variable ID.
+
+            prefix = "AuxiliarySignalMean:";
+            name = string(name);
+            tf = startsWith(name,prefix);
+            channelID = "";
+
+            if tf
+                channelID = extractAfter(name,strlength(prefix));
+                tf = channelID ~= "";
+            end
+        end
+
+        function label = label(name,project)
         %LABEL Convert one internal measurement name to a display label.
 
             arguments
                 name (1,1) string
+                project = oops.model.Project.empty(0,1)
+            end
+
+            if ~isempty(project)
+                [auxiliary,channelID] = oops.model.ObjectMeasurements.isAuxiliary(name);
+
+                if auxiliary
+                    channel = project.Channels.findByID(channelID);
+
+                    if isempty(channel)
+                        label = "Missing channel signal mean";
+                    else
+                        label = channel.Name + " signal mean";
+                    end
+                    return;
+                end
             end
 
             overrides = oops.model.ObjectMeasurements.labelOverrides();
@@ -83,18 +142,19 @@ classdef ObjectMeasurements
             label = oops.model.ObjectMeasurements.pascalCaseLabel(name);
         end
 
-        function labels = labels(names)
+        function labels = labels(names,project)
         %LABELS Convert an array of internal measurement names to display labels.
 
             arguments
                 names string
+                project = oops.model.Project.empty(0,1)
             end
 
             % Preserve the input shape so labels remain aligned with ItemsData.
             labels = strings(size(names));
 
             for k = 1:numel(names)
-                labels(k) = oops.model.ObjectMeasurements.label(names(k));
+                labels(k) = oops.model.ObjectMeasurements.label(names(k),project);
             end
         end
 

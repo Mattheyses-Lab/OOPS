@@ -768,7 +768,7 @@ t.verifyEqual(string(ui.RightPlotAxes.Axes.YLabel.String), ...
 % Point data tips retain model identity alongside the plotted measurements.
 scatterTip = ui.ScatterRenderer.Data.DataTipCells{1};
 t.verifyEqual(string(scatterTip{1}), ...
-    ["Group","Image","Object","Label","Signal/background ratio","Order mean"]);
+    ["Group","Image","Object","Label","S/B ratio","Order mean"]);
 t.verifyEqual(string(scatterTip{2}{1}(1)),"Group\_1");
 t.verifyEqual(string(scatterTip{2}{3}(1)),"Object 1");
 t.verifyEqual(string(scatterTip{3}),["","","","","%.2f","%.2f"]);

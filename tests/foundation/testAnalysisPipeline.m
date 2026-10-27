@@ -137,7 +137,7 @@ for k = 1:4, truth(:,:,k) = I*(1+.5*cosd(2*(angles(k)-35))); end
 im = g.addImage(input(truth));
 oops.analysis.Analyzer.segmentImages(im,p.Settings);
 t.verifyNotEmpty(im.Objects); t.verifyGreaterThan(im.Objects(1).Area,0);
-t.verifyGreaterThan(im.Objects(1).SignalMean,im.Objects(1).BackgroundMean);
+t.verifyGreaterThan(im.Objects(1).MeanSignalIntensity,im.Objects(1).MeanBackgroundIntensity);
 t.verifyNotEmpty(im.Objects(1).Midline);
 t.verifyEqual(size(im.Objects(1).Midline,2),2);
 t.verifyEqual(numel(im.Objects(1).PixelMidlineTangentList),numel(im.Objects(1).PixelIdxList));

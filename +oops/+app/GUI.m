@@ -549,6 +549,9 @@ classdef GUI < handle
             end
 
             obj.bindEvents();
+            % Project channels must populate variable dropdowns before saved
+            % channel-backed selections are copied into their Value properties.
+            obj.refreshMeasurementControls();
             obj.refreshSettingsControls();
             % Image Display owns custom model-backed controls outside SettingsUI;
             % rebuild their channel choices against the newly attached project.
@@ -877,12 +880,12 @@ classdef GUI < handle
         function buildScatterPlotControls(obj)
         %BUILDSCATTERPLOTCONTROLS Bind scatter variables and appearance settings.
 
-            variables = oops.model.Object.measurementNames();
+            variables = oops.model.ObjectMeasurements.plottableNames(obj.Project);
             obj.addSetting("Scatterplot","X variable","ScatterPlot","XVariable",variables);
             obj.addSetting("Scatterplot","Y variable","ScatterPlot","YVariable",variables);
 
             % Show readable labels while retaining model property names as values.
-            labels = oops.model.ObjectMeasurements.labels(variables);
+            labels = oops.model.ObjectMeasurements.labels(variables,obj.Project);
             obj.SettingsUI.ScatterPlot.XVariable.Items = cellstr(labels);
             obj.SettingsUI.ScatterPlot.YVariable.Items = cellstr(labels);
 
@@ -925,11 +928,11 @@ classdef GUI < handle
         function buildSwarmPlotControls(obj)
         %BUILDSWARMPLOTCONTROLS Bind violin grouping, variable, and appearance settings.
 
-            variables = oops.model.Object.measurementNames();
+            variables = oops.model.ObjectMeasurements.plottableNames(obj.Project);
             obj.addSetting("Swarmplot","Y variable","SwarmPlot","YVariable",variables);
 
             % Show readable labels while retaining model property names as values.
-            labels = oops.model.ObjectMeasurements.labels(variables);
+            labels = oops.model.ObjectMeasurements.labels(variables,obj.Project);
             obj.SettingsUI.SwarmPlot.YVariable.Items = cellstr(labels);
 
             % Data selection and grouping.
@@ -2195,6 +2198,7 @@ classdef GUI < handle
             end
 
             obj.reconcileActive();
+            obj.refreshMeasurementControls();
             obj.refreshNavigation();
             obj.refreshViewers(false);
         end
@@ -2281,6 +2285,7 @@ classdef GUI < handle
             % even when the displayed pixels and navigation hierarchy are unchanged.
             if ismember(e.Name,["PrimaryChannelID","AuxiliaryChannels"])
                 obj.refreshColormapControls();
+                obj.refreshMeasurementControls();
             end
 
             % Per-object measurement events need only the Object summary.
@@ -3867,7 +3872,8 @@ classdef GUI < handle
 
             % Use the unshifted circular azimuth map, matching orientation-line colors.
             map = oops.render.colormap(obj.Settings.Colormaps,"Azimuth");
-            variableLabel = oops.model.ObjectMeasurements.label(settings.Variable);
+            variableLabel = oops.model.ObjectMeasurements.label( ...
+                settings.Variable,obj.Project);
             style = oops.plot.PolarHistogramStyle( ...
                 Title=settings.DataSource + " - Object " + variableLabel, ...
                 BinCount=settings.BinCount, ...
@@ -3925,8 +3931,8 @@ classdef GUI < handle
                 plottedMembers,settings.ColorMode,settings.YVariable);
 
             % Resolve internal property names into text intended for display.
-            xLabel = oops.model.ObjectMeasurements.label(settings.XVariable);
-            yLabel = oops.model.ObjectMeasurements.label(settings.YVariable);
+            xLabel = oops.model.ObjectMeasurements.label(settings.XVariable,obj.Project);
+            yLabel = oops.model.ObjectMeasurements.label(settings.YVariable,obj.Project);
 
             % Describe each plotted point using its model identity and measurements.
             dataTipCells = cell(size(plottedMembers));
@@ -4010,7 +4016,7 @@ classdef GUI < handle
                 plottedMembers,settings.ColorMode,settings.YVariable);
 
             % Resolve the internal property name into text intended for display.
-            yLabel = oops.model.ObjectMeasurements.label(settings.YVariable);
+            yLabel = oops.model.ObjectMeasurements.label(settings.YVariable,obj.Project);
 
             % Describe each swarm point while leaving violin summary tips at defaults.
             dataTipCells = cell(size(plottedMembers));
@@ -4175,8 +4181,13 @@ classdef GUI < handle
         function values = objectValues(~,members,property)
         %OBJECTVALUES Read one stored scalar property from an object array.
 
+            [auxiliary,channelID] = oops.model.ObjectMeasurements.isAuxiliary(property);
+
             if isempty(members)
                 values = zeros(0,1);
+            elseif auxiliary
+                values = arrayfun(@(member) ...
+                    member.auxiliarySignalMean(channelID),members(:));
             else
                 values = arrayfun(@(member) member.(property),members(:));
             end
@@ -5398,11 +5409,17 @@ classdef GUI < handle
                 importedImageIDs(k) = plan(k).Image.ID;
             end
 
+            for imageID = reshape(unique(importedImageIDs,'stable'),1,[])
+                index = find(importedImageIDs == imageID,1);
+                oops.analysis.Analyzer.measureAuxiliaryObjects(plan(index).Image);
+            end
+
             % Show the first imported image and its stable registry-ordered stack.
             obj.Project.setActiveImage(plan(1).Image);
             obj.Settings.View.LeftSource = "AverageIntensity";
             obj.Settings.View.RightSource = "AuxiliaryChannels";
             clear guard;
+            obj.refreshMeasurementControls();
             obj.ViewerKeys(:) = "";
             obj.refreshViewers(true);
             oops.Log.INFO(sprintf( ...
@@ -6072,8 +6089,39 @@ classdef GUI < handle
         %REFRESHCHANNELSAFTEREDIT Reconcile controls and visible channel sources.
 
             obj.refreshColormapControls();
+            obj.refreshMeasurementControls();
             obj.ViewerKeys(:) = "";
             obj.refreshViewers(true);
+        end
+
+        function refreshMeasurementControls(obj)
+        %REFRESHMEASUREMENTCONTROLS Rebuild plot variables from channel identities.
+
+            if isempty(obj.Project) || ~isfield(obj.SettingsUI,'ScatterPlot') || ...
+                    ~isfield(obj.SettingsUI,'SwarmPlot')
+                return;
+            end
+
+            names = oops.model.ObjectMeasurements.plottableNames(obj.Project);
+            labels = oops.model.ObjectMeasurements.labels(names,obj.Project);
+            bindings = {obj.SettingsUI.ScatterPlot.XVariable,'ScatterPlot','XVariable'; ...
+                obj.SettingsUI.ScatterPlot.YVariable,'ScatterPlot','YVariable'; ...
+                obj.SettingsUI.SwarmPlot.YVariable,'SwarmPlot','YVariable'};
+
+            for k = 1:size(bindings,1)
+                control = bindings{k,1};
+                domain = bindings{k,2};
+                property = bindings{k,3};
+                value = obj.Settings.(domain).(property);
+
+                if ~ismember(value,names)
+                    value = names(1);
+                    obj.Settings.(domain).(property) = value;
+                end
+
+                set(control,'Items',cellstr(labels), ...
+                    'ItemsData',cellstr(names),'Value',char(value));
+            end
         end
 
         function promptGroup(obj,groupID)
@@ -6345,7 +6393,7 @@ classdef GUI < handle
         function selectByProperty(obj)
         %SELECTBYPROPERTY Add objects matching an AND filter set to selection.
 
-            filters = oops.app.objectFilterDialog(obj.Fig);
+            filters = oops.app.objectFilterDialog(obj.Fig,obj.Project);
             obj.focusWindow();
 
             if isempty(filters)
@@ -6374,7 +6422,7 @@ classdef GUI < handle
         function labelByProperty(obj)
         %LABELBYPROPERTY Apply an existing or new label to filtered objects.
 
-            filters = oops.app.objectFilterDialog(obj.Fig);
+            filters = oops.app.objectFilterDialog(obj.Fig,obj.Project);
             obj.focusWindow();
 
             if isempty(filters)
@@ -6429,7 +6477,7 @@ classdef GUI < handle
         function deleteByProperty(obj)
         %DELETEBYPROPERTY Confirm and delete every object matching filters.
 
-            filters = oops.app.objectFilterDialog(obj.Fig);
+            filters = oops.app.objectFilterDialog(obj.Fig,obj.Project);
             obj.focusWindow();
 
             if isempty(filters)
@@ -6561,7 +6609,7 @@ classdef GUI < handle
                 keep = true(numel(objects),1);
 
                 for j = 1:numel(filters)
-                    values = arrayfun(@(member) member.(filters(j).Property),objects(:));
+                    values = obj.objectValues(objects,filters(j).Property);
 
                     switch filters(j).Operator
                         case ">",  match = values > filters(j).Value;

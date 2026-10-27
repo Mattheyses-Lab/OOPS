@@ -38,8 +38,8 @@ for radius = [0 3 6]
                     ring = imdilate(buffer,ones(2*width+1)) & ~buffer;
                     if excludeObjects, ring(mask) = false; end
                     if excludeBuffers, ring(allBuffers) = false; end
-                    t.verifyEqual(values{k}.BackgroundMean,mean(average(ring),'omitnan'),'AbsTol',1e-10);
-                    t.verifyEqual(values{k}.SignalMean,mean(average(lists{k}),'omitnan'),'AbsTol',1e-10);
+                    t.verifyEqual(values{k}.MeanBackgroundIntensity,mean(average(ring),'omitnan'),'AbsTol',1e-10);
+                    t.verifyEqual(values{k}.MeanSignalIntensity,mean(average(lists{k}),'omitnan'),'AbsTol',1e-10);
                 end
                 delete(settings);
             end
@@ -51,5 +51,5 @@ function testNoBackgroundPixelsProducesNaN(t)
 mask = true(8); lists = {find(mask)}; settings = oops.config.LocalBackground();
 cleanup = onCleanup(@() delete(settings));
 values = oops.analysis.objectMeasurements(mask,lists,ones(8),[],[],settings);
-t.verifyTrue(isnan(values{1}.BackgroundMean)); t.verifyTrue(isnan(values{1}.SignalToBackgroundRatio));
+t.verifyTrue(isnan(values{1}.MeanBackgroundIntensity)); t.verifyTrue(isnan(values{1}.SignalToBackgroundRatio));
 end

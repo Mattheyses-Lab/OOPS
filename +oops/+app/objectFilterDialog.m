@@ -1,12 +1,13 @@
-function filters = objectFilterDialog(parent)
+function filters = objectFilterDialog(parent,project)
 %OBJECTFILTERDIALOG Collect one or more AND-combined object-property filters.
 
 arguments
     parent (1,1) matlab.ui.Figure
+    project (1,1) oops.model.Project
 end
 
-properties = oops.model.Object.measurementNames();
-labels = oops.model.ObjectMeasurements.labels(properties);
+properties = oops.model.ObjectMeasurements.plottableNames(project);
+labels = oops.model.ObjectMeasurements.labels(properties,project);
 operators = [">",">=","==","~=","<=","<"];
 
 % Categorical table variables render as constrained drop-downs. This keeps

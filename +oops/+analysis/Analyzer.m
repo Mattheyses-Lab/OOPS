@@ -487,6 +487,36 @@ classdef Analyzer
             end
         end
 
+        function measureAuxiliaryObjects(image)
+        %MEASUREAUXILIARYOBJECTS Measure assigned channel planes over object pixels.
+
+            arguments
+                image (1,1) oops.model.Image
+            end
+
+            if isempty(image.Objects)
+                return;
+            end
+
+            assignments = image.AuxiliaryChannels;
+            channelIDs = reshape(string({assignments.ChannelID}),[],1);
+            values = nan(numel(image.Objects),numel(assignments));
+
+            for channelIndex = 1:numel(assignments)
+                plane = double(assignments(channelIndex).getPlane());
+
+                for objectIndex = 1:numel(image.Objects)
+                    values(objectIndex,channelIndex) = mean( ...
+                        plane(image.Objects(objectIndex).PixelIdxList),'omitnan');
+                end
+            end
+
+            for objectIndex = 1:numel(image.Objects)
+                image.Objects(objectIndex).setAuxiliarySignalMeans( ...
+                    channelIDs,values(objectIndex,:));
+            end
+        end
+
     end
 
     methods (Static, Access=private)
@@ -555,6 +585,11 @@ classdef Analyzer
         function measureObjects(image,settings)
         %MEASUREOBJECTS Commit scalar outputs calculated in the analysis package.
 
+            arguments
+                image (1,1) oops.model.Image
+                settings (1,1) oops.config.Settings
+            end
+
             if isempty(image.Objects)
                 return;
             end
@@ -599,13 +634,15 @@ classdef Analyzer
 
             % Computed scalar-measurement structs, one per object.
             values = oops.analysis.objectMeasurements(image.Mask,reshape(lists,1,[]), ...
-                image.Results.AverageIntensity,image.Order,image.Azimuth,settings.LocalBackground, ...
-                pixelTangents);
+                image.Results.AverageIntensity,image.Order,image.Azimuth, ...
+                settings.LocalBackground,pixelTangents);
 
             % Store the computed scalar measurement struct on each corresponding object.
             for k = 1:numel(image.Objects)
                 image.Objects(k).setMeasurements(values{k});
             end
+
+            oops.analysis.Analyzer.measureAuxiliaryObjects(image);
 
             oops.Log.INFO("Object measurements complete for " + image.Name + ".");
         end

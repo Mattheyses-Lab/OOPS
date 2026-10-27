@@ -134,6 +134,11 @@ Objects expose the non-reference scalar measurements from the original
 `OOPSObject`: morphology, centroid coordinates, signal/background statistics,
 order statistics, axial azimuth statistics, and midline statistics. These are
 stored results initialized to `NaN`; accessing them does not run analysis.
+Primary signal, local-background, and S/B measurements are derived exclusively
+from the corrected average-intensity image. This intentionally replaces the
+earlier raw/corrected duplicate measurements because correction changes signal
+and background proportionally in the validated workflows while the resulting
+S/B ratios remain effectively linear.
 Angles are in degrees, lengths in pixels, and areas in pixels squared. Analysis
 can update a subset through `object.setMeasurements(resultStruct)`. Validation
 happens before any scalar is changed. Updating parent image results clears the

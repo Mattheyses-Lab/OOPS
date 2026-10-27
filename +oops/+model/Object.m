@@ -39,9 +39,9 @@ classdef Object < handle
         MinFeretDiameter (1,1) double = NaN % Minimum caliper diameter, in pixels.
         CentroidX (1,1) double = NaN % Centroid column in parent-image coordinates.
         CentroidY (1,1) double = NaN % Centroid row in parent-image coordinates.
-        SignalMean (1,1) double = NaN % Mean signal intensity in the analysis input units.
-        BackgroundMean (1,1) double = NaN % Mean local background intensity.
-        SignalToBackgroundRatio (1,1) double = NaN % Mean signal divided by mean background.
+        MeanSignalIntensity (1,1) double = NaN % Mean corrected intensity over object pixels.
+        MeanBackgroundIntensity (1,1) double = NaN % Mean corrected intensity in the local background.
+        SignalToBackgroundRatio (1,1) double = NaN % Corrected signal divided by background.
         OrderMean (1,1) double = NaN % Mean orientational order.
         OrderStandardDeviation (1,1) double = NaN % Standard deviation of order.
         OrderMinimum (1,1) double = NaN % Minimum orientational order.
@@ -54,6 +54,7 @@ classdef Object < handle
         MidlineLength (1,1) double = NaN % Midline length, in pixels.
         Tortuosity (1,1) double = NaN % Midline length divided by endpoint distance.
         MidlineOrientationMean (1,1) double = NaN % Axial mean midline tangent direction, in degrees.
+        AuxiliaryMeasurements struct = struct('ChannelID',{},'SignalMean',{}) % Channel-keyed auxiliary results.
     end
 
     properties (Dependent, SetAccess=private)
@@ -230,7 +231,8 @@ classdef Object < handle
                 'LabelID',obj.LabelID, ...
                 'Midline',obj.Midline, ...
                 'PixelMidlineTangentList',obj.PixelMidlineTangentList, ...
-                'Measurements',obj.getMeasurements());
+                'Measurements',obj.getMeasurements(), ...
+                'AuxiliaryMeasurements',obj.AuxiliaryMeasurements);
         end
 
         function restoreStruct(obj,S)
@@ -241,6 +243,7 @@ classdef Object < handle
             obj.Midline = double(S.Midline);
             obj.PixelMidlineTangentList = double(S.PixelMidlineTangentList(:));
             obj.setMeasurements(S.Measurements);
+            obj.AuxiliaryMeasurements = S.AuxiliaryMeasurements;
         end
 
         function setMidlineResult(obj,coordinates,pixelTangents,scalars)
@@ -355,6 +358,50 @@ classdef Object < handle
             catch ME
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
+            end
+        end
+
+        function setAuxiliarySignalMeans(obj,channelIDs,values)
+        %SETAUXILIARYSIGNALMEANS Replace channel-keyed auxiliary measurements.
+
+            channelIDs = reshape(string(channelIDs),[],1);
+            values = reshape(double(values),[],1);
+
+            if numel(channelIDs) ~= numel(values) || ...
+                    numel(unique(channelIDs)) ~= numel(channelIDs) || ...
+                    any(channelIDs == "") || any(~isreal(values))
+                error('oops:model:InvalidAuxiliaryMeasurements', ...
+                    'Auxiliary measurements require unique channel IDs and one real scalar per channel.');
+            end
+
+            measurements = struct('ChannelID',cell(numel(channelIDs),1), ...
+                'SignalMean',cell(numel(channelIDs),1));
+
+            for k = 1:numel(channelIDs)
+                measurements(k).ChannelID = channelIDs(k);
+                measurements(k).SignalMean = values(k);
+            end
+
+            obj.AuxiliaryMeasurements = measurements;
+            obj.changed("ObjectMeasurements");
+        end
+
+        function value = auxiliarySignalMean(obj,channelID)
+        %AUXILIARYSIGNALMEAN Return one stored channel measurement or NaN.
+
+            assigned = string({obj.Parent.AuxiliaryChannels.ChannelID});
+            if ~ismember(string(channelID),assigned)
+                value = NaN;
+                return;
+            end
+
+            ids = string({obj.AuxiliaryMeasurements.ChannelID});
+            index = find(ids == string(channelID),1);
+
+            if isempty(index)
+                value = NaN;
+            else
+                value = obj.AuxiliaryMeasurements(index).SignalMean;
             end
         end
 
@@ -508,9 +555,9 @@ classdef Object < handle
             names = ["Name","Label","Mean order","Mean azimuth", ...
                 "Mean azimuth (midline)","Mean azimuth (normal)", ...
                 "Azimuth circular standard deviation", ...
-                "Signal/background ratio","Area","Convex area","Perimeter","Circularity", ...
+                "S/B ratio","Area","Convex area","Perimeter","Circularity", ...
                 "Eccentricity","Extent","Solidity","Mean signal intensity", ...
-                "Mean background intensity","Index","Tortuosity","Midline length","Midline orientation"];
+                "Mean BG intensity","Index","Tortuosity","Midline length","Midline orientation"];
 
             % Formatted identity, morphology, intensity, and polarization values.
             label = obj.Label;
@@ -528,7 +575,8 @@ classdef Object < handle
                 sprintf('%g px²',obj.ConvexArea),sprintf('%.2f px',obj.Perimeter), ...
                 sprintf('%.2f',obj.Circularity),sprintf('%.2f',obj.Eccentricity), ...
                 sprintf('%.2f',obj.Extent),sprintf('%.2f',obj.Solidity), ...
-                sprintf('%.2f A.U.',obj.SignalMean),sprintf('%.2f A.U.',obj.BackgroundMean),obj.SelfIdx, ...
+                sprintf('%.2f A.U.',obj.MeanSignalIntensity), ...
+                sprintf('%.2f A.U.',obj.MeanBackgroundIntensity),obj.SelfIdx, ...
                 sprintf('%.2f',obj.Tortuosity),sprintf('%.2f px',obj.MidlineLength), ...
                 sprintf('%.2f°',obj.MidlineOrientationMean)};
 
@@ -582,7 +630,8 @@ classdef Object < handle
         % Morphology and midline-only geometry remain valid for immutable pixels.
 
             % Measurement fields that depend on the parent's intensity or FPM outputs.
-            names = ["SignalMean","BackgroundMean","SignalToBackgroundRatio", ...
+            names = ["MeanSignalIntensity","MeanBackgroundIntensity", ...
+                "SignalToBackgroundRatio", ...
                 "OrderMean","OrderStandardDeviation","OrderMinimum","OrderMaximum", ...
                 "AzimuthMean","AzimuthCircularStandardDeviation","AzimuthCircularAngularDeviation", ...
                 "MidlineRelativeAzimuthMean","NormalRelativeAzimuthMean"];

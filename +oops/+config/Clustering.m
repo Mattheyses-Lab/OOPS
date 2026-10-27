@@ -14,7 +14,7 @@ classdef Clustering < handle
         NormalizationMethod_ (1,1) string = "zscore"
         DisplayEvaluation_ (1,1) logical = true
         % Names of stored scalar object measurements to use as features.
-        VariableList_ (1,:) string = ["Area" "BackgroundMean" "Circularity" "ConvexArea" "Eccentricity" "EquivDiameter" "Extent" "SignalToBackgroundRatio" "MajorAxisLength" "MaxFeretDiameter" "MidlineLength" "MinFeretDiameter" "MinorAxisLength" "Perimeter" "SignalMean" "Solidity" "Tortuosity"]
+        VariableList_ (1,:) string = ["Area" "MeanBackgroundIntensity" "Circularity" "ConvexArea" "Eccentricity" "EquivDiameter" "Extent" "SignalToBackgroundRatio" "MajorAxisLength" "MaxFeretDiameter" "MidlineLength" "MinFeretDiameter" "MinorAxisLength" "Perimeter" "MeanSignalIntensity" "Solidity" "Tortuosity"]
     end
 
     properties (Dependent)

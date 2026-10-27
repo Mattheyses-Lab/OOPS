@@ -2,7 +2,7 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-function values = objectMeasurements(mask,pixelLists,average,order,azimuth,settings,pixelTangents)
+function values = objectMeasurements(mask,pixelLists,averageIntensity,order,azimuth,settings,pixelTangents)
 %OBJECTMEASUREMENTS Derive pixel-unit morphology, intensity, and axial FPM summaries.
 % Background rings exclude other objects/buffers according to hidden settings.
 
@@ -85,15 +85,12 @@ for k = 1:numel(pixelLists)
         ring = ring & ~allBuffers(rows,cols);
     end
 
-    % Average-intensity data extracted into the same local crop.
-    localAverage = average(rows,cols);
-    s.SignalMean = mean(average(pixelLists{k}),'omitnan');
-    s.BackgroundMean = mean(localAverage(ring),'omitnan');
-    s.SignalToBackgroundRatio = NaN;
-
-    if s.BackgroundMean > 0
-        s.SignalToBackgroundRatio = s.SignalMean/s.BackgroundMean;
-    end
+    % Primary signal and local background use the corrected average intensity.
+    localAverage = averageIntensity(rows,cols);
+    s.MeanSignalIntensity = mean(averageIntensity(pixelLists{k}),'omitnan');
+    s.MeanBackgroundIntensity = mean(localAverage(ring),'omitnan');
+    s.SignalToBackgroundRatio = ratio( ...
+        s.MeanSignalIntensity,s.MeanBackgroundIntensity);
 
     if ~isempty(order)
 
@@ -162,6 +159,15 @@ for k = 1:numel(pixelLists)
     end
 
     values{k} = s;
+end
+
+function value = ratio(signal,background)
+%RATIO Return signal/background only for a positive finite denominator.
+
+value = NaN;
+if isfinite(background) && background > 0
+    value = signal/background;
+end
 end
 
 end
