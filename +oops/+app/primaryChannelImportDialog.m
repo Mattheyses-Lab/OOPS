@@ -144,14 +144,11 @@ footer = uigridlayout(layout,[1 4], ...
     'ColumnWidth',{'1x','fit','fit','fit'},'RowHeight',{'1x'}, ...
     'Padding',0,'RowSpacing',5,'ColumnSpacing',5);
 footer.Layout.Row = 4;
-hint = uilabel(footer, ...
-    'Text','Map each primary input to a project channel.');
 applyMatching = uibutton(footer, ...
     'Text','Apply mapping to matching channels', ...
     'ButtonPushedFcn',@applyMatchingMappings);
 cancel = uibutton(footer,'Text','Cancel','ButtonPushedFcn',@cancelImport);
 confirm = uibutton(footer,'Text','Import','ButtonPushedFcn',@confirmImport);
-hint.Layout.Column = 1;
 applyMatching.Layout.Column = 2;
 cancel.Layout.Column = 3;
 confirm.Layout.Column = 4;
@@ -242,7 +239,9 @@ uiwait(dialog);
             matches = matches+1;
         end
 
-        hint.Text = sprintf('Updated %d matching primary input(s).',matches);
+        uialert(dialog,sprintf( ...
+            'Updated %d matching primary input(s).',matches), ...
+            'Channel mappings','Icon','info');
     end
 
     function confirmImport(~,~)

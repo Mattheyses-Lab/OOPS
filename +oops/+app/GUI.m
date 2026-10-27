@@ -331,7 +331,7 @@ classdef GUI < handle
         %REGISTERCALIBRATIONS Add reusable files without assigning any group.
 
             % Operation progress dialog and its exception-safe cleanup guard.
-            [progress,cleanupProgress] = obj.createProgressDialog("Registering calibration stacks..."); %#ok<ASGLU>
+            [progress,cleanupProgress] = obj.createProgressDialog("Importing calibration stacks..."); %#ok<ASGLU>
             calibrations = obj.registerCalibrationFiles(files,progress);
             obj.warnCalibrationState();
         end
@@ -2102,9 +2102,9 @@ classdef GUI < handle
             obj.MenuUI.SaveAs = uimenu(file,'Text','Save As...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseProjectSave(true)));
 
-            obj.MenuUI.LoadImages = uimenu(file,'Text','Load images...','Separator','on', ...
+            obj.MenuUI.LoadImages = uimenu(file,'Text','Import polarization stacks...','Separator','on', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseFiles()));
-            obj.MenuUI.Calibration = uimenu(file,'Text','Register calibration stacks...', ...
+            obj.MenuUI.Calibration = uimenu(file,'Text','Import calibration stacks...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseCalibrationFiles()));
             obj.MenuUI.AuxiliaryChannels = uimenu(file, ...
                 'Text','Import auxiliary channels...', ...
@@ -4424,13 +4424,14 @@ classdef GUI < handle
         end
 
         function refreshOrientationFields(obj,names)
-        %REFRESHORIENTATIONFIELDS Draw sampled axial segments over average intensity.
+        %REFRESHORIENTATIONFIELDS Draw sampled axial segments over compatible image sources.
 
             % Active image supplying order, azimuth, and optional object membership.
             image = obj.Project.ActiveImage;
 
             % Project-wide appearance and sampling preferences for this overlay.
             settings = obj.Settings.AzimuthDisplay;
+            viewers = {obj.LeftViewer,obj.RightViewer};
 
             for k = 1:2
 
@@ -4438,10 +4439,15 @@ classdef GUI < handle
                 field = obj.OrientationFields{k};
                 tool = obj.OrientationFieldTools{k};
 
-                % The first implementation is intentionally limited to the
-                % average-intensity source and requires completed FPM analysis.
-                available = names(k) == "AverageIntensity" && ...
-                    ~isempty(image) && ~isempty(image.Order) && ~isempty(image.Azimuth);
+                % Any active-image view with matching XY geometry can host the
+                % field. Normalized calibration data describe the group response,
+                % rather than the active image, and are deliberately excluded.
+                viewer = viewers{k};
+                available = names(k) ~= "Calibration" && ...
+                    ~isempty(image) && ~isempty(image.Order) && ~isempty(image.Azimuth) && ...
+                    viewer.Visible == "on" && viewer.ImageVisible == "on" && ...
+                    viewer.ImageData.SizeY == image.Input.SizeY && ...
+                    viewer.ImageData.SizeX == image.Input.SizeX;
 
                 if ~available
                     field.clear();
@@ -4550,7 +4556,8 @@ classdef GUI < handle
                 end
 
                 % Whether this viewer displays an available, spatially compatible image.
-                ready = ~isempty(image) && viewer.ImageVisible == "on";
+                ready = obj.PanelContentNames(k) ~= "Calibration" && ...
+                    ~isempty(image) && viewer.ImageVisible == "on";
 
                 if ready
                     ready = viewer.ImageData.SizeY == image.Input.SizeY && ...
@@ -5178,7 +5185,7 @@ classdef GUI < handle
                     calibration = uimenu(menu,'Text','Calibration');
                     uimenu(calibration,'Text','View assignment...', ...
                         'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.showCalibrationAssignment(string(menu.UserData))));
-                    uimenu(calibration,'Text','Assign registered calibrations...', ...
+                    uimenu(calibration,'Text','Assign imported calibrations...', ...
                         'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseRegisteredCalibrations(string(menu.UserData))));
                     uimenu(calibration,'Text','Import and assign...', ...
                         'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.chooseCalibrationFiles(string(menu.UserData))));
@@ -5650,7 +5657,7 @@ classdef GUI < handle
 
             if isempty(obj.Project.Calibrations)
                 uialert(obj.Fig, ...
-                    'No calibration files are registered. Use Import and assign first.', ...
+                    'No calibration files have been imported. Use Import and assign first.', ...
                     'Calibration assignment','Icon','info');
                 return;
             end
@@ -5667,7 +5674,7 @@ classdef GUI < handle
                 'RowHeight',{'1x','fit'},'ColumnWidth',{'1x'},'Padding',10,'RowSpacing',10);
             tree = uitree(grid,'checkbox');
             tree.Layout.Row = 1;
-            tree.Tooltip = 'Check every registered calibration stack to average for this group.';
+            tree.Tooltip = 'Check every imported calibration stack to average for this group.';
 
             % One checkable registry node per reusable calibration input.
             nodes = matlab.ui.container.TreeNode.empty(0,1);

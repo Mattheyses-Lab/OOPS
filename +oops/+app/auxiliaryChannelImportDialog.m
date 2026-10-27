@@ -246,22 +246,11 @@ mapping = uitable(mappingPanel, ...
     'CellEditCallback',@mappingEdited, ...
     'CellSelectionCallback',@componentSelected);
 
-% Existing project names remind users which semantic identities can be reused.
-existingNames = [registry.Channels.Name];
-
-if isempty(existingNames)
-    hintText = "Check channels to import and edit their project channel names.";
-else
-    hintText = "Existing project channels: " + strjoin(existingNames,", ");
-end
-
 buttons = uigridlayout(layout,[1 4], ...
     'ColumnWidth',{'1x','fit','fit','fit'},'RowHeight',{'1x'}, ...
     'Padding',0,'RowSpacing',5,'ColumnSpacing',5);
 buttons.Layout.Row = 4;
 buttons.Layout.Column = [1 2];
-hint = uilabel(buttons,'Text',char(hintText));
-hint.Layout.Column = 1;
 applyMatching = uibutton(buttons, ...
     'Text','Apply mappings to matching channels', ...
     'ButtonPushedFcn',@applyMatchingMappings);
@@ -486,12 +475,14 @@ uiwait(dialog);
         end
 
         if updatedRows == 0
-            hint.Text = 'No matching source-channel names were found in other files.';
+            message = 'No matching source-channel names were found in other files.';
         else
-            hint.Text = sprintf( ...
+            message = sprintf( ...
                 'Updated %d matching channel(s) across %d other file(s).', ...
                 updatedRows,updatedFiles);
         end
+
+        uialert(dialog,message,'Channel mappings','Icon','info');
     end
 
     function componentSelected(~,event)
