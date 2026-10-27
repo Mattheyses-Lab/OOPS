@@ -245,7 +245,9 @@ classdef GUI < handle
             settings = obj.Settings;
 
             if ~isempty(obj.Project)
-                obj.closeProject();
+                if ~obj.closeProject()
+                    return;
+                end
                 settings = obj.Settings;
             end
 
@@ -254,10 +256,17 @@ classdef GUI < handle
             oops.Log.INFO("Created project: " + name);
         end
 
-        function closeProject(obj)
+        function closed = closeProject(obj)
         %CLOSEPROJECT Detach the current project while keeping the application open.
 
+            closed = false;
+
             if isempty(obj.Project)
+                closed = true;
+                return;
+            end
+
+            if ~obj.confirmSaveIfDirty()
                 return;
             end
 
@@ -282,11 +291,14 @@ classdef GUI < handle
             end
 
             obj.refreshEmptyProject();
+            closed = true;
             oops.Log.INFO("Closed project.");
         end
 
-        function saveProject(obj,file)
+        function saved = saveProject(obj,file)
         %SAVEPROJECT Write the current project to an explicitly chosen path.
+
+            saved = false;
 
             if isempty(obj.Project)
                 error('oops:app:NoProject','Create or open a project before saving.');
@@ -294,6 +306,7 @@ classdef GUI < handle
 
             oops.io.project.save(obj.Project,string(file));
             obj.updateProjectUIState();
+            saved = true;
         end
 
         function resolution = openProject(obj,file,opts)
@@ -646,15 +659,60 @@ classdef GUI < handle
             end
 
             if hasProject
+                dirtyMarker = "";
+
+                if obj.Project.HasUnsavedChanges
+                    dirtyMarker = "*";
+                end
+
                 marker = "";
 
                 if obj.Project.SourcePath ~= ""
                     marker = " — " + obj.Project.SourcePath;
                 end
 
-                obj.Fig.Name = char("OOPS — " + obj.Project.Name + marker);
+                obj.Fig.Name = char("OOPS — " + obj.Project.Name + dirtyMarker + marker);
             else
                 obj.Fig.Name = 'OOPS — No project';
+            end
+        end
+
+        function proceed = confirmSaveIfDirty(obj)
+        %CONFIRMSAVEIFDIRTY Resolve unsaved project changes before replacement.
+
+            proceed = true;
+
+            if isempty(obj.Project) || ~obj.Project.HasUnsavedChanges
+                return;
+            end
+
+            % Hidden controller instances cannot present a modal decision. They are
+            % used by programmatic workflows that already own their model lifecycle.
+            if isempty(obj.Fig) || ~isvalid(obj.Fig) || strcmp(obj.Fig.Visible,'off')
+                return;
+            end
+
+            answer = uiconfirm(obj.Fig, ...
+                "Save changes to " + obj.Project.Name + "?", ...
+                'Unsaved project changes', ...
+                'Options',{'Save','Discard','Cancel'}, ...
+                'DefaultOption','Save','CancelOption','Cancel','Icon','warning');
+
+            switch answer
+                case 'Save'
+                    proceed = obj.chooseProjectSave(false);
+                case 'Discard'
+                    proceed = true;
+                otherwise
+                    proceed = false;
+            end
+        end
+
+        function requestApplicationClose(obj)
+        %REQUESTAPPLICATIONCLOSE Confirm dirty state before destroying the app.
+
+            if obj.confirmSaveIfDirty()
+                delete(obj);
             end
         end
 
@@ -670,6 +728,10 @@ classdef GUI < handle
             end
 
             path = string(fullfile(folder,file));
+
+            if ~obj.confirmSaveIfDirty()
+                return;
+            end
 
             try
                 resolution = obj.openProject(path);
@@ -728,8 +790,10 @@ classdef GUI < handle
             end
         end
 
-        function chooseProjectSave(obj,saveAs)
+        function saved = chooseProjectSave(obj,saveAs)
         %CHOOSEPROJECTSAVE Always confirm the destination before writing a project.
+
+            saved = false;
 
             if isempty(obj.Project)
                 return;
@@ -751,7 +815,7 @@ classdef GUI < handle
                 return;
             end
 
-            obj.saveProject(string(fullfile(folder,file)));
+            saved = obj.saveProject(string(fullfile(folder,file)));
         end
 
         function exportSummaryTables(obj)
@@ -777,7 +841,7 @@ classdef GUI < handle
 
             obj.Fig = uifigure('Name','OOPS','Tag',oops.Info.MainFigureTag, ...
                 'Visible','off','AutoResizeChildren','off','Position',[80 80 1400 850],'Color',[.12 .12 .12], ...
-                'CloseRequestFcn',@(~,~) delete(obj));
+                'CloseRequestFcn',@(~,~) obj.requestApplicationClose());
             obj.Grid = uigridlayout(obj.Fig,[1 2],'ColumnWidth',{300,'1x'}, ...
                 'RowHeight',{'1x'},'Padding',5,'ColumnSpacing',5, ...
                 'BackgroundColor',[.12 .12 .12]);
@@ -2181,6 +2245,8 @@ classdef GUI < handle
                 @(~,~) obj.runCallback(@() obj.onLabelsChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'ActiveLabelChanged', ...
                 @(~,~) obj.runCallback(@() obj.syncActiveLabel()));
+            obj.Listeners(end+1) = addlistener(obj.Project,'DirtyStateChanged', ...
+                @(~,~) obj.runCallback(@() obj.updateProjectUIState()));
             obj.Listeners(end+1) = addlistener(obj.Settings,'Changed', ...
                 @(~,e) obj.runCallback(@() obj.onSettingsChanged(e)));
         end

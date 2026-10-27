@@ -25,6 +25,7 @@ classdef Project < handle
 
     properties (SetAccess=private, Transient)
         CacheManager oops.runtime.CacheManager
+        HasUnsavedChanges (1,1) logical = false
     end
 
     properties (Dependent, SetAccess=private)
@@ -38,6 +39,9 @@ classdef Project < handle
     properties (Access=private)
         GroupListeners cell = {}
         LabelListeners event.listener = event.listener.empty()
+        ChannelListener event.listener = event.listener.empty()
+        SettingsListener event.listener = event.listener.empty()
+        MutationListeners event.listener = event.listener.empty()
     end
 
     %% Model events
@@ -53,6 +57,8 @@ classdef Project < handle
         DataChanged
         LabelsChanged
         ActiveLabelChanged
+        ChannelsChanged
+        DirtyStateChanged
     end
 
     %% Lifecycle
@@ -77,10 +83,10 @@ classdef Project < handle
                 obj.CacheManager = oops.runtime.CacheManager();
                 obj.Labels = oops.model.LabelRegistry.default();
                 obj.Channels = oops.model.ChannelRegistry();
-                obj.LabelListeners(1) = addlistener(obj.Labels,'LabelsChanged', ...
-                    @(~,~) notify(obj,'LabelsChanged'));
-                obj.LabelListeners(2) = addlistener(obj.Labels,'ActiveChanged', ...
-                    @(~,~) notify(obj,'ActiveLabelChanged'));
+                obj.attachRegistryListeners();
+                obj.SettingsListener = addlistener(obj.Settings,'Changed', ...
+                    @(~,~) obj.markDirty());
+                obj.attachMutationListeners();
             catch ME
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
@@ -98,14 +104,39 @@ classdef Project < handle
                     delete(obj(i).GroupListeners{k});
                 end
 
+                delete(obj(i).MutationListeners);
+                delete(obj(i).SettingsListener);
+                delete(obj(i).ChannelListener);
+                delete(obj(i).LabelListeners);
                 delete(obj(i).Groups);
                 delete(obj(i).Calibrations);
                 delete(obj(i).Channels);
                 delete(obj(i).CacheManager);
-                delete(obj(i).LabelListeners);
                 delete(obj(i).Labels);
             end
 
+        end
+
+        function markDirty(obj)
+        %MARKDIRTY Record that persistent project state differs from its saved state.
+
+            if obj.HasUnsavedChanges
+                return;
+            end
+
+            obj.HasUnsavedChanges = true;
+            notify(obj,'DirtyStateChanged');
+        end
+
+        function markClean(obj)
+        %MARKCLEAN Record that the current project state matches its saved state.
+
+            if ~obj.HasUnsavedChanges
+                return;
+            end
+
+            obj.HasUnsavedChanges = false;
+            notify(obj,'DirtyStateChanged');
         end
 
         function S = toStruct(obj,projectFolder)
@@ -174,17 +205,14 @@ classdef Project < handle
             obj = oops.model.Project(string(S.Name),settings);
             obj.ID = string(S.ID);
 
+            delete(obj.ChannelListener);
             delete(obj.Channels);
-
             obj.Channels = oops.model.ChannelRegistry.fromStruct(S.Channels);
 
             delete(obj.LabelListeners);
             delete(obj.Labels);
             obj.Labels = oops.model.LabelRegistry.fromStruct(S.Labels);
-            obj.LabelListeners(1) = addlistener(obj.Labels,'LabelsChanged', ...
-                @(~,~) notify(obj,'LabelsChanged'));
-            obj.LabelListeners(2) = addlistener(obj.Labels,'ActiveChanged', ...
-                @(~,~) notify(obj,'ActiveLabelChanged'));
+            obj.attachRegistryListeners();
 
             % Total file-backed members used to report reconstruction progress.
             imageCount = sum(arrayfun(@(group) numel(group.Images),S.Groups));
@@ -297,6 +325,7 @@ classdef Project < handle
             oops.runtime.updateProgress(opts.Progress,"Restoring project navigation...",.99);
             obj.setActiveGroup(string(S.ActiveGroupID));
             obj.setSelectedGroups(string(S.SelectedGroupIDs));
+            obj.markClean();
             oops.Log.DEBUG("Project model construction completed: " + obj.Name);
         end
 
@@ -585,6 +614,7 @@ classdef Project < handle
                 % Multiple groups may reference the same registered source.
                 calibration = oops.model.Calibration(input,name);
                 obj.Calibrations(end+1,1) = calibration;
+                obj.markDirty();
                 oops.Log.INFO("Registered calibration: " + calibration.Name);
             catch ME
                 oops.Log.EXCEPTION(ME);
@@ -757,6 +787,53 @@ classdef Project < handle
 
     %% Input cache and child event forwarding
     methods (Access=private)
+
+        function attachRegistryListeners(obj)
+        %ATTACHREGISTRYLISTENERS Forward replaceable label and channel registries.
+
+            delete(obj.LabelListeners);
+            delete(obj.ChannelListener);
+            obj.LabelListeners = event.listener.empty();
+            obj.ChannelListener = event.listener.empty();
+            obj.LabelListeners(1) = addlistener(obj.Labels,'LabelsChanged', ...
+                @(~,~) notify(obj,'LabelsChanged'));
+            obj.LabelListeners(2) = addlistener(obj.Labels,'ActiveChanged', ...
+                @(~,~) notify(obj,'ActiveLabelChanged'));
+            obj.ChannelListener = addlistener(obj.Channels,'ChannelsChanged', ...
+                @(~,~) notify(obj,'ChannelsChanged'));
+        end
+
+        function attachMutationListeners(obj)
+        %ATTACHMUTATIONLISTENERS Derive dirty state from persistent model events.
+
+            for eventName = ["GroupAdded","GroupRemoved","GroupChanged", ...
+                    "ImagesAdded","ImagesRemoved","ObjectsChanged", ...
+                    "CalibrationChanged","LabelsChanged","ChannelsChanged"]
+                obj.MutationListeners(end+1) = addlistener(obj,char(eventName), ...
+                    @(~,~) obj.markDirty()); %#ok<AGROW>
+            end
+
+            obj.MutationListeners(end+1) = addlistener(obj,'DataChanged', ...
+                @(~,e) obj.onDataMutation(e));
+            obj.MutationListeners(end+1) = addlistener(obj,'NavigationChanged', ...
+                @(~,e) obj.onNavigationMutation(e));
+        end
+
+        function onDataMutation(obj,e)
+        %ONDATAMUTATION Ignore lazy input residency while tracking saved image data.
+
+            if ~ismember(e.Name,["InputLoaded","InputUnloaded"])
+                obj.markDirty();
+            end
+        end
+
+        function onNavigationMutation(obj,e)
+        %ONNAVIGATIONMUTATION Persist selections without dirtying active bookmarks.
+
+            if startsWith(e.Name,"Selected")
+                obj.markDirty();
+            end
+        end
 
         function color = nextGroupColor(obj)
         %NEXTGROUPCOLOR Cycle through MATLAB's default axes color order.

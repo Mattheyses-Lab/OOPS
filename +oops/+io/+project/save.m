@@ -8,7 +8,11 @@ function save(project,file)
 
     folder = string(fileparts(file));
     snapshot = project.toStruct(folder); %#ok<NASGU>
+    savedName = oops.io.project.nameFromFile(file);
+    snapshot.Name = savedName;
     save(file,'snapshot','-v7.3');
+    project.Name = savedName;
     project.SourcePath = file;
+    project.markClean();
     oops.Log.INFO("Saved project: " + file);
 end

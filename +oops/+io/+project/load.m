@@ -20,6 +20,13 @@ function [project,resolution] = load(file,opts)
     oops.runtime.updateProgress(opts.Progress,"Checking project image sources...",.08);
     [project,resolution] = oops.model.Project.fromStruct( ...
         data.snapshot,projectFolder,opts.SearchRoot,Progress=opts.Progress);
+    project.Name = oops.io.project.nameFromFile(file);
     project.SourcePath = file;
+    project.markClean();
+
+    if isfield(resolution,'Relinked') && ~isempty(resolution.Relinked)
+        project.markDirty();
+    end
+
     oops.Log.INFO("Opened project: " + file);
 end
