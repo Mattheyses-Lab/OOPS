@@ -302,17 +302,8 @@ function [data,info] = auxiliaryChannels(image)
         available(k) = true;
         sourceClasses(k) = string(class(values));
 
-        if isempty(assignment.DisplayRange)
-            range = double([min(values(:)) max(values(:))]);
-
-            if range(2) <= range(1)
-                range(2) = range(1)+max(1,eps(range(1)));
-            end
-
-            limits{k} = range;
-        else
-            limits{k} = assignment.DisplayRange;
-        end
+        limits{k} = oops.render.auxiliaryDisplayLimits( ...
+            assignment,image.Parent.Parent.Settings,values);
     end
 
     if ~any(available)

@@ -176,7 +176,8 @@ classdef Image < handle
             obj.setSelectedObjects(string(S.SelectedObjectIDs));
         end
 
-        function assignment = addAuxiliaryChannel(obj,channelID,input,componentIndex,displayRange)
+        function assignment = addAuxiliaryChannel( ...
+                obj,channelID,input,componentIndex,displayRange,displayStatistics)
         %ADDAUXILIARYCHANNEL Assign one single-plane source component by semantic ID.
 
             arguments
@@ -185,6 +186,7 @@ classdef Image < handle
                 input (1,1) matlabx.image.Image5D
                 componentIndex (1,1) double {mustBeInteger,mustBePositive}
                 displayRange double = []
+                displayStatistics (1,1) struct = struct()
             end
 
             definition = oops.model.ChannelDefinition.empty(0,1);
@@ -207,7 +209,7 @@ classdef Image < handle
             end
 
             assignment = oops.model.AuxiliaryChannelAssignment( ...
-                channelID,input,componentIndex,displayRange);
+                channelID,input,componentIndex,displayRange,displayStatistics);
             definition.markAuxiliary();
             channelIDs = string({obj.AuxiliaryChannels.ChannelID});
             existing = find(channelIDs == channelID,1);
@@ -815,7 +817,12 @@ classdef Image < handle
                 error('oops:model:UnknownDisplayDomain','Unknown display domain: %s',domain);
             end
 
-            if ~isfield(obj.DisplayStatistics,domain)
+            required = ["Minimum","Maximum","Percentile0_5","Percentile1", ...
+                "Percentile99_5","Percentile99_9","Percentile99_95"];
+            hasCurrentStatistics = isfield(obj.DisplayStatistics,domain) && ...
+                all(isfield(obj.DisplayStatistics.(domain),required));
+
+            if ~hasCurrentStatistics
 
                 if domain == "Intensity"
                     values = oops.analysis.Analyzer.ensureAverageIntensity(obj);
@@ -870,6 +877,20 @@ classdef Image < handle
                 oops.Log.EXCEPTION(ME);
                 rethrow(ME);
             end
+        end
+
+        function setAuxiliaryDisplayRange(obj,channelID,value)
+        %SETAUXILIARYDISPLAYRANGE Store one assigned channel's manual limits.
+
+            assignment = obj.getAuxiliaryChannel(channelID);
+
+            if isempty(assignment)
+                error('oops:model:MissingAuxiliaryChannel', ...
+                    'Image %s has no assignment for channel %s.',obj.Name,channelID);
+            end
+
+            assignment.setDisplayRange(value);
+            notify(obj,'DataChanged',oops.model.events.DataChanged(obj.ID,"DisplayRange"));
         end
 
     end
@@ -964,13 +985,28 @@ classdef Image < handle
 
             if isempty(values)
                 limits = fallback;
-                percentiles = fallback;
+                percentile1 = fallback(1);
+                percentile0_5 = fallback(1);
+                percentile99_5 = fallback(2);
+                percentile99_9 = fallback(2);
+                percentile99_95 = fallback(2);
             else
                 limits = [min(values) max(values)];
-                percentiles = prctile(values,[1 99]);
+                percentiles = prctile(values,[0.5 1 99.5 99.9 99.95]);
+                percentile0_5 = percentiles(1);
+                percentile1 = percentiles(2);
+                percentile99_5 = percentiles(3);
+                percentile99_9 = percentiles(4);
+                percentile99_95 = percentiles(5);
 
-                if percentiles(2) <= percentiles(1)
-                    percentiles = limits;
+                if percentile99_5 <= percentile1
+                    percentile1 = limits(1);
+                    percentile99_5 = limits(2);
+                end
+                if percentile99_95 <= percentile0_5
+                    percentile0_5 = limits(1);
+                    percentile99_9 = limits(2);
+                    percentile99_95 = limits(2);
                 end
             end
 
@@ -981,8 +1017,11 @@ classdef Image < handle
             statistics = struct( ...
                 'Minimum',limits(1), ...
                 'Maximum',limits(2), ...
-                'Percentile1',percentiles(1), ...
-                'Percentile99',percentiles(2));
+                'Percentile0_5',percentile0_5, ...
+                'Percentile1',percentile1, ...
+                'Percentile99_5',percentile99_5, ...
+                'Percentile99_9',percentile99_9, ...
+                'Percentile99_95',percentile99_95);
         end
 
     end

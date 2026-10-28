@@ -504,6 +504,7 @@ classdef Analyzer
 
             for channelIndex = 1:numel(assignments)
                 plane = double(assignments(channelIndex).getPlane());
+                assignments(channelIndex).getDisplayStatistics(plane);
 
                 for objectIndex = 1:numel(image.Objects)
                     values(objectIndex,channelIndex) = mean( ...

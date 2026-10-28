@@ -562,6 +562,7 @@ classdef GUI < handle
             end
 
             obj.bindEvents();
+            obj.rebuildAuxiliaryDisplayLimitControls();
             % Project channels must populate variable dropdowns before saved
             % channel-backed selections are copied into their Value properties.
             obj.refreshMeasurementControls();
@@ -623,6 +624,7 @@ classdef GUI < handle
             obj.PanelContentNames(:) = "";
             obj.ObjectViewerKey = "";
             obj.refreshColormapControls();
+            obj.rebuildAuxiliaryDisplayLimitControls();
 
             viewers = {obj.LeftViewer,obj.RightViewer};
 
@@ -1619,130 +1621,295 @@ classdef GUI < handle
         end
 
         function buildDisplayLimits(obj)
-        %BUILDDISPLAYLIMITS Build one-shot and navigation policies for each domain.
+        %BUILDDISPLAYLIMITS Group intensity targets above the fixed order block.
 
-            % Create independent policy buttons and a manual range for each display domain.
-            for domain = ["Intensity","Order"]
+            pane = obj.SettingsAccordion.getItem("Display Limits").Pane;
+            row = numel(pane.RowHeight)+1;
+            pane.RowHeight{row} = 'fit';
+            container = uigridlayout(pane,[2 1], ...
+                'ColumnWidth',{'1x'},'RowHeight',{'fit','fit'}, ...
+                'Padding',0,'RowSpacing',8,'ColumnSpacing',0, ...
+                'BackgroundColor',[.18 .18 .18]);
+            container.Layout.Row = row;
+            container.Layout.Column = [1 2];
 
-                % Accordion item grid that owns the controls being created or updated.
-                pane = obj.SettingsAccordion.getItem("Display Limits").Pane;
+            intensityGrid = uigridlayout(container,[1 1], ...
+                'ColumnWidth',{'1x'},'RowHeight',{'fit'}, ...
+                'Padding',0,'RowSpacing',8,'ColumnSpacing',0, ...
+                'BackgroundColor',[.18 .18 .18]);
+            intensityGrid.Layout.Row = 1;
+            orderGrid = uigridlayout(container,[1 1], ...
+                'ColumnWidth',{'1x'},'RowHeight',{'fit'}, ...
+                'Padding',0,'RowSpacing',0,'ColumnSpacing',0, ...
+                'BackgroundColor',[.18 .18 .18]);
+            orderGrid.Layout.Row = 2;
 
-                % Next grid row allocated to the manual range slider.
-                row = numel(pane.RowHeight)+1;
-                pane.RowHeight{row} = 'fit';
+            primaryTarget = struct('Kind',"Primary",'Domain',"Intensity",'ChannelID',"");
+            orderTarget = struct('Kind',"Order",'Domain',"Order",'ChannelID',"");
+            obj.DisplayLimitUI.Container = container;
+            obj.DisplayLimitUI.IntensityGrid = intensityGrid;
+            obj.DisplayLimitUI.Primary = obj.createDisplayLimitBlock( ...
+                intensityGrid,"Primary intensity",primaryTarget,1);
+            obj.DisplayLimitUI.Order = obj.createDisplayLimitBlock( ...
+                orderGrid,"Order",orderTarget,1);
+            obj.DisplayLimitUI.Auxiliary = struct([]);
+            obj.rebuildAuxiliaryDisplayLimitControls();
+        end
 
-                % Range slider used to preview and store an explicit image range.
-                control = matlabx.ui.control.Slider(pane,'Title',char(domain), ...
-                    'ValueMode','range','Limits',[0 1],'Value',[0 1], ...
-                    'ValueDisplayFormat','%.2f','FontColor',[.9 .9 .9], ...
-                    'BackgroundColor',[.18 .18 .18], ...
-                    'ValueChangingFcn',@(src,~) obj.runCallback(@() obj.onDisplayLimitsEdited(src,false)), ...
-                    'ValueChangedFcn',@(src,~) obj.runCallback(@() obj.onDisplayLimitsEdited(src,true)));
-                control.UserData = domain;
-                control.Layout.Row = row;
-                control.Layout.Column = [1 2];
-                obj.DisplayLimitUI.(domain) = control;
+        function block = createDisplayLimitBlock(obj,parent,title,target,row)
+        %CREATEDISPLAYLIMITBLOCK Build one complete range and policy editor.
 
-                % Next grid row allocated to the four evenly spaced policy buttons.
-                row = numel(pane.RowHeight)+1;
-                pane.RowHeight{row} = 'fit';
+            host = uigridlayout(parent,[3 2], ...
+                'ColumnWidth',{'fit','1x'},'RowHeight',{'fit','fit','fit'}, ...
+                'Padding',0,'RowSpacing',4,'ColumnSpacing',5, ...
+                'BackgroundColor',[.18 .18 .18]);
+            host.Layout.Row = row;
+            slider = matlabx.ui.control.Slider(host,'Title',char(title), ...
+                'ValueMode','range','Limits',[0 1],'Value',[0 1], ...
+                'ValueDisplayFormat','%.2f','FontColor',[.9 .9 .9], ...
+                'BackgroundColor',[.18 .18 .18], ...
+                'ValueChangingFcn',@(src,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitsEdited(src,false)), ...
+                'ValueChangedFcn',@(src,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitsEdited(src,true)));
+            slider.UserData = target;
+            slider.Layout.Row = 1;
+            slider.Layout.Column = [1 2];
 
-                % One-row host keeping the four display-limit actions evenly spaced.
-                buttonGrid = uigridlayout(pane,[1 4], ...
-                    'ColumnWidth',{'1x','1x','1x','1x'}, ...
-                    'RowHeight',{'fit'},'ColumnSpacing',4, ...
-                    'Padding',[0 0 0 0],'BackgroundColor',[.18 .18 .18]);
-                buttonGrid.Layout.Row = row;
-                buttonGrid.Layout.Column = [1 2];
+            buttonGrid = uigridlayout(host,[1 4], ...
+                'ColumnWidth',{'1x','1x','1x','1x'},'RowHeight',{'fit'}, ...
+                'ColumnSpacing',4,'Padding',0,'BackgroundColor',[.18 .18 .18]);
+            buttonGrid.Layout.Row = 2;
+            buttonGrid.Layout.Column = [1 2];
+            reset = uibutton(buttonGrid,'push','Text','Reset', ...
+                'ButtonPushedFcn',@(~,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitAction(target,"Reset")));
+            auto = uibutton(buttonGrid,'push','Text','Auto', ...
+                'ButtonPushedFcn',@(~,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitAction(target,"Auto")));
+            keepAuto = uibutton(buttonGrid,'state','Text','Keep Auto', ...
+                'ValueChangedFcn',@(src,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitModeChanged(target,"KeepAuto",src.Value)));
+            lock = uibutton(buttonGrid,'state','Text','Lock', ...
+                'ValueChangedFcn',@(src,~) obj.runCallback( ...
+                    @() obj.onDisplayLimitModeChanged(target,"Lock",src.Value)));
 
-                % Immediate actions calculate and store one range for the active image.
-                reset = uibutton(buttonGrid,'push','Text','Reset', ...
-                    'ButtonPushedFcn',@(~,~) obj.runCallback( ...
-                    @() obj.onDisplayLimitAction(domain,"Reset")));
-                auto = uibutton(buttonGrid,'push','Text','Auto', ...
-                    'ButtonPushedFcn',@(~,~) obj.runCallback( ...
-                    @() obj.onDisplayLimitAction(domain,"Auto")));
+            methodLabel = uilabel(host,'Text','Scaling method', ...
+                'FontColor',[.75 .75 .75]);
+            methodLabel.Layout.Row = 3;
+            methodLabel.Layout.Column = 1;
+            method = uidropdown(host, ...
+                'Items',{'Light contrast','Medium contrast','Strong contrast', ...
+                    'Zero to max','Data range'}, ...
+                'Value','Light contrast', ...
+                'ValueChangedFcn',@(src,~) obj.runCallback( ...
+                    @() obj.onDisplayAutoScaleMethodChanged(target,string(src.Value))));
+            method.Layout.Row = 3;
+            method.Layout.Column = 2;
+            block = struct('Host',host,'Slider',slider, ...
+                'Buttons',struct('Reset',reset,'Auto',auto, ...
+                    'KeepAuto',keepAuto,'Lock',lock), ...
+                'Method',method,'Target',target);
+        end
 
-                % Persistent navigation modes are exclusive and synchronized from settings.
-                keepAuto = uibutton(buttonGrid,'state','Text','Keep Auto', ...
-                    'ValueChangedFcn',@(src,~) obj.runCallback( ...
-                    @() obj.onDisplayLimitModeChanged(domain,"KeepAuto",src.Value)));
-                lock = uibutton(buttonGrid,'state','Text','Lock', ...
-                    'ValueChangedFcn',@(src,~) obj.runCallback( ...
-                    @() obj.onDisplayLimitModeChanged(domain,"Lock",src.Value)));
+        function rebuildAuxiliaryDisplayLimitControls(obj)
+        %REBUILDAUXILIARYDISPLAYLIMITCONTROLS Match rows to semantic channels.
 
-                obj.DisplayLimitUI.Controls.(domain) = struct( ...
-                    'Reset',reset,'Auto',auto,'KeepAuto',keepAuto,'Lock',lock);
+            if ~isfield(obj.DisplayLimitUI,'IntensityGrid') || ...
+                    ~isvalid(obj.DisplayLimitUI.IntensityGrid)
+                return;
+            end
 
-                if domain == "Order"
-                    obj.addSetting("Display Limits","Scaling method","Display", ...
-                        "OrderAutoScaleMethod",["Contrast","Zero to max","Data range"]);
+            if isfield(obj.DisplayLimitUI,'Auxiliary')
+                for block = reshape(obj.DisplayLimitUI.Auxiliary,1,[])
+                    if isvalid(block.Host), delete(block.Host); end
                 end
             end
 
+            definitions = oops.model.ChannelDefinition.empty(0,1);
+            if ~isempty(obj.Project)
+                definitions = obj.Project.Channels.Channels;
+                definitions = definitions([definitions.IsAuxiliary]);
+            end
+
+            grid = obj.DisplayLimitUI.IntensityGrid;
+            grid.RowHeight = repmat({'fit'},1,1+numel(definitions));
+            obj.DisplayLimitUI.Primary.Host.Layout.Row = 1;
+            blocks = struct([]);
+
+            for k = 1:numel(definitions)
+                target = struct('Kind',"Auxiliary",'Domain',"Auxiliary", ...
+                    'ChannelID',definitions(k).ID);
+                block = obj.createDisplayLimitBlock( ...
+                    grid,definitions(k).Name,target,k+1);
+
+                % A fieldless struct([]) cannot accept a subscripted
+                % assignment from the first fully defined block.
+                if k == 1
+                    blocks = block;
+                else
+                    blocks(k) = block; %#ok<AGROW>
+                end
+            end
+            obj.DisplayLimitUI.Auxiliary = blocks;
         end
 
         function refreshDisplayLimits(obj)
         %REFRESHDISPLAYLIMITS Show effective limits while preserving stored manual values.
 
-            % Active image supplying data and object membership for this operation.
             image = obj.Project.ActiveImage;
+            blocks = {obj.DisplayLimitUI.Primary};
+            for auxiliaryBlock = reshape(obj.DisplayLimitUI.Auxiliary,1,[])
+                blocks{end+1} = auxiliaryBlock; %#ok<AGROW>
+            end
+            blocks{end+1} = obj.DisplayLimitUI.Order;
 
-            % Synchronize each display-domain slider with the active image's effective limits.
-            for domain = ["Intensity","Order"]
+            for k = 1:numel(blocks)
+                block = blocks{k};
+                [ready,value,bounds,integerDisplay,policy] = ...
+                    obj.resolveDisplayLimitTarget(image,block.Target);
+                state = matlab.lang.OnOffSwitchState(ready);
 
-                % Bound UI component being constructed or synchronized.
-                control = obj.DisplayLimitUI.(domain);
-
-                % Buttons controlling one-shot ranges and navigation behavior.
-                buttons = obj.DisplayLimitUI.Controls.(domain);
-
-                % Whether the active image has data for the current display-limit domain.
-                ready = ~isempty(image);
-
-                if isprop(control,'Enable')
-                    control.Enable = matlab.lang.OnOffSwitchState(ready);
+                % MATLABX Slider currently has no public interaction-state
+                % property. Keep this guarded so the surrounding native
+                % controls can still reflect availability without preventing
+                % GUI construction.
+                if isprop(block.Slider,'Enable')
+                    block.Slider.Enable = state;
                 end
+
+                block.Method.Enable = state;
 
                 for name = ["Reset","Auto","KeepAuto","Lock"]
-                    buttons.(name).Enable = matlab.lang.OnOffSwitchState(ready);
+                    block.Buttons.(name).Enable = state;
                 end
 
-                buttons.KeepAuto.Value = obj.Settings.Display.("KeepAutoDisplay"+domain);
-                buttons.Lock.Value = obj.Settings.Display.("LockDisplay"+domain);
+                block.Buttons.KeepAuto.Value = policy.KeepAuto;
+                block.Buttons.Lock.Value = policy.Lock;
+                block.Method.Value = char(policy.AutoScaleMethod);
 
-                if ready
-
-                    % Match edit-field formatting and committed precision to display pixels.
-                    if domain == "Intensity"
-                        [detectorLimits,~] = oops.analysis.detectorRange(image.Input);
-                        integerDisplay = ~isempty(detectorLimits);
-                    else
-                        integerDisplay = false;
-                    end
-
-                    if integerDisplay
-                        control.ValueDisplayFormat = '%d';
-                        control.RoundValues = 'on';
-                        control.RoundDigits = 0;
-                    else
-                        control.ValueDisplayFormat = '%.2f';
-                        control.RoundValues = 'off';
-                    end
-
-                    % Effective display range and slider bounds resolved for this image/domain.
-                    [value,bounds] = oops.render.displayLimits(image,domain,obj.Settings);
-                    control.Limits = bounds;
-                    control.Value = value;
+                if integerDisplay
+                    block.Slider.ValueDisplayFormat = '%d';
+                    block.Slider.RoundValues = 'on';
+                    block.Slider.RoundDigits = 0;
                 else
-                    control.ValueDisplayFormat = '%.2f';
-                    control.RoundValues = 'off';
-                    control.Limits = [0 1];
-                    control.Value = [0 1];
+                    block.Slider.ValueDisplayFormat = '%.2f';
+                    block.Slider.RoundValues = 'off';
                 end
 
+                obj.refreshDisplayLimitColormap(block,image);
+                block.Slider.Limits = bounds;
+                block.Slider.Value = value;
             end
 
+        end
+
+        function refreshDisplayLimitColormap(obj,block,image)
+        %REFRESHDISPLAYLIMITCOLORMAP Show the target's effective color ramp.
+
+            target = block.Target;
+            definition = oops.model.ChannelDefinition.empty(0,1);
+
+            if target.Kind == "Primary"
+                mode = obj.Settings.Display.PrimaryIntensityColorMode;
+                if ~isempty(image), definition = image.PrimaryChannel; end
+                fallbackDomain = "Intensity";
+            elseif target.Kind == "Auxiliary"
+                mode = obj.Settings.Display.AuxiliaryColorMode;
+                if ~isempty(obj.Project)
+                    definition = obj.Project.Channels.findByID(target.ChannelID);
+                end
+                fallbackDomain = "Intensity";
+            else
+                mode = obj.Settings.Display.OrderColorMode;
+                fallbackDomain = "Order";
+            end
+
+            if mode == "colors"
+                if ~isempty(definition)
+                    color = oops.render.canonicalComponentColor(definition.Color);
+                    if color == "", color = "gray"; end
+                    [~,rgb] = matlabx.image.normalizeComponentColor(color);
+                    identity = definition.ID+":"+sprintf('%.17g,',rgb);
+                else
+                    color = "gray";
+                    if fallbackDomain ~= "Intensity"
+                        color = obj.Settings.Colormaps.(fallbackDomain+"Color");
+                    end
+                    [~,rgb] = matlabx.image.normalizeComponentColor( ...
+                        color);
+                    identity = fallbackDomain+":"+sprintf('%.17g,',rgb);
+                end
+                map = linspace(0,1,256)'.*rgb;
+                key = "colors:"+identity;
+            else
+                if ~isempty(definition)
+                    name = definition.Colormap;
+                    category = definition.ColormapCategory;
+                    map = matlabx.colors.maps.Registry.map(name,category);
+                    identity = definition.ID+":"+category+":"+name;
+                else
+                    name = obj.Settings.Colormaps.(fallbackDomain);
+                    category = obj.Settings.Colormaps.(fallbackDomain+"Category");
+                    map = oops.render.colormap( ...
+                        obj.Settings.Colormaps,fallbackDomain);
+                    identity = fallbackDomain+":"+category+":"+name;
+                end
+                key = "luts:"+identity;
+            end
+
+            % Assigning a Slider colormap updates its filled patch. Avoid that
+            % work during routine navigation when appearance is unchanged.
+            previousKey = string(block.Host.UserData);
+            if isempty(previousKey) || previousKey ~= key
+                block.Slider.Colormap = map;
+                block.Host.UserData = key;
+            end
+        end
+
+        function [ready,value,bounds,integerDisplay,policy,ranges] = ...
+                resolveDisplayLimitTarget(obj,image,target)
+        %RESOLVEDISPLAYLIMITTARGET Resolve data, policy, and formatting for one row.
+
+            ready = ~isempty(image);
+            value = [0 1];
+            bounds = [0 1];
+            integerDisplay = false;
+            ranges = struct('Reset',[0 1],'Auto',[0 1]);
+
+            if target.Kind == "Auxiliary"
+                policy = obj.Settings.Display.auxiliaryPolicy(target.ChannelID);
+                if ready
+                    assignment = image.getAuxiliaryChannel(target.ChannelID);
+                    ready = ~isempty(assignment);
+                end
+
+                if ready
+                    [value,bounds,ranges] = oops.render.auxiliaryDisplayLimits( ...
+                        assignment,obj.Settings);
+                    componentClass = string(assignment.Input.getComponentClass( ...
+                        assignment.ComponentIndex));
+                    integerDisplay = startsWith(componentClass,"uint") || ...
+                        startsWith(componentClass,"int");
+                end
+                return;
+            end
+
+            domain = target.Domain;
+            policy = struct( ...
+                'KeepAuto',obj.Settings.Display.("KeepAutoDisplay"+domain), ...
+                'Lock',obj.Settings.Display.("LockDisplay"+domain), ...
+                'LockedRange',obj.Settings.Display.("LockedDisplayRange"+domain), ...
+                'AutoScaleMethod',obj.Settings.Display.(domain+"AutoScaleMethod"));
+
+            if ready
+                [value,bounds,ranges] = oops.render.displayLimits( ...
+                    image,domain,obj.Settings);
+                if domain == "Intensity"
+                    [detectorLimits,~] = oops.analysis.detectorRange(image.Input);
+                    integerDisplay = ~isempty(detectorLimits);
+                end
+            end
         end
 
         function onDisplayLimitsEdited(obj,control,commit)
@@ -1755,13 +1922,12 @@ classdef GUI < handle
                 return;
             end
 
-            % Display/settings domain selected by the current control.
-            domain = string(control.UserData);
+            target = control.UserData;
 
             % Range selected by the intensity/order display-limit slider.
             value = control.Value;
 
-            if domain == "Intensity"
+            if target.Kind == "Primary"
                 value = oops.render.normalizeIntensityDisplayRange(image,value);
             end
 
@@ -1776,12 +1942,10 @@ classdef GUI < handle
                 previous = obj.Processing;
                 obj.Processing = true;
                 guard = onCleanup(@() obj.restoreProcessing(previous));
-                image.setDisplayRange(domain,value);
-                obj.Settings.Display.("KeepAutoDisplay"+domain) = false;
-
-                if obj.Settings.Display.("LockDisplay"+domain)
-                    obj.Settings.Display.("LockedDisplayRange"+domain) = value;
-                end
+                obj.storeDisplayTargetRange(image,target,value);
+                obj.setDisplayTargetPolicy(target,"KeepAuto",false);
+                policy = obj.displayTargetPolicy(target);
+                if policy.Lock, obj.setDisplayTargetPolicy(target,"LockedRange",value); end
 
                 clear guard;
 
@@ -1789,13 +1953,13 @@ classdef GUI < handle
                     obj.refreshViewers(true);
                 end
             else
-                obj.applyDisplayRangeToViewers(domain,value);
+                obj.applyDisplayRangeToViewers(target,value);
 
             end
 
         end
 
-        function onDisplayLimitAction(obj,domain,action)
+        function onDisplayLimitAction(obj,target,action)
         %ONDISPLAYLIMITACTION Apply a one-shot Reset or Auto range to the active image.
 
             % Active image receiving the newly calculated stored display range.
@@ -1805,11 +1969,11 @@ classdef GUI < handle
                 return;
             end
 
-            % Reset and Auto ranges calculated from the current image and domain.
-            [~,~,ranges] = oops.render.displayLimits(image,domain,obj.Settings);
+            [ready,~,~,~,~,ranges] = obj.resolveDisplayLimitTarget(image,target);
+            if ~ready, return; end
             value = ranges.(action);
 
-            if domain == "Intensity"
+            if target.Kind == "Primary"
                 value = oops.render.normalizeIntensityDisplayRange(image,value);
             end
 
@@ -1817,12 +1981,10 @@ classdef GUI < handle
             previous = obj.Processing;
             obj.Processing = true;
             guard = onCleanup(@() obj.restoreProcessing(previous));
-            image.setDisplayRange(domain,value);
-            obj.Settings.Display.("KeepAutoDisplay"+domain) = false;
-
-            if obj.Settings.Display.("LockDisplay"+domain)
-                obj.Settings.Display.("LockedDisplayRange"+domain) = value;
-            end
+            obj.storeDisplayTargetRange(image,target,value);
+            obj.setDisplayTargetPolicy(target,"KeepAuto",false);
+            policy = obj.displayTargetPolicy(target);
+            if policy.Lock, obj.setDisplayTargetPolicy(target,"LockedRange",value); end
 
             clear guard;
 
@@ -1832,7 +1994,7 @@ classdef GUI < handle
 
         end
 
-        function onDisplayLimitModeChanged(obj,domain,mode,value)
+        function onDisplayLimitModeChanged(obj,target,mode,value)
         %ONDISPLAYLIMITMODECHANGED Enable an exclusive navigation scaling policy.
 
             % Active image supplies the effective range captured when Lock is enabled.
@@ -1849,17 +2011,81 @@ classdef GUI < handle
             guard = onCleanup(@() obj.restoreProcessing(previous));
 
             if mode == "Lock" && value
-                current = oops.render.displayLimits(image,domain,obj.Settings);
-                obj.Settings.Display.("LockedDisplayRange"+domain) = current;
+                [ready,current] = obj.resolveDisplayLimitTarget(image,target);
+                if ~ready, return; end
+                obj.setDisplayTargetPolicy(target,"LockedRange",current);
             end
 
-            obj.Settings.Display.(mode+"Display"+domain) = logical(value);
+            obj.setDisplayTargetPolicy(target,mode,logical(value));
             clear guard;
 
             if ~previous
                 obj.refreshViewers(true);
             end
 
+        end
+
+        function onDisplayAutoScaleMethodChanged(obj,target,value)
+        %ONDISPLAYAUTOSCALEMETHODCHANGED Store a method and refresh Keep Auto views.
+
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
+            obj.setDisplayTargetPolicy(target,"AutoScaleMethod",value);
+            policy = obj.displayTargetPolicy(target);
+            clear guard;
+
+            if ~previous
+                if policy.KeepAuto
+                    obj.refreshViewers(true);
+                else
+                    obj.refreshDisplayLimits();
+                end
+            end
+        end
+
+        function policy = displayTargetPolicy(obj,target)
+        %DISPLAYTARGETPOLICY Return a uniform policy record for any target.
+
+            if target.Kind == "Auxiliary"
+                policy = obj.Settings.Display.auxiliaryPolicy(target.ChannelID);
+            else
+                domain = target.Domain;
+                policy = struct( ...
+                    'KeepAuto',obj.Settings.Display.("KeepAutoDisplay"+domain), ...
+                    'Lock',obj.Settings.Display.("LockDisplay"+domain), ...
+                    'LockedRange',obj.Settings.Display.("LockedDisplayRange"+domain), ...
+                    'AutoScaleMethod',obj.Settings.Display.(domain+"AutoScaleMethod"));
+            end
+        end
+
+        function setDisplayTargetPolicy(obj,target,name,value)
+        %SETDISPLAYTARGETPOLICY Store one policy field through its settings API.
+
+            if target.Kind == "Auxiliary"
+                obj.Settings.Display.setAuxiliaryPolicy(target.ChannelID,name,value);
+                return;
+            end
+
+            domain = target.Domain;
+            switch name
+                case {"KeepAuto","Lock"}
+                    obj.Settings.Display.(name+"Display"+domain) = value;
+                case "LockedRange"
+                    obj.Settings.Display.("LockedDisplayRange"+domain) = value;
+                case "AutoScaleMethod"
+                    obj.Settings.Display.(domain+"AutoScaleMethod") = value;
+            end
+        end
+
+        function storeDisplayTargetRange(~,image,target,value)
+        %STOREDISPLAYTARGETRANGE Commit a manual range to its image-owned location.
+
+            if target.Kind == "Auxiliary"
+                image.setAuxiliaryDisplayRange(target.ChannelID,value);
+            else
+                image.setDisplayRange(target.Domain,value);
+            end
         end
 
         function buildViewers(obj)
@@ -2245,10 +2471,23 @@ classdef GUI < handle
                 @(~,~) obj.runCallback(@() obj.onLabelsChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'ActiveLabelChanged', ...
                 @(~,~) obj.runCallback(@() obj.syncActiveLabel()));
+            obj.Listeners(end+1) = addlistener(obj.Project,'ChannelsChanged', ...
+                @(~,~) obj.runCallback(@() obj.onChannelsChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'DirtyStateChanged', ...
                 @(~,~) obj.runCallback(@() obj.updateProjectUIState()));
             obj.Listeners(end+1) = addlistener(obj.Settings,'Changed', ...
                 @(~,e) obj.runCallback(@() obj.onSettingsChanged(e)));
+        end
+
+        function onChannelsChanged(obj)
+        %ONCHANNELSCHANGED Rebuild channel-derived controls and current displays.
+
+            obj.rebuildAuxiliaryDisplayLimitControls();
+            obj.refreshMeasurementControls();
+            obj.refreshColormapControls();
+            obj.refreshDisplayLimits();
+            obj.ViewerKeys(:) = "";
+            obj.refreshViewers(true);
         end
 
         function reconcileActive(obj)
@@ -2373,6 +2612,10 @@ classdef GUI < handle
             if ismember(e.Name,["PrimaryChannelID","AuxiliaryChannels"])
                 obj.refreshColormapControls();
                 obj.refreshMeasurementControls();
+                if e.Name == "AuxiliaryChannels"
+                    obj.rebuildAuxiliaryDisplayLimitControls();
+                end
+                obj.refreshDisplayLimits();
             end
 
             % Per-object measurement events need only the Object summary.
@@ -3357,7 +3600,10 @@ classdef GUI < handle
                 obj.Settings.Display.("LockedDisplayRange"+domain) = value;
             end
 
-            obj.applyDisplayRangeToViewers(domain,value);
+            kind = "Order";
+            if domain == "Intensity", kind = "Primary"; end
+            target = struct('Kind',kind,'Domain',domain,'ChannelID',"");
+            obj.applyDisplayRangeToViewers(target,value);
             obj.refreshDisplayLimits();
             clear processingGuard;
         end
@@ -3450,6 +3696,10 @@ classdef GUI < handle
                 return;
             end
 
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
+
             definitions = obj.Project.Channels.Channels;
             definitions = definitions([definitions.IsAuxiliary]);
             indices = event.ComponentIdx;
@@ -3469,12 +3719,22 @@ classdef GUI < handle
                 assignment = image.getAuxiliaryChannel(definitions(index).ID);
 
                 if ~isempty(assignment)
-                    assignment.setDisplayRange(limits{index});
+                    channelID = definitions(index).ID;
+                    image.setAuxiliaryDisplayRange(channelID,limits{index});
+                    obj.Settings.Display.setAuxiliaryPolicy( ...
+                        channelID,"KeepAuto",false);
+                    policy = obj.Settings.Display.auxiliaryPolicy(channelID);
+                    if policy.Lock
+                        obj.Settings.Display.setAuxiliaryPolicy( ...
+                            channelID,"LockedRange",limits{index});
+                    end
                 end
             end
+            clear guard;
+            obj.refreshDisplayLimits();
         end
 
-        function applyDisplayRangeToViewers(obj,domain,value)
+        function applyDisplayRangeToViewers(obj,target,value)
         %APPLYDISPLAYRANGETOVIEWERS Synchronize visible sources without rebuilding them.
 
             obj.SyncingViewerDisplay = true;
@@ -3483,18 +3743,37 @@ classdef GUI < handle
             % Main sources whose pixels use the shared image display domain.
             names = [obj.Settings.View.LeftSource,obj.Settings.View.RightSource];
             viewers = {obj.LeftViewer,obj.RightViewer};
+            domain = target.Domain;
 
-            if domain == "Intensity"
+            if target.Kind == "Primary"
                 affected = ismember(names,["Input","Corrected","AverageIntensity"]);
-            else
+            elseif target.Kind == "Order"
                 affected = names == "Order";
+            else
+                affected = names == "AuxiliaryChannels";
             end
 
             for k = find(affected)
                 currentViewer = viewers{k};
                 currentViewer.CLimMode = 'manual';
-                currentViewer.ComponentCLims = ...
-                    repmat({value},1,currentViewer.NumComponents);
+                if target.Kind == "Auxiliary"
+                    definitions = obj.Project.Channels.Channels;
+                    definitions = definitions([definitions.IsAuxiliary]);
+                    index = find([definitions.ID] == target.ChannelID,1);
+                    limits = currentViewer.ComponentCLims;
+                    if ~isempty(index) && index <= numel(limits)
+                        limits{index} = value;
+                        currentViewer.ComponentCLims = limits;
+                    end
+                else
+                    currentViewer.ComponentCLims = ...
+                        repmat({value},1,currentViewer.NumComponents);
+                end
+            end
+
+            if target.Kind == "Auxiliary"
+                clear displayGuard;
+                return;
             end
 
             % RGB derived views bake both domains into their pixels, so live
@@ -3504,11 +3783,11 @@ classdef GUI < handle
             image = obj.Project.ActiveImage;
 
             for k = find(ismember(names,derived))
-                if domain == "Order" && names(k) == "IntensityWeightedAzimuth"
+                if target.Kind == "Order" && names(k) == "IntensityWeightedAzimuth"
                     continue;
                 end
 
-                if domain == "Intensity"
+                if target.Kind == "Primary"
                     rgb = oops.render.derivedVisualization( ...
                         image,names(k),obj.Settings,IntensityLimits=value);
                 else
@@ -3524,7 +3803,7 @@ classdef GUI < handle
             % Object crops share their parent image's intensity and order limits.
             if obj.Settings.View.RightSource == "Objects"
 
-                if domain == "Intensity"
+                if target.Kind == "Primary"
                     objectViewer = obj.ObjectViewers{1};
                 else
                     objectViewer = obj.ObjectViewers{2};
@@ -5513,6 +5792,12 @@ classdef GUI < handle
             obj.Settings.View.LeftSource = "AverageIntensity";
             obj.Settings.View.RightSource = "AuxiliaryChannels";
             clear guard;
+            % Channel-registration events occur before each definition is
+            % marked auxiliary, while assignment events are intentionally
+            % suppressed during this batch. Reconcile the dynamic rows once
+            % from the completed registry instead of relying on those
+            % intermediate event states.
+            obj.rebuildAuxiliaryDisplayLimitControls();
             obj.refreshMeasurementControls();
             obj.ViewerKeys(:) = "";
             obj.refreshViewers(true);

@@ -13,8 +13,13 @@ classdef Display < handle
         LockDisplayOrder_ (1,1) logical = false
         LockedDisplayRangeIntensity_ double = []
         LockedDisplayRangeOrder_ double = []
+        IntensityAutoScaleMethod_ (1,1) string {mustBeMember(IntensityAutoScaleMethod_, ...
+            ["Light contrast","Medium contrast","Strong contrast","Zero to max","Data range"])} = "Light contrast"
         OrderAutoScaleMethod_ (1,1) string {mustBeMember(OrderAutoScaleMethod_, ...
-            ["Contrast","Zero to max","Data range"])} = "Contrast"
+            ["Light contrast","Medium contrast","Strong contrast","Zero to max","Data range"])} = "Light contrast"
+        AuxiliaryPolicies_ struct = struct( ...
+            'ChannelID',{},'KeepAuto',{},'Lock',{}, ...
+            'LockedRange',{},'AutoScaleMethod',{})
         PrimaryIntensityColorMode_ (1,1) string {mustBeMember(PrimaryIntensityColorMode_,["colors","luts"])} = "colors"
         AuxiliaryColorMode_ (1,1) string {mustBeMember(AuxiliaryColorMode_,["colors","luts"])} = "colors"
         OrderColorMode_ (1,1) string {mustBeMember(OrderColorMode_,["colors","luts"])} = "luts"
@@ -36,6 +41,7 @@ classdef Display < handle
         LockDisplayOrder
         LockedDisplayRangeIntensity
         LockedDisplayRangeOrder
+        IntensityAutoScaleMethod
         OrderAutoScaleMethod
         PrimaryIntensityColorMode
         AuxiliaryColorMode
@@ -138,6 +144,18 @@ classdef Display < handle
         %GET.ORDERAUTOSCALEMETHOD Return the method used by Order Auto and Keep Auto.
 
             v = obj.OrderAutoScaleMethod_;
+        end
+
+        function v = get.IntensityAutoScaleMethod(obj)
+        %GET.INTENSITYAUTOSCALEMETHOD Return the primary intensity Auto method.
+
+            v = obj.IntensityAutoScaleMethod_;
+        end
+
+        function set.IntensityAutoScaleMethod(obj,v)
+        %SET.INTENSITYAUTOSCALEMETHOD Store the primary intensity Auto method.
+
+            obj.setValue("IntensityAutoScaleMethod",string(v));
         end
 
         function set.OrderAutoScaleMethod(obj,v)
@@ -278,7 +296,9 @@ classdef Display < handle
                 'LockDisplayOrder',obj.LockDisplayOrder, ...
                 'LockedDisplayRangeIntensity',obj.LockedDisplayRangeIntensity, ...
                 'LockedDisplayRangeOrder',obj.LockedDisplayRangeOrder, ...
+                'IntensityAutoScaleMethod',obj.IntensityAutoScaleMethod, ...
                 'OrderAutoScaleMethod',obj.OrderAutoScaleMethod, ...
+                'AuxiliaryPolicies',obj.AuxiliaryPolicies_, ...
                 'PrimaryIntensityColorMode',obj.PrimaryIntensityColorMode, ...
                 'AuxiliaryColorMode',obj.AuxiliaryColorMode, ...
                 'OrderColorMode',obj.OrderColorMode, ...
@@ -304,12 +324,85 @@ classdef Display < handle
             % Apply serialized fields through their validated public setting setters.
             for k = 1:numel(names)
 
-                if isfield(S,names{k})
+                if strcmp(names{k},'AuxiliaryPolicies') && isfield(S,names{k})
+                    obj.AuxiliaryPolicies_ = normalizeAuxiliaryPolicies(S.(names{k}));
+                elseif isfield(S,names{k})
                     obj.(names{k}) = S.(names{k});
                 end
 
             end
 
+        end
+
+        function policy = auxiliaryPolicy(obj,channelID)
+        %AUXILIARYPOLICY Return the stored policy or a default without mutating state.
+
+            channelID = string(channelID);
+            index = find(string({obj.AuxiliaryPolicies_.ChannelID}) == channelID,1);
+
+            if isempty(index)
+                policy = defaultAuxiliaryPolicy(channelID);
+            else
+                policy = obj.AuxiliaryPolicies_(index);
+            end
+        end
+
+        function setAuxiliaryPolicy(obj,channelID,name,value)
+        %SETAUXILIARYPOLICY Update one channel policy and emit a settings event.
+
+            channelID = string(channelID);
+            name = string(name);
+            policy = obj.auxiliaryPolicy(channelID);
+            oldPolicies = obj.AuxiliaryPolicies_;
+
+            switch name
+                case {"KeepAuto","Lock"}
+                    validateattributes(value,{'logical','numeric'},{'scalar'});
+                    value = logical(value);
+                    policy.(name) = value;
+
+                    if value
+                        if name == "KeepAuto"
+                            policy.Lock = false;
+                        else
+                            policy.KeepAuto = false;
+                        end
+                    end
+                case "LockedRange"
+                    if isempty(value)
+                        value = [];
+                    else
+                        validateattributes(value,{'numeric'}, ...
+                            {'real','finite','vector','numel',2,'increasing'});
+                        value = reshape(double(value),1,2);
+                    end
+                    policy.LockedRange = value;
+                case "AutoScaleMethod"
+                    value = string(value);
+                    mustBeMember(value,["Light contrast","Medium contrast", ...
+                        "Strong contrast","Zero to max","Data range"]);
+                    policy.AutoScaleMethod = value;
+                otherwise
+                    error('oops:config:UnknownAuxiliaryDisplaySetting', ...
+                        'Unknown auxiliary display setting: %s',name);
+            end
+
+            index = find(string({obj.AuxiliaryPolicies_.ChannelID}) == channelID,1);
+
+            if isempty(index)
+                obj.AuxiliaryPolicies_(end+1) = policy;
+            else
+                obj.AuxiliaryPolicies_(index) = policy;
+            end
+
+            if isequaln(oldPolicies,obj.AuxiliaryPolicies_)
+                return;
+            end
+
+            ev = oops.config.ChangeEvent( ...
+                "Display","AuxiliaryPolicies",oldPolicies,obj.AuxiliaryPolicies_);
+            notify(obj,'DisplayChanged',ev);
+            notify(obj,'Changed',ev);
         end
 
     end
@@ -393,4 +486,38 @@ classdef Display < handle
         end
 
     end
+end
+
+function policy = defaultAuxiliaryPolicy(channelID)
+%DEFAULTAUXILIARYPOLICY Construct one channel's initial scaling policy.
+
+policy = struct( ...
+    'ChannelID',string(channelID), ...
+    'KeepAuto',false, ...
+    'Lock',false, ...
+    'LockedRange',[], ...
+    'AutoScaleMethod',"Light contrast");
+end
+
+function policies = normalizeAuxiliaryPolicies(value)
+%NORMALIZEAUXILIARYPOLICIES Restore JSON-decoded policies to canonical shapes.
+
+policies = struct('ChannelID',{},'KeepAuto',{},'Lock',{}, ...
+    'LockedRange',{},'AutoScaleMethod',{});
+
+for k = 1:numel(value)
+    policy = defaultAuxiliaryPolicy(string(value(k).ChannelID));
+
+    for name = ["KeepAuto","Lock","LockedRange","AutoScaleMethod"]
+        if isfield(value,name)
+            policy.(name) = value(k).(name);
+        end
+    end
+
+    policy.KeepAuto = logical(policy.KeepAuto);
+    policy.Lock = logical(policy.Lock);
+    policy.LockedRange = reshape(double(policy.LockedRange),1,[]);
+    policy.AutoScaleMethod = string(policy.AutoScaleMethod);
+    policies(end+1) = policy; %#ok<AGROW>
+end
 end

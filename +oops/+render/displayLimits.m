@@ -27,20 +27,15 @@ end
 % One-shot ranges used by the Reset and Auto buttons.
 if domain == "Intensity"
     ranges.Reset = bounds;
-    ranges.Auto = [statistics.Percentile1 statistics.Percentile99];
+    ranges.Auto = automaticRange( ...
+        statistics,settings.Display.IntensityAutoScaleMethod,bounds);
     ranges.Auto = oops.render.normalizeIntensityDisplayRange(image,ranges.Auto);
 else
     bounds = [0 1];
     ranges.Reset = [0 1];
 
-    switch settings.Display.OrderAutoScaleMethod
-        case "Contrast"
-            ranges.Auto = [statistics.Percentile1 statistics.Percentile99];
-        case "Zero to max"
-            ranges.Auto = zeroToMaxRange(statistics.Maximum,[0 1]);
-        case "Data range"
-            ranges.Auto = [statistics.Minimum statistics.Maximum];
-    end
+    ranges.Auto = automaticRange( ...
+        statistics,settings.Display.OrderAutoScaleMethod,[0 1]);
 end
 
 % Keep Auto has precedence over Lock, followed by the image-local range.
@@ -72,6 +67,27 @@ bounds = [min(bounds(1),value(1)) max(bounds(2),value(2))];
 oops.Log.DEBUG(sprintf( ...
     'Resolved %s display limits for %s in %.3f s: value=[%.6g %.6g], bounds=[%.6g %.6g].', ...
     domain,image.Name,toc(started),value(1),value(2),bounds(1),bounds(2)));
+end
+
+function value = automaticRange(statistics,method,fallback)
+%AUTOMATICRANGE Resolve one named scaling method from cached statistics.
+
+switch method
+    case "Light contrast"
+        value = [statistics.Percentile0_5 statistics.Percentile99_95];
+    case "Medium contrast"
+        value = [statistics.Percentile0_5 statistics.Percentile99_9];
+    case "Strong contrast"
+        value = [statistics.Percentile1 statistics.Percentile99_5];
+    case "Zero to max"
+        value = zeroToMaxRange(statistics.Maximum,fallback);
+    case "Data range"
+        value = [statistics.Minimum statistics.Maximum];
+end
+
+if value(2) <= value(1)
+    value = fallback;
+end
 end
 
 function value = zeroToMaxRange(maximum,fallback)

@@ -126,7 +126,7 @@ t.verifyFalse(copy.Display.AutoScaleDisplayOrder); t.verifyFalse(copy.Display.Au
 end
 
 function testOrderAutoScalingMethods(t)
-%TESTORDERAUTOSCALINGMETHODS Resolve contrast, zero-anchored, and data ranges.
+%TESTORDERAUTOSCALINGMETHODS Resolve robust, zero-anchored, and data ranges.
 
 p = oops.model.Project(); cleaner = onCleanup(@() delete(p));
 g = p.addGroup("A");
@@ -138,6 +138,16 @@ im.setResults(struct('AverageIntensity',I,'Order',order));
 p.Settings.Display.OrderAutoScaleMethod = "Contrast";
 [~,~,ranges] = oops.render.displayLimits(im,"Order",p.Settings);
 t.verifyEqual(ranges.Auto,prctile(order(:),[1 99]),'AbsTol',eps);
+
+p.Settings.Display.OrderAutoScaleMethod = "Gentle contrast";
+[~,~,ranges] = oops.render.displayLimits(im,"Order",p.Settings);
+t.verifyEqual(ranges.Auto,prctile(order(:),[0.5 99.5]),'AbsTol',eps);
+
+intensity = reshape(linspace(10,210,100),10,10);
+im.setResults(struct('AverageIntensity',intensity,'Order',order));
+p.Settings.Display.IntensityAutoScaleMethod = "Gentle contrast";
+[~,~,ranges] = oops.render.displayLimits(im,"Intensity",p.Settings);
+t.verifyEqual(ranges.Auto,prctile(intensity(:),[0.5 99.5]),'AbsTol',eps);
 
 p.Settings.Display.OrderAutoScaleMethod = "Zero to max";
 [~,~,ranges] = oops.render.displayLimits(im,"Order",p.Settings);

@@ -10,11 +10,13 @@ classdef AuxiliaryChannelAssignment < handle
         Input (1,1) matlabx.image.Image5D
         ComponentIndex (1,1) double {mustBeInteger,mustBePositive} = 1
         DisplayRange double = []
+        DisplayStatistics (1,1) struct = struct()
     end
 
     methods
 
-        function obj = AuxiliaryChannelAssignment(channelID,input,componentIndex,displayRange)
+        function obj = AuxiliaryChannelAssignment( ...
+                channelID,input,componentIndex,displayRange,displayStatistics)
         %AUXILIARYCHANNELASSIGNMENT Validate a single-plane scalar component.
 
             arguments
@@ -22,6 +24,7 @@ classdef AuxiliaryChannelAssignment < handle
                 input (1,1) matlabx.image.Image5D
                 componentIndex (1,1) double {mustBeInteger,mustBePositive}
                 displayRange double = []
+                displayStatistics (1,1) struct = struct()
             end
 
             if componentIndex > input.NumComponents
@@ -45,6 +48,7 @@ classdef AuxiliaryChannelAssignment < handle
             obj.Input = input;
             obj.ComponentIndex = componentIndex;
             obj.DisplayRange = double(displayRange);
+            obj.DisplayStatistics = displayStatistics;
         end
 
         function delete(obj)
@@ -85,6 +89,66 @@ classdef AuxiliaryChannelAssignment < handle
             obj.DisplayRange = double(value);
         end
 
+        function statistics = getDisplayStatistics(obj,values)
+        %GETDISPLAYSTATISTICS Cache extrema and robust percentiles after first read.
+
+            required = ["Minimum","Maximum","Percentile0_5","Percentile1", ...
+                "Percentile99_5","Percentile99_9","Percentile99_95"];
+
+            if all(isfield(obj.DisplayStatistics,required))
+                statistics = obj.DisplayStatistics;
+                return;
+            end
+
+            if nargin < 2 || isempty(values)
+                values = obj.getPlane();
+            end
+
+            finiteValues = double(values(:));
+            finiteValues = finiteValues(isfinite(finiteValues));
+
+            if isempty(finiteValues)
+                limits = [0 1];
+                percentile1 = limits(1);
+                percentile0_5 = limits(1);
+                percentile99_5 = limits(2);
+                percentile99_9 = limits(2);
+                percentile99_95 = limits(2);
+            else
+                limits = [min(finiteValues) max(finiteValues)];
+                percentiles = prctile(finiteValues,[0.5 1 99.5 99.9 99.95]);
+                percentile0_5 = percentiles(1);
+                percentile1 = percentiles(2);
+                percentile99_5 = percentiles(3);
+                percentile99_9 = percentiles(4);
+                percentile99_95 = percentiles(5);
+
+                if percentile99_5 <= percentile1
+                    percentile1 = limits(1);
+                    percentile99_5 = limits(2);
+                end
+                if percentile99_95 <= percentile0_5
+                    percentile0_5 = limits(1);
+                    percentile99_9 = limits(2);
+                    percentile99_95 = limits(2);
+                end
+            end
+
+            if limits(2) <= limits(1)
+                limits(2) = limits(1)+max(1,eps(limits(1)));
+            end
+
+            obj.DisplayStatistics = struct( ...
+                'Minimum',limits(1), ...
+                'Maximum',limits(2), ...
+                'Percentile0_5',percentile0_5, ...
+                'Percentile1',percentile1, ...
+                'Percentile99_5',percentile99_5, ...
+                'Percentile99_9',percentile99_9, ...
+                'Percentile99_95',percentile99_95);
+            statistics = obj.DisplayStatistics;
+        end
+
         function S = toStruct(obj,projectFolder)
         %TOSTRUCT Capture the semantic mapping and portable external source reference.
 
@@ -92,7 +156,8 @@ classdef AuxiliaryChannelAssignment < handle
                 'ChannelID',obj.ChannelID, ...
                 'Source',oops.io.project.sourceReference(obj.Input,projectFolder), ...
                 'ComponentIndex',obj.ComponentIndex, ...
-                'DisplayRange',obj.DisplayRange);
+                'DisplayRange',obj.DisplayRange, ...
+                'DisplayStatistics',obj.DisplayStatistics);
         end
 
     end
