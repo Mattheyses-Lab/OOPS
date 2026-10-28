@@ -38,6 +38,7 @@ classdef BioFormatsImageSource < matlabx.image.ImageSource
         OMEMetadata_ struct = struct()
         CoreMetadata_ struct = struct()
         GraphicsFileMetadata_ struct = struct()
+        Metadata_ (1,1) matlabx.image.ImageMetadata = matlabx.image.ImageMetadata()
     end
 
 
@@ -223,6 +224,25 @@ classdef BioFormatsImageSource < matlabx.image.ImageSource
             I = bfGetPlane(r, iPlane);
         end
 
+        function reader = openPlaneReader(obj)
+            %OPENPLANEREADER Open one Bio-Formats reader for repeated access.
+            if obj.IsLoaded_
+                reader = matlabx.image.ImagePlaneReader( ...
+                    @(idx,z,t) obj.Components_(idx).getPlane(z,t));
+                return
+            end
+
+            r = obj.createReader_();
+            reader = matlabx.image.ImagePlaneReader( ...
+                @(idx,z,t) obj.readPlaneFromReader_(r,idx,z,t), ...
+                @() obj.closeReader_(r));
+        end
+
+        function md = getMetadata(obj)
+            %GETMETADATA Return normalized source-independent metadata.
+            md = obj.Metadata_;
+        end
+
         function md = getOriginalMetadata(obj)
             md = obj.OriginalMetadata_;
         end
@@ -272,6 +292,7 @@ classdef BioFormatsImageSource < matlabx.image.ImageSource
         
             obj.OriginalMetadata_ = obj.readOriginalMetadata_(r);
             obj.OMEMetadata_ = obj.readOMEMetadata_(r);
+            obj.Metadata_ = obj.normalizedMetadata_();
         
             try
                 obj.GraphicsFileMetadata_ = imfinfo(obj.FilePath);
@@ -418,6 +439,53 @@ classdef BioFormatsImageSource < matlabx.image.ImageSource
             r.setSeries(obj.SeriesIndex - 1);
         end
 
+        function I = readPlaneFromReader_(obj, r, idx, z, t)
+            if obj.shouldTreatAsRGB_()
+                iPlane = r.getIndex(z-1, 0, t-1) + 1;
+                plane = bfGetPlane(r, iPlane);
+                if ndims(plane) == 3 && size(plane,3) == 3
+                    I = plane;
+                    return
+                end
+                if ismatrix(plane) && r.getSizeC() >= 3
+                    I = zeros(size(plane,1),size(plane,2),3,class(plane));
+                    I(:,:,1) = plane;
+                    for c = 2:3
+                        iPlane = r.getIndex(z-1,c-1,t-1) + 1;
+                        I(:,:,c) = bfGetPlane(r,iPlane);
+                    end
+                    return
+                end
+                error('matlabx:image:BioFormatsImageSource:UnexpectedRGBPlaneShape', ...
+                    'Could not interpret RGB plane.');
+            end
+
+            iPlane = r.getIndex(z-1,idx-1,t-1) + 1;
+            I = bfGetPlane(r,iPlane);
+        end
+
+        function md = normalizedMetadata_(obj)
+            basic = struct();
+            if isfield(obj.OMEMetadata_,'Basic')
+                basic = obj.OMEMetadata_.Basic;
+            end
+
+            imageName = getStructValue_(basic,'ImageName',"");
+            description = getStructValue_(basic,'ImageDescription',"");
+            [sx,ux] = getQuantity_(basic,'PhysicalSizeX');
+            [sy,uy] = getQuantity_(basic,'PhysicalSizeY');
+            [sz,uz] = getQuantity_(basic,'PhysicalSizeZ');
+            [dt,ut] = getQuantity_(basic,'TimeIncrement');
+
+            md = matlabx.image.ImageMetadata( ...
+                ImageName=string(imageName), ...
+                Description=string(description), ...
+                PhysicalSizeX=sx, PhysicalSizeXUnit=ux, ...
+                PhysicalSizeY=sy, PhysicalSizeYUnit=uy, ...
+                PhysicalSizeZ=sz, PhysicalSizeZUnit=uz, ...
+                TimeIncrement=dt, TimeIncrementUnit=ut);
+        end
+
         function closeReader_(~, r)
             try
                 r.close();
@@ -438,7 +506,7 @@ classdef BioFormatsImageSource < matlabx.image.ImageSource
                 cls = 'uint32';
             elseif pixelType == loci.formats.FormatTools.INT32
                 cls = 'int32';
-            elseif pixelType == loci.formats.FormatTools.SINGLE
+            elseif pixelType == loci.formats.FormatTools.FLOAT
                 cls = 'single';
             elseif pixelType == loci.formats.FormatTools.DOUBLE
                 cls = 'double';
@@ -658,6 +726,10 @@ classdef BioFormatsImageSource < matlabx.image.ImageSource
             end
         end
 
+        function s = timeToStruct_(timeObj)
+            s = matlabx.image.BioFormatsImageSource.lengthToStruct_(timeObj);
+        end
+
         function s = omeMetadataToStruct_(omeMeta, iSeries)
             s = struct();
         
@@ -739,6 +811,13 @@ classdef BioFormatsImageSource < matlabx.image.ImageSource
                     omeMeta.getPixelsPhysicalSizeZ(iImage));
             catch
                 s.PhysicalSizeZ = struct();
+            end
+
+            try
+                s.TimeIncrement = matlabx.image.BioFormatsImageSource.timeToStruct_( ...
+                    omeMeta.getPixelsTimeIncrement(iImage));
+            catch
+                s.TimeIncrement = struct();
             end
         
             % Channels
@@ -858,4 +937,29 @@ classdef BioFormatsImageSource < matlabx.image.ImageSource
 
     end
 
+end
+
+
+function value = getStructValue_(s, field, fallback)
+    if isstruct(s) && isfield(s,field) && ~isempty(s.(field))
+        value = s.(field);
+    else
+        value = fallback;
+    end
+end
+
+
+function [value, unit] = getQuantity_(s, field)
+    value = NaN;
+    unit = "";
+    if ~isstruct(s) || ~isfield(s,field) || ~isstruct(s.(field))
+        return
+    end
+    q = s.(field);
+    if isfield(q,'Value') && ~isempty(q.Value)
+        value = double(q.Value);
+    end
+    if isfield(q,'Unit') && ~isempty(q.Unit)
+        unit = string(q.Unit);
+    end
 end

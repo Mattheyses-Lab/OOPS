@@ -92,11 +92,27 @@ classdef ParamsDialog < handle
             % flag to track whether the form includes any dropdowns/colorpicker/etc.
             hasDropDown = false;
 
-            figW = 420;
             rowH = 20;
             pad = 10;
             buttonH = 20;
             rowSpacing = 10;
+            columnSpacing = 10;
+            controlWidth = 250;
+
+            % Size the label column from this dialog's actual labels. The
+            % bounds keep short forms compact and prevent long forms from
+            % consuming the entire window.
+            labels = strings(1,n);
+            for i = 1:n
+                S = matlabx.app.ParamsDialog.parseSpec_(self.Specs{i},i);
+                labels(i) = S.Label;
+            end
+            if isempty(labels)
+                labelWidth = 140;
+            else
+                labelWidth = min(280,max(140,ceil(7.5 * max(strlength(labels))) + 12));
+            end
+            figW = 2*pad + labelWidth + columnSpacing + controlWidth;
             figH = 2*pad + n*rowH + n*rowSpacing + buttonH;
 
             self.Figure = uifigure( ...
@@ -110,9 +126,9 @@ classdef ParamsDialog < handle
             self.Grid = uigridlayout(self.Figure, [n+1 2]);
             self.Grid.Padding = [pad pad pad pad];
             self.Grid.RowHeight = [repmat({rowH},1,n), {buttonH}];
-            self.Grid.ColumnWidth = {140, '1x'};
+            self.Grid.ColumnWidth = {labelWidth, '1x'};
             self.Grid.RowSpacing = rowSpacing;
-            self.Grid.ColumnSpacing = 10;
+            self.Grid.ColumnSpacing = columnSpacing;
 
             for i = 1:n
                 S = matlabx.app.ParamsDialog.parseSpec_(self.Specs{i}, i);
