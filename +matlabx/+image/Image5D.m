@@ -44,6 +44,9 @@ classdef Image5D < handle
         SizeX
         SizeZ
         SizeT
+
+        % Metadata is normalized source-independent image metadata.
+        Metadata
         OriginalMetadata
         OMEMetadata
         CoreMetadata
@@ -75,6 +78,7 @@ classdef Image5D < handle
                 opts.Kinds string = matlabx.string.empty()
                 opts.Colors = []
                 opts.Source string = ""
+                opts.Metadata (1,1) matlabx.image.ImageMetadata = matlabx.image.ImageMetadata()
             end
 
             src = matlabx.image.InMemoryImageSource( ...
@@ -82,7 +86,8 @@ classdef Image5D < handle
                 Names=opts.Names, ...
                 Kinds=opts.Kinds, ...
                 Colors=opts.Colors, ...
-                Source=opts.Source);
+                Source=opts.Source, ...
+                Metadata=opts.Metadata);
             obj = matlabx.image.Image5D(src);
         end
 
@@ -222,6 +227,10 @@ classdef Image5D < handle
         function md = get.OriginalMetadata(obj)
             md = obj.Source_.getOriginalMetadata();
         end
+
+        function md = get.Metadata(obj)
+            md = obj.Source_.getMetadata();
+        end
         
         function md = get.OMEMetadata(obj)
             md = obj.Source_.getOMEMetadata();
@@ -237,10 +246,14 @@ classdef Image5D < handle
 
         function md = get.AllMetadata(obj)
             md = struct(...
+                'Image',[],...
+                'Components',[],...
                 'Original',[],...
                 'OME',[],...
                 'Core',[],...
                 'GraphicsFile',[]);
+            md.Image = obj.Metadata;
+            md.Components = {obj.Components.Metadata};
             md.Original = obj.OriginalMetadata;
             md.OME = obj.OMEMetadata;
             md.Core = obj.CoreMetadata;
@@ -288,6 +301,11 @@ classdef Image5D < handle
 
         function load(obj)
             obj.Source_.load();
+        end
+
+        function reader = openPlaneReader(obj)
+            %OPENPLANEREADER Open a reusable session for streaming planes.
+            reader = obj.Source_.openPlaneReader();
         end
 
         function unload(obj)

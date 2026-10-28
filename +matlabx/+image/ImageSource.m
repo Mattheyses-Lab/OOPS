@@ -24,6 +24,8 @@ classdef (Abstract) ImageSource < handle
         load(obj)
         unload(obj)
         I = getPlane(obj, idx, z, t)
+        reader = openPlaneReader(obj)
+        md = getMetadata(obj)
         md = getOriginalMetadata(obj)
         md = getOMEMetadata(obj)
         md = getCoreMetadata(obj)

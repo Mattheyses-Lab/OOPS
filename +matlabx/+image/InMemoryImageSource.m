@@ -25,6 +25,7 @@ classdef InMemoryImageSource < matlabx.image.ImageSource
     properties (Access = private)
         Components_ (1,:) matlabx.image.ImageComponent = matlabx.image.ImageComponent.empty(1,0)
         Source_ string = ""
+        Metadata_ (1,1) matlabx.image.ImageMetadata = matlabx.image.ImageMetadata()
     end
 
     methods
@@ -45,16 +46,19 @@ classdef InMemoryImageSource < matlabx.image.ImageSource
                 opts.Kinds string = matlabx.string.empty()
                 opts.Colors = []
                 opts.Source string = ""
+                opts.Metadata (1,1) matlabx.image.ImageMetadata = matlabx.image.ImageMetadata()
             end
 
             if isa(data, 'matlabx.image.ImageComponent')
                 obj.Components_ = reshape(data, 1, []);
                 obj.Source_ = opts.Source;
+                obj.Metadata_ = opts.Metadata;
                 return
             end
 
             obj.Components_ = obj.createComponents_(data, opts.Names, opts.Kinds, opts.Colors);
             obj.Source_ = opts.Source;
+            obj.Metadata_ = opts.Metadata;
         end
 
         function comps = getComponents(obj)
@@ -85,6 +89,17 @@ classdef InMemoryImageSource < matlabx.image.ImageSource
         function I = getPlane(obj, idx, z, t)
             %GETPLANE Return one Z/T plane from one component.
             I = obj.Components_(idx).getPlane(z, t);
+        end
+
+        function reader = openPlaneReader(obj)
+            %OPENPLANEREADER Open a reusable in-memory plane reader.
+            reader = matlabx.image.ImagePlaneReader( ...
+                @(idx,z,t) obj.getPlane(idx,z,t));
+        end
+
+        function md = getMetadata(obj)
+            %GETMETADATA Return normalized source-independent metadata.
+            md = obj.Metadata_;
         end
 
         function md = getOriginalMetadata(~)
