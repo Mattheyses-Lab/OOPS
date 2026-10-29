@@ -838,6 +838,24 @@ classdef GUI < handle
             end
         end
 
+        function exportNativeImages(obj)
+        %EXPORTNATIVEIMAGES Collect native export options and write OME-TIFF files.
+
+            if isempty(obj.Project)
+                return;
+            end
+
+            [progress,cleanupProgress] = obj.createProgressDialog( ...
+                "Preparing native image export..."); %#ok<ASGLU>
+            success = oops.export.Exporter.exportNativeImages( ...
+                obj.Project,Progress=progress);
+            obj.focusWindow();
+
+            if ~success
+                oops.Log.INFO("Native image export cancelled.");
+            end
+        end
+
         function buildWindow(obj)
         %BUILDWINDOW Use a fixed settings column and a non-scrolling viewer/log grid.
 
@@ -2338,6 +2356,8 @@ classdef GUI < handle
             obj.MenuUI.Export = uimenu(file,'Text','Export','Separator','on');
             uimenu(obj.MenuUI.Export,'Text','Summary tables (.xlsx)...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.exportSummaryTables()));
+            uimenu(obj.MenuUI.Export,'Text','Native images (OME-TIFF)...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.exportNativeImages()));
 
             % Edit menu manages ordered project-wide model collections.
             edit = uimenu(obj.Fig,'Text','Edit');
