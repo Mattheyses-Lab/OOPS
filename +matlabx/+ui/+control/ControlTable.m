@@ -16,6 +16,11 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
 %   component is intended for modest configuration tables rather than large,
 %   virtualized datasets.
 %
+%   SelectionMode controls single- or multiple-row interaction. ActiveRow is
+%   the primary row for single-row operations, while SelectedRows is the
+%   complete ordered batch target. Reorderable adds a structural grip column;
+%   row moves preserve RowIDs and selection identity.
+%
 %   Example:
 %       columns = [ ...
 %           matlabx.ui.control.ControlTableColumn( ...
@@ -66,8 +71,14 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         Columns
         % Authoritative row data.
         Data table
-        % Selected row index, or zero when no row is selected.
-        SelectedRow (1,1) double
+        % Selection policy used by pointer gestures and assignments.
+        SelectionMode (1,1) string
+        % Primary selected row index, or zero when selection is empty.
+        ActiveRow (1,1) double
+        % Ordered numeric indices of every selected row.
+        SelectedRows (1,:) double
+        % Whether row grips and drag reordering are available.
+        Reorderable (1,1) logical
         % Outer border width as a scalar or [left bottom right top].
         BorderWidth
         % Inner border width as a scalar or [left bottom right top].
@@ -81,6 +92,10 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         RowIDs (1,:) string = string.empty(1,0)
         % Stable runtime identities corresponding to Columns.
         ColumnIDs (1,:) string = string.empty(1,0)
+        % Stable identity of the active row, or empty string.
+        ActiveRowID (1,1) string = ""
+        % Stable identities of all selected rows in table order.
+        SelectedRowIDs (1,:) string = string.empty(1,0)
     end
 
     % Public sizing, spacing, text, and appearance configuration.
@@ -124,13 +139,33 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         InnerBorderColor (1,3) double {mustBeBetween(InnerBorderColor,0,1)} = [0.14 0.15 0.18]
         % Color of the outer table border.
         BorderColor (1,3) double {mustBeBetween(BorderColor,0,1)} = [0.44 0.46 0.50]
+        % Relative luminance adjustment applied only to the active row.
+        ActiveTint (1,1) double {mustBeBetween(ActiveTint,0,1)} = 0.10
+        % Background used to indicate the current reorder destination.
+        DropTargetBackgroundColor (1,3) double {mustBeBetween(DropTargetBackgroundColor,0,1)} = [1.0 0.45 0.0]
+        % Minimum thickness of the expanded insertion slot during dragging.
+        DropTargetThickness (1,1) double {mustBePositive} = 1
+        % Width in pixels of the optional row-reorder grip column.
+        GripWidth (1,1) double {mustBePositive} = 24
+        % Pointer travel required before a primed grip begins dragging.
+        DragThreshold (1,1) double {mustBeNonnegative} = 4
+        % Optional factory returning a compatible one-row table.
+        NewRowFcn = []
     end
 
     events (HasCallbackProperty, NotifyAccess=protected)
         % Emitted once after a user edit is stored in Data.
         CellEdited
-        % Emitted whenever SelectedRow changes.
+        % Emitted once after a complete selection transition.
         SelectionChanged
+        % Emitted after a row is created by addRow or addNewRow.
+        RowAdded
+        % Emitted after a row is duplicated.
+        RowDuplicated
+        % Emitted after one or more rows are removed.
+        RowsRemoved
+        % Emitted after one row is moved to a new position.
+        RowReordered
     end
 
     %% State and graphics
@@ -142,8 +177,16 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             matlabx.ui.control.ControlTableColumn.empty(1,0)
         % Authoritative table data backing the public Data property.
         Data_ table = table()
-        % Backing value for the selected row index.
-        SelectedRow_ (1,1) double = 0
+        % Backing selection policy.
+        SelectionMode_ (1,1) string = "single"
+        % Stable selected identities; numeric indices are derived on demand.
+        SelectedRowIDs_ (1,:) string = string.empty(1,0)
+        % Stable identity of the primary selected row.
+        ActiveRowID_ (1,1) string = ""
+        % Stable identity from which shift-selection ranges are extended.
+        AnchorRowID_ (1,1) string = ""
+        % Backing state for the structural grip column.
+        Reorderable_ (1,1) logical = false
         % Row currently highlighted by pointer hover, or zero.
         HoveredRow_ (1,1) double = 0
         % Guard suppressing callbacks during programmatic control updates.
@@ -170,12 +213,24 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         HeaderGrids cell = {}
         % Per-column header label handles.
         HeaderLabels cell = {}
+        % Header cell occupying the optional structural grip column.
+        GripHeader = []
+        % Per-row grid containers hosting reorder grip icons.
+        GripGrids cell = {}
+        % Per-row reorder grip image handles.
+        GripImages cell = {}
         % Row-by-column cell grid containers.
         CellGrids cell = {}
+        % Individually paintable insertion slots surrounding data rows.
+        DropSlotPanels cell = {}
         % Row-by-column native control handles.
         CellControls cell = {}
         % Empty-state label shown when Data has no rows.
         EmptyLabel = []
+        % Built-in context menu attached to table-owned graphics.
+        BuiltInContextMenu_ = []
+        % Named handles for enabling and disabling built-in menu actions.
+        ContextMenuItems struct = struct()
     end
 
     % FigureEventHub registration state for pointer routing.
@@ -186,6 +241,24 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         HubFigure = []
         % Registration identifier returned by FigureEventHub.
         RouterId (1,1) double = NaN
+        % Whether a grip press is waiting to cross the drag threshold.
+        DragPrimed_ (1,1) logical = false
+        % Whether the current grip gesture has crossed the drag threshold.
+        Dragging_ (1,1) logical = false
+        % Stable identity of the row participating in a grip drag.
+        DragRowID_ (1,1) string = ""
+        % Figure-coordinate pointer position at the initial grip press.
+        DragStartPoint_ (1,2) double = [NaN NaN]
+        % Current insertion slot highlighted as the reorder destination.
+        DropTargetSlot_ (1,1) double = 0
+        % Whether this component currently owns the figure pointer shape.
+        PointerOwned_ (1,1) logical = false
+        % Figure pointer name saved before showing grip feedback.
+        PreviousPointer_ (1,1) string = "arrow"
+        % Custom pointer pixels saved when replacing an existing custom cursor.
+        PreviousPointerShapeCData_ = []
+        % Custom pointer hotspot saved when replacing an existing custom cursor.
+        PreviousPointerShapeHotSpot_ = []
     end
 
     %% Component lifecycle
@@ -209,7 +282,7 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 'BackgroundColor',obj.InnerBorderColor);
             obj.SizingGrid = uigridlayout(obj.InnerGrid,[1 1], ...
                 'Padding',obj.InnerPadding, ...
-                'RowSpacing',obj.RowSpacing, ...
+                'RowSpacing',0, ...
                 'ColumnSpacing',obj.ColumnSpacing, ...
                 'BackgroundColor',obj.CellBorderColor);
             obj.SetupComplete_ = true;
@@ -226,6 +299,7 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             obj.applyAllRowAppearances_();
             if string(obj.Visible) == "off"
                 obj.updateHover_(0);
+                obj.cancelDrag_();
             end
             obj.ensureHub_();
         end
@@ -235,6 +309,9 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         function delete(obj)
         %DELETE Release the FigureEventHub registration.
             obj.releaseHub_();
+            if isvalidHandle_(obj.BuiltInContextMenu_)
+                delete(obj.BuiltInContextMenu_);
+            end
         end
     end
 
@@ -247,10 +324,17 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 'SizingGrid',obj.SizingGrid, ...
                 'HeaderGrids',{obj.HeaderGrids}, ...
                 'HeaderLabels',{obj.HeaderLabels}, ...
+                'GripHeader',obj.GripHeader, ...
+                'GripGrids',{obj.GripGrids}, ...
+                'GripImages',{obj.GripImages}, ...
                 'CellGrids',{obj.CellGrids}, ...
                 'Controls',{obj.CellControls}, ...
                 'EmptyLabel',obj.EmptyLabel, ...
                 'HoveredRow',obj.HoveredRow_, ...
+                'DropTargetSlot',obj.DropTargetSlot_, ...
+                'DropSlotPanels',{obj.DropSlotPanels}, ...
+                'ContextMenu',obj.BuiltInContextMenu_, ...
+                'ContextMenuItems',obj.ContextMenuItems, ...
                 'Refreshing',obj.Refreshing_, ...
                 'Hub',obj.Hub, ...
                 'RouterId',obj.RouterId);
@@ -266,9 +350,34 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             row = obj.rowForTarget_(target);
             if action == "move"
                 obj.updateHover_(row);
+                obj.updateGripPointer_(target);
             elseif action == "down" && row > 0
-                obj.SelectedRow = row;
+                obj.ActiveRow = row;
             end
+        end
+
+        function debugSelectionGesture(obj,row,modifiers,isContext)
+        %DEBUGSELECTIONGESTURE Exercise selection gestures without a pointer.
+            arguments
+                obj
+                row (1,1) double
+                modifiers (1,:) string = string.empty(1,0)
+                isContext (1,1) logical = false
+            end
+            obj.validateRowIndex_(row);
+            obj.applySelectionFlags_(row,isContext, ...
+                any(ismember(modifiers,["meta","control"])), ...
+                ismember("shift",modifiers));
+        end
+
+        function debugDropTarget(obj,slot)
+        %DEBUGDROPTARGET Display or clear an insertion target for diagnostics.
+            if ~isscalar(slot) || slot~=fix(slot) || slot<0 || ...
+                    slot>numel(obj.DropSlotPanels)
+                error('matlabx:ui:control:ControlTable:InvalidDropSlot', ...
+                    'Drop slot must be zero or a current insertion slot.');
+            end
+            obj.updateDropTarget_(slot);
         end
     end
 
@@ -310,31 +419,93 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             obj.Data_ = value;
             obj.DataAssigned_ = true;
             obj.RowIDs = newUUIDs_(height(value));
-            newSelection = obj.nearestRow_(obj.SelectedRow_);
+            oldState = obj.selectionState_();
+            obj.SelectedRowIDs_ = string.empty(1,0);
+            obj.ActiveRowID_ = "";
+            obj.AnchorRowID_ = "";
+            obj.publishSelectionProperties_();
             if obj.SetupComplete_, obj.rebuild_(); end
-            obj.SelectedRow = newSelection;
+            obj.notifySelectionChange_(oldState);
         end
 
-        function value = get.SelectedRow(obj)
-        %GET.SELECTEDROW Return the selected numeric row index.
-            value = obj.SelectedRow_;
+        function value = get.SelectionMode(obj)
+        %GET.SELECTIONMODE Return the current single- or multiple-row policy.
+            value = obj.SelectionMode_;
         end
 
-        function set.SelectedRow(obj,value)
-        %SET.SELECTEDROW Validate, display, and announce a selection change.
-            if isempty(value), value = 0; end
-            if ~isscalar(value) || ~isnumeric(value) || ~isfinite(value) || ...
-                    value < 0 || value ~= fix(value) || value > height(obj.Data_)
-                error('matlabx:ui:control:ControlTable:InvalidSelectedRow', ...
-                    'SelectedRow must be zero or a valid row index.');
+        function set.SelectionMode(obj,value)
+        %SET.SELECTIONMODE Change the gesture policy and normalize selection.
+            value = string(value);
+            if ~isscalar(value) || ~ismember(value,["single","multiple"])
+                error('matlabx:ui:control:ControlTable:InvalidSelectionMode', ...
+                    'SelectionMode must be "single" or "multiple".');
             end
-            old = obj.SelectedRow_;
-            if old == value, return; end
-            obj.SelectedRow_ = value;
-            obj.applyRowAppearance_(old);
-            obj.applyRowAppearance_(value);
-            notify(obj,'SelectionChanged', ...
-                matlabx.ui.control.ControlTableSelectionChangedData(old,value));
+            if obj.SelectionMode_ == value, return; end
+            obj.SelectionMode_ = value;
+            if value == "single" && numel(obj.SelectedRowIDs_) > 1
+                active = obj.ActiveRowID_;
+                if active == "", active = obj.SelectedRowIDs_(1); end
+                obj.setSelectionByIDs_(active,active,active,true);
+            end
+            obj.refreshContextMenu_();
+        end
+
+        function value = get.ActiveRow(obj)
+        %GET.ACTIVEROW Resolve the primary stable identity to a numeric row.
+            value = obj.rowForID_(obj.ActiveRowID_);
+        end
+
+        function set.ActiveRow(obj,value)
+        %SET.ACTIVEROW Select and activate one row, or clear with zero.
+            value = obj.validateSelectionRows_(value,true);
+            if value == 0
+                obj.setSelectionByIDs_(string.empty(1,0),"","",true);
+            else
+                id = obj.RowIDs(value);
+                selected = obj.SelectedRowIDs_;
+                if ~ismember(id,selected)
+                    if obj.SelectionMode_ == "single", selected = id;
+                    else, selected(end+1) = id; end
+                end
+                obj.setSelectionByIDs_(selected,id,id,true);
+            end
+        end
+
+        function value = get.SelectedRows(obj)
+        %GET.SELECTEDROWS Return selected numeric indices in table order.
+            value = obj.rowsForIDs_(obj.SelectedRowIDs_);
+        end
+
+        function set.SelectedRows(obj,value)
+        %SET.SELECTEDROWS Replace the complete selected-row set.
+            rows = obj.validateSelectionRows_(value,false);
+            ids = obj.RowIDs(rows);
+            if isempty(ids)
+                active = "";
+            elseif ismember(obj.ActiveRowID_,ids)
+                active = obj.ActiveRowID_;
+            else
+                active = ids(1);
+            end
+            obj.setSelectionByIDs_(ids,active,active,true);
+        end
+
+        function value = get.Reorderable(obj)
+        %GET.REORDERABLE Return whether row grips are displayed.
+            value = obj.Reorderable_;
+        end
+
+        function set.Reorderable(obj,value)
+        %SET.REORDERABLE Show or remove structural row-reordering grips.
+            value = logical(value);
+            if ~isscalar(value)
+                error('matlabx:ui:control:ControlTable:InvalidReorderable', ...
+                    'Reorderable must be a logical scalar.');
+            end
+            if obj.Reorderable_ == value, return; end
+            obj.Reorderable_ = value;
+            obj.cancelDrag_();
+            if obj.SetupComplete_, obj.rebuild_(); end
         end
 
         function value = get.BorderWidth(obj)
@@ -394,103 +565,118 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
 
         function addRow(obj,rowData)
         %ADDROW Append one compatible table row.
-            obj.insertRow(height(obj.Data_)+1,rowData);
+            index = height(obj.Data_)+1;
+            rowID = obj.insertRowCore_(index,rowData);
+            notify(obj,'RowAdded',matlabx.ui.control.ControlTableRowsChangedData( ...
+                rowID,string.empty(1,0),double.empty(1,0),index));
         end
 
         function insertRow(obj,index,rowData)
         %INSERTROW Insert one compatible table row before INDEX.
-            if ~isscalar(index) || index ~= fix(index) || index < 1 || index > height(obj.Data_)+1
-                error('matlabx:ui:control:ControlTable:InvalidInsertIndex', ...
-                    'Insert index must be between 1 and height(Data)+1.');
-            end
-            rowData = obj.normalizeRow_(rowData);
-            cleanup = obj.beginRefresh_(); %#ok<NASGU>
-            columnCount = numel(obj.Columns_);
-
-            % Insert authoritative data, identity, and handle slots together.
-            % Existing cells keep their UUIDs and graphics handles.
-            obj.Data_ = [obj.Data_(1:index-1,:); rowData; obj.Data_(index:end,:)];
-            obj.RowIDs = [obj.RowIDs(1:index-1),newUUIDs_(1),obj.RowIDs(index:end)];
-            obj.CellGrids = [obj.CellGrids(1:index-1,:); ...
-                cell(1,columnCount); obj.CellGrids(index:end,:)];
-            obj.CellControls = [obj.CellControls(1:index-1,:); ...
-                cell(1,columnCount); obj.CellControls(index:end,:)];
-            if isvalidHandle_(obj.EmptyLabel)
-                delete(obj.EmptyLabel);
-                obj.EmptyLabel = [];
-            end
-            oldSelection = obj.SelectedRow_;
-
-            % Numeric interaction indices move with their logical rows.
-            if obj.SelectedRow_ >= index && obj.SelectedRow_ > 0
-                obj.SelectedRow_ = obj.SelectedRow_ + 1;
-            end
-            if obj.HoveredRow_ >= index && obj.HoveredRow_ > 0
-                obj.HoveredRow_ = obj.HoveredRow_ + 1;
-            end
-            obj.createRowGraphics_(index);
-            obj.positionRowsFrom_(index+1);
-            obj.applySizingTracks_();
-
-            % Cross-row callbacks may make choices or enabled states change
-            % even in rows whose own data and graphics were retained.
-            obj.refreshDynamicControls_();
-            obj.applyRowAppearancesFrom_(index);
-            clear cleanup
-            if oldSelection ~= obj.SelectedRow_
-                notify(obj,'SelectionChanged', ...
-                    matlabx.ui.control.ControlTableSelectionChangedData( ...
-                    oldSelection,obj.SelectedRow_));
-            end
+            rowID = obj.insertRowCore_(index,rowData);
+            notify(obj,'RowAdded',matlabx.ui.control.ControlTableRowsChangedData( ...
+                rowID,string.empty(1,0),double.empty(1,0),index));
         end
 
         function removeRow(obj,index)
         %REMOVEROW Remove one row and keep selection on a nearby row.
             obj.validateRowIndex_(index);
-            cleanup = obj.beginRefresh_(); %#ok<NASGU>
-            oldSelection = obj.SelectedRow_;
+            obj.removeRows_(index);
+        end
 
-            % Deleting each cell grid also deletes its hosted native control.
-            for column = 1:size(obj.CellGrids,2)
-                if isvalidHandle_(obj.CellGrids{index,column})
-                    delete(obj.CellGrids{index,column});
-                end
+        function rowID = addNewRow(obj)
+        %ADDNEWROW Create and append a row using NewRowFcn.
+            if isempty(obj.NewRowFcn)
+                error('matlabx:ui:control:ControlTable:MissingNewRowFcn', ...
+                    'NewRowFcn must be assigned before calling addNewRow.');
             end
-            obj.Data_(index,:) = [];
-            obj.RowIDs(index) = [];
-            obj.CellGrids(index,:) = [];
-            obj.CellControls(index,:) = [];
+            row = obj.NewRowFcn(obj);
+            index = height(obj.Data_)+1;
+            rowID = obj.insertRowCore_(index,row);
+            notify(obj,'RowAdded',matlabx.ui.control.ControlTableRowsChangedData( ...
+                rowID,string.empty(1,0),double.empty(1,0),index));
+        end
 
-            % Keep selection near the removed row while preserving selection
-            % of surviving rows whose numeric index merely shifted.
-            if oldSelection == index
-                newSelection = min(index,height(obj.Data_));
-            elseif oldSelection > index
-                newSelection = oldSelection - 1;
-            else
-                newSelection = oldSelection;
+        function rowID = duplicateRow(obj,index)
+        %DUPLICATEROW Insert a copy after INDEX with a new stable identity.
+            obj.validateRowIndex_(index);
+            sourceID = obj.RowIDs(index);
+            newIndex = index+1;
+            rowID = obj.insertRowCore_(newIndex,obj.Data_(index,:));
+            obj.setSelectionByIDs_(rowID,rowID,rowID,true);
+            notify(obj,'RowDuplicated',matlabx.ui.control.ControlTableRowsChangedData( ...
+                rowID,sourceID,index,newIndex));
+        end
+
+        function rowID = duplicateActiveRow(obj)
+        %DUPLICATEACTIVEROW Duplicate the current active row.
+            if obj.ActiveRow == 0
+                error('matlabx:ui:control:ControlTable:NoActiveRow', ...
+                    'No row is active.');
             end
-            obj.SelectedRow_ = newSelection;
-            if obj.HoveredRow_ == index
-                obj.HoveredRow_ = 0;
-            elseif obj.HoveredRow_ > index
-                obj.HoveredRow_ = obj.HoveredRow_ - 1;
+            rowID = obj.duplicateRow(obj.ActiveRow);
+        end
+
+        function removeSelectedRows(obj)
+        %REMOVESELECTEDROWS Delete the complete selected row set in one operation.
+            obj.removeRows_(obj.SelectedRows);
+        end
+
+        function moveRow(obj,oldIndex,newIndex)
+        %MOVEROW Move one logical row while preserving its stable identity.
+            obj.validateRowIndex_(oldIndex);
+            obj.validateRowIndex_(newIndex);
+            if oldIndex == newIndex, return; end
+            obj.cancelDrag_();
+            oldState = obj.selectionState_();
+            rowID = obj.RowIDs(oldIndex);
+            order = 1:height(obj.Data_);
+            moved = order(oldIndex);
+            order(oldIndex) = [];
+            order = [order(1:newIndex-1),moved,order(newIndex:end)];
+            obj.Data_ = obj.Data_(order,:);
+            obj.RowIDs = obj.RowIDs(order);
+            obj.SelectedRowIDs_ = obj.RowIDs(ismember(obj.RowIDs,obj.SelectedRowIDs_));
+            obj.CellGrids = obj.CellGrids(order,:);
+            obj.CellControls = obj.CellControls(order,:);
+            if obj.Reorderable_
+                obj.GripGrids = obj.GripGrids(order);
+                obj.GripImages = obj.GripImages(order);
             end
-            obj.positionRowsFrom_(index);
-            if height(obj.Data_) == 0, obj.createEmptyLabel_(); end
-            obj.applySizingTracks_();
+            obj.positionRowsFrom_(min(oldIndex,newIndex));
             obj.refreshDynamicControls_();
-            appearanceStart = index;
-            if oldSelection == index && newSelection > 0
-                appearanceStart = min(index,newSelection);
+            obj.applyRowAppearancesFrom_(min(oldIndex,newIndex));
+            obj.publishSelectionProperties_();
+            obj.notifySelectionChange_(oldState);
+            notify(obj,'RowReordered', ...
+                matlabx.ui.control.ControlTableRowReorderedData(rowID,oldIndex,newIndex));
+        end
+
+        function selectAll(obj)
+        %SELECTALL Select every row when multiple selection is enabled.
+            if obj.SelectionMode_ ~= "multiple"
+                error('matlabx:ui:control:ControlTable:SingleSelection', ...
+                    'selectAll requires SelectionMode="multiple".');
             end
-            obj.applyRowAppearancesFrom_(appearanceStart);
-            clear cleanup
-            if oldSelection ~= newSelection
-                notify(obj,'SelectionChanged', ...
-                    matlabx.ui.control.ControlTableSelectionChangedData( ...
-                    oldSelection,newSelection));
+            active = obj.ActiveRowID_;
+            if active == "" && ~isempty(obj.RowIDs), active = obj.RowIDs(1); end
+            obj.setSelectionByIDs_(obj.RowIDs,active,active,true);
+        end
+
+        function clearSelection(obj)
+        %CLEARSELECTION Clear active, selected, and range-anchor state.
+            obj.setSelectionByIDs_(string.empty(1,0),"","",true);
+        end
+
+        function invertSelection(obj)
+        %INVERTSELECTION Select precisely the rows not currently selected.
+            if obj.SelectionMode_ ~= "multiple"
+                error('matlabx:ui:control:ControlTable:SingleSelection', ...
+                    'invertSelection requires SelectionMode="multiple".');
             end
+            ids = obj.RowIDs(~ismember(obj.RowIDs,obj.SelectedRowIDs_));
+            active = obj.promoteActiveID_(ids,obj.ActiveRow);
+            obj.setSelectionByIDs_(ids,active,active,true);
         end
     end
 
@@ -519,6 +705,7 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         %   handles themselves are replaced.
             if ~obj.SetupComplete_ || obj.Refreshing_, return; end
             cleanup = obj.beginRefresh_(); %#ok<NASGU>
+            obj.cancelDrag_();
             obj.HoveredRow_ = 0;
 
             % Headers and cell graphics are children of SizingGrid, so one
@@ -526,8 +713,12 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             delete(obj.SizingGrid.Children);
             obj.HeaderGrids = cell(1,numel(obj.Columns_));
             obj.HeaderLabels = cell(1,numel(obj.Columns_));
+            obj.GripHeader = [];
+            obj.GripGrids = cell(height(obj.Data_),1);
+            obj.GripImages = cell(height(obj.Data_),1);
             obj.CellGrids = cell(height(obj.Data_),numel(obj.Columns_));
             obj.CellControls = cell(size(obj.CellGrids));
+            obj.DropSlotPanels = cell(max(0,height(obj.Data_)+1),1);
             obj.EmptyLabel = [];
 
             if isempty(obj.Columns_)
@@ -538,6 +729,14 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 return
             end
 
+            if obj.Reorderable_
+                obj.GripHeader = uigridlayout(obj.SizingGrid,[1 1], ...
+                    Padding=0,RowSpacing=0,ColumnSpacing=0, ...
+                    BackgroundColor=obj.HeaderBackgroundColor);
+                obj.GripHeader.Layout.Row = 1;
+                obj.GripHeader.Layout.Column = 1;
+            end
+            columnOffset = double(obj.Reorderable_);
             for column = 1:numel(obj.Columns_)
                 definition = obj.Columns_(column);
                 header = uigridlayout(obj.SizingGrid,[1 1], ...
@@ -546,7 +745,7 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                     RowSpacing=0,ColumnSpacing=0, ...
                     BackgroundColor=obj.HeaderBackgroundColor);
                 header.Layout.Row = 1;
-                header.Layout.Column = column;
+                header.Layout.Column = column + columnOffset;
                 label = uilabel(header,Text=definition.Label, ...
                     BackgroundColor=obj.HeaderBackgroundColor, ...
                     FontColor=obj.FontColor,FontSize=obj.HeaderFontSize, ...
@@ -558,6 +757,9 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             if height(obj.Data_) == 0
                 obj.createEmptyLabel_();
             else
+                for slot = 1:height(obj.Data_)+1
+                    obj.createDropSlot_(slot);
+                end
                 for row = 1:height(obj.Data_)
                     obj.createRowGraphics_(row);
                 end
@@ -565,11 +767,29 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             obj.applyLayout_();
             obj.applyAllRowAppearances_();
             obj.ensureHub_();
+            obj.attachContextMenu_();
         end
 
         function createRowGraphics_(obj,row)
         %CREATEROWGRAPHICS_ Create and synchronize every cell in one row.
             rowID = obj.RowIDs(row);
+            columnOffset = double(obj.Reorderable_);
+            if obj.Reorderable_
+                gripGrid = uigridlayout(obj.SizingGrid,[1 1], ...
+                    Padding=[2 2 2 2],RowSpacing=0,ColumnSpacing=0, ...
+                    BackgroundColor=obj.baseRowColor_(row));
+                gripGrid.Layout.Row = obj.dataTrack_(row);
+                gripGrid.Layout.Column = 1;
+                metadata = struct('TableID',obj.ID,'RowID',rowID, ...
+                    'ColumnID',"",'IsGrip',true);
+                setappdata(gripGrid,'matlabxControlTableCell',metadata);
+                grip = uiimage(gripGrid,ScaleMethod='fit',BackgroundColor='none');
+                grip.Layout.Row = 1;
+                grip.Layout.Column = 1;
+                setappdata(grip,'matlabxControlTableCell',metadata);
+                obj.GripGrids{row} = gripGrid;
+                obj.GripImages{row} = grip;
+            end
             for column = 1:numel(obj.Columns_)
                 definition = obj.Columns_(column);
                 if definition.ControlType == "checkbox"
@@ -586,14 +806,25 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 cellGrid.BackgroundColor = obj.baseRowColor_(row);
                 setappdata(cellGrid,'matlabxControlTableCell',struct( ...
                     'TableID',obj.ID,'RowID',rowID, ...
-                    'ColumnID',obj.ColumnIDs(column)));
-                cellGrid.Layout.Row = row + 1;
-                cellGrid.Layout.Column = column;
+                    'ColumnID',obj.ColumnIDs(column),'IsGrip',false));
+                cellGrid.Layout.Row = obj.dataTrack_(row);
+                cellGrid.Layout.Column = column + columnOffset;
                 control = obj.createControl_(cellGrid,rowID,obj.ColumnIDs(column));
                 obj.CellGrids{row,column} = cellGrid;
                 obj.CellControls{row,column} = control;
                 obj.syncControl_(row,column);
             end
+        end
+
+        function createDropSlot_(obj,slot)
+        %CREATEDROPSLOT_ Create one independently paintable insertion gap.
+            panel = uipanel(obj.SizingGrid,BorderType='none', ...
+                BackgroundColor=obj.CellBorderColor);
+            panel.Layout.Row = obj.slotTrack_(slot);
+            panel.Layout.Column = gridColumnSpan_( ...
+                max(1,numel(obj.Columns_)+double(obj.Reorderable_)));
+            setappdata(panel,'matlabxControlTableDropSlot',obj.ID);
+            obj.DropSlotPanels{slot} = panel;
         end
 
         function control = createControl_(obj,parent,rowID,columnID)
@@ -780,7 +1011,7 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             obj.syncControl_(row,column);
             obj.refreshDynamicControls_(row,column);
             clear cleanup
-            obj.SelectedRow = row;
+            obj.ActiveRow = row;
             if isvalid(obj), notify(obj,'CellEdited',eventData); end
         end
 
@@ -812,9 +1043,21 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         function positionRowsFrom_(obj,firstRow)
         %POSITIONROWSFROM_ Update graphics row positions after a structural edit.
             for row = max(1,firstRow):height(obj.Data_)
+                if obj.Reorderable_ && isvalidHandle_(obj.GripGrids{row})
+                    obj.GripGrids{row}.Layout.Row = obj.dataTrack_(row);
+                end
                 for column = 1:size(obj.CellGrids,2)
                     grid = obj.CellGrids{row,column};
-                    if isvalidHandle_(grid), grid.Layout.Row = row + 1; end
+                    if isvalidHandle_(grid), grid.Layout.Row = obj.dataTrack_(row); end
+                end
+            end
+        end
+
+        function positionDropSlotsFrom_(obj,firstSlot)
+        %POSITIONDROPSLOTSFROM_ Reposition insertion gaps after structure changes.
+            for slot = max(1,firstSlot):numel(obj.DropSlotPanels)
+                if isvalidHandle_(obj.DropSlotPanels{slot})
+                    obj.DropSlotPanels{slot}.Layout.Row = obj.slotTrack_(slot);
                 end
             end
         end
@@ -827,7 +1070,8 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 BackgroundColor=obj.CellBackgroundColor, ...
                 FontColor=obj.FontColor);
             obj.EmptyLabel.Layout.Row = 2;
-            obj.EmptyLabel.Layout.Column = gridColumnSpan_(max(1,numel(obj.Columns_)));
+            obj.EmptyLabel.Layout.Column = gridColumnSpan_( ...
+                max(1,numel(obj.Columns_)+double(obj.Reorderable_)));
         end
 
         function [row,column] = indicesForIDs_(obj,rowID,columnID)
@@ -847,7 +1091,7 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             obj.InnerGrid.Padding = obj.InnerBorderWidth;
             obj.SizingGrid.BackgroundColor = obj.CellBorderColor;
             obj.SizingGrid.Padding = obj.InnerPadding;
-            obj.SizingGrid.RowSpacing = obj.RowSpacing;
+            obj.SizingGrid.RowSpacing = 0;
             obj.SizingGrid.ColumnSpacing = obj.ColumnSpacing;
             obj.applySizingTracks_();
             for i = 1:numel(obj.HeaderGrids)
@@ -871,6 +1115,9 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 if isvalidHandle_(obj.CellGrids{i})
                     obj.CellGrids{i}.Padding = obj.CellPadding;
                 end
+            end
+            for slot = 1:numel(obj.DropSlotPanels)
+                obj.applyDropSlotAppearance_(slot);
             end
             if isvalidHandle_(obj.EmptyLabel)
                 obj.EmptyLabel.Text = obj.EmptyText;
@@ -923,26 +1170,81 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             if isempty(obj.Columns_)
                 obj.SizingGrid.ColumnWidth = {'1x'};
             else
-                obj.SizingGrid.ColumnWidth = {obj.Columns_.Width};
+                widths = {obj.Columns_.Width};
+                if obj.Reorderable_, widths = [{obj.GripWidth},widths]; end
+                obj.SizingGrid.ColumnWidth = widths;
             end
-            rowCount = max(1,height(obj.Data_));
-            obj.SizingGrid.RowHeight = [{obj.headerHeight_()}, ...
-                repmat({obj.RowHeight},1,rowCount)];
+            if height(obj.Data_) == 0
+                obj.SizingGrid.RowHeight = {obj.headerHeight_(),obj.RowHeight};
+                return
+            end
+            tracks = cell(1,2*height(obj.Data_)+1);
+            for slot = 1:height(obj.Data_)+1
+                % The old grid had spacing before the first data row and
+                % between data rows, but no trailing space after the final
+                % row. Keep the last insertion slot collapsed until it is
+                % used as the active drop target.
+                if slot == height(obj.Data_)+1
+                    thickness = 0;
+                else
+                    thickness = obj.RowSpacing;
+                end
+                if slot == obj.DropTargetSlot_
+                    thickness = max(thickness,obj.DropTargetThickness);
+                end
+                tracks{2*slot-1} = thickness;
+                if slot <= height(obj.Data_), tracks{2*slot} = obj.RowHeight; end
+            end
+            obj.SizingGrid.RowHeight = [{obj.headerHeight_()},tracks];
         end
 
         function applyRowAppearance_(obj,row)
         %APPLYROWAPPEARANCE_ Paint every cell background in one row.
             if row < 1 || row > size(obj.CellGrids,1), return; end
             color = obj.resolveRowColor_(row);
+            if obj.Reorderable_ && row <= numel(obj.GripGrids)
+                if isvalidHandle_(obj.GripGrids{row})
+                    obj.GripGrids{row}.BackgroundColor = color;
+                end
+                if isvalidHandle_(obj.GripImages{row})
+                    obj.GripImages{row}.ImageSource = obj.gripIcon_(color);
+                end
+            end
             for column = 1:size(obj.CellGrids,2)
                 cellGrid = obj.CellGrids{row,column};
                 if isvalidHandle_(cellGrid), cellGrid.BackgroundColor = color; end
             end
         end
 
+        function applyDropSlotAppearance_(obj,slot)
+        %APPLYDROPSLOTAPPEARANCE_ Paint one normal or active insertion gap.
+            if slot < 1 || slot > numel(obj.DropSlotPanels), return; end
+            panel = obj.DropSlotPanels{slot};
+            if ~isvalidHandle_(panel), return; end
+            if slot == obj.DropTargetSlot_
+                panel.BackgroundColor = obj.DropTargetBackgroundColor;
+            else
+                panel.BackgroundColor = obj.CellBorderColor;
+            end
+        end
+
+        function track = dataTrack_(~,row)
+        %DATATRACK_ Map a logical data row to its interleaved grid track.
+            track = 2*row+1;
+        end
+
+        function track = slotTrack_(~,slot)
+        %SLOTTRACK_ Map an insertion slot to its interleaved grid track.
+            track = 2*slot;
+        end
+
         function color = resolveRowColor_(obj,row)
         %RESOLVEROWCOLOR_ Choose the effective color for a row state.
-            selected = row == obj.SelectedRow_;
+            if obj.Dragging_ && obj.RowIDs(row) == obj.DragRowID_
+                color = obj.DropTargetBackgroundColor;
+                return
+            end
+            selected = ismember(obj.RowIDs(row),obj.SelectedRowIDs_);
             hovered = row == obj.HoveredRow_;
             if selected && hovered
                 color = obj.SelectedHoverBackgroundColor;
@@ -952,6 +1254,9 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 color = obj.HoverBackgroundColor;
             else
                 color = obj.baseRowColor_(row);
+            end
+            if obj.RowIDs(row) == obj.ActiveRowID_
+                color = tintColor_(color,obj.ActiveTint);
             end
         end
 
@@ -974,28 +1279,66 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         end
 
         function onDown(obj,event)
-        %ONDOWN Select the row containing the pointer target.
+        %ONDOWN Apply row selection or prime a reorder grip drag.
             row = obj.rowForTarget_(event.Target);
-            if row > 0, obj.SelectedRow = row; end
+            if row == 0, return; end
+            if obj.isGripTarget_(event.Target) && obj.Reorderable_
+                obj.applyPointerSelection_(row,event);
+                obj.DragPrimed_ = true;
+                obj.DragRowID_ = obj.RowIDs(row);
+                obj.DragStartPoint_ = event.CurrentPointFigure;
+                return
+            end
+            obj.applyPointerSelection_(row,event);
         end
 
         function onMove(obj,event)
         %ONMOVE Update the row hover state.
-            obj.updateHover_(obj.rowForTarget_(event.Target));
+            row = obj.rowForTarget_(event.Target);
+            if ~obj.Dragging_, obj.updateHover_(row); end
+            if obj.DragPrimed_ && ~obj.Dragging_
+                delta = event.CurrentPointFigure - obj.DragStartPoint_;
+                obj.Dragging_ = all(isfinite(delta)) && norm(delta) >= obj.DragThreshold;
+                if obj.Dragging_
+                    % Once dragging begins, the insertion slot and source
+                    % row provide all feedback; ordinary hover is suppressed.
+                    obj.updateHover_(0);
+                    obj.applyRowAppearance_(obj.rowForID_(obj.DragRowID_));
+                end
+            end
+            if obj.Dragging_
+                obj.updateDropTarget_(obj.dropSlotForEvent_(event,row));
+            end
+            obj.updateGripPointer_(event.Target);
         end
 
         function onEnter(obj,event)
         %ONENTER Initialize hover when this table becomes the hub claimant.
-            obj.updateHover_(obj.rowForTarget_(event.Target));
+            if ~obj.Dragging_
+                obj.updateHover_(obj.rowForTarget_(event.Target));
+            end
+            obj.updateGripPointer_(event.Target);
         end
 
         function onLeave(obj,~)
         %ONLEAVE Clear hover when this table releases hub ownership.
             obj.updateHover_(0);
+            if ~obj.Dragging_, obj.restorePointer_(); end
         end
 
-        function onUp(~,~)
-        %ONUP Leave pointer-release behavior to native child controls.
+        function onUp(obj,event)
+        %ONUP Commit a valid row drop or cancel a primed grip gesture.
+            if ~obj.DragPrimed_, return; end
+            destinationSlot = obj.dropSlotForEvent_(event,obj.rowForTarget_(event.Target));
+            source = obj.rowForID_(obj.DragRowID_);
+            dragging = obj.Dragging_;
+            obj.cancelDrag_();
+            obj.updateHover_(obj.rowForTarget_(event.Target));
+            obj.updateGripPointer_(event.Target);
+            if dragging && source > 0 && destinationSlot > 0
+                destination = destinationSlot - double(destinationSlot > source);
+                if source ~= destination, obj.moveRow(source,destination); end
+            end
         end
 
         function onScroll(~,~)
@@ -1028,11 +1371,15 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             obj.Hub = matlabx.ui.interaction.FigureEventHub.ensure(fig);
             obj.HubFigure = fig;
             obj.RouterId = obj.Hub.register(obj, ...
-                'Priority',10,'CaptureDuringDrag',false);
+                'Priority',10,'CaptureDuringDrag',true);
+            obj.ensureContextMenu_(fig);
         end
 
         function releaseHub_(obj)
         %RELEASEHUB_ Remove the current event-hub registration and hover.
+            % Restore any cursor claimed by this table while the old figure
+            % reference is still available.
+            obj.cancelDrag_();
             try
                 if ~isempty(obj.Hub) && isvalid(obj.Hub)
                     obj.Hub.unregister(obj.RouterId);
@@ -1093,10 +1440,467 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 end
             end
         end
+
+        function tf = isGripTarget_(obj,target)
+        %ISGRIPTARGET_ Return true when TARGET belongs to this table's grip.
+            tf = false;
+            current = target;
+            while ~isempty(current) && isvalidHandle_(current)
+                try
+                    if isappdata(current,'matlabxControlTableCell')
+                        metadata = getappdata(current,'matlabxControlTableCell');
+                        tf = isfield(metadata,'TableID') && ...
+                            string(metadata.TableID) == obj.ID && ...
+                            isfield(metadata,'IsGrip') && metadata.IsGrip;
+                        return
+                    end
+                    current = current.Parent;
+                catch
+                    return
+                end
+            end
+        end
+
+        function applyPointerSelection_(obj,row,event)
+        %APPLYPOINTERSELECTION_ Apply explorer-style selection modifiers.
+            isContext = string(event.MouseAction) == "contextclick";
+            toggle = event.hasModifier("meta") || event.hasModifier("control");
+            extend = event.hasModifier("shift");
+            obj.applySelectionFlags_(row,isContext,toggle,extend);
+        end
+
+        function applySelectionFlags_(obj,row,isContext,toggle,extend)
+        %APPLYSELECTIONFLAGS_ Commit one normalized explorer-style gesture.
+            clickedID = obj.RowIDs(row);
+            if isContext
+                if ismember(clickedID,obj.SelectedRowIDs_)
+                    obj.setSelectionByIDs_(obj.SelectedRowIDs_,clickedID, ...
+                        obj.AnchorRowID_,true);
+                else
+                    obj.setSelectionByIDs_(clickedID,clickedID,clickedID,true);
+                end
+                return
+            end
+            if obj.SelectionMode_ == "single"
+                obj.setSelectionByIDs_(clickedID,clickedID,clickedID,true);
+                return
+            end
+            anchor = obj.rowForID_(obj.AnchorRowID_);
+            if anchor == 0, anchor = row; end
+            if extend
+                range = min(anchor,row):max(anchor,row);
+                rangeIDs = obj.RowIDs(range);
+                if toggle
+                    selected = setxor(obj.SelectedRowIDs_,rangeIDs,'stable');
+                else
+                    selected = rangeIDs;
+                end
+                active = clickedID;
+                if ~ismember(active,selected)
+                    active = obj.promoteActiveID_(selected,row);
+                end
+                obj.setSelectionByIDs_(selected,active,obj.RowIDs(anchor),true);
+            elseif toggle
+                selected = obj.SelectedRowIDs_;
+                if ismember(clickedID,selected)
+                    selected(selected == clickedID) = [];
+                    if obj.ActiveRowID_ == clickedID
+                        active = obj.promoteActiveID_(selected,row);
+                    else
+                        active = obj.ActiveRowID_;
+                    end
+                else
+                    selected(end+1) = clickedID;
+                    active = clickedID;
+                end
+                obj.setSelectionByIDs_(selected,active,clickedID,true);
+            else
+                obj.setSelectionByIDs_(clickedID,clickedID,clickedID,true);
+            end
+        end
+
+        function slot = dropSlotForEvent_(obj,event,row)
+        %DROPSLOTFOREVENT_ Resolve a pointer to the nearest insertion gap.
+            slot = obj.dropSlotForTarget_(event.Target);
+            if slot > 0 || row == 0, return; end
+
+            % A cursor over the upper half of a row targets the gap before
+            % it; the lower half targets the following gap.
+            target = [];
+            if obj.Reorderable_ && isvalidHandle_(obj.GripGrids{row})
+                target = obj.GripGrids{row};
+            elseif ~isempty(obj.CellGrids) && isvalidHandle_(obj.CellGrids{row,1})
+                target = obj.CellGrids{row,1};
+            end
+            if isempty(target), return; end
+            try
+                bounds = getpixelposition(target,true);
+                belowMidpoint = event.CurrentPointFigure(2) < bounds(2)+bounds(4)/2;
+                slot = row + double(belowMidpoint);
+            catch
+                slot = row;
+            end
+        end
+
+        function slot = dropSlotForTarget_(obj,target)
+        %DROPSLOTFORTARGET_ Find an owned insertion slot in target ancestry.
+            slot = 0;
+            current = target;
+            while ~isempty(current) && isvalidHandle_(current)
+                try
+                    if isappdata(current,'matlabxControlTableDropSlot') && ...
+                            string(getappdata(current,'matlabxControlTableDropSlot')) == obj.ID
+                        for i = 1:numel(obj.DropSlotPanels)
+                            if isvalidHandle_(obj.DropSlotPanels{i}) && ...
+                                    isequal(current,obj.DropSlotPanels{i})
+                                slot = i;
+                                return
+                            end
+                        end
+                    end
+                    current = current.Parent;
+                catch
+                    return
+                end
+            end
+        end
+
+        function updateDropTarget_(obj,slot)
+        %UPDATEDROPTARGET_ Repaint and resize the active insertion slot.
+            old = obj.DropTargetSlot_;
+            if old == slot, return; end
+            obj.DropTargetSlot_ = slot;
+            obj.applyDropSlotAppearance_(old);
+            obj.applyDropSlotAppearance_(slot);
+            obj.applySizingTracks_();
+        end
+
+        function cancelDrag_(obj)
+        %CANCELDRAG_ Clear all primed and active reorder state.
+            old = obj.DropTargetSlot_;
+            draggedRow = obj.rowForID_(obj.DragRowID_);
+            obj.DragPrimed_ = false;
+            obj.Dragging_ = false;
+            obj.DragRowID_ = "";
+            obj.DragStartPoint_ = [NaN NaN];
+            obj.DropTargetSlot_ = 0;
+            obj.applyDropSlotAppearance_(old);
+            obj.applyRowAppearance_(draggedRow);
+            if obj.SetupComplete_ && isvalidHandle_(obj.SizingGrid)
+                obj.applySizingTracks_();
+            end
+            obj.restorePointer_();
+        end
+
+        function updateGripPointer_(obj,target)
+        %UPDATEGRIPPOINTER_ Show open- or closed-hand feedback for the grip.
+            if obj.Dragging_
+                obj.setGripPointer_("dragging");
+            elseif obj.isGripTarget_(target) && obj.Reorderable_
+                obj.setGripPointer_("open");
+            else
+                obj.restorePointer_();
+            end
+        end
+
+        function setGripPointer_(obj,state)
+        %SETGRIPPOINTER_ Claim the figure pointer and apply a grip cursor.
+            fig = obj.HubFigure;
+            if isempty(fig) || ~isvalid(fig), return; end
+            if ~obj.PointerOwned_
+                obj.PreviousPointer_ = string(fig.Pointer);
+                obj.PreviousPointerShapeCData_ = fig.PointerShapeCData;
+                obj.PreviousPointerShapeHotSpot_ = fig.PointerShapeHotSpot;
+                obj.PointerOwned_ = true;
+            end
+            if state == "dragging"
+                fig.Pointer = 'top';
+            else
+                fig.Pointer = 'hand';
+            end
+        end
+
+        function restorePointer_(obj)
+        %RESTOREPOINTER_ Restore the figure pointer that preceded grip hover.
+            if ~obj.PointerOwned_, return; end
+            fig = obj.HubFigure;
+            if ~isempty(fig) && isvalid(fig)
+                if obj.PreviousPointer_ == "custom"
+                    fig.PointerShapeCData = obj.PreviousPointerShapeCData_;
+                    fig.PointerShapeHotSpot = obj.PreviousPointerShapeHotSpot_;
+                end
+                fig.Pointer = char(obj.PreviousPointer_);
+            end
+            obj.PointerOwned_ = false;
+            obj.PreviousPointerShapeCData_ = [];
+            obj.PreviousPointerShapeHotSpot_ = [];
+        end
+
+        function icon = gripIcon_(~,background)
+        %GRIPICON_ Choose the grip asset that contrasts with BACKGROUND.
+            root = fileparts(fileparts(fileparts(fileparts(mfilename('fullpath')))));
+            luminance = dot(background,[0.2126 0.7152 0.0722]);
+            if luminance < 0.55
+                name = 'GripWhiteFGTransparentBG.png';
+            else
+                name = 'GripBlackFGTransparentBG.png';
+            end
+            icon = fullfile(root,'assets','icons',name);
+        end
+
+        function ensureContextMenu_(obj,fig)
+        %ENSURECONTEXTMENU_ Create and attach the built-in table menu.
+            if isvalidHandle_(obj.BuiltInContextMenu_) && isequal(obj.BuiltInContextMenu_.Parent,fig)
+                obj.attachContextMenu_();
+                return
+            end
+            if isvalidHandle_(obj.BuiltInContextMenu_), delete(obj.BuiltInContextMenu_); end
+            menu = uicontextmenu(fig,ContextMenuOpeningFcn=@(~,~) obj.refreshContextMenu_());
+            items.Add = uimenu(menu,Text='Add row',MenuSelectedFcn=@(~,~) obj.addNewRow());
+            items.Duplicate = uimenu(menu,Text='Duplicate row',MenuSelectedFcn=@(~,~) obj.duplicateActiveRow());
+            items.Delete = uimenu(menu,Text='Delete row',MenuSelectedFcn=@(~,~) obj.removeRow(obj.ActiveRow));
+            items.SelectAll = uimenu(menu,Text='Select all',Separator='on',MenuSelectedFcn=@(~,~) obj.selectAll());
+            items.Clear = uimenu(menu,Text='Clear selection',MenuSelectedFcn=@(~,~) obj.clearSelection());
+            items.Invert = uimenu(menu,Text='Invert selection',MenuSelectedFcn=@(~,~) obj.invertSelection());
+            items.DeleteSelected = uimenu(menu,Text='Delete selected',Separator='on',MenuSelectedFcn=@(~,~) obj.removeSelectedRows());
+            obj.BuiltInContextMenu_ = menu;
+            obj.ContextMenuItems = items;
+            obj.attachContextMenu_();
+        end
+
+        function attachContextMenu_(obj)
+        %ATTACHCONTEXTMENU_ Attach the menu without replacing explicit menus.
+            targets = [{obj.SizingGrid,obj.EmptyLabel},obj.GripGrids(:)', ...
+                obj.GripImages(:)',obj.DropSlotPanels(:)', ...
+                obj.CellGrids(:)',obj.CellControls(:)'];
+            for i = 1:numel(targets)
+                target = targets{i};
+                if isvalidHandle_(target) && isprop(target,'ContextMenu') && ...
+                        isempty(target.ContextMenu)
+                    target.ContextMenu = obj.BuiltInContextMenu_;
+                end
+            end
+        end
+
+        function refreshContextMenu_(obj)
+        %REFRESHCONTEXTMENU_ Update built-in action availability.
+            if isempty(fieldnames(obj.ContextMenuItems)), return; end
+            set(obj.ContextMenuItems.Add,'Enable',onOff_(~isempty(obj.NewRowFcn)));
+            set(obj.ContextMenuItems.Duplicate,'Enable',onOff_(obj.ActiveRow > 0));
+            set(obj.ContextMenuItems.Delete,'Enable',onOff_(obj.ActiveRow > 0));
+            set(obj.ContextMenuItems.SelectAll,'Enable',onOff_( ...
+                obj.SelectionMode_ == "multiple" && numel(obj.SelectedRowIDs_) < height(obj.Data_)));
+            set(obj.ContextMenuItems.Clear,'Enable',onOff_(~isempty(obj.SelectedRowIDs_)));
+            set(obj.ContextMenuItems.Invert,'Enable',onOff_( ...
+                obj.SelectionMode_ == "multiple" && height(obj.Data_) > 0));
+            set(obj.ContextMenuItems.DeleteSelected,'Enable',onOff_(~isempty(obj.SelectedRowIDs_)));
+        end
     end
 
     %% Data helpers and callback guard
     methods (Access=private)
+        function rowID = insertRowCore_(obj,index,rowData)
+        %INSERTROWCORE_ Insert data, identity, and graphics without an event.
+            if ~isscalar(index) || index ~= fix(index) || index < 1 || index > height(obj.Data_)+1
+                error('matlabx:ui:control:ControlTable:InvalidInsertIndex', ...
+                    'Insert index must be between 1 and height(Data)+1.');
+            end
+            rowData = obj.normalizeRow_(rowData);
+            obj.cancelDrag_();
+            oldState = obj.selectionState_();
+            cleanup = obj.beginRefresh_(); %#ok<NASGU>
+            columnCount = numel(obj.Columns_);
+            oldRowCount = height(obj.Data_);
+            rowID = newUUIDs_(1);
+            obj.Data_ = [obj.Data_(1:index-1,:);rowData;obj.Data_(index:end,:)];
+            obj.RowIDs = [obj.RowIDs(1:index-1),rowID,obj.RowIDs(index:end)];
+            obj.CellGrids = [obj.CellGrids(1:index-1,:);cell(1,columnCount);obj.CellGrids(index:end,:)];
+            obj.CellControls = [obj.CellControls(1:index-1,:);cell(1,columnCount);obj.CellControls(index:end,:)];
+            if obj.Reorderable_
+                obj.GripGrids = [obj.GripGrids(1:index-1);{[]};obj.GripGrids(index:end)];
+                obj.GripImages = [obj.GripImages(1:index-1);{[]};obj.GripImages(index:end)];
+            end
+            if oldRowCount == 0
+                obj.DropSlotPanels = cell(2,1);
+                obj.createDropSlot_(1);
+                obj.createDropSlot_(2);
+            else
+                obj.DropSlotPanels = [obj.DropSlotPanels(1:index); ...
+                    {[]};obj.DropSlotPanels(index+1:end)];
+                obj.createDropSlot_(index+1);
+            end
+            if isvalidHandle_(obj.EmptyLabel), delete(obj.EmptyLabel); obj.EmptyLabel=[]; end
+            if obj.HoveredRow_ >= index && obj.HoveredRow_ > 0
+                obj.HoveredRow_ = obj.HoveredRow_+1;
+            end
+            obj.createRowGraphics_(index);
+            obj.positionRowsFrom_(index+1);
+            obj.positionDropSlotsFrom_(index);
+            obj.applySizingTracks_();
+            obj.refreshDynamicControls_();
+            obj.applyRowAppearancesFrom_(index);
+            obj.publishSelectionProperties_();
+            obj.attachContextMenu_();
+            clear cleanup
+            obj.notifySelectionChange_(oldState);
+        end
+
+        function removeRows_(obj,rows)
+        %REMOVEROWS_ Remove a normalized row set and emit one structural event.
+            rows = obj.validateSelectionRows_(rows,false);
+            if isempty(rows), return; end
+            rows = sort(unique(rows));
+            obj.cancelDrag_();
+            oldState = obj.selectionState_();
+            removedIDs = obj.RowIDs(rows);
+            formerActive = obj.ActiveRow;
+            cleanup = obj.beginRefresh_(); %#ok<NASGU>
+            for row = rows
+                if obj.Reorderable_ && isvalidHandle_(obj.GripGrids{row})
+                    delete(obj.GripGrids{row});
+                end
+                for column = 1:size(obj.CellGrids,2)
+                    if isvalidHandle_(obj.CellGrids{row,column}), delete(obj.CellGrids{row,column}); end
+                end
+            end
+            slotsToDelete = rows+1;
+            for slot = slotsToDelete
+                if isvalidHandle_(obj.DropSlotPanels{slot})
+                    delete(obj.DropSlotPanels{slot});
+                end
+            end
+            obj.Data_(rows,:) = [];
+            obj.RowIDs(rows) = [];
+            obj.CellGrids(rows,:) = [];
+            obj.CellControls(rows,:) = [];
+            if obj.Reorderable_
+                obj.GripGrids(rows) = [];
+                obj.GripImages(rows) = [];
+            end
+            obj.DropSlotPanels(slotsToDelete) = [];
+            obj.SelectedRowIDs_ = obj.SelectedRowIDs_(ismember(obj.SelectedRowIDs_,obj.RowIDs));
+            if ~ismember(obj.ActiveRowID_,obj.SelectedRowIDs_)
+                if ~isempty(obj.SelectedRowIDs_)
+                    obj.ActiveRowID_ = obj.promoteActiveID_(obj.SelectedRowIDs_,formerActive);
+                elseif ~isempty(obj.RowIDs)
+                    neighbor = min(max(1,min(rows)),height(obj.Data_));
+                    obj.ActiveRowID_ = obj.RowIDs(neighbor);
+                    obj.SelectedRowIDs_ = obj.ActiveRowID_;
+                else
+                    obj.ActiveRowID_ = "";
+                end
+            end
+            if ~ismember(obj.AnchorRowID_,obj.RowIDs), obj.AnchorRowID_=obj.ActiveRowID_; end
+            obj.publishSelectionProperties_();
+            obj.HoveredRow_ = 0;
+            obj.positionRowsFrom_(min(rows));
+            obj.positionDropSlotsFrom_(min(rows));
+            if height(obj.Data_)==0
+                for slot = 1:numel(obj.DropSlotPanels)
+                    if isvalidHandle_(obj.DropSlotPanels{slot}), delete(obj.DropSlotPanels{slot}); end
+                end
+                obj.DropSlotPanels = {};
+                obj.createEmptyLabel_();
+            end
+            obj.applySizingTracks_();
+            obj.refreshDynamicControls_();
+            obj.applyRowAppearancesFrom_(min(rows));
+            clear cleanup
+            obj.notifySelectionChange_(oldState);
+            notify(obj,'RowsRemoved',matlabx.ui.control.ControlTableRowsChangedData( ...
+                removedIDs,string.empty(1,0),rows,double.empty(1,0)));
+        end
+
+        function state = selectionState_(obj)
+        %SELECTIONSTATE_ Snapshot complete identity and numeric selection state.
+            state = struct('ActiveRow',obj.rowForID_(obj.ActiveRowID_), ...
+                'ActiveRowID',obj.ActiveRowID_, ...
+                'SelectedRows',obj.rowsForIDs_(obj.SelectedRowIDs_), ...
+                'SelectedRowIDs',obj.SelectedRowIDs_);
+        end
+
+        function setSelectionByIDs_(obj,ids,activeID,anchorID,emit)
+        %SETSELECTIONBYIDS_ Normalize and atomically commit selection identity.
+            oldState = obj.selectionState_();
+            ids = reshape(string(ids),1,[]);
+            ids = obj.RowIDs(ismember(obj.RowIDs,unique(ids,'stable')));
+            if obj.SelectionMode_ == "single" && numel(ids)>1
+                if ismember(string(activeID),ids), ids=string(activeID); else, ids=ids(1); end
+            end
+            activeID = string(activeID);
+            if ~ismember(activeID,ids)
+                if isempty(ids), activeID=""; else, activeID=ids(1); end
+            end
+            anchorID = string(anchorID);
+            if ~ismember(anchorID,obj.RowIDs), anchorID=activeID; end
+            if isequal(ids,obj.SelectedRowIDs_) && activeID==obj.ActiveRowID_ && ...
+                    anchorID==obj.AnchorRowID_
+                return
+            end
+            affected = unique([obj.rowsForIDs_(obj.SelectedRowIDs_), ...
+                obj.rowsForIDs_(ids),obj.rowForID_(obj.ActiveRowID_),obj.rowForID_(activeID)]);
+            obj.SelectedRowIDs_ = ids;
+            obj.ActiveRowID_ = activeID;
+            obj.AnchorRowID_ = anchorID;
+            obj.publishSelectionProperties_();
+            for row = affected, obj.applyRowAppearance_(row); end
+            obj.refreshContextMenu_();
+            if emit, obj.notifySelectionChange_(oldState); end
+        end
+
+        function publishSelectionProperties_(obj)
+        %PUBLISHSELECTIONPROPERTIES_ Synchronize read-only public ID properties.
+            obj.ActiveRowID = obj.ActiveRowID_;
+            obj.SelectedRowIDs = obj.SelectedRowIDs_;
+        end
+
+        function notifySelectionChange_(obj,oldState)
+        %NOTIFYSELECTIONCHANGE_ Emit one event only when public state changed.
+            newState = obj.selectionState_();
+            if isequal(oldState,newState), return; end
+            notify(obj,'SelectionChanged', ...
+                matlabx.ui.control.ControlTableSelectionChangedData(oldState,newState));
+        end
+
+        function rows = rowsForIDs_(obj,ids)
+        %ROWSFORIDS_ Resolve stable identities in current table order.
+            rows = find(ismember(obj.RowIDs,string(ids)));
+            rows = reshape(rows,1,[]);
+        end
+
+        function row = rowForID_(obj,id)
+        %ROWFORID_ Resolve one stable identity, returning zero when absent.
+            row = find(obj.RowIDs==string(id),1);
+            if isempty(row), row=0; end
+        end
+
+        function rows = validateSelectionRows_(obj,rows,scalarOnly)
+        %VALIDATESELECTIONROWS_ Validate public numeric row selections.
+            if isempty(rows), rows=double.empty(1,0); end
+            if scalarOnly && isnumeric(rows) && isscalar(rows) && isequal(rows,0)
+                rows = 0;
+                return
+            end
+            if ~isnumeric(rows) || ~isvector(rows) || any(~isfinite(rows)) || ...
+                    any(rows~=fix(rows)) || any(rows<1) || any(rows>height(obj.Data_)) || ...
+                    (scalarOnly && ~isscalar(rows))
+                error('matlabx:ui:control:ControlTable:InvalidSelectionRows', ...
+                    'Rows must contain valid integer Data row indices.');
+            end
+            rows = reshape(double(rows),1,[]);
+            rows = unique(rows,'stable');
+        end
+
+        function id = promoteActiveID_(obj,ids,referenceRow)
+        %PROMOTEACTIVEID_ Choose the nearest selected row, preferring preceding.
+            ids = reshape(string(ids),1,[]);
+            if isempty(ids), id=""; return; end
+            rows = obj.rowsForIDs_(ids);
+            preceding = rows(rows<referenceRow);
+            if ~isempty(preceding), row=preceding(end); else, row=rows(1); end
+            id = obj.RowIDs(row);
+        end
+
         function validateData_(~,data,columns)
         %VALIDATEDATA_ Require one table variable for every column definition.
             if isempty(columns), return; end
@@ -1151,15 +1955,6 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
                 obj.Data_.(name){row} = value;
             else
                 obj.Data_.(name)(row,:) = value;
-            end
-        end
-
-        function row = nearestRow_(obj,row)
-        %NEARESTROW_ Clamp a prior selection to the current data height.
-            if height(obj.Data_) == 0 || row == 0
-                row = 0;
-            else
-                row = min(row,height(obj.Data_));
             end
         end
 
@@ -1267,4 +2062,19 @@ function span = gridColumnSpan_(columnCount)
     else
         span = [1 columnCount];
     end
+end
+
+function color = tintColor_(color,amount)
+%TINTCOLOR_ Shift a color away from its current luminance extreme.
+    luminance = dot(color,[0.2126 0.7152 0.0722]);
+    if luminance < 0.5
+        color = color + (1-color)*amount;
+    else
+        color = color*(1-amount);
+    end
+end
+
+function value = onOff_(tf)
+%ONOFF_ Convert a logical condition to a MATLAB on/off character value.
+    if tf, value='on'; else, value='off'; end
 end
