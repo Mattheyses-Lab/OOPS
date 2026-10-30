@@ -20,6 +20,8 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
 %   the primary row for single-row operations, while SelectedRows is the
 %   complete ordered batch target. Reorderable adds a structural grip column;
 %   row moves preserve RowIDs and selection identity.
+%   RowOperationRequestedFcn can cancel add, duplicate, remove, and reorder
+%   operations before any table state changes.
 %
 %   Example:
 %       columns = [ ...
@@ -158,6 +160,8 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         CellEdited
         % Emitted once after a complete selection transition.
         SelectionChanged
+        % Requested before a structural row operation is committed.
+        RowOperationRequested
         % Emitted after a row is created by addRow or addNewRow.
         RowAdded
         % Emitted after a row is duplicated.
@@ -566,14 +570,18 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
         function addRow(obj,rowData)
         %ADDROW Append one compatible table row.
             index = height(obj.Data_)+1;
-            rowID = obj.insertRowCore_(index,rowData);
+            [rowID,rowData] = obj.prepareAdd_(index,rowData);
+            if rowID == "", return; end
+            rowID = obj.insertRowCore_(index,rowData,rowID);
             notify(obj,'RowAdded',matlabx.ui.control.ControlTableRowsChangedData( ...
                 rowID,string.empty(1,0),double.empty(1,0),index));
         end
 
         function insertRow(obj,index,rowData)
         %INSERTROW Insert one compatible table row before INDEX.
-            rowID = obj.insertRowCore_(index,rowData);
+            [rowID,rowData] = obj.prepareAdd_(index,rowData);
+            if rowID == "", return; end
+            rowID = obj.insertRowCore_(index,rowData,rowID);
             notify(obj,'RowAdded',matlabx.ui.control.ControlTableRowsChangedData( ...
                 rowID,string.empty(1,0),double.empty(1,0),index));
         end
@@ -592,7 +600,9 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             end
             row = obj.NewRowFcn(obj);
             index = height(obj.Data_)+1;
-            rowID = obj.insertRowCore_(index,row);
+            [rowID,row] = obj.prepareAdd_(index,row);
+            if rowID == "", return; end
+            rowID = obj.insertRowCore_(index,row,rowID);
             notify(obj,'RowAdded',matlabx.ui.control.ControlTableRowsChangedData( ...
                 rowID,string.empty(1,0),double.empty(1,0),index));
         end
@@ -602,7 +612,14 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             obj.validateRowIndex_(index);
             sourceID = obj.RowIDs(index);
             newIndex = index+1;
-            rowID = obj.insertRowCore_(newIndex,obj.Data_(index,:));
+            row = obj.Data_(index,:);
+            request = matlabx.ui.control.ControlTableRowOperationData( ...
+                "duplicate",sourceID,index,index,newIndex,row);
+            if ~obj.requestOperation_(request)
+                rowID = "";
+                return
+            end
+            rowID = obj.insertRowCore_(newIndex,row,newUUIDs_(1));
             obj.setSelectionByIDs_(rowID,rowID,rowID,true);
             notify(obj,'RowDuplicated',matlabx.ui.control.ControlTableRowsChangedData( ...
                 rowID,sourceID,index,newIndex));
@@ -627,9 +644,12 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             obj.validateRowIndex_(oldIndex);
             obj.validateRowIndex_(newIndex);
             if oldIndex == newIndex, return; end
+            rowID = obj.RowIDs(oldIndex);
+            request = matlabx.ui.control.ControlTableRowOperationData( ...
+                "reorder",rowID,oldIndex,oldIndex,newIndex,obj.Data_(oldIndex,:));
+            if ~obj.requestOperation_(request), return; end
             obj.cancelDrag_();
             oldState = obj.selectionState_();
-            rowID = obj.RowIDs(oldIndex);
             order = 1:height(obj.Data_);
             moved = order(oldIndex);
             order(oldIndex) = [];
@@ -1699,19 +1719,32 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
 
     %% Data helpers and callback guard
     methods (Access=private)
-        function rowID = insertRowCore_(obj,index,rowData)
-        %INSERTROWCORE_ Insert data, identity, and graphics without an event.
-            if ~isscalar(index) || index ~= fix(index) || index < 1 || index > height(obj.Data_)+1
-                error('matlabx:ui:control:ControlTable:InvalidInsertIndex', ...
-                    'Insert index must be between 1 and height(Data)+1.');
-            end
+        function [rowID,rowData] = prepareAdd_(obj,index,rowData)
+        %PREPAREADD_ Validate an addition and request permission to commit it.
+            obj.validateInsertIndex_(index);
             rowData = obj.normalizeRow_(rowData);
+            request = matlabx.ui.control.ControlTableRowOperationData( ...
+                "add",string.empty(1,0),double.empty(1,0),0,index,rowData);
+            if obj.requestOperation_(request)
+                rowID = newUUIDs_(1);
+            else
+                rowID = "";
+            end
+        end
+
+        function allowed = requestOperation_(obj,eventData)
+        %REQUESTOPERATION_ Emit one cancellable structural-operation request.
+            notify(obj,'RowOperationRequested',eventData);
+            allowed = ~eventData.Cancel;
+        end
+
+        function rowID = insertRowCore_(obj,index,rowData,rowID)
+        %INSERTROWCORE_ Insert data, identity, and graphics without an event.
             obj.cancelDrag_();
             oldState = obj.selectionState_();
             cleanup = obj.beginRefresh_(); %#ok<NASGU>
             columnCount = numel(obj.Columns_);
             oldRowCount = height(obj.Data_);
-            rowID = newUUIDs_(1);
             obj.Data_ = [obj.Data_(1:index-1,:);rowData;obj.Data_(index:end,:)];
             obj.RowIDs = [obj.RowIDs(1:index-1),rowID,obj.RowIDs(index:end)];
             obj.CellGrids = [obj.CellGrids(1:index-1,:);cell(1,columnCount);obj.CellGrids(index:end,:)];
@@ -1750,9 +1783,12 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             rows = obj.validateSelectionRows_(rows,false);
             if isempty(rows), return; end
             rows = sort(unique(rows));
+            removedIDs = obj.RowIDs(rows);
+            request = matlabx.ui.control.ControlTableRowOperationData( ...
+                "remove",removedIDs,rows,0,0,obj.Data_(rows,:));
+            if ~obj.requestOperation_(request), return; end
             obj.cancelDrag_();
             oldState = obj.selectionState_();
-            removedIDs = obj.RowIDs(rows);
             formerActive = obj.ActiveRow;
             cleanup = obj.beginRefresh_(); %#ok<NASGU>
             for row = rows
@@ -1916,6 +1952,15 @@ classdef ControlTable < matlab.ui.componentcontainer.ComponentContainer
             if ~isscalar(index) || index ~= fix(index) || index < 1 || index > height(obj.Data_)
                 error('matlabx:ui:control:ControlTable:InvalidRowIndex', ...
                     'Row index must identify an existing Data row.');
+            end
+        end
+
+        function validateInsertIndex_(obj,index)
+        %VALIDATEINSERTINDEX_ Require a valid insertion position.
+            if ~isscalar(index) || index ~= fix(index) || index < 1 || ...
+                    index > height(obj.Data_)+1
+                error('matlabx:ui:control:ControlTable:InvalidInsertIndex', ...
+                    'Insert index must be between 1 and height(Data)+1.');
             end
         end
 
