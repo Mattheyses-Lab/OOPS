@@ -28,6 +28,12 @@ classdef testControlTable < matlab.unittest.TestCase
             testCase.verifyTrue(isvalid(state.EmptyLabel));
             testCase.verifyEqual(string(state.EmptyLabel.Text),"No rows");
             testCase.verifyEqual(string(state.SizingGrid.Scrollable),"off");
+
+            populated = testCase.data_();
+            component.addRow(populated(1,:));
+            testCase.verifySize(component.debug().DropSlotPanels,[2 1]);
+            component.removeRow(1);
+            testCase.verifyEmpty(component.debug().DropSlotPanels);
         end
 
         function staticAndDynamicDropdowns(testCase)
@@ -88,7 +94,7 @@ classdef testControlTable < matlab.unittest.TestCase
             testCase.verifyEqual(event.Name,"EmbedLUT");
             testCase.verifyFalse(event.OldValue);
             testCase.verifyTrue(event.NewValue);
-            testCase.verifyEqual(component.SelectedRow,1);
+            testCase.verifyEqual(component.ActiveRow,1);
             testCase.verifyFalse(getappdata(fig,'RefreshingAtEdit'));
         end
 
@@ -179,9 +185,10 @@ classdef testControlTable < matlab.unittest.TestCase
             component.SelectionChangedFcn = @(~,event) ...
                 captureSelection_(fig,component,event);
 
-            component.SelectedRow = 2;
+            component.ActiveRow = 2;
             event = getappdata(fig,'Selection');
-            testCase.verifyEqual([event.OldRow event.NewRow],[0 2]);
+            testCase.verifyEqual([event.OldActiveRow event.NewActiveRow],[0 2]);
+            testCase.verifyEqual(event.NewSelectedRows,2);
 
             component.addRow(component.Data(1,:));
             component.insertRow(2,component.Data(1,:));
@@ -189,7 +196,7 @@ classdef testControlTable < matlab.unittest.TestCase
             testCase.verifyFalse(getappdata(fig,'RefreshingAtSelection'));
             component.removeRow(2);
             testCase.verifyEqual(height(component.Data),3);
-            testCase.verifyEqual(component.SelectedRow,2);
+            testCase.verifyEqual(component.ActiveRow,2);
             testCase.verifyFalse(getappdata(fig,'RefreshingAtSelection'));
         end
 
@@ -208,7 +215,7 @@ classdef testControlTable < matlab.unittest.TestCase
             testCase.verifyNotEqual(component.RowIDs(2),originalIDs(1));
             testCase.verifyEqual(inserted.CellGrids{1,1},firstGrid);
             testCase.verifyEqual(inserted.CellGrids{3,1},secondGrid);
-            testCase.verifyEqual(secondGrid.Layout.Row,4);
+            testCase.verifyEqual(secondGrid.Layout.Row,7);
 
             secondControl.Value = 'renamed';
             secondControl.ValueChangedFcn(secondControl,[]);
@@ -219,7 +226,7 @@ classdef testControlTable < matlab.unittest.TestCase
             testCase.verifyEqual(component.RowIDs,originalIDs);
             testCase.verifyEqual(removed.CellGrids{1,1},firstGrid);
             testCase.verifyEqual(removed.CellGrids{2,1},secondGrid);
-            testCase.verifyEqual(secondGrid.Layout.Row,3);
+            testCase.verifyEqual(secondGrid.Layout.Row,5);
         end
 
         function columnWidthsAndSharedTracks(testCase)
@@ -278,13 +285,13 @@ classdef testControlTable < matlab.unittest.TestCase
             component.debugPointerTarget(target,"move");
             state = component.debug();
 
-            testCase.verifyEqual(component.SelectedRow,2);
+            testCase.verifyEqual(component.ActiveRow,2);
             testCase.verifyEqual(state.HoveredRow,2);
             testCase.verifyEqual(state.CellGrids{2,1}.BackgroundColor, ...
-                component.SelectedHoverBackgroundColor,'AbsTol',1e-12);
+                [0.10 0.505 0.766],'AbsTol',1e-12);
             component.debugPointerTarget(fig,"move");
             testCase.verifyEqual(component.debug().CellGrids{2,1}.BackgroundColor, ...
-                component.SelectedBackgroundColor,'AbsTol',1e-12);
+                [0.10 0.424 0.64],'AbsTol',1e-12);
         end
 
         function reparentingRebindsHub(testCase)
@@ -330,6 +337,118 @@ classdef testControlTable < matlab.unittest.TestCase
 
             testCase.verifyNumElements(component.Columns,2);
             testCase.verifyEqual([component.Columns.Name],["Name","Enabled"]);
+        end
+
+        function multipleSelectionGesturesAreAtomicAndOrdered(testCase)
+            data = testCase.data_();
+            data = [data;data(1,:)];
+            [fig,component] = testCase.make_(data);
+            testCase.addTeardown(@() delete(fig));
+            component.SelectionMode = "multiple";
+            setappdata(fig,'SelectionCount',0);
+            component.SelectionChangedFcn = @(~,event) captureSelectionCount_(fig,event);
+
+            component.debugSelectionGesture(1);
+            component.debugSelectionGesture(3,"control");
+            testCase.verifyEqual(component.SelectedRows,[1 3]);
+            testCase.verifyEqual(component.ActiveRow,3);
+            component.debugSelectionGesture(2,"shift");
+            testCase.verifyEqual(component.SelectedRows,[2 3]);
+            testCase.verifyEqual(component.ActiveRow,2);
+            component.debugSelectionGesture(1,["control","shift"]);
+            testCase.verifyEqual(component.SelectedRows,1);
+            testCase.verifyEqual(component.ActiveRow,1);
+            testCase.verifyEqual(getappdata(fig,'SelectionCount'),4);
+            event = getappdata(fig,'Selection');
+            testCase.verifyEqual(event.OldSelectedRows,[2 3]);
+            testCase.verifyEqual(event.NewSelectedRows,1);
+            testCase.verifyEqual(event.NewActiveRowID,component.RowIDs(1));
+        end
+
+        function structuralOperationsPreserveIdentityAndEmitOnce(testCase)
+            [fig,component] = testCase.make_(testCase.data_());
+            testCase.addTeardown(@() delete(fig));
+            counts = struct('added',0,'duplicated',0,'removed',0,'reordered',0);
+            setappdata(fig,'Counts',counts);
+            component.RowAddedFcn = @(~,~) increment_('added');
+            component.RowDuplicatedFcn = @(~,~) increment_('duplicated');
+            component.RowsRemovedFcn = @(~,~) increment_('removed');
+            component.RowReorderedFcn = @(~,~) increment_('reordered');
+            originalID = component.RowIDs(1);
+
+            component.addRow(component.Data(1,:));
+            duplicateID = component.duplicateRow(1);
+            testCase.verifyNotEqual(duplicateID,originalID);
+            testCase.verifyEqual(component.ActiveRowID,duplicateID);
+            component.moveRow(component.ActiveRow,height(component.Data));
+            testCase.verifyEqual(component.RowIDs(end),duplicateID);
+            component.removeSelectedRows();
+            testCase.verifyFalse(ismember(duplicateID,component.RowIDs));
+            counts = getappdata(fig,'Counts');
+            testCase.verifyEqual(struct2array(counts),[1 1 1 1]);
+
+            function increment_(name)
+                value = getappdata(fig,'Counts');
+                value.(name) = value.(name)+1;
+                setappdata(fig,'Counts',value);
+            end
+        end
+
+        function reorderChromeAndContextMenuAreOwnedByTable(testCase)
+            [fig,component] = testCase.make_(testCase.data_());
+            testCase.addTeardown(@() delete(fig));
+            component.Reorderable = true;
+            drawnow;
+            state = component.debug();
+
+            testCase.verifyEqual(state.SizingGrid.ColumnWidth(1),{component.GripWidth});
+            testCase.verifyTrue(isvalid(state.GripHeader));
+            testCase.verifySize(state.GripImages,[2 1]);
+            testCase.verifyTrue(all(cellfun(@isvalid,state.GripImages)));
+            testCase.verifyEqual(string(state.GripImages{1}.BackgroundColor),"none");
+            testCase.verifySize(state.DropSlotPanels,[3 1]);
+            testCase.verifyEqual(cellfun(@(panel) panel.Layout.Row, ...
+                state.DropSlotPanels)',[2 4 6]);
+            testCase.verifyEqual(state.SizingGrid.RowSpacing,0);
+            testCase.verifyEqual(component.DropTargetThickness,1);
+            testCase.verifyEqual(state.SizingGrid.RowHeight{6},0);
+            testCase.verifyTrue(isvalid(state.ContextMenu));
+            testCase.verifyEqual(state.CellGrids{1,1}.Layout.Column,2);
+            testCase.verifyEqual(state.GripGrids{1}.Layout.Column,1);
+
+            component.debugPointerTarget(state.GripImages{1},"move");
+            testCase.verifyEqual(string(fig.Pointer),"hand");
+            component.debugPointerTarget(state.Controls{1,1},"move");
+            testCase.verifyEqual(string(fig.Pointer),"arrow");
+
+            component.debugDropTarget(2);
+            state = component.debug();
+            testCase.verifyEqual(state.DropSlotPanels{2}.BackgroundColor, ...
+                component.DropTargetBackgroundColor,'AbsTol',1e-12);
+            testCase.verifyEqual(state.SizingGrid.RowHeight{4}, ...
+                max(component.RowSpacing,component.DropTargetThickness));
+            component.debugDropTarget(0);
+            testCase.verifyEqual(component.debug().SizingGrid.RowHeight{4}, ...
+                component.RowSpacing);
+            component.debugDropTarget(3);
+            testCase.verifyEqual(component.debug().SizingGrid.RowHeight{6}, ...
+                component.DropTargetThickness);
+            component.debugDropTarget(0);
+            testCase.verifyEqual(component.debug().SizingGrid.RowHeight{6},0);
+
+            component.DragThreshold = 0;
+            down = matlabx.ui.interaction.HubEvent( ...
+                fig,state.GripImages{1},"Down",[]);
+            move = matlabx.ui.interaction.HubEvent( ...
+                fig,state.Controls{2,1},"Move",[]);
+            component.onDown(down);
+            component.onMove(move);
+            dragging = component.debug();
+            testCase.verifyEqual(dragging.HoveredRow,0);
+            testCase.verifyEqual(dragging.CellGrids{1,1}.BackgroundColor, ...
+                component.DropTargetBackgroundColor,'AbsTol',1e-12);
+            testCase.verifyEqual(string(fig.Pointer),"top");
+            component.onUp(move);
         end
     end
 
@@ -408,4 +527,9 @@ end
 function captureEdit_(fig,component,event)
     setappdata(fig,'LastEdit',event);
     setappdata(fig,'RefreshingAtEdit',component.debug().Refreshing);
+end
+
+function captureSelectionCount_(fig,event)
+    setappdata(fig,'Selection',event);
+    setappdata(fig,'SelectionCount',getappdata(fig,'SelectionCount')+1);
 end

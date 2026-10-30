@@ -1,5 +1,5 @@
 classdef ControlTableSelectionChangedData < event.EventData
-%CONTROLTABLESELECTIONCHANGEDDATA Payload for ControlTable selection changes.
+%CONTROLTABLESELECTIONCHANGEDDATA Complete ControlTable selection transition.
 
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
@@ -17,19 +17,36 @@ classdef ControlTableSelectionChangedData < event.EventData
 % You should have received a copy of the GNU General Public License along
 % with this program; if not, see <https://www.gnu.org/licenses/>.
 
-    % Immutable numeric row transition for a selection change.
     properties (SetAccess=immutable)
-        % Previously selected row, or zero when none was selected.
-        OldRow (1,1) double
-        % Newly selected row, or zero when selection was cleared.
-        NewRow (1,1) double
+        % Active row before the completed selection change, or zero.
+        OldActiveRow (1,1) double
+        % Active row after the completed selection change, or zero.
+        NewActiveRow (1,1) double
+        % Stable active-row identity before the change, or empty string.
+        OldActiveRowID (1,1) string
+        % Stable active-row identity after the change, or empty string.
+        NewActiveRowID (1,1) string
+        % Ordered numeric selection before the change.
+        OldSelectedRows (1,:) double
+        % Ordered numeric selection after the change.
+        NewSelectedRows (1,:) double
+        % Ordered stable row identities before the change.
+        OldSelectedRowIDs (1,:) string
+        % Ordered stable row identities after the change.
+        NewSelectedRowIDs (1,:) string
     end
 
     methods
-        function obj = ControlTableSelectionChangedData(oldRow,newRow)
-        %CONTROLTABLESELECTIONCHANGEDDATA Construct a selection-change payload.
-            obj.OldRow = oldRow;
-            obj.NewRow = newRow;
+        function obj = ControlTableSelectionChangedData(oldState,newState)
+        %CONTROLTABLESELECTIONCHANGEDDATA Construct a complete transition payload.
+            obj.OldActiveRow = oldState.ActiveRow;
+            obj.NewActiveRow = newState.ActiveRow;
+            obj.OldActiveRowID = oldState.ActiveRowID;
+            obj.NewActiveRowID = newState.ActiveRowID;
+            obj.OldSelectedRows = oldState.SelectedRows;
+            obj.NewSelectedRows = newState.SelectedRows;
+            obj.OldSelectedRowIDs = oldState.SelectedRowIDs;
+            obj.NewSelectedRowIDs = newState.SelectedRowIDs;
         end
     end
 end

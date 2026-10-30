@@ -71,6 +71,9 @@ function [fig,controlTable] = controlTable()
         BackgroundColor=[0.08 0.09 0.11],Scrollable='on');
     controlTable = matlabx.ui.control.ControlTable(tableHost, ...
         Columns=columns,Data=data);
+    controlTable.SelectionMode = "multiple";
+    controlTable.Reorderable = true;
+    controlTable.NewRowFcn = @(~) makeRow_();
 
     footer = uigridlayout(grid,[1 5], ...
         ColumnWidth={80,80,80,'1x','2x'},Padding=[0 0 0 0],ColumnSpacing=6, ...
@@ -84,45 +87,47 @@ function [fig,controlTable] = controlTable()
     controlTable.CellEditedFcn = @(~,event) set(status,'Text',sprintf( ...
         'Edited row %d, %s',event.Row,event.Name));
     controlTable.SelectionChangedFcn = @(~,event) set(status,'Text',sprintf( ...
-        'Selected row %d',event.NewRow));
+        'Active row %d; %d selected',event.NewActiveRow,numel(event.NewSelectedRows)));
     movegui(fig,'center');
 
     function addRow_(~,~)
     %ADDROW_ Append a valid example booking with a new stable row ID.
-        index = height(controlTable.Data) + 1;
-        names = ["Team meeting","Bench work"];
-        types = ["meeting","laboratory"];
-        rooms = ["cedar","lab-a"];
-        choice = mod(index-1,numel(types))+1;
-        colors = [0.30 0.70 0.95; 0.95 0.65 0.25];
-        row = table(names(choice),types(choice),rooms(choice),1, ...
-            colors(choice,:),true, ...
-            VariableNames=controlTable.Data.Properties.VariableNames);
-        controlTable.addRow(row);
-        controlTable.SelectedRow = index;
+        controlTable.addNewRow();
+        controlTable.ActiveRow = height(controlTable.Data);
     end
 
     function duplicateRow_(~,~)
     %DUPLICATEROW_ Append a copy so cross-row room validity can be tested.
-        index = controlTable.SelectedRow;
+        index = controlTable.ActiveRow;
         if index == 0
             status.Text = 'Select a row to duplicate.';
             return
         end
-        row = controlTable.Data(index,:);
-        controlTable.addRow(row);
-        controlTable.SelectedRow = height(controlTable.Data);
+        controlTable.duplicateActiveRow();
     end
 
     function deleteRow_(~,~)
     %DELETEROW_ Remove the selected booking through the incremental API.
-        index = controlTable.SelectedRow;
+        index = controlTable.ActiveRow;
         if index == 0
             status.Text = 'Select a row to delete.';
             return
         end
         controlTable.removeRow(index);
         status.Text = sprintf('Deleted row %d',index);
+    end
+
+    function row = makeRow_()
+    %MAKEROW_ Return a valid example row for Add actions.
+        index = height(controlTable.Data)+1;
+        names = ["Team meeting","Bench work"];
+        types = ["meeting","laboratory"];
+        rooms = ["cedar","lab-a"];
+        choice = mod(index-1,numel(types))+1;
+        colors = [0.30 0.70 0.95;0.95 0.65 0.25];
+        row = table(names(choice),types(choice),rooms(choice),1, ...
+            colors(choice,:),true, ...
+            VariableNames=controlTable.Data.Properties.VariableNames);
     end
 end
 
