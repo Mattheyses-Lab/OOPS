@@ -65,18 +65,18 @@ uiwait(dialog);
 
     function addRecipe(~,~)
         recipeTable.addRow(defaultRecipe());
-        recipeTable.SelectedRow = height(recipeTable.Data);
+        recipeTable.ActiveRow = height(recipeTable.Data);
     end
 
     function duplicateRecipe(~,~)
-        index = recipeTable.SelectedRow;
+        index = recipeTable.ActiveRow;
         if index == 0, return; end
         recipeTable.insertRow(index+1,recipeTable.Data(index,:));
-        recipeTable.SelectedRow = index+1;
+        recipeTable.ActiveRow = index+1;
     end
 
     function removeRecipe(~,~)
-        index = recipeTable.SelectedRow;
+        index = recipeTable.ActiveRow;
         if index == 0, return; end
         recipeTable.removeRow(index);
     end
