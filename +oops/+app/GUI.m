@@ -838,21 +838,40 @@ classdef GUI < handle
             end
         end
 
-        function exportNativeImages(obj)
-        %EXPORTNATIVEIMAGES Collect native export options and write OME-TIFF files.
+        function exportImages(obj)
+        %EXPORTIMAGES Collect image recipes and write the resulting manifest.
 
             if isempty(obj.Project)
                 return;
             end
 
+            options = oops.app.imageExportDialog(obj.Fig);
+            obj.focusWindow();
+            if isempty(options)
+                oops.Log.INFO("Image export cancelled.");
+                return
+            end
+
+            folder = pwd;
+            if obj.Project.SourcePath ~= ""
+                candidate = fileparts(obj.Project.SourcePath);
+                if isfolder(candidate), folder = candidate; end
+            end
+            folder = uigetdir(folder,'Export images');
+            obj.focusWindow();
+            if isequal(folder,0)
+                oops.Log.INFO("Image export cancelled.");
+                return
+            end
+
             [progress,cleanupProgress] = obj.createProgressDialog( ...
-                "Preparing native image export..."); %#ok<ASGLU>
-            success = oops.export.Exporter.exportNativeImages( ...
-                obj.Project,Progress=progress);
+                "Preparing image export..."); %#ok<ASGLU>
+            success = oops.export.Exporter.exportImages( ...
+                obj.Project,string(folder),options,Progress=progress);
             obj.focusWindow();
 
             if ~success
-                oops.Log.INFO("Native image export cancelled.");
+                oops.Log.INFO("Image export cancelled.");
             end
         end
 
@@ -2356,8 +2375,8 @@ classdef GUI < handle
             obj.MenuUI.Export = uimenu(file,'Text','Export','Separator','on');
             uimenu(obj.MenuUI.Export,'Text','Summary tables (.xlsx)...', ...
                 'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.exportSummaryTables()));
-            uimenu(obj.MenuUI.Export,'Text','Native images (OME-TIFF)...', ...
-                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.exportNativeImages()));
+            uimenu(obj.MenuUI.Export,'Text','Images...', ...
+                'MenuSelectedFcn',@(~,~) obj.runCallback(@() obj.exportImages()));
 
             % Edit menu manages ordered project-wide model collections.
             edit = uimenu(obj.Fig,'Text','Edit');

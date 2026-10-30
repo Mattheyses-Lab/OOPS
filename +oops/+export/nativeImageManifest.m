@@ -151,25 +151,29 @@ switch domain
         if ~isempty(image.PrimaryChannel)
             name = image.PrimaryChannel.Name + " average intensity";
             color = image.PrimaryChannel.Color;
-            map = matlabx.colors.maps.Registry.map( ...
-                image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
+            if settings.Display.PrimaryIntensityColorMode == "luts"
+                map = matlabx.colors.maps.Registry.map( ...
+                    image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
+            else
+                map = colorRamp(color);
+            end
         end
     case "Mask"
         values = image.Mask;
         name = "Mask";
         color = colorValue(settings.Colormaps.MaskColor);
-        map = oops.render.colormap(settings.Colormaps,"Mask");
+        map = effectiveDomainMap(settings,"Mask");
     case "Order"
         values = image.Order;
         name = "Order";
         color = colorValue(settings.Colormaps.OrderColor);
-        map = oops.render.colormap(settings.Colormaps,"Order");
+        map = effectiveDomainMap(settings,"Order");
     case "Azimuth"
         % OOPS presents axial orientation in signed degrees throughout its UI.
         values = rad2deg(image.Azimuth);
         name = "Azimuth (degrees)";
         color = colorValue(settings.Colormaps.AzimuthColor);
-        map = oops.render.azimuthImageColormap(settings.Colormaps);
+        map = effectiveDomainMap(settings,"Azimuth");
     otherwise
         error('oops:export:UnknownNativeDomain','Unknown native export domain: %s',domain);
 end
@@ -183,8 +187,12 @@ function data = buildAuxiliary(image,assignment,channel)
 values = assignment.getPlane();
 data = matlabx.image.Image5D.fromComponents(values,Names=channel.Name, ...
     Colors=channel.Color,Metadata=imageMetadata(image,channel.Name));
-data.Components(1).LUT = matlabx.colors.maps.Registry.map( ...
-    channel.Colormap,channel.ColormapCategory);
+if image.Parent.Parent.Settings.Display.AuxiliaryColorMode == "luts"
+    data.Components(1).LUT = matlabx.colors.maps.Registry.map( ...
+        channel.Colormap,channel.ColormapCategory);
+else
+    data.Components(1).LUT = colorRamp(channel.Color);
+end
 end
 
 function data = buildCombinedAuxiliary(image,assignments,project)
@@ -198,8 +206,12 @@ for k = 1:numel(assignments)
     planes{k} = assignments(k).getPlane();
     names(k) = channel.Name;
     colors(k,:) = channel.Color;
-    maps{k} = matlabx.colors.maps.Registry.map( ...
-        channel.Colormap,channel.ColormapCategory);
+    if project.Settings.Display.AuxiliaryColorMode == "luts"
+        maps{k} = matlabx.colors.maps.Registry.map( ...
+            channel.Colormap,channel.ColormapCategory);
+    else
+        maps{k} = colorRamp(channel.Color);
+    end
 end
 
 data = matlabx.image.Image5D.fromComponents(planes,Names=names,Colors=colors, ...
@@ -247,4 +259,21 @@ end
 
 function value = colorValue(color)
 [~,value] = matlabx.image.normalizeComponentColor(color);
+end
+
+function map = effectiveDomainMap(settings,domain)
+if settings.Display.(domain+"ColorMode") == "luts"
+    if domain == "Azimuth"
+        map = oops.render.azimuthImageColormap(settings.Colormaps);
+    else
+        map = oops.render.colormap(settings.Colormaps,domain);
+    end
+else
+    map = colorRamp(settings.Colormaps.(domain+"Color"));
+end
+end
+
+function map = colorRamp(color)
+[~,rgb] = matlabx.image.normalizeComponentColor(color);
+map = linspace(0,1,256)'.*rgb;
 end

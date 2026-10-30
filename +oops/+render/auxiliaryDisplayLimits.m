@@ -17,22 +17,8 @@ bounds = [statistics.Minimum statistics.Maximum];
 ranges.Reset = bounds;
 policy = settings.Display.auxiliaryPolicy(assignment.ChannelID);
 
-switch policy.AutoScaleMethod
-    case "Light contrast"
-        ranges.Auto = [statistics.Percentile0_5 statistics.Percentile99_95];
-    case "Medium contrast"
-        ranges.Auto = [statistics.Percentile0_5 statistics.Percentile99_9];
-    case "Strong contrast"
-        ranges.Auto = [statistics.Percentile1 statistics.Percentile99_5];
-    case "Zero to max"
-        ranges.Auto = [0 statistics.Maximum];
-    case "Data range"
-        ranges.Auto = bounds;
-end
-
-if ranges.Auto(2) <= ranges.Auto(1)
-    ranges.Auto = bounds;
-end
+ranges.Auto = oops.render.automaticDisplayRange( ...
+    statistics,policy.AutoScaleMethod,bounds);
 
 if policy.KeepAuto
     value = ranges.Auto;
