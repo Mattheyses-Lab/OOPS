@@ -394,6 +394,95 @@ classdef testControlTable < matlab.unittest.TestCase
             end
         end
 
+        function rowOperationPreflightReportsEachOperation(testCase)
+            [fig,component] = testCase.make_(testCase.data_());
+            testCase.addTeardown(@() delete(fig));
+            requests = {};
+            component.RowOperationRequestedFcn = @capture_;
+
+            component.insertRow(2,component.Data(1,:));
+            duplicateID = component.duplicateRow(1);
+            component.moveRow(component.ActiveRow,height(component.Data));
+            component.removeSelectedRows();
+
+            operations = strings(1,numel(requests));
+            for index = 1:numel(requests)
+                operations(index) = requests{index}.Operation;
+            end
+            testCase.verifyEqual(operations,["add","duplicate","reorder","remove"]);
+            add = requests{1};
+            testCase.verifyEmpty(add.RowIDs);
+            testCase.verifyEmpty(add.Rows);
+            testCase.verifyEqual(add.DestinationRow,2);
+            testCase.verifyEqual(add.ProposedData,component.Data(1,:));
+            duplicate = requests{2};
+            testCase.verifyEqual(duplicate.Rows,1);
+            testCase.verifyEqual(duplicate.SourceRow,1);
+            testCase.verifyEqual(duplicate.DestinationRow,2);
+            reorder = requests{3};
+            testCase.verifyEqual(reorder.RowIDs,duplicateID);
+            testCase.verifyEqual(reorder.SourceRow,2);
+            testCase.verifyEqual(reorder.DestinationRow,4);
+            remove = requests{4};
+            testCase.verifyEqual(remove.RowIDs,duplicateID);
+            testCase.verifyEqual(remove.Rows,4);
+
+            function capture_(~,event)
+                requests{end+1} = event; %#ok<AGROW>
+            end
+        end
+
+        function cancelledRowOperationsLeaveStateUntouched(testCase)
+            [fig,component] = testCase.make_(testCase.data_());
+            testCase.addTeardown(@() delete(fig));
+            component.SelectionMode = "multiple";
+            component.ActiveRow = 1;
+            component.NewRowFcn = @(~) component.Data(1,:);
+            originalData = component.Data;
+            originalIDs = component.RowIDs;
+            originalSelected = component.SelectedRowIDs;
+            counts = zeros(1,4);
+            component.RowAddedFcn = @(~,~) increment_(1);
+            component.RowDuplicatedFcn = @(~,~) increment_(2);
+            component.RowsRemovedFcn = @(~,~) increment_(3);
+            component.RowReorderedFcn = @(~,~) increment_(4);
+            component.RowOperationRequestedFcn = @cancel_;
+
+            addedID = component.addNewRow();
+            duplicateID = component.duplicateActiveRow();
+            component.removeSelectedRows();
+            component.moveRow(1,2);
+
+            testCase.verifyEqual(addedID,"");
+            testCase.verifyEqual(duplicateID,"");
+            testCase.verifyEqual(component.Data,originalData);
+            testCase.verifyEqual(component.RowIDs,originalIDs);
+            testCase.verifyEqual(component.SelectedRowIDs,originalSelected);
+            testCase.verifyEqual(component.ActiveRow,1);
+            testCase.verifyEqual(counts,zeros(1,4));
+
+            function cancel_(~,event)
+                event.Cancel = true;
+            end
+            function increment_(index)
+                counts(index) = counts(index)+1;
+            end
+        end
+
+        function rowOperationPreflightErrorsPreserveState(testCase)
+            [fig,component] = testCase.make_(testCase.data_());
+            testCase.addTeardown(@() delete(fig));
+            originalData = component.Data;
+            originalIDs = component.RowIDs;
+            component.RowOperationRequestedFcn = @(~,~) ...
+                error('matlabx:test:RejectedOperation','Rejected by application.');
+
+            testCase.verifyError(@() component.moveRow(1,2), ...
+                'matlabx:test:RejectedOperation');
+            testCase.verifyEqual(component.Data,originalData);
+            testCase.verifyEqual(component.RowIDs,originalIDs);
+        end
+
         function reorderChromeAndContextMenuAreOwnedByTable(testCase)
             [fig,component] = testCase.make_(testCase.data_());
             testCase.addTeardown(@() delete(fig));
