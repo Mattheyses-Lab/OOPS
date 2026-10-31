@@ -342,7 +342,7 @@ classdef LabelRegistry < handle
         %DEFAULT Create the initial OOPS label set and active label.
 
             obj = oops.model.LabelRegistry();
-            obj.add("Unlabeled",ID="unlabeled",Hotkey="u",Color=[0.7 0.7 0.7]);
+            obj.add("Unlabeled",ID="unlabeled",Hotkey="u",Color=[1 1 1]);
             obj.setActiveByID("unlabeled");
         end
 

@@ -9,12 +9,12 @@ classdef ObjectSelection < handle
     properties (Access=private)
         BoxType_ (1,1) string = "Boundary"
         LineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 0.5
-        SelectedLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 0.5
+        SelectedLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.5
         ActiveLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 0.5
-        HoverLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 2.0
-        ColorMode_ (1,1) string = "Custom"
+        HoverLineWidth_ (1,1) double {mustBeFinite,mustBePositive} = 1.0
+        ColorMode_ (1,1) string = "Label"
         Color_ (1,3) double {mustBeFinite,mustBeInRange(Color_,0,1)} = [1.0 1.0 1.0]
-        SelectedColorMode_ (1,1) string = "Custom"
+        SelectedColorMode_ (1,1) string = "Auto"
         SelectedColor_ (1,3) double {mustBeFinite,mustBeInRange(SelectedColor_,0,1)} = [1.0 1.0 0.0]
         ActiveColorMode_ (1,1) string = "Auto"
         ActiveColor_ (1,3) double {mustBeFinite,mustBeInRange(ActiveColor_,0,1)} = [0.30 0.65 1.00]
