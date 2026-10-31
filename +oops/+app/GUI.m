@@ -1987,7 +1987,8 @@ classdef GUI < handle
                 clear guard;
 
                 if ~previous
-                    obj.refreshViewers(true);
+                    obj.applyDisplayRangeToViewers(target,value);
+                    obj.refreshDisplayLimits();
                 end
             else
                 obj.applyDisplayRangeToViewers(target,value);
@@ -2026,7 +2027,8 @@ classdef GUI < handle
             clear guard;
 
             if ~previous
-                obj.refreshViewers(true);
+                obj.applyDisplayRangeToViewers(target,value);
+                obj.refreshDisplayLimits();
             end
 
         end
@@ -2057,7 +2059,11 @@ classdef GUI < handle
             clear guard;
 
             if ~previous
-                obj.refreshViewers(true);
+                [ready,current] = obj.resolveDisplayLimitTarget(image,target);
+                if ready
+                    obj.applyDisplayRangeToViewers(target,current);
+                end
+                obj.refreshDisplayLimits();
             end
 
         end
@@ -2074,7 +2080,14 @@ classdef GUI < handle
 
             if ~previous
                 if policy.KeepAuto
-                    obj.refreshViewers(true);
+                    image = obj.Project.ActiveImage;
+                    if ~isempty(image)
+                        [ready,current] = obj.resolveDisplayLimitTarget(image,target);
+                        if ready
+                            obj.applyDisplayRangeToViewers(target,current);
+                        end
+                    end
+                    obj.refreshDisplayLimits();
                 else
                     obj.refreshDisplayLimits();
                 end
@@ -3394,6 +3407,14 @@ classdef GUI < handle
             % Left and right panel source names in viewer order.
             names = [settings.View.LeftSource,settings.View.RightSource];
 
+            % A locked zoom viewport belongs to the user's navigation state,
+            % not to the current Image5D handle. Capture it before a genuine
+            % source replacement so ImageAxes' normal data-reset behavior does
+            % not unexpectedly discard that state.
+            viewportStates = {obj.captureLockedViewport(obj.LeftViewer), ...
+                obj.captureLockedViewport(obj.RightViewer)};
+            replacedImageData = false;
+
             % Reparent or resize panel content only when the view definition changes.
             % Image navigation changes pixels, not the surrounding component layout.
             stage = tic;
@@ -3441,6 +3462,14 @@ classdef GUI < handle
                         k,key));
                     continue;
                 end
+
+                % Linked viewers propagate ImageAxes' reset viewport during an
+                % ImageData assignment. Temporarily separate the pair and
+                % restore both captured viewports after all replacements.
+                if linkViewports && ~replacedImageData
+                    obj.setLargeViewerViewportLink(false);
+                end
+                replacedImageData = true;
 
                 % Display-ready Image5D source and its title/scaling/availability metadata.
                 stage = tic;
@@ -3512,6 +3541,11 @@ classdef GUI < handle
                 end
 
                 obj.ViewerKeys(k) = key;
+            end
+
+            if replacedImageData
+                obj.restoreLockedViewport(obj.LeftViewer,viewportStates{1});
+                obj.restoreLockedViewport(obj.RightViewer,viewportStates{2});
             end
 
             % Link after both sources are ready, using the left viewer as the
@@ -3821,10 +3855,22 @@ classdef GUI < handle
                 "AzimuthOrderIntensityHSV"];
             image = obj.Project.ActiveImage;
 
-            for k = find(ismember(names,derived))
-                if target.Kind == "Order" && names(k) == "IntensityWeightedAzimuth"
-                    continue;
-                end
+            % Replacing the ImageData of a visible derived composite resets
+            % ImageAxes by design. Preserve locked navigation around only these
+            % necessary pixel rebuilds and isolate the linked peer while doing so.
+            derivedAffected = find(ismember(names,derived));
+            if target.Kind == "Order"
+                derivedAffected(names(derivedAffected) == "IntensityWeightedAzimuth") = [];
+            end
+            viewportStates = {obj.captureLockedViewport(obj.LeftViewer), ...
+                obj.captureLockedViewport(obj.RightViewer)};
+            relink = ~isempty(derivedAffected) && ...
+                obj.LeftViewer.Visible == "on" && obj.RightViewer.Visible == "on";
+            if relink
+                obj.setLargeViewerViewportLink(false);
+            end
+
+            for k = derivedAffected
 
                 if target.Kind == "Primary"
                     rgb = oops.render.derivedVisualization( ...
@@ -3837,6 +3883,14 @@ classdef GUI < handle
                 label = oops.config.View.sourceLabels(names(k));
                 viewers{k}.ImageData = matlabx.image.Image5D.fromComponents( ...
                     rgb,Names=label,Kinds="rgb");
+            end
+
+            if ~isempty(derivedAffected)
+                obj.restoreLockedViewport(obj.LeftViewer,viewportStates{1});
+                obj.restoreLockedViewport(obj.RightViewer,viewportStates{2});
+                if relink
+                    obj.setLargeViewerViewportLink(true);
+                end
             end
 
             % Object crops share their parent image's intensity and order limits.
@@ -3856,6 +3910,42 @@ classdef GUI < handle
             end
 
             clear displayGuard;
+        end
+
+        function state = captureLockedViewport(~,viewer)
+        %CAPTURELOCKEDVIEWPORT Record normalized navigation for a locked viewer.
+
+            state = struct('Preserve',false,'Center',[0.5 0.5],'ZoomFactor',1);
+            if isempty(viewer) || ~isvalid(viewer) || ...
+                    ~viewer.ZoomEnabled || viewer.FollowCursorEnabled || ...
+                    isempty(viewer.ImageData)
+                return;
+            end
+
+            width = viewer.ImageData.SizeX;
+            height = viewer.ImageData.SizeY;
+            if width < 1 || height < 1
+                return;
+            end
+
+            viewport = viewer.getViewport();
+            state.Preserve = true;
+            state.Center = (viewport.Center - 0.5) ./ [width height];
+            state.ZoomFactor = viewport.ZoomFactor;
+        end
+
+        function restoreLockedViewport(~,viewer,state)
+        %RESTORELOCKEDVIEWPORT Map captured navigation onto current dimensions.
+
+            if ~state.Preserve || isempty(viewer) || ~isvalid(viewer) || ...
+                    isempty(viewer.ImageData)
+                return;
+            end
+
+            width = viewer.ImageData.SizeX;
+            height = viewer.ImageData.SizeY;
+            center = 0.5 + state.Center .* [width height];
+            viewer.setViewportCenterAndZoomFactor(center,state.ZoomFactor);
         end
 
         function syncPanelContent(obj,names)
