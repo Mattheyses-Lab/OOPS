@@ -34,14 +34,17 @@ switch type
         values = assignment.getPlane();
         limits = auxiliaryLimits(assignment,values,scaling,autoMethod);
         rgb = applyMap(values,limits,channelMap(channel,settings));
-    case "auxiliary-combined"
-        assignments = image.AuxiliaryChannels;
-        rgb = zeros(image.Input.SizeY,image.Input.SizeX,3);
+    case "channels"
         project = image.Parent.Parent;
-        for k = 1:numel(assignments)
-            itemChannel = project.Channels.findByID(assignments(k).ChannelID);
+        definitions = project.Channels.Channels;
+        definitions = definitions([definitions.IsAuxiliary]);
+        rgb = oops.export.renderImage(image,"average-intensity",scaling, ...
+            autoMethod,settings);
+        for itemChannel = reshape(definitions,1,[])
+            assignment = image.getAuxiliaryChannel(itemChannel.ID);
+            if isempty(assignment), continue; end
             layer = oops.export.renderImage(image,"auxiliary",scaling,autoMethod, ...
-                settings,assignments(k),itemChannel);
+                settings,assignment,itemChannel);
             rgb = max(rgb,layer);
         end
     case {"intensity-weighted-order","intensity-weighted-azimuth", ...
@@ -119,7 +122,7 @@ end
 function map = primaryMap(image,settings)
 if isempty(image.PrimaryChannel)
     map = gray(256);
-elseif settings.Display.PrimaryIntensityColorMode == "luts"
+elseif settings.Display.IntensityColorMode == "luts"
     map = matlabx.colors.maps.Registry.map( ...
         image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
 else
@@ -128,7 +131,7 @@ end
 end
 
 function map = channelMap(channel,settings)
-if settings.Display.AuxiliaryColorMode == "luts"
+if settings.Display.IntensityColorMode == "luts"
     map = matlabx.colors.maps.Registry.map(channel.Colormap,channel.ColormapCategory);
 else
     map = colorRamp(channel.Color);

@@ -272,8 +272,8 @@ ui.Project.Settings.View.LeftSource = "AverageIntensity";
 
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
 t.verifyEqual(string(ui.LeftViewer.ComponentColors{1}),"gray");
-t.verifyEqual(string(ui.ColormapDomain.Items{1}),"Primary intensity");
-t.verifyEqual(string(ui.ColormapDomain.ItemsData{1}),"PrimaryIntensity");
+t.verifyEqual(string(ui.ColormapDomain.Items{1}),"Intensity");
+t.verifyEqual(string(ui.ColormapDomain.ItemsData{1}),"Intensity");
 end
 
 function testAuxiliaryChannelViewerUsesProjectSemanticOrder(t)
@@ -289,14 +289,15 @@ source = matlabx.image.Image5D.fromComponents( ...
     {uint16(9*ones(20,30)),uint16(17*ones(20,30))}, ...
     Names=["Actin","DAPI"]);
 image.addAuxiliaryChannel(actin.ID,source,1);
-p.Settings.View.RightSource = "AuxiliaryChannels";
+p.Settings.View.RightSource = "Channels";
 
-t.verifyEqual(ui.RightViewer.ImageData.NumComponents,2);
-t.verifyEqual([ui.RightViewer.ImageData.Components.Name],["DAPI" "Actin"]);
-t.verifyEqual(ui.RightViewer.ImageData.getPlane(1),zeros(20,30,'uint16'));
-t.verifyEqual(ui.RightViewer.ImageData.getPlane(2),uint16(9*ones(20,30)));
-t.verifyEqual(ui.RightViewer.ImageData.Components(1).Color,dapi.Color);
-t.verifyEqual(ui.RightViewer.ImageData.Components(2).Color,actin.Color);
+t.verifyEqual(ui.RightViewer.ImageData.NumComponents,3);
+t.verifyEqual([ui.RightViewer.ImageData.Components.Name], ...
+    [image.PrimaryChannel.Name "DAPI" "Actin"]);
+t.verifyEqual(ui.RightViewer.ImageData.getPlane(2),zeros(20,30,'uint16'));
+t.verifyEqual(ui.RightViewer.ImageData.getPlane(3),uint16(9*ones(20,30)));
+t.verifyEqual(ui.RightViewer.ImageData.Components(2).Color,dapi.Color);
+t.verifyEqual(ui.RightViewer.ImageData.Components(3).Color,actin.Color);
 t.verifyTrue(ui.RightViewer.CanMergeComponents);
 
 % ImageAxes owns native composite display without an OOPS-specific tool.
@@ -307,22 +308,22 @@ ui.RightViewer.ShowComposite = 'on';
 t.verifyEqual(ui.RightViewer.ShowComposite,matlab.lang.OnOffSwitchState.on);
 
 % Moving unlike sources between viewers must replace their complete color state.
-p.Settings.View.LeftSource = "AuxiliaryChannels";
+p.Settings.View.LeftSource = "Channels";
 p.Settings.View.RightSource = "Mask";
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"colors");
 t.verifyEqual(string(ui.RightViewer.ComponentColorMode),"luts");
 p.Settings.View.LeftSource = "Mask";
-p.Settings.View.RightSource = "AuxiliaryChannels";
+p.Settings.View.RightSource = "Channels";
 t.verifyEqual(string(ui.LeftViewer.ComponentColorMode),"luts");
 t.verifyEqual(string(ui.RightViewer.ComponentColorMode),"colors");
 
 % ImageAxes contrast edits persist against the semantic assignment.
-ui.RightViewer.C = 2;
+ui.RightViewer.C = 3;
 ui.RightViewer.CLim = [2 8];
 t.verifyEqual(image.getAuxiliaryChannel(actin.ID).DisplayRange,[2 8]);
 p.ActiveGroup.setActiveImage(p.ActiveGroup.Images(2));
 p.ActiveGroup.setActiveImage(image);
-t.verifyEqual(ui.RightViewer.ComponentCLims{2},[2 8]);
+t.verifyEqual(ui.RightViewer.ComponentCLims{3},[2 8]);
 
 fileMenu = findall(ui.Fig,'Type','uimenu','Text','File');
 importMenu = findall(fileMenu,'Type','uimenu','Text','Import auxiliary channels...');

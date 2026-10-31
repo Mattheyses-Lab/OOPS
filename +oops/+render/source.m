@@ -81,8 +81,8 @@ try
             % Quantize only the display copy; the durable analytical average remains double.
             values = oops.render.intensityDisplayValues(image,values);
             data = matlabx.image.Image5D.fromComponents(values,Names="Average intensity");
-        case "AuxiliaryChannels"
-            [data,channelInfo] = auxiliaryChannels(image);
+        case "Channels"
+            [data,channelInfo] = channels(image,settings);
 
             if isempty(data)
                 info.Reason = channelInfo.Reason;
@@ -93,7 +93,7 @@ try
             info.ComponentColors = channelInfo.ComponentColors;
             info.ComponentColormaps = channelInfo.ComponentColormaps;
             info.ComponentColorMode = channelInfo.ComponentColorMode;
-            info.Title = image.Name + " — Auxiliary channels";
+            info.Title = image.Name + " — Channels";
         case "Mask"
 
             if isempty(image.Mask)
@@ -176,7 +176,7 @@ try
         % channel across its raw, corrected, and averaged representations.
         color = primaryComponentColor(image);
 
-        info.ComponentColorMode = settings.Display.PrimaryIntensityColorMode;
+        info.ComponentColorMode = settings.Display.IntensityColorMode;
         info.ComponentColors = repmat({char(color)},1,data.NumComponents);
 
         if ~isempty(image.PrimaryChannel)
@@ -214,6 +214,7 @@ catch ME
     oops.Log.EXCEPTION(ME);
     rethrow(ME);
 end
+end
 
 function color = primaryComponentColor(image)
 %PRIMARYCOMPONENTCOLOR Resolve the first polarization frame's metadata color.
@@ -244,7 +245,6 @@ if metadataColor ~= ""
     color = metadataColor;
 end
 end
-end
 
 function logSourceTiming(name,imageName,started)
 %LOGSOURCETIMING Report total display-source construction time on every exit.
@@ -254,43 +254,71 @@ oops.Log.DEBUG(sprintf( ...
     name,imageName,toc(started)));
 end
 
-function [data,info] = auxiliaryChannels(image)
-%AUXILIARYCHANNELS Build a registry-ordered display stack with missing placeholders.
+function [data,info] = channels(image,settings)
+%CHANNELS Build primary-first channel data with registry-ordered auxiliaries.
 
     data = matlabx.image.Image5D.empty(0,1);
-    info = struct('Reason',"No auxiliary channels are registered", ...
+    info = struct('Reason',"Channel data are unavailable", ...
         'ComponentColorMode',"colors",'ComponentCLims',{{}}, ...
         'ComponentColors',{{}},'ComponentColormaps',{{}});
 
     definitions = image.Parent.Parent.Channels.Channels;
     definitions = definitions([definitions.IsAuxiliary]);
 
-    if isempty(definitions)
-        return;
+    % Component one is always the corrected average of the polarization
+    % channel. Registry order defines the remaining stable component positions.
+    count = numel(definitions)+1;
+    planes = cell(1,count);
+    names = strings(1,count);
+    limits = cell(1,count);
+    colors = cell(1,count);
+    metadataColors = cell(1,count);
+    colormaps = repmat({gray(256)},1,count);
+    available = false(1,count);
+    sourceClasses = strings(1,count);
+
+    primary = oops.analysis.Analyzer.ensureAverageIntensity(image);
+    primary = oops.render.intensityDisplayValues(image,primary);
+    planes{1} = primary;
+    available(1) = true;
+    sourceClasses(1) = string(class(primary));
+    names(1) = "Primary intensity";
+    limits{1} = oops.render.displayLimits(image,"Intensity",settings);
+    primaryColor = primaryComponentColor(image);
+    colors{1} = char(primaryColor);
+    metadataColors{1} = colorValue(primaryColor);
+    intensityMode = settings.Display.IntensityColorMode;
+
+    if ~isempty(image.PrimaryChannel)
+        names(1) = image.PrimaryChannel.Name;
+        metadataColors{1} = image.PrimaryChannel.Color;
+        primaryMap = matlabx.colors.maps.Registry.map( ...
+            image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
+    else
+        primaryMap = gray(256);
     end
 
-    % Registry order defines stable component positions across every image.
-    planes = cell(1,numel(definitions));
-    names = strings(1,numel(definitions));
-    limits = cell(1,numel(definitions));
-    colors = cell(1,numel(definitions));
-    metadataColors = cell(1,numel(definitions));
-    colormaps = repmat({gray(256)},1,numel(definitions));
-    available = false(1,numel(definitions));
-    sourceClasses = strings(1,numel(definitions));
+    if intensityMode == "colors"
+        primaryMap = colorRamp(metadataColors{1});
+    end
+    colormaps{1} = primaryMap;
 
     % Read assigned planes in their native classes. The common display class
     % cannot be selected until every available source has been inspected.
     for k = 1:numel(definitions)
         definition = definitions(k);
         assignment = image.getAuxiliaryChannel(definition.ID);
-        names(k) = definition.Name;
-        metadataColors{k} = definition.Color;
+        index = k+1;
+        names(index) = definition.Name;
+        metadataColors{index} = definition.Color;
         color = oops.render.canonicalComponentColor(definition.Color);
 
-        colors{k} = char(color);
-        colormaps{k} = matlabx.colors.maps.Registry.map( ...
+        colors{index} = char(color);
+        colormaps{index} = matlabx.colors.maps.Registry.map( ...
             definition.Colormap,definition.ColormapCategory);
+        if settings.Display.IntensityColorMode == "colors"
+            colormaps{index} = colorRamp(definition.Color);
+        end
 
         if isempty(assignment)
             continue;
@@ -298,17 +326,12 @@ function [data,info] = auxiliaryChannels(image)
 
         % Preserve native detector values until the stack class is resolved.
         values = assignment.getPlane();
-        planes{k} = values;
-        available(k) = true;
-        sourceClasses(k) = string(class(values));
+        planes{index} = values;
+        available(index) = true;
+        sourceClasses(index) = string(class(values));
 
-        limits{k} = oops.render.auxiliaryDisplayLimits( ...
+        limits{index} = oops.render.auxiliaryDisplayLimits( ...
             assignment,image.Parent.Parent.Settings,values);
-    end
-
-    if ~any(available)
-        info.Reason = "No auxiliary channels are assigned to this image";
-        return;
     end
 
     % Preserve the source class when every assigned channel agrees. Mixed
@@ -324,7 +347,7 @@ function [data,info] = auxiliaryChannels(image)
 
     % Fill absent semantic channels using the selected display class, and
     % convert available planes only when heterogeneous sources require it.
-    for k = 1:numel(definitions)
+    for k = 1:count
 
         if available(k)
 
@@ -342,13 +365,24 @@ function [data,info] = auxiliaryChannels(image)
     data = matlabx.image.Image5D.fromComponents(planes,Names=names);
 
     % ImageAxes initializes exact composite colors from component metadata.
-    for k = 1:numel(definitions)
+    for k = 1:count
         data.Components(k).Color = metadataColors{k};
     end
 
     info.Reason = "";
-    info.ComponentColorMode = image.Parent.Parent.Settings.Display.AuxiliaryColorMode;
+    info.ComponentColorMode = intensityMode;
     info.ComponentCLims = limits;
     info.ComponentColors = colors;
     info.ComponentColormaps = colormaps;
+end
+
+function value = colorValue(color)
+%COLORVALUE Normalize a canonical name or triplet to RGB metadata.
+[~,value] = matlabx.image.normalizeComponentColor(color);
+end
+
+function map = colorRamp(color)
+%COLORRAMP Construct a linear lookup table for colors-mode equivalence.
+[~,rgb] = matlabx.image.normalizeComponentColor(color);
+map = linspace(0,1,256)'.*rgb;
 end

@@ -1795,6 +1795,19 @@ classdef GUI < handle
         %REFRESHDISPLAYLIMITS Show effective limits while preserving stored manual values.
 
             image = obj.Project.ActiveImage;
+
+            % Use the semantic primary-channel identity just as auxiliary rows
+            % use their channel names. The generic label remains useful before
+            % an image or channel definition is available.
+            primaryTitle = "Primary intensity";
+            if ~isempty(image) && ~isempty(image.PrimaryChannel) && ...
+                    strlength(strtrim(image.PrimaryChannel.Name)) > 0
+                primaryTitle = image.PrimaryChannel.Name;
+            end
+            if string(obj.DisplayLimitUI.Primary.Slider.Title) ~= primaryTitle
+                obj.DisplayLimitUI.Primary.Slider.Title = char(primaryTitle);
+            end
+
             blocks = {obj.DisplayLimitUI.Primary};
             for auxiliaryBlock = reshape(obj.DisplayLimitUI.Auxiliary,1,[])
                 blocks{end+1} = auxiliaryBlock; %#ok<AGROW>
@@ -1848,11 +1861,11 @@ classdef GUI < handle
             definition = oops.model.ChannelDefinition.empty(0,1);
 
             if target.Kind == "Primary"
-                mode = obj.Settings.Display.PrimaryIntensityColorMode;
+                mode = obj.Settings.Display.IntensityColorMode;
                 if ~isempty(image), definition = image.PrimaryChannel; end
                 fallbackDomain = "Intensity";
             elseif target.Kind == "Auxiliary"
-                mode = obj.Settings.Display.AuxiliaryColorMode;
+                mode = obj.Settings.Display.IntensityColorMode;
                 if ~isempty(obj.Project)
                     definition = obj.Project.Channels.findByID(target.ChannelID);
                 end
@@ -3627,8 +3640,8 @@ classdef GUI < handle
                 domain = "Intensity";
             elseif source == "Order"
                 domain = "Order";
-            elseif source == "AuxiliaryChannels"
-                obj.persistAuxiliaryDisplayRanges(viewer,event);
+            elseif source == "Channels"
+                obj.persistChannelDisplayRanges(viewer,event);
                 return;
             else
                 return;
@@ -3697,13 +3710,13 @@ classdef GUI < handle
             end
 
             if ismember(source,["Input","Corrected","AverageIntensity"])
-                modeProperty = "PrimaryIntensityColorMode";
+                modeProperty = "IntensityColorMode";
                 definitions = image.PrimaryChannel;
                 mapDomain = "";
-            elseif source == "AuxiliaryChannels"
-                modeProperty = "AuxiliaryColorMode";
+            elseif source == "Channels"
+                modeProperty = "IntensityColorMode";
                 definitions = obj.Project.Channels.Channels;
-                definitions = definitions([definitions.IsAuxiliary]);
+                definitions = [image.PrimaryChannel; definitions([definitions.IsAuxiliary])];
                 mapDomain = "";
             elseif ismember(source,["Order","Azimuth","Mask"])
                 modeProperty = source + "ColorMode";
@@ -3760,8 +3773,8 @@ classdef GUI < handle
             obj.refreshViewers(true);
         end
 
-        function persistAuxiliaryDisplayRanges(obj,viewer,event)
-        %PERSISTAUXILIARYDISPLAYRANGES Store per-channel auxiliary contrast.
+        function persistChannelDisplayRanges(obj,viewer,event)
+        %PERSISTCHANNELDISPLAYRANGES Store primary and auxiliary channel contrast.
 
             image = obj.Project.ActiveImage;
 
@@ -3778,21 +3791,33 @@ classdef GUI < handle
             indices = event.ComponentIdx;
 
             if isempty(indices)
-                indices = 1:min(numel(definitions),viewer.NumComponents);
+                indices = 1:min(numel(definitions)+1,viewer.NumComponents);
             end
 
             limits = viewer.ComponentCLims;
 
             for index = reshape(indices,1,[])
 
-                if index > numel(definitions) || index > numel(limits)
+                if index == 1
+                    value = oops.render.normalizeIntensityDisplayRange(image,limits{1});
+                    image.setDisplayRange("Intensity",value);
+                    obj.Settings.Display.KeepAutoDisplayIntensity = false;
+                    if obj.Settings.Display.LockDisplayIntensity
+                        obj.Settings.Display.LockedDisplayRangeIntensity = value;
+                    end
                     continue;
                 end
 
-                assignment = image.getAuxiliaryChannel(definitions(index).ID);
+                auxiliaryIndex = index-1;
+
+                if auxiliaryIndex > numel(definitions) || index > numel(limits)
+                    continue;
+                end
+
+                assignment = image.getAuxiliaryChannel(definitions(auxiliaryIndex).ID);
 
                 if ~isempty(assignment)
-                    channelID = definitions(index).ID;
+                    channelID = definitions(auxiliaryIndex).ID;
                     image.setAuxiliaryDisplayRange(channelID,limits{index});
                     obj.Settings.Display.setAuxiliaryPolicy( ...
                         channelID,"KeepAuto",false);
@@ -3819,20 +3844,24 @@ classdef GUI < handle
             domain = target.Domain;
 
             if target.Kind == "Primary"
-                affected = ismember(names,["Input","Corrected","AverageIntensity"]);
+                affected = ismember(names,["Input","Corrected","AverageIntensity","Channels"]);
             elseif target.Kind == "Order"
                 affected = names == "Order";
             else
-                affected = names == "AuxiliaryChannels";
+                affected = names == "Channels";
             end
 
             for k = find(affected)
                 currentViewer = viewers{k};
                 currentViewer.CLimMode = 'manual';
-                if target.Kind == "Auxiliary"
+                if target.Kind == "Primary" && names(k) == "Channels"
+                    limits = currentViewer.ComponentCLims;
+                    limits{1} = value;
+                    currentViewer.ComponentCLims = limits;
+                elseif target.Kind == "Auxiliary"
                     definitions = obj.Project.Channels.Channels;
                     definitions = definitions([definitions.IsAuxiliary]);
-                    index = find([definitions.ID] == target.ChannelID,1);
+                    index = find([definitions.ID] == target.ChannelID,1)+1;
                     limits = currentViewer.ComponentCLims;
                     if ~isempty(index) && index <= numel(limits)
                         limits{index} = value;
@@ -5328,30 +5357,30 @@ classdef GUI < handle
             obj.ColormapTypeLabel.Layout.Row = 1;
             obj.ColormapTypeLabel.Layout.Column = 1;
             obj.ColormapDomain = uidropdown(pane, ...
-                'Items',{'Primary intensity','Auxiliary channels','Order','Azimuth','Mask'}, ...
-                'ItemsData',{'PrimaryIntensity','Auxiliary','Order','Azimuth','Mask'}, ...
-                'Value','PrimaryIntensity','BackgroundColor',[.3 .3 .3],'FontColor',[.9 .9 .9], ...
+                'Items',{'Intensity','Order','Azimuth','Mask'}, ...
+                'ItemsData',{'Intensity','Order','Azimuth','Mask'}, ...
+                'Value','Intensity','BackgroundColor',[.3 .3 .3],'FontColor',[.9 .9 .9], ...
                 'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.refreshColormapControls()));
             obj.ColormapDomain.Layout.Row = 1;
             obj.ColormapDomain.Layout.Column = 2;
-            obj.ColormapChannelLabel = uilabel(pane,'Text','Channel','FontColor',[.85 .85 .85]);
-            obj.ColormapChannelLabel.Layout.Row = 2;
-            obj.ColormapChannelLabel.Layout.Column = 1;
-            obj.ColormapChannel = uidropdown(pane,'Items',{'All primary channels'}, ...
-                'ItemsData',{'__all__'},'BackgroundColor',[.3 .3 .3], ...
-                'FontColor',[.9 .9 .9], ...
-                'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.refreshColormapControls()));
-            obj.ColormapChannel.Layout.Row = 2;
-            obj.ColormapChannel.Layout.Column = 2;
             obj.ColormapModeLabel = uilabel(pane,'Text','Mode','FontColor',[.85 .85 .85]);
-            obj.ColormapModeLabel.Layout.Row = 3;
+            obj.ColormapModeLabel.Layout.Row = 2;
             obj.ColormapModeLabel.Layout.Column = 1;
             obj.ColormapMode = uidropdown(pane,'Items',{'Colors','LUTs'}, ...
                 'ItemsData',{'colors','luts'},'BackgroundColor',[.3 .3 .3], ...
                 'FontColor',[.9 .9 .9], ...
                 'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.onColorModeChosen()));
-            obj.ColormapMode.Layout.Row = 3;
+            obj.ColormapMode.Layout.Row = 2;
             obj.ColormapMode.Layout.Column = 2;
+            obj.ColormapChannelLabel = uilabel(pane,'Text','Channel','FontColor',[.85 .85 .85]);
+            obj.ColormapChannelLabel.Layout.Row = 3;
+            obj.ColormapChannelLabel.Layout.Column = 1;
+            obj.ColormapChannel = uidropdown(pane,'Items',{'No channels'}, ...
+                'ItemsData',{''},'BackgroundColor',[.3 .3 .3], ...
+                'FontColor',[.9 .9 .9], ...
+                'ValueChangedFcn',@(~,~) obj.runCallback(@() obj.refreshColormapControls()));
+            obj.ColormapChannel.Layout.Row = 3;
+            obj.ColormapChannel.Layout.Column = 2;
             obj.ColormapAppearanceLabel = uilabel(pane,'Text','Color','FontColor',[.85 .85 .85]);
             obj.ColormapAppearanceLabel.Layout.Row = 4;
             obj.ColormapAppearanceLabel.Layout.Column = 1;
@@ -5405,21 +5434,31 @@ classdef GUI < handle
             % Internal settings key for the selected user-facing display domain.
             domain = string(obj.ColormapDomain.Value);
 
-            channelDomain = ismember(domain,["PrimaryIntensity","Auxiliary"]);
+            channelDomain = domain == "Intensity";
             obj.ColormapChannel.Visible = matlab.lang.OnOffSwitchState(channelDomain);
             obj.ColormapChannelLabel.Visible = matlab.lang.OnOffSwitchState(channelDomain);
             definitions = obj.displayChannels(domain);
 
             if channelDomain
                 previousChannel = string(obj.ColormapChannel.Value);
-                prefix = "All "+lower(strrep(domain,"PrimaryIntensity","primary"))+" channels";
-                obj.ColormapChannel.Items = cellstr([prefix string({definitions.Name})]);
-                obj.ColormapChannel.ItemsData = cellstr(["__all__" string({definitions.ID})]);
-                if ismember(previousChannel,string(obj.ColormapChannel.ItemsData))
-                    obj.ColormapChannel.Value = char(previousChannel);
+                if isempty(definitions)
+                    obj.ColormapChannel.Items = {'No channels'};
+                    obj.ColormapChannel.ItemsData = {''};
+                    obj.ColormapChannel.Value = '';
+                    obj.ColormapChannel.Enable = 'off';
                 else
-                    obj.ColormapChannel.Value = '__all__';
+                    ids = string({definitions.ID});
+                    obj.ColormapChannel.Items = cellstr(string({definitions.Name}));
+                    obj.ColormapChannel.ItemsData = cellstr(ids);
+                    obj.ColormapChannel.Enable = 'on';
+                    if ismember(previousChannel,ids)
+                        obj.ColormapChannel.Value = char(previousChannel);
+                    else
+                        obj.ColormapChannel.Value = char(ids(1));
+                    end
                 end
+            else
+                obj.ColormapChannel.Enable = 'off';
             end
 
             modeProperty = domain + "ColorMode";
@@ -5439,7 +5478,7 @@ classdef GUI < handle
             obj.ColormapTree.Visible = matlab.lang.OnOffSwitchState(~colorsMode);
             obj.ColormapPreview.Visible = matlab.lang.OnOffSwitchState(~colorsMode);
             pane = obj.SettingsAccordion.getItem("Image Display").Pane;
-            pane.RowHeight = {24,24*double(channelDomain),24,24,200*double(~colorsMode)};
+            pane.RowHeight = {24,24,24*double(channelDomain),24,200*double(~colorsMode)};
 
             % All category/map nodes inspected to restore the assigned map highlight.
             nodes = findall(obj.ColormapTree,'Type','uitreenode');
@@ -5492,7 +5531,7 @@ classdef GUI < handle
             % Cleanup guard releasing the temporary refresh/processing state.
             cleaner = onCleanup(@() obj.endProcessing());
             definitions = obj.displayChannels(domain);
-            if ismember(domain,["PrimaryIntensity","Auxiliary"])
+            if domain == "Intensity"
                 definitions = obj.selectedDisplayChannels(definitions);
                 for definition = reshape(definitions,1,[])
                     definition.setColormap(data.Name,data.Category);
@@ -5509,9 +5548,13 @@ classdef GUI < handle
         %ONCOLORMODECHOSEN Store the selected viewer/domain coloring policy.
 
             domain = string(obj.ColormapDomain.Value);
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
             obj.Settings.Display.(domain+"ColorMode") = string(obj.ColormapMode.Value);
+            clear guard;
             obj.refreshColormapControls();
-            obj.refreshViewers(true);
+            if ~previous, obj.refreshViewers(true); end
         end
 
         function onDisplayColorChosen(obj)
@@ -5519,7 +5562,10 @@ classdef GUI < handle
 
             domain = string(obj.ColormapDomain.Value);
             color = string(obj.ColormapColor.Value);
-            if ismember(domain,["PrimaryIntensity","Auxiliary"])
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
+            if domain == "Intensity"
                 definitions = obj.selectedDisplayChannels(obj.displayChannels(domain));
                 [~,rgb] = matlabx.image.normalizeComponentColor(color);
                 for definition = reshape(definitions,1,[])
@@ -5528,7 +5574,9 @@ classdef GUI < handle
             else
                 obj.Settings.Colormaps.(domain+"Color") = color;
             end
-            obj.refreshViewers(true);
+            clear guard;
+            obj.refreshColormapControls();
+            if ~previous, obj.refreshViewers(true); end
         end
 
         function definitions = displayChannels(obj,domain)
@@ -5537,30 +5585,25 @@ classdef GUI < handle
             definitions = oops.model.ChannelDefinition.empty(0,1);
             if isempty(obj.Project), return; end
             definitions = obj.Project.Channels.Channels;
-            if domain == "PrimaryIntensity"
-                definitions = definitions([definitions.IsPrimary]);
-            elseif domain == "Auxiliary"
-                definitions = definitions([definitions.IsAuxiliary]);
+            if domain == "Intensity"
+                definitions = definitions([definitions.IsPrimary] | [definitions.IsAuxiliary]);
             else
                 definitions = oops.model.ChannelDefinition.empty(0,1);
             end
         end
 
         function definitions = selectedDisplayChannels(obj,definitions)
-        %SELECTEDDISPLAYCHANNELS Resolve the current channel or the All target.
+        %SELECTEDDISPLAYCHANNELS Resolve the one explicitly selected channel.
 
             id = string(obj.ColormapChannel.Value);
-            if id ~= "__all__"
-                definitions = definitions(string({definitions.ID}) == id);
-            end
+            definitions = definitions(string({definitions.ID}) == id);
         end
 
         function [name,category,color] = displayAppearance(obj,domain,definitions)
         %DISPLAYAPPEARANCE Resolve the selected channel/domain appearance.
 
-            if ismember(domain,["PrimaryIntensity","Auxiliary"])
+            if domain == "Intensity"
                 selected = obj.selectedDisplayChannels(definitions);
-                if isempty(selected), selected = definitions; end
                 if isempty(selected)
                     name = "gray"; category = "MATLAB"; color = "gray";
                     return;
@@ -5919,7 +5962,7 @@ classdef GUI < handle
             % Show the first imported image and its stable registry-ordered stack.
             obj.Project.setActiveImage(plan(1).Image);
             obj.Settings.View.LeftSource = "AverageIntensity";
-            obj.Settings.View.RightSource = "AuxiliaryChannels";
+            obj.Settings.View.RightSource = "Channels";
             clear guard;
             % Channel-registration events occur before each definition is
             % marked auxiliary, while assignment events are intentionally

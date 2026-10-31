@@ -60,7 +60,7 @@ if color == ""
     color = "gray";
 end
 
-info(1).ComponentColorMode = settings.Display.PrimaryIntensityColorMode;
+info(1).ComponentColorMode = settings.Display.IntensityColorMode;
 info(1).ComponentColors = repmat({char(color)},1,sources{1}.NumComponents);
 if ~isempty(image.PrimaryChannel)
     info(1).Colormap = matlabx.colors.maps.Registry.map( ...

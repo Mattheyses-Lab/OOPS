@@ -13,7 +13,7 @@ arguments
     opts.Order (1,1) logical = true
     opts.Azimuth (1,1) logical = true
     opts.AuxiliaryIndividual (1,1) logical = true
-    opts.AuxiliaryCombined (1,1) logical = true
+    opts.Channels (1,1) logical = true
     opts.ImageFolders (1,1) logical = false
     opts.EmbedLUTs (1,1) logical = true
     opts.ExistingFiles (1,1) string {mustBeMember(opts.ExistingFiles,["stop","overwrite","skip"])} = "stop"
@@ -28,7 +28,7 @@ manifest = oops.export.nativeImageManifest(project,folder, ...
     AverageIntensity=opts.AverageIntensity,Mask=opts.Mask, ...
     Order=opts.Order,Azimuth=opts.Azimuth, ...
     AuxiliaryIndividual=opts.AuxiliaryIndividual, ...
-    AuxiliaryCombined=opts.AuxiliaryCombined,ImageFolders=opts.ImageFolders);
+    Channels=opts.Channels,ImageFolders=opts.ImageFolders);
 
 if isempty(manifest)
     error('oops:export:EmptyNativeManifest', ...

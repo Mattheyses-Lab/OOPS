@@ -41,14 +41,14 @@ end
 
 function native = nativeEntries(project,folder,type,imageFolders)
 flags = struct(AverageIntensity=false,Mask=false,Order=false,Azimuth=false, ...
-    AuxiliaryIndividual=false,AuxiliaryCombined=false);
+    AuxiliaryIndividual=false,Channels=false);
 switch type
     case "average-intensity", flags.AverageIntensity = true;
     case "mask", flags.Mask = true;
     case "order", flags.Order = true;
     case "azimuth", flags.Azimuth = true;
     case "auxiliary-individual", flags.AuxiliaryIndividual = true;
-    case "auxiliary-combined", flags.AuxiliaryCombined = true;
+    case "channels", flags.Channels = true;
     otherwise
         error('oops:export:InvalidOmeRecipe', ...
             'Image type %s cannot be exported as OME-TIFF.',type);
@@ -56,7 +56,7 @@ end
 native = oops.export.nativeImageManifest(project,folder, ...
     AverageIntensity=flags.AverageIntensity,Mask=flags.Mask,Order=flags.Order, ...
     Azimuth=flags.Azimuth,AuxiliaryIndividual=flags.AuxiliaryIndividual, ...
-    AuxiliaryCombined=flags.AuxiliaryCombined,ImageFolders=imageFolders);
+    Channels=flags.Channels,ImageFolders=imageFolders);
 end
 
 function manifest = appendPngEntries(manifest,prototype,project,recipe,imageFolders)
@@ -69,7 +69,8 @@ for group = reshape(project.Groups,1,[])
         suffix = recipeSuffix(recipe);
 
         if recipe.ImageType == "auxiliary-individual"
-            for assignment = reshape(image.AuxiliaryChannels,1,[])
+            assignments = orderedAssignments(image,project);
+            for assignment = reshape(assignments,1,[])
                 channel = project.Channels.findByID(assignment.ChannelID);
                 channelName = safeName(channel.Name,"channel");
                 item = prototype;
@@ -95,13 +96,24 @@ for group = reshape(project.Groups,1,[])
 end
 end
 
+function assignments = orderedAssignments(image,project)
+%ORDEREDASSIGNMENTS Return assigned auxiliary channels in registry order.
+assignments = oops.model.AuxiliaryChannelAssignment.empty(0,1);
+definitions = project.Channels.Channels;
+definitions = definitions([definitions.IsAuxiliary]);
+for definition = reshape(definitions,1,[])
+    assignment = image.getAuxiliaryChannel(definition.ID);
+    if ~isempty(assignment), assignments(end+1,1) = assignment; end %#ok<AGROW>
+end
+end
+
 function tf = available(image,type)
 switch type
     case "mask", tf = ~isempty(image.Mask);
     case "order", tf = ~isempty(image.Order);
     case "azimuth", tf = ~isempty(image.Azimuth);
     case "auxiliary-individual", tf = ~isempty(image.AuxiliaryChannels);
-    case "auxiliary-combined", tf = ~isempty(image.AuxiliaryChannels);
+    case "channels", tf = ~isempty(image.AuxiliaryChannels);
     case "intensity-weighted-order", tf = ~isempty(image.Order);
     case "intensity-weighted-azimuth", tf = ~isempty(image.Azimuth);
     case "azimuth-order-intensity-hsv"

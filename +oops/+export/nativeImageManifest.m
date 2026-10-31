@@ -13,7 +13,7 @@ arguments
     opts.Order (1,1) logical = true
     opts.Azimuth (1,1) logical = true
     opts.AuxiliaryIndividual (1,1) logical = true
-    opts.AuxiliaryCombined (1,1) logical = true
+    opts.Channels (1,1) logical = true
     opts.ImageFolders (1,1) logical = false
 end
 
@@ -54,7 +54,7 @@ for group = reshape(project.Groups,1,[])
                 @() buildPrimary(image,"Azimuth",project.Settings)); %#ok<AGROW>
         end
 
-        assignments = image.AuxiliaryChannels;
+        assignments = orderedAssignments(image,project);
 
         if opts.AuxiliaryIndividual
             for assignment = reshape(assignments,1,[])
@@ -72,16 +72,27 @@ for group = reshape(project.Groups,1,[])
             end
         end
 
-        if opts.AuxiliaryCombined && ~isempty(assignments)
-            validateCombinedAuxiliary(image,assignments);
-            manifest(end+1,1) = makeEntry(group,image,"Auxiliary channels","", ...
-                relativeFile(parent,base+"_auxiliary-channels.ome.tiff"), ...
-                @() buildCombinedAuxiliary(image,assignments,project)); %#ok<AGROW>
+        if opts.Channels && ~isempty(assignments)
+            validateChannels(image,assignments);
+            manifest(end+1,1) = makeEntry(group,image,"Channels","", ...
+                relativeFile(parent,base+"_channels.ome.tiff"), ...
+                @() buildChannels(image,assignments,project)); %#ok<AGROW>
         end
     end
 end
 
 manifest = uniquifyPaths(manifest,folder);
+end
+
+function assignments = orderedAssignments(image,project)
+%ORDEREDASSIGNMENTS Return assigned auxiliary channels in registry order.
+assignments = oops.model.AuxiliaryChannelAssignment.empty(0,1);
+definitions = project.Channels.Channels;
+definitions = definitions([definitions.IsAuxiliary]);
+for definition = reshape(definitions,1,[])
+    assignment = image.getAuxiliaryChannel(definition.ID);
+    if ~isempty(assignment), assignments(end+1,1) = assignment; end %#ok<AGROW>
+end
 end
 
 function item = makeEntry(group,image,domain,channelName,path,buildFcn)
@@ -151,7 +162,7 @@ switch domain
         if ~isempty(image.PrimaryChannel)
             name = image.PrimaryChannel.Name + " average intensity";
             color = image.PrimaryChannel.Color;
-            if settings.Display.PrimaryIntensityColorMode == "luts"
+            if settings.Display.IntensityColorMode == "luts"
                 map = matlabx.colors.maps.Registry.map( ...
                     image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
             else
@@ -187,7 +198,7 @@ function data = buildAuxiliary(image,assignment,channel)
 values = assignment.getPlane();
 data = matlabx.image.Image5D.fromComponents(values,Names=channel.Name, ...
     Colors=channel.Color,Metadata=imageMetadata(image,channel.Name));
-if image.Parent.Parent.Settings.Display.AuxiliaryColorMode == "luts"
+if image.Parent.Parent.Settings.Display.IntensityColorMode == "luts"
     data.Components(1).LUT = matlabx.colors.maps.Registry.map( ...
         channel.Colormap,channel.ColormapCategory);
 else
@@ -195,48 +206,69 @@ else
 end
 end
 
-function data = buildCombinedAuxiliary(image,assignments,project)
-planes = cell(1,numel(assignments));
-names = strings(1,numel(assignments));
-colors = zeros(numel(assignments),3);
-maps = cell(1,numel(assignments));
+function data = buildChannels(image,assignments,project)
+count = numel(assignments)+1;
+planes = cell(1,count);
+names = strings(1,count);
+colors = zeros(count,3);
+maps = cell(1,count);
+
+planes{1} = oops.analysis.Analyzer.ensureAverageIntensity(image);
+planes{1} = oops.render.intensityDisplayValues(image,planes{1});
+names(1) = "Primary intensity";
+colors(1,:) = [1 1 1];
+maps{1} = gray(256);
+if ~isempty(image.PrimaryChannel)
+    names(1) = image.PrimaryChannel.Name;
+    colors(1,:) = image.PrimaryChannel.Color;
+    if project.Settings.Display.IntensityColorMode == "luts"
+        maps{1} = matlabx.colors.maps.Registry.map( ...
+            image.PrimaryChannel.Colormap,image.PrimaryChannel.ColormapCategory);
+    else
+        maps{1} = colorRamp(image.PrimaryChannel.Color);
+    end
+end
 
 for k = 1:numel(assignments)
+    index = k+1;
     channel = project.Channels.findByID(assignments(k).ChannelID);
-    planes{k} = assignments(k).getPlane();
-    names(k) = channel.Name;
-    colors(k,:) = channel.Color;
-    if project.Settings.Display.AuxiliaryColorMode == "luts"
-        maps{k} = matlabx.colors.maps.Registry.map( ...
+    planes{index} = assignments(k).getPlane();
+    names(index) = channel.Name;
+    colors(index,:) = channel.Color;
+    if project.Settings.Display.IntensityColorMode == "luts"
+        maps{index} = matlabx.colors.maps.Registry.map( ...
             channel.Colormap,channel.ColormapCategory);
     else
-        maps{k} = colorRamp(channel.Color);
+        maps{index} = colorRamp(channel.Color);
     end
 end
 
 data = matlabx.image.Image5D.fromComponents(planes,Names=names,Colors=colors, ...
-    Metadata=imageMetadata(image,image.Name+" auxiliary channels"));
+    Metadata=imageMetadata(image,image.Name+" channels"));
 for k = 1:numel(maps), data.Components(k).LUT = maps{k}; end
 end
 
-function validateCombinedAuxiliary(image,assignments)
-classes = strings(numel(assignments),1);
-sizes = zeros(numel(assignments),2);
+function validateChannels(image,assignments)
+classes = strings(numel(assignments)+1,1);
+sizes = zeros(numel(assignments)+1,2);
+[~,primaryClass] = oops.analysis.detectorRange(image.Input);
+classes(1) = primaryClass;
+sizes(1,:) = [image.Input.SizeY image.Input.SizeX];
 for k = 1:numel(assignments)
     component = assignments(k).Input.Components(assignments(k).ComponentIndex);
-    classes(k) = component.Class;
-    sizes(k,:) = [component.SizeY component.SizeX];
+    classes(k+1) = component.Class;
+    sizes(k+1,:) = [component.SizeY component.SizeX];
 end
 if numel(unique(classes)) ~= 1
-    error('oops:export:MixedAuxiliaryClasses', ...
-        ['The auxiliary channels assigned to %s use different pixel classes (%s). ' ...
-        'Export them individually or disable combined auxiliary export.'], ...
+    error('oops:export:MixedChannelClasses', ...
+        ['The primary and auxiliary channels assigned to %s use different pixel ' ...
+        'classes (%s). Export them individually or disable the Channels export.'], ...
         image.Name,strjoin(unique(classes),', '));
 end
 if any(sizes ~= sizes(1,:),"all")
-    error('oops:export:MixedAuxiliaryGeometry', ...
-        ['The auxiliary channels assigned to %s do not share matching image ' ...
-        'dimensions and cannot be combined in one OME-TIFF.'],image.Name);
+    error('oops:export:MixedChannelGeometry', ...
+        ['The primary and auxiliary channels assigned to %s do not share matching ' ...
+        'image dimensions and cannot be combined in one OME-TIFF.'],image.Name);
 end
 end
 

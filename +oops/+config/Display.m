@@ -20,8 +20,7 @@ classdef Display < handle
         AuxiliaryPolicies_ struct = struct( ...
             'ChannelID',{},'KeepAuto',{},'Lock',{}, ...
             'LockedRange',{},'AutoScaleMethod',{})
-        PrimaryIntensityColorMode_ (1,1) string {mustBeMember(PrimaryIntensityColorMode_,["colors","luts"])} = "colors"
-        AuxiliaryColorMode_ (1,1) string {mustBeMember(AuxiliaryColorMode_,["colors","luts"])} = "colors"
+        IntensityColorMode_ (1,1) string {mustBeMember(IntensityColorMode_,["colors","luts"])} = "colors"
         OrderColorMode_ (1,1) string {mustBeMember(OrderColorMode_,["colors","luts"])} = "luts"
         AzimuthColorMode_ (1,1) string {mustBeMember(AzimuthColorMode_,["colors","luts"])} = "luts"
         MaskColorMode_ (1,1) string {mustBeMember(MaskColorMode_,["colors","luts"])} = "luts"
@@ -43,8 +42,7 @@ classdef Display < handle
         LockedDisplayRangeOrder
         IntensityAutoScaleMethod
         OrderAutoScaleMethod
-        PrimaryIntensityColorMode
-        AuxiliaryColorMode
+        IntensityColorMode
         OrderColorMode
         AzimuthColorMode
         MaskColorMode
@@ -164,10 +162,8 @@ classdef Display < handle
             obj.setValue("OrderAutoScaleMethod",string(v));
         end
 
-        function v = get.PrimaryIntensityColorMode(obj), v = obj.PrimaryIntensityColorMode_; end
-        function set.PrimaryIntensityColorMode(obj,v), obj.setValue("PrimaryIntensityColorMode",string(v)); end
-        function v = get.AuxiliaryColorMode(obj), v = obj.AuxiliaryColorMode_; end
-        function set.AuxiliaryColorMode(obj,v), obj.setValue("AuxiliaryColorMode",string(v)); end
+        function v = get.IntensityColorMode(obj), v = obj.IntensityColorMode_; end
+        function set.IntensityColorMode(obj,v), obj.setValue("IntensityColorMode",string(v)); end
         function v = get.OrderColorMode(obj), v = obj.OrderColorMode_; end
         function set.OrderColorMode(obj,v), obj.setValue("OrderColorMode",string(v)); end
         function v = get.AzimuthColorMode(obj), v = obj.AzimuthColorMode_; end
@@ -299,8 +295,7 @@ classdef Display < handle
                 'IntensityAutoScaleMethod',obj.IntensityAutoScaleMethod, ...
                 'OrderAutoScaleMethod',obj.OrderAutoScaleMethod, ...
                 'AuxiliaryPolicies',obj.AuxiliaryPolicies_, ...
-                'PrimaryIntensityColorMode',obj.PrimaryIntensityColorMode, ...
-                'AuxiliaryColorMode',obj.AuxiliaryColorMode, ...
+                'IntensityColorMode',obj.IntensityColorMode, ...
                 'OrderColorMode',obj.OrderColorMode, ...
                 'AzimuthColorMode',obj.AzimuthColorMode, ...
                 'MaskColorMode',obj.MaskColorMode, ...
