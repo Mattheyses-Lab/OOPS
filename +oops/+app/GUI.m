@@ -6284,46 +6284,33 @@ classdef GUI < handle
         end
 
         function manageCollection(obj,kind)
-        %MANAGECOLLECTION Open a shared flat-tree editor for model registries.
+        %MANAGECOLLECTION Open a staged editor for an ordered model collection.
 
             actions = struct();
+            items = obj.collectionItems(kind);
+            actions.New = @(data) obj.newCollectionItem(kind,data);
+            if kind == "Labels"
+                actions.Merge = @(data,rows) obj.mergeCollectionItems(data,rows);
+            end
+            actions.Apply = @(original,draft,parent) ...
+                obj.applyCollectionChanges(kind,original,draft,parent);
 
-            switch kind
-                case "Groups"
-                    itemsFcn = @() obj.collectionItems("Groups");
-                    actions.New = @(~,~) obj.promptGroup();
-                    actions.Edit = @(id,~) obj.promptGroup(id);
-                    actions.Delete = @(id,parent) obj.deleteManagedGroup(id,parent);
-                    actions.Move = @(id,offset,~) obj.Project.moveGroup(id,offset);
-                    hint = "Checked groups are reserved for future batch actions.";
+            applied = oops.app.collectionManagerDialog( ...
+                obj.Fig,"Edit "+lower(kind),items,actions, ...
+                ItemName=lower(extractBefore(kind,strlength(kind))), ...
+                AllowMerge=kind == "Labels", ...
+                ShowID=kind == "Labels", ...
+                ShowHotkey=kind == "Labels");
 
-                case "Labels"
-                    itemsFcn = @() obj.collectionItems("Labels");
-                    actions.New = @(~,~) obj.promptLabel();
-                    actions.Edit = @(id,~) obj.promptLabel(id);
-                    actions.Delete = @(id,parent) obj.deleteLabel(id,parent);
-                    actions.Move = @(id,offset,~) obj.Project.Labels.move(id,offset);
-                    hint = "Checked labels are reserved for future merge and batch actions.";
-
-                case "Channels"
-                    itemsFcn = @() obj.collectionItems("Channels");
-                    actions.New = @(~,~) obj.promptChannel();
-                    actions.Edit = @(id,~) obj.promptChannel(id);
-                    actions.Delete = @(id,parent) obj.deleteChannel(id,parent);
-                    actions.Move = @(id,offset,~) obj.moveChannel(id,offset);
-                    hint = "Checked channels are reserved for future batch actions.";
+            if applied && kind == "Channels"
+                obj.refreshChannelsAfterEdit();
             end
 
-            oops.app.collectionManagerDialog( ...
-                obj.Fig,"Edit "+lower(kind),itemsFcn,actions,Hint=hint);
             obj.focusWindow();
         end
 
         function items = collectionItems(obj,kind)
-        %COLLECTIONITEMS Describe ordered manager nodes without exposing handles.
-
-            items = repmat(struct('ID',"",'Name',"",'Color',[1 1 1], ...
-                'Protected',false),0,1);
+        %COLLECTIONITEMS Capture an ordered, editable collection snapshot.
 
             switch kind
                 case "Groups"
@@ -6334,16 +6321,404 @@ classdef GUI < handle
                     values = obj.Project.Channels.Channels;
             end
 
-            for k = 1:numel(values)
-                name = values(k).Name;
+            count = numel(values);
+            originalID = strings(count,1);
+            id = strings(count,1);
+            name = strings(count,1);
+            color = zeros(count,3);
+            hotkey = strings(count,1);
+            protected = false(count,1);
+            mergeSourceIDs = repmat({strings(0,1)},count,1);
 
-                if kind == "Labels" && values(k).Hotkey ~= ""
-                    name = name + "  [" + values(k).Hotkey + "]";
+            for k = 1:count
+                originalID(k) = values(k).ID;
+                id(k) = values(k).ID;
+                name(k) = values(k).Name;
+                color(k,:) = values(k).Color;
+                protected(k) = kind == "Labels" && values(k).ID == "unlabeled";
+
+                if kind == "Labels"
+                    hotkey(k) = values(k).Hotkey;
+                end
+            end
+
+            items = table(originalID,id,name,color,hotkey,protected,mergeSourceIDs, ...
+                'VariableNames',{'OriginalID','ID','Name','Color','Hotkey', ...
+                'Protected','MergeSourceIDs'});
+        end
+
+        function row = newCollectionItem(obj,kind,data)
+        %NEWCOLLECTIONITEM Build one unique default row for direct table editing.
+
+            number = height(data)+1;
+            originalID = "";
+            id = matlabx.utils.text.uniqueID();
+            hotkey = "";
+            protected = false;
+            mergeSourceIDs = {strings(0,1)};
+            colors = get(groot,'defaultAxesColorOrder');
+            color = colors(mod(number-1,size(colors,1))+1,:);
+
+            switch kind
+                case "Groups"
+                    name = "Group "+number;
+                case "Channels"
+                    name = "Channel "+number;
+                    while any(strcmpi(name,data.Name))
+                        number = number+1;
+                        name = "Channel "+number;
+                    end
+                case "Labels"
+                    number = max(1,height(data));
+                    name = "Label "+number;
+                    id = "label-"+number;
+                    while any(strcmpi(name,data.Name)) || any(id == data.ID)
+                        number = number+1;
+                        name = "Label "+number;
+                        id = "label-"+number;
+                    end
+            end
+
+            row = table(originalID,id,name,color,hotkey,protected,mergeSourceIDs, ...
+                'VariableNames',data.Properties.VariableNames);
+        end
+
+        function row = mergeCollectionItems(obj,data,rows)
+        %MERGECOLLECTIONITEMS Replace selected staged labels with one merge target.
+
+            sources = data.OriginalID(rows);
+            for k = reshape(rows,1,[])
+                sources = [sources;data.MergeSourceIDs{k}(:)]; %#ok<AGROW>
+            end
+            sources = unique(sources(sources ~= ""),'stable');
+
+            if numel(sources) < 2
+                error('oops:app:InsufficientMergeLabels', ...
+                    'Select at least two existing labels to merge.');
+            end
+
+            number = 1;
+            name = "Merged";
+            id = "merged";
+            while any(strcmpi(name,data.Name)) || any(id == data.ID)
+                number = number+1;
+                name = "Merged "+number;
+                id = "merged-"+number;
+            end
+
+            originalID = "";
+            hotkey = "";
+            protected = false;
+            color = data.Color(rows(1),:);
+            mergeSourceIDs = {sources};
+            row = table(originalID,id,name,color,hotkey,protected,mergeSourceIDs, ...
+                'VariableNames',data.Properties.VariableNames);
+        end
+
+        function applied = applyCollectionChanges(obj,kind,original,draft,parent)
+        %APPLYCOLLECTIONCHANGES Validate, confirm, and commit one staged snapshot.
+
+            applied = false;
+            obj.validateCollectionDraft(kind,draft);
+            removed = original.OriginalID( ...
+                ~ismember(original.OriginalID,draft.OriginalID));
+
+            if kind == "Labels"
+                merged = obj.mergedLabelSourceIDs(draft);
+                removed = removed(~ismember(removed,merged));
+            end
+
+            if ~obj.confirmCollectionChanges(kind,removed,draft,parent)
+                return;
+            end
+
+            previous = obj.Processing;
+            obj.Processing = true;
+            guard = onCleanup(@() obj.restoreProcessing(previous));
+
+            switch kind
+                case "Groups"
+                    finalIDs = obj.applyGroupDraft(original,draft);
+                    obj.reorderCollection("Groups",finalIDs);
+
+                case "Labels"
+                    obj.applyLabelDraft(original,draft);
+                    obj.reorderCollection("Labels",draft.ID);
+
+                case "Channels"
+                    finalIDs = obj.applyChannelDraft(original,draft);
+                    obj.reorderCollection("Channels",finalIDs);
+            end
+
+            clear guard;
+            if previous
+                obj.restoreProcessing(true);
+            else
+                obj.endProcessing();
+            end
+            applied = true;
+        end
+
+        function validateCollectionDraft(obj,kind,draft)
+        %VALIDATECOLLECTIONDRAFT Check invariants before mutating the model.
+
+            if any(strlength(strtrim(draft.Name)) == 0)
+                error('oops:app:EmptyCollectionName','Names cannot be empty.');
+            end
+
+            if kind ~= "Groups" && ...
+                    numel(unique(lower(strtrim(draft.Name)))) ~= height(draft)
+                error('oops:app:DuplicateCollectionName','Names must be unique.');
+            end
+
+            if kind == "Labels"
+                if numel(unique(strtrim(draft.ID))) ~= height(draft) || ...
+                        any(strlength(strtrim(draft.ID)) == 0)
+                    error('oops:app:DuplicateLabelID','Label IDs must be nonempty and unique.');
                 end
 
-                items(k,1) = struct( ...
-                    'ID',values(k).ID,'Name',name,'Color',values(k).Color, ...
-                    'Protected',kind == "Labels" && values(k).ID == "unlabeled"); %#ok<AGROW>
+                protected = draft.Protected;
+                if nnz(protected) ~= 1 || draft.ID(protected) ~= "unlabeled"
+                    error('oops:app:MissingUnlabeledLabel', ...
+                        'The protected Unlabeled entry must be retained.');
+                end
+
+                keys = lower(strtrim(draft.Hotkey));
+                nonempty = keys ~= "";
+                valid = arrayfun(@(key) ~isempty(regexp(key,'^[a-z0-9]$','once')),keys(nonempty));
+                if any(~valid) || numel(unique(keys(nonempty))) ~= nnz(nonempty)
+                    error('oops:app:InvalidLabelHotkey', ...
+                        'Hotkeys must be unique single alphanumeric characters.');
+                end
+
+                mergedSources = obj.mergedLabelSourceIDs(draft);
+                if any(ismember(draft.ID,mergedSources))
+                    error('oops:app:MergeTargetIDConflict', ...
+                        'A merged label must use a new ID distinct from its source labels.');
+                end
+            end
+        end
+
+        function confirmed = confirmCollectionChanges(obj,kind,ids,draft,parent)
+        %CONFIRMCOLLECTIONCHANGES Summarize all destructive effects once.
+
+            confirmed = true;
+            ids(ids == "") = [];
+            message = "";
+
+            switch kind
+                case "Groups"
+                    if isempty(ids), return; end
+                    imageCount = 0;
+                    objectCount = 0;
+                    for id = reshape(ids,1,[])
+                        group = oops.model.internal.resolve(obj.Project.Groups,id);
+                        if ~isempty(group)
+                            imageCount = imageCount+numel(group.Images);
+                            objectCount = objectCount+sum(arrayfun( ...
+                                @(image) numel(image.Objects),group.Images));
+                        end
+                    end
+                    message = sprintf(['Delete %d group(s), including %d image(s) ' ...
+                        'and %d object(s)?'],numel(ids),imageCount,objectCount);
+
+                case "Labels"
+                    mergedSources = obj.mergedLabelSourceIDs(draft);
+                    mergeTargets = nnz(cellfun(@(values) ~isempty(values), ...
+                        draft.MergeSourceIDs));
+
+                    if ~isempty(ids)
+                        message = message+sprintf(['You are about to delete %d label(s). ' ...
+                            'Objects using them will be reassigned to Unlabeled.'],numel(ids));
+                    end
+
+                    if ~isempty(mergedSources)
+                        if message ~= "", message = message+newline+newline; end
+                        message = message+sprintf(['You are about to merge %d label(s) ' ...
+                            'into %d new label(s). Object label assignments will be updated.'], ...
+                            numel(mergedSources),mergeTargets);
+                    end
+
+                    if message == "", return; end
+
+                case "Channels"
+                    if isempty(ids), return; end
+                    primary = 0;
+                    auxiliary = 0;
+                    for id = reshape(ids,1,[])
+                        [p,a] = obj.channelReferenceCounts(id);
+                        primary = primary+p;
+                        auxiliary = auxiliary+a;
+                    end
+                    if primary > 0
+                        uialert(parent,sprintf(['The selected channels are primary ' ...
+                            'channels for %d image(s) and cannot be deleted.'],primary), ...
+                            'Channels are in use','Icon','warning');
+                        confirmed = false;
+                        return;
+                    end
+                    message = sprintf('You are about to delete %d channel definition(s).', ...
+                        numel(ids));
+                    if auxiliary > 0
+                        message = message+newline+newline+sprintf([ ...
+                            'This will unlink %d imported auxiliary channel(s) ' ...
+                            'from their project images.'],auxiliary);
+                    end
+            end
+
+            answer = uiconfirm(parent,message,'Apply collection changes?', ...
+                'Options',{'Apply','Cancel'},'DefaultOption','Cancel', ...
+                'CancelOption','Cancel','Icon','warning');
+            confirmed = strcmp(answer,'Apply');
+        end
+
+        function finalIDs = applyGroupDraft(obj,original,draft)
+        %APPLYGROUPDRAFT Commit staged group removals, edits, and additions.
+
+            removed = original.OriginalID(~ismember(original.OriginalID,draft.OriginalID));
+            for id = reshape(removed,1,[])
+                group = oops.model.internal.resolve(obj.Project.Groups,id);
+                if isempty(group), continue; end
+                images = group.Images;
+                obj.Project.removeGroup(group);
+                delete(images);
+                delete(group);
+            end
+
+            finalIDs = draft.ID;
+            for k = 1:height(draft)
+                if draft.OriginalID(k) == ""
+                    group = obj.Project.addGroup(draft.Name(k),draft.Color(k,:));
+                    finalIDs(k) = group.ID;
+                else
+                    group = oops.model.internal.resolve( ...
+                        obj.Project.Groups,draft.OriginalID(k));
+                    group.setProperties(draft.Name(k),draft.Color(k,:));
+                    finalIDs(k) = group.ID;
+                end
+            end
+        end
+
+        function applyLabelDraft(obj,original,draft)
+        %APPLYLABELDRAFT Commit label changes using temporary collision-free identities.
+
+            removed = original.OriginalID(~ismember(original.OriginalID,draft.OriginalID));
+            mergedSources = obj.mergedLabelSourceIDs(draft);
+            removed = removed(~ismember(removed,mergedSources));
+            for id = reshape(removed,1,[])
+                obj.Project.removeLabel(id);
+            end
+
+            mergeTargets = find(cellfun(@(ids) ~isempty(ids),draft.MergeSourceIDs));
+            existing = find(draft.OriginalID ~= "" & ...
+                ~ismember((1:height(draft))',mergeTargets));
+            temporaryIDs = strings(height(draft),1);
+            for k = reshape(existing,1,[])
+                oldID = draft.OriginalID(k);
+                temporaryID = matlabx.utils.text.uniqueID();
+                if oldID == "unlabeled", temporaryID = oldID; end
+                temporaryIDs(k) = obj.Project.editLabel(oldID, ...
+                    Name="__oops_staged_"+matlabx.utils.text.uniqueID(), ...
+                    ID=temporaryID,Hotkey="",Color=draft.Color(k,:));
+            end
+
+            for k = reshape(existing,1,[])
+                obj.Project.editLabel(temporaryIDs(k), ...
+                    Name=draft.Name(k),ID=draft.ID(k), ...
+                    Hotkey=draft.Hotkey(k),Color=draft.Color(k,:));
+            end
+
+            ordinaryNew = find(draft.OriginalID == "" & ...
+                ~ismember((1:height(draft))',mergeTargets));
+            for k = reshape(ordinaryNew,1,[])
+                obj.Project.addLabel(draft.Name(k),ID=draft.ID(k), ...
+                    Hotkey=draft.Hotkey(k),Color=draft.Color(k,:));
+            end
+
+            for k = reshape(mergeTargets,1,[])
+                sourceIDs = draft.MergeSourceIDs{k};
+                for sourceID = reshape(sourceIDs,1,[])
+                    source = obj.Project.Labels.getByID(sourceID);
+                    obj.Project.editLabel(sourceID, ...
+                        Name="__oops_merge_"+matlabx.utils.text.uniqueID(), ...
+                        ID=sourceID,Hotkey="",Color=source.Color);
+                end
+                obj.Project.mergeLabels(sourceIDs,draft.Name(k), ...
+                    ID=draft.ID(k),Hotkey=draft.Hotkey(k),Color=draft.Color(k,:));
+            end
+        end
+
+        function ids = mergedLabelSourceIDs(~,draft)
+        %MERGEDLABELSOURCEIDS Collect original identities assigned to merge targets.
+
+            ids = strings(0,1);
+            if ~ismember('MergeSourceIDs',draft.Properties.VariableNames)
+                return;
+            end
+            for k = 1:height(draft)
+                ids = [ids;draft.MergeSourceIDs{k}(:)]; %#ok<AGROW>
+            end
+            ids = unique(ids(ids ~= ""),'stable');
+        end
+
+        function finalIDs = applyChannelDraft(obj,original,draft)
+        %APPLYCHANNELDRAFT Commit channel changes after removing assignments.
+
+            removed = original.OriginalID(~ismember(original.OriginalID,draft.OriginalID));
+            for id = reshape(removed,1,[])
+                for group = reshape(obj.Project.Groups,1,[])
+                    for image = reshape(group.Images,1,[])
+                        image.removeAuxiliaryChannel(id);
+                    end
+                end
+                obj.Project.Channels.remove(id);
+            end
+
+            existing = find(draft.OriginalID ~= "");
+            for k = reshape(existing,1,[])
+                obj.Project.Channels.edit(draft.OriginalID(k), ...
+                    "__oops_staged_"+matlabx.utils.text.uniqueID(),draft.Color(k,:));
+            end
+
+            finalIDs = draft.ID;
+            for k = 1:height(draft)
+                if draft.OriginalID(k) == ""
+                    channel = obj.Project.Channels.add(draft.Name(k),draft.Color(k,:));
+                    finalIDs(k) = channel.ID;
+                else
+                    obj.Project.Channels.edit(draft.OriginalID(k), ...
+                        draft.Name(k),draft.Color(k,:));
+                    finalIDs(k) = draft.OriginalID(k);
+                end
+            end
+        end
+
+        function reorderCollection(obj,kind,desiredIDs)
+        %REORDERCOLLECTION Move members until model order matches the staged order.
+
+            for target = 1:numel(desiredIDs)
+                while true
+                    switch kind
+                        case "Groups"
+                            currentIDs = string({obj.Project.Groups.ID});
+                        case "Labels"
+                            currentIDs = obj.Project.Labels.ids();
+                        case "Channels"
+                            currentIDs = string({obj.Project.Channels.Channels.ID});
+                    end
+
+                    current = find(currentIDs == desiredIDs(target),1);
+                    if isempty(current) || current == target, break; end
+                    offset = sign(target-current);
+                    switch kind
+                        case "Groups"
+                            obj.Project.moveGroup(desiredIDs(target),offset);
+                        case "Labels"
+                            obj.Project.Labels.move(desiredIDs(target),offset);
+                        case "Channels"
+                            obj.Project.Channels.move(desiredIDs(target),offset);
+                    end
+                end
             end
         end
 

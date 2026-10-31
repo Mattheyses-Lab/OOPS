@@ -2,19 +2,24 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-function collectionManagerDialog(parent,title,itemsFcn,actions,opts)
-%COLLECTIONMANAGERDIALOG Manage one flat ordered model collection.
+function applied = collectionManagerDialog(parent,title,items,actions,opts)
+%COLLECTIONMANAGERDIALOG Stage edits to one flat ordered model collection.
 
 arguments
     parent (1,1) matlab.ui.Figure
     title (1,1) string
-    itemsFcn (1,1) function_handle
+    items table
     actions (1,1) struct
-    opts.Hint (1,1) string = "Highlight an item to edit, delete, or reorder it."
+    opts.ItemName (1,1) string = "item"
+    opts.AllowMerge (1,1) logical = false
+    opts.ShowID (1,1) logical = false
+    opts.ShowHotkey (1,1) logical = false
 end
 
+applied = false;
+original = items;
 dialog = uifigure('Name',char(title),'WindowStyle','normal', ...
-    'AutoResizeChildren','off','Position',[100 100 440 500], ...
+    'AutoResizeChildren','off','Position',[100 100 520 500], ...
     'Color',[.12 .12 .12]);
 oops.app.centerDialog(dialog);
 
@@ -22,151 +27,139 @@ grid = uigridlayout(dialog,[3 1], ...
     'RowHeight',{'1x','fit','fit'},'ColumnWidth',{'1x'}, ...
     'Padding',5,'RowSpacing',5,'BackgroundColor',[.12 .12 .12]);
 
-tree = uitree(grid,'checkbox','BackgroundColor',[.18 .18 .18], ...
-    'FontColor',[.9 .9 .9], ...
-    'SelectionChangedFcn',@(~,~) updateButtons());
+host = uigridlayout(grid,[1 1], ...
+    'RowHeight',{'fit'},'ColumnWidth',{'1x'}, ...
+    'Padding',0,'RowSpacing',0,'ColumnSpacing',0,'Scrollable','on');
 
-buttons = uigridlayout(grid,[1 5], ...
-    'ColumnWidth',{'1x','1x','1x','1x','1x'}, ...
-    'RowHeight',{'fit'},'Padding',0,'ColumnSpacing',5, ...
-    'BackgroundColor',[.12 .12 .12]);
-newButton = uibutton(buttons,'Text','New...', ...
-    'ButtonPushedFcn',@(~,~) runAction(actions.New,""));
-editButton = uibutton(buttons,'Text','Edit...', ...
-    'ButtonPushedFcn',@(~,~) runAction(actions.Edit,selectedID()));
-deleteButton = uibutton(buttons,'Text','Delete', ...
-    'ButtonPushedFcn',@(~,~) runAction(actions.Delete,selectedID()));
-upButton = uibutton(buttons,'Text','Move up', ...
-    'ButtonPushedFcn',@(~,~) runMove(-1));
-downButton = uibutton(buttons,'Text','Move down', ...
-    'ButtonPushedFcn',@(~,~) runMove(1));
+columns = [ ...
+    matlabx.ui.control.ControlTableColumn( ...
+        Name="Name",Label="Name",Width="2x",ControlType="text") ...
+    matlabx.ui.control.ControlTableColumn( ...
+        Name="Color",Label="Color",Width=90,ControlType="color")];
 
-footer = uigridlayout(grid,[1 2], ...
-    'ColumnWidth',{'1x','fit'},'RowHeight',{'fit'}, ...
+if opts.ShowID
+    columns = [columns(1), ...
+        matlabx.ui.control.ControlTableColumn( ...
+            Name="ID",Label="ID",Width="2x",ControlType="text", ...
+            EnabledFcn=@(row,~,~) ~row.Protected), ...
+        columns(2)];
+end
+
+if opts.ShowHotkey
+    columns(end+1) = matlabx.ui.control.ControlTableColumn( ...
+        Name="Hotkey",Label="Hotkey",Width=80,ControlType="text");
+end
+
+tableUI = matlabx.ui.control.ControlTable(host, ...
+    Columns=columns,Data=items,SelectionMode="multiple",Reorderable=true);
+tableUI.RowOperationRequestedFcn = @validateRowOperation;
+tableUI.NewRowFcn = @(~) actions.New(tableUI.Data);
+
+buttonWidths = {'fit','fit','1x'};
+if opts.AllowMerge, buttonWidths = {'fit','fit','fit','1x'}; end
+buttons = uigridlayout(grid,[1 numel(buttonWidths)], ...
+    'ColumnWidth',buttonWidths,'RowHeight',{'fit'}, ...
     'Padding',0,'ColumnSpacing',5,'BackgroundColor',[.12 .12 .12]);
-uilabel(footer,'Text',char(opts.Hint+" Changes are applied immediately."), ...
-    'FontColor',[.75 .75 .75]);
-uibutton(footer,'Text','Close','ButtonPushedFcn',@(~,~) uiresume(dialog));
+uibutton(buttons,'Text',char("Add "+opts.ItemName), ...
+    'ButtonPushedFcn',@(~,~) tableUI.addNewRow());
+deleteButton = uibutton(buttons,'Text','Delete selected', ...
+    'ButtonPushedFcn',@(~,~) tableUI.removeSelectedRows());
+mergeButton = [];
+if opts.AllowMerge
+    mergeButton = uibutton(buttons,'Text','Merge selected', ...
+        'ButtonPushedFcn',@(~,~) mergeSelected());
+end
 
-refresh("");
-dialog.CloseRequestFcn = @(~,~) uiresume(dialog);
+footer = uigridlayout(grid,[1 3], ...
+    'ColumnWidth',{'1x','fit','fit'},'RowHeight',{'fit'}, ...
+    'Padding',0,'ColumnSpacing',5,'BackgroundColor',[.12 .12 .12]);
+uibutton(footer,'Text','Cancel','ButtonPushedFcn',@(~,~) cancel());
+uibutton(footer,'Text','Apply','ButtonPushedFcn',@(~,~) apply());
+
+tableUI.SelectionChangedFcn = @(~,~) updateButtons();
+updateButtons();
+dialog.CloseRequestFcn = @(~,~) cancel();
 uiwait(dialog);
 
 if isvalid(dialog)
     delete(dialog);
 end
 
-    function id = selectedID()
-        id = "";
+    function validateRowOperation(~,event)
+        switch event.Operation
+            case "duplicate"
+                event.Cancel = true;
+                uialert(dialog,'Use Add row so the new item receives a unique identity.', ...
+                    'Duplicate unavailable','Icon','info');
 
-        if ~isempty(tree.SelectedNodes)
-            id = string(tree.SelectedNodes(1).NodeData);
+            case "remove"
+                if any(event.ProposedData.Protected)
+                    event.Cancel = true;
+                    uialert(dialog,'The protected item cannot be deleted.', ...
+                        'Protected item','Icon','warning');
+                end
+
+            case "reorder"
+                source = event.SourceRow;
+                destination = event.DestinationRow;
+                protected = find(tableUI.Data.Protected);
+
+                if tableUI.Data.Protected(source) || ...
+                        any(protected >= min(source,destination) & ...
+                        protected <= max(source,destination))
+                    event.Cancel = true;
+                end
         end
     end
 
-    function runAction(action,id)
-        isNew = isequal(action,actions.New);
-
-        if id == "" && ~isNew
+    function mergeSelected()
+        rows = tableUI.SelectedRows;
+        if numel(rows) < 2 || any(tableUI.Data.Protected(rows))
             return;
         end
 
         try
-            action(id,dialog);
+            merged = actions.Merge(tableUI.Data,rows);
         catch ME
-            oops.Log.EXCEPTION(ME);
-            uialert(dialog,ME.message,'OOPS');
+            showError(ME);
             return;
         end
 
-        if isNew
-            refresh("__last__");
-        else
-            refresh(id);
-        end
-
-        figure(dialog);
+        tableUI.removeSelectedRows();
+        tableUI.addRow(merged);
+        tableUI.ActiveRow = height(tableUI.Data);
     end
 
-    function runMove(offset)
-        id = selectedID();
-
-        if id == ""
-            return;
-        end
-
+    function apply()
         try
-            actions.Move(id,offset,dialog);
+            accepted = actions.Apply(original,tableUI.Data,dialog);
         catch ME
-            oops.Log.EXCEPTION(ME);
-            uialert(dialog,ME.message,'OOPS');
+            showError(ME);
             return;
         end
 
-        refresh(id);
+        if accepted
+            applied = true;
+            uiresume(dialog);
+        end
     end
 
-    function refresh(preferredID)
-        checked = strings(0,1);
-
-        if ~isempty(tree.CheckedNodes)
-            checked = string({tree.CheckedNodes.NodeData});
-        end
-
-        % CheckedNodes and SelectedNodes must not retain handles that are
-        % about to be deleted from this tree.
-        tree.CheckedNodes = [];
-        tree.SelectedNodes = [];
-        delete(tree.Children);
-        items = itemsFcn();
-
-        for k = 1:numel(items)
-            node = uitreenode(tree,'Text',char(items(k).Name), ...
-                'NodeData',items(k).ID);
-            node.Icon = char(matlabx.ui.icon.get( ...
-                Shape="circle",Color=items(k).Color,Size=16));
-        end
-
-        % Query the tree after construction so every assigned handle is known
-        % by MATLAB to be a current direct child of this exact tree.
-        nodes = tree.Children;
-
-        if ~isempty(nodes)
-            ids = string({nodes.NodeData});
-            keep = ismember(ids,checked);
-
-            if any(keep)
-                tree.CheckedNodes = nodes(keep);
-            end
-
-            if preferredID == "__last__"
-                selected = numel(nodes);
-            else
-                selected = find(ids == preferredID,1);
-            end
-
-            if isempty(selected)
-                selected = 1;
-            end
-
-            tree.SelectedNodes = nodes(selected);
-        end
-
-        updateButtons();
+    function cancel()
+        uiresume(dialog);
     end
 
     function updateButtons()
-        items = itemsFcn();
-        id = selectedID();
-        index = find(string({items.ID}) == id,1);
-        selected = ~isempty(index);
-        protected = selected && items(index).Protected;
-        editButton.Enable = matlab.lang.OnOffSwitchState(selected);
-        deleteButton.Enable = matlab.lang.OnOffSwitchState(selected && ~protected);
-        upButton.Enable = matlab.lang.OnOffSwitchState( ...
-            selected && ~protected && index > 1 && ~items(index-1).Protected);
-        downButton.Enable = matlab.lang.OnOffSwitchState( ...
-            selected && ~protected && index < numel(items));
-        newButton.Enable = 'on';
+        selected = tableUI.SelectedRows;
+        protected = ~isempty(selected) && any(tableUI.Data.Protected(selected));
+        deleteButton.Enable = matlab.lang.OnOffSwitchState(~isempty(selected) && ~protected);
+        if opts.AllowMerge
+            mergeButton.Enable = matlab.lang.OnOffSwitchState( ...
+                numel(selected) >= 2 && ~protected);
+        end
+    end
+
+    function showError(exception)
+        oops.Log.EXCEPTION(exception);
+        uialert(dialog,exception.message,'OOPS','Icon','error');
     end
 end
