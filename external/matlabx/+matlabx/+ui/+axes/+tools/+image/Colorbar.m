@@ -1,6 +1,6 @@
-classdef Colorbar < matlabx.ui.axes.AxesTool
+classdef Colorbar < matlabx.ui.axes.ImageAxesTool
 %COLORBAR Axes tool for toggling colorbar visibility.
-% matlabx.ui.axes.tools.Colorbar
+% matlabx.ui.axes.tools.image.Colorbar
 % when Enabled:
 %   Colorbar is Visible
 
@@ -23,9 +23,8 @@ classdef Colorbar < matlabx.ui.axes.AxesTool
     methods
 
         function obj = Colorbar(host)
-            obj@matlabx.ui.axes.AxesTool(host, "Colorbar", ...
+            obj@matlabx.ui.axes.ImageAxesTool(host, "Colorbar", ...
                 'Tooltip','Show/Hide Colorbar', ...
-                'AxesType',"image", ...
                 'Icon',matlabx.internal.Paths.icons('ColorbarIcon.png'), ...
                 'Priority',1);
         end

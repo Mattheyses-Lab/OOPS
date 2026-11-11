@@ -1,5 +1,5 @@
-classdef ExternalAxesTool < matlabx.ui.axes.AxesTool
-%EXTERNALAXESTOOL Test AxesTool implementation owned outside MATLABX.
+classdef ExternalImageAxesTool < matlabx.ui.axes.ImageAxesTool
+%EXTERNALIMAGEAXESTOOL Test an application-owned ImageAxesTool implementation.
 
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
@@ -27,8 +27,8 @@ classdef ExternalAxesTool < matlabx.ui.axes.AxesTool
         GraphicsAliveAtUninstall = false
     end
     methods
-        function obj = ExternalAxesTool(host)
-            obj@matlabx.ui.axes.AxesTool(host,"ExternalTool", ...
+        function obj = ExternalImageAxesTool(host)
+            obj@matlabx.ui.axes.ImageAxesTool(host,"ExternalTool", ...
                 'Tooltip','External test tool', ...
                 'Icon',matlabx.internal.Paths.icons('QuestionMark.png'), ...
                 'ToggleHotkey',"shift+j");

@@ -1,4 +1,4 @@
-classdef Mask < matlabx.ui.axes.AxesTool
+classdef Mask < matlabx.ui.axes.ImageAxesTool
 %MASK Toolbar toggle for ImageAxes.MaskEnabled.
 
 % matlabx - MATLAB utilities for app building, image display, and analysis.
@@ -23,9 +23,8 @@ classdef Mask < matlabx.ui.axes.AxesTool
 
     methods
         function obj = Mask(host)
-            obj@matlabx.ui.axes.AxesTool(host, "Mask", ...
+            obj@matlabx.ui.axes.ImageAxesTool(host, "Mask", ...
                 'Tooltip', 'Enable/Disable Mask', ...
-                'AxesType', "image", ...
                 'Icon', matlabx.internal.Paths.icons('MaskWhiteFGTransparentBG.svg'));
         end
 

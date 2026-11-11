@@ -1,7 +1,7 @@
-classdef AxesTool < handle
-%AXESTOOL Base class for tools hosted by matlabx.ui.axes.ImageAxes.
+classdef ImageAxesTool < handle
+%IMAGEAXESTOOL Base class for tools hosted by matlabx.ui.axes.ImageAxes.
 %
-%   AxesTool subclasses can add toolbar actions, interactive modes,
+%   ImageAxesTool subclasses can add toolbar actions, interactive modes,
 %   overlays, and host-event listeners to an ImageAxes instance.
 %
 %   Tool styles
@@ -79,7 +79,6 @@ classdef AxesTool < handle
     properties (SetAccess=protected)
         Host                                                    % axes.ImageAxes
         Name (1,1) string = ""                                  % name of the tool
-        AxesType (1,1) string {mustBeMember(AxesType, ["image", "plot", "both"])} = "both"
         Tooltip (1,:) = ''                                      % tooltip for toolbar buttons
         Icon (1,:) char = matlabx.internal.Paths.icons('QuestionMark.png')   % icon for toolbar buttons, question mark by default
         ToggleHotkey (1,1) string = ""
@@ -133,7 +132,7 @@ classdef AxesTool < handle
     end
 
     methods
-        function obj = AxesTool(host, name, varargin)
+        function obj = ImageAxesTool(host, name, varargin)
             obj.Host = host;
             obj.Name = string(name);
 
@@ -142,8 +141,7 @@ classdef AxesTool < handle
 
             p = inputParser;
             p.addParameter('Tooltip', '', @(x)ischar(x));
-            p.addParameter('AxesType', "both", @(x)(isstring(x)&&isscalar(x)) || ischar(x));
-            p.addParameter('Icon', 'QuestionMark.png', @(x)ischar(x));
+            p.addParameter('Icon', obj.Icon, @(x)ischar(x));
             p.addParameter('ToggleHotkey', "", @(x)isstring(x)&&isscalar(x));
             p.addParameter('Style', 'state', @(x)ischar(x));
             p.addParameter('Priority', 1, @(x)isnumeric(x)&&isscalar(x));
@@ -165,7 +163,6 @@ classdef AxesTool < handle
             p.parse(varargin{:});
 
             obj.Tooltip = p.Results.Tooltip;
-            obj.AxesType = p.Results.AxesType;
             obj.Icon = p.Results.Icon;
             obj.ToggleHotkey = p.Results.ToggleHotkey;
             obj.Style = p.Results.Style;
@@ -299,20 +296,20 @@ classdef AxesTool < handle
         function onDelete(~),     end
 
         % Pointer routing (only active Interceptors get these)
-        function onDown(~,~,~),     end
-        function onMove(~,~,~),     end
-        function onUp(~,~,~),       end
-        function onScroll(~,~,~),   end
-        function onKeyPress(~,~,~),      end
-        function onKeyRelease(~,~,~),    end
+        function onDown(~,~),     end
+        function onMove(~,~),     end
+        function onUp(~,~),       end
+        function onScroll(~,~),   end
+        function onKeyPress(~,~),      end
+        function onKeyRelease(~,~),    end
 
         % Pointer routing (only PassiveInterceptors get these)
-        function onPassiveDown(~,~,~),   end
-        function onPassiveMove(~,~,~),   end
-        function onPassiveUp(~,~,~),     end
-        function onPassiveScroll(~,~,~), end
-        function onPassiveKeyPress(~,~,~),    end
-        function onPassiveKeyRelease(~,~,~),  end
+        function onPassiveDown(~,~),   end
+        function onPassiveMove(~,~),   end
+        function onPassiveUp(~,~),     end
+        function onPassiveScroll(~,~), end
+        function onPassiveKeyPress(~,~),    end
+        function onPassiveKeyRelease(~,~),  end
 
         % Adjust pointer shape (override in subclass to set pointer - if empty, Host will set)
         function pointer = getPreferredPointer(~), pointer = ''; end

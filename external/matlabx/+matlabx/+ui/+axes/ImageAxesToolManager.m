@@ -15,7 +15,7 @@ classdef ImageAxesToolManager < handle
 %
 %   The manager keeps lifecycle bookkeeping, toolbar wiring, and event-routing
 %   lookup out of ImageAxes while preserving the tool-owned install/uninstall
-%   hooks in AxesTool subclasses.
+%   hooks in ImageAxesTool subclasses.
 
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
@@ -111,7 +111,7 @@ classdef ImageAxesToolManager < handle
         end
 
         function loadAll(obj)
-        %LOADALL Load every concrete tool class in matlabx.ui.axes.tools.
+        %LOADALL Load every concrete tool class in matlabx.ui.axes.tools.image.
             obj.loadMany(obj.Host.getToolNames());
         end
 
@@ -158,7 +158,7 @@ classdef ImageAxesToolManager < handle
                 return
             end
 
-            obj.LoadedTools(name) = matlabx.ui.axes.tools.(name)(obj.Host);
+            obj.LoadedTools(name) = matlabx.ui.axes.tools.image.(name)(obj.Host);
         end
 
         function unload(obj, name)
@@ -193,7 +193,7 @@ classdef ImageAxesToolManager < handle
 
         function install(obj, name)
         %INSTALL Install a loaded built-in name or an application-owned object.
-            if isa(name,'matlabx.ui.axes.AxesTool')
+            if isa(name,'matlabx.ui.axes.ImageAxesTool')
                 tool = name;
                 obj.validateTool(tool);
             else
@@ -204,14 +204,14 @@ classdef ImageAxesToolManager < handle
                     return;
                 end
             end
-            % AxesTool.install calls register for both ownership cases. Object
+            % ImageAxesTool.install calls register for both ownership cases. Object
             % inputs are deliberately never added to the owning LoadedTools map.
             tool.install();
         end
 
         function uninstall(obj, name)
         %UNINSTALL Accept an installed name or the exact supplied instance.
-            if isa(name,'matlabx.ui.axes.AxesTool')
+            if isa(name,'matlabx.ui.axes.ImageAxesTool')
                 if ~isscalar(name)
                     error('matlabx:ui:InvalidTool','Tool must be scalar.');
                 end
@@ -476,8 +476,8 @@ classdef ImageAxesToolManager < handle
     methods (Access=private)
         function validateTool(obj,tool)
         %VALIDATETOOL Keep host identity and installed-name ownership explicit.
-            if ~isa(tool,'matlabx.ui.axes.AxesTool') || ~isscalar(tool) || ~isvalid(tool)
-                error('matlabx:ui:InvalidTool','Expected a valid scalar AxesTool.');
+            if ~isa(tool,'matlabx.ui.axes.ImageAxesTool') || ~isscalar(tool) || ~isvalid(tool)
+                error('matlabx:ui:InvalidTool','Expected a valid scalar ImageAxesTool.');
             end
             if isempty(tool.Host) || ~isvalid(tool.Host) || tool.Host ~= obj.Host
                 error('matlabx:ui:ToolHostMismatch', ...
@@ -485,9 +485,6 @@ classdef ImageAxesToolManager < handle
             end
             if ~isvarname(char(tool.Name))
                 error('matlabx:ui:InvalidToolName','Tool Name must be a valid MATLAB identifier.');
-            end
-            if ~ismember(tool.AxesType,["image","both"])
-                error('matlabx:ui:ToolAxesTypeMismatch','Tool must support image axes.');
             end
         end
 

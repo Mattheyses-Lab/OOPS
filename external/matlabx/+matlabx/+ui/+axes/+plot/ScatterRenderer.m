@@ -44,6 +44,8 @@ classdef ScatterRenderer < matlabx.ui.axes.PlotContent
         Legend matlab.graphics.illustration.Legend = matlab.graphics.illustration.Legend.empty()
         % Invisible proxy lines used to represent series in the legend.
         LegendPlots (:,1) matlab.graphics.chart.primitive.Line = matlab.graphics.chart.primitive.Line.empty()
+        % Content-owned properties window, when currently open.
+        PropertiesDialog = []
     end
 
     methods
@@ -151,8 +153,16 @@ classdef ScatterRenderer < matlabx.ui.axes.PlotContent
             axes.CLim = style.CLim;
             axes.XScale = 'linear';
             axes.YScale = 'linear';
-            axes.XLimMode = 'auto';
-            axes.YLimMode = 'auto';
+            if style.XLimMode == "manual"
+                axes.XLim = style.XLim;
+            else
+                axes.XLimMode = 'auto';
+            end
+            if style.YLimMode == "manual"
+                axes.YLim = style.YLim;
+            else
+                axes.YLimMode = 'auto';
+            end
             axes.XTickMode = 'auto';
             axes.YTickMode = 'auto';
             axes.XTickLabelMode = 'auto';
@@ -178,12 +188,177 @@ classdef ScatterRenderer < matlabx.ui.axes.PlotContent
             end
         end
 
+        function contributeContextMenu(obj,menu)
+        %CONTRIBUTECONTEXTMENU Add the mounted scatter plot's Properties command.
+
+            menu.addItem("Scatter.Properties","Properties...", ...
+                @(~,~) obj.openProperties(),Owner=obj,Separator="on");
+        end
+
+        function openProperties(obj)
+        %OPENPROPERTIES Open the scatter-specific axes-limits dialog.
+        %
+        % Auto mode disables its numeric fields. Editing either field switches
+        % that axis to Manual so future scatter-specific settings can be added
+        % here without introducing a general style-reflection framework.
+
+            if isgraphics(obj.PropertiesDialog)
+                figure(obj.PropertiesDialog);
+                return;
+            end
+
+            style = obj.Style;
+            xLimits = obj.dialogLimits(style.XLim,"X");
+            yLimits = obj.dialogLimits(style.YLim,"Y");
+            background = [.12 .12 .12];
+            paneColor = [.18 .18 .18];
+            controlColor = [.3 .3 .3];
+            fontColor = [.85 .85 .85];
+            controlFontColor = [.9 .9 .9];
+
+            fig = uifigure(Visible="off",Name="Scatter Properties", ...
+                InnerPosition=[0 0 410 315],Resize="off",WindowStyle="modal", ...
+                Color=background);
+            obj.PropertiesDialog = fig;
+            fig.CloseRequestFcn = @(~,~) closeDialog();
+
+            root = uigridlayout(fig,[2 1],Padding=[10 10 10 10], ...
+                RowSpacing=10,ColumnSpacing=0,BackgroundColor=background, ...
+                RowHeight={'1x',32},ColumnWidth={'1x'});
+            accordionHost = uigridlayout(root,[1 1],Padding=0, ...
+                RowSpacing=0,ColumnSpacing=0,BackgroundColor=background, ...
+                RowHeight={'fit'},ColumnWidth={'1x'},Scrollable="on");
+            accordionHost.Layout.Row = 1;
+            accordion = matlabx.ui.container.Accordion(accordionHost, ...
+                ItemSpacing=5,BorderWidth=0,BorderColor=paneColor, ...
+                Padding=0,BackgroundColor=background);
+
+            [xMode,xMinimum,xMaximum] = makeAxisItem("X Axis", ...
+                style.XLimMode,xLimits);
+            [yMode,yMinimum,yMaximum] = makeAxisItem("Y Axis", ...
+                style.YLimMode,yLimits);
+
+            buttons = uigridlayout(root,[1 4],Padding=0,RowSpacing=0, ...
+                ColumnSpacing=8,ColumnWidth={110,'1x',80,80},RowHeight={'1x'}, ...
+                BackgroundColor=background);
+            buttons.Layout.Row = 2;
+            restore = uibutton(buttons,Text="Restore Defaults", ...
+                BackgroundColor=controlColor,FontColor=controlFontColor, ...
+                ButtonPushedFcn=@(~,~) restoreDefaults());
+            restore.Layout.Column = 1;
+            cancel = uibutton(buttons,Text="Cancel", ...
+                BackgroundColor=controlColor,FontColor=controlFontColor, ...
+                ButtonPushedFcn=@(~,~) closeDialog());
+            cancel.Layout.Column = 3;
+            apply = uibutton(buttons,Text="Apply", ...
+                BackgroundColor=[.18 .42 .68],FontColor=[1 1 1], ...
+                ButtonPushedFcn=@(~,~) applyChanges());
+            apply.Layout.Column = 4;
+
+            movegui(fig,"center");
+            fig.Visible = "on";
+
+            function [mode,minimum,maximum] = makeAxisItem(title,initialMode,limits)
+                accordion.addItem(Title=title,BorderColor=[.49 .49 .49], ...
+                    TitleBackgroundColor=background, ...
+                    HoverTitleBackgroundColor=controlColor, ...
+                    PaneBackgroundColor=paneColor,FontColor=fontColor, ...
+                    BorderWidth=1,ExpandedBorderWidth=1,TitlePadding=1);
+                item = accordion.getItem(title);
+                item.expand();
+                grid = item.Pane;
+                set(grid,ColumnWidth={'fit','1x'}, ...
+                    RowHeight={'fit','fit','fit'},Padding=[5 5 5 5], ...
+                    ColumnSpacing=5,RowSpacing=5,BackgroundColor=paneColor);
+
+                modeLabel = uilabel(grid,Text="Mode",FontColor=fontColor);
+                modeLabel.Layout.Row = 1;
+                modeLabel.Layout.Column = 1;
+                mode = uidropdown(grid,Items={'Auto','Manual'}, ...
+                    Value=obj.displayMode(initialMode), ...
+                    BackgroundColor=controlColor,FontColor=controlFontColor);
+                mode.Layout.Row = 1;
+                mode.Layout.Column = 2;
+
+                minimumLabel = uilabel(grid,Text="Minimum",FontColor=fontColor);
+                minimumLabel.Layout.Row = 2;
+                minimumLabel.Layout.Column = 1;
+                minimum = uieditfield(grid,"numeric",Value=limits(1), ...
+                    BackgroundColor=controlColor,FontColor=controlFontColor);
+                minimum.Layout.Row = 2;
+                minimum.Layout.Column = 2;
+                maximumLabel = uilabel(grid,Text="Maximum",FontColor=fontColor);
+                maximumLabel.Layout.Row = 3;
+                maximumLabel.Layout.Column = 1;
+                maximum = uieditfield(grid,"numeric",Value=limits(2), ...
+                    BackgroundColor=controlColor,FontColor=controlFontColor);
+                maximum.Layout.Row = 3;
+                maximum.Layout.Column = 2;
+
+                mode.ValueChangedFcn = @(~,~) updateLimitControls(mode,minimum,maximum);
+                minimum.ValueChangedFcn = @(~,~) makeManual(mode,minimum,maximum);
+                maximum.ValueChangedFcn = @(~,~) makeManual(mode,minimum,maximum);
+                updateLimitControls(mode,minimum,maximum);
+            end
+
+            function updateLimitControls(mode,minimum,maximum)
+                enabled = matlab.lang.OnOffSwitchState(string(mode.Value) == "Manual");
+                minimum.Enable = enabled;
+                maximum.Enable = enabled;
+            end
+
+            function makeManual(mode,minimum,maximum)
+                mode.Value = 'Manual';
+                updateLimitControls(mode,minimum,maximum);
+            end
+
+            function restoreDefaults()
+                xMode.Value = 'Auto';
+                yMode.Value = 'Auto';
+                updateLimitControls(xMode,xMinimum,xMaximum);
+                updateLimitControls(yMode,yMinimum,yMaximum);
+            end
+
+            function applyChanges()
+                if string(xMode.Value) == "Manual" && xMinimum.Value >= xMaximum.Value
+                    uialert(fig,"X maximum must be greater than X minimum.", ...
+                        "Invalid X Limits");
+                    return;
+                end
+                if string(yMode.Value) == "Manual" && yMinimum.Value >= yMaximum.Value
+                    uialert(fig,"Y maximum must be greater than Y minimum.", ...
+                        "Invalid Y Limits");
+                    return;
+                end
+
+                updated = obj.Style;
+                if string(xMode.Value) == "Auto"
+                    updated.XLimMode = "auto";
+                else
+                    updated.XLim = [xMinimum.Value xMaximum.Value];
+                end
+                if string(yMode.Value) == "Auto"
+                    updated.YLimMode = "auto";
+                else
+                    updated.YLim = [yMinimum.Value yMaximum.Value];
+                end
+                obj.setStyle(updated);
+                closeDialog();
+            end
+
+            function closeDialog()
+                if isgraphics(fig), delete(fig); end
+                if isvalid(obj), obj.PropertiesDialog = []; end
+            end
+        end
+
         function delete(obj)
         %DELETE Release renderer-owned plot primitives and legend proxies.
 
             delete(obj.LegendPlots(isvalid(obj.LegendPlots)));
             delete(obj.Legend(isvalid(obj.Legend)));
             obj.detach();
+            if isgraphics(obj.PropertiesDialog), delete(obj.PropertiesDialog); end
             delete(obj.Plots(isvalid(obj.Plots)));
         end
 
@@ -216,6 +391,25 @@ classdef ScatterRenderer < matlabx.ui.axes.PlotContent
     end
 
     methods (Access=private)
+
+        function limits = dialogLimits(obj,stored,dimension)
+        %DIALOGLIMITS Return stored or currently rendered limits for editing.
+
+            if ~isempty(stored)
+                limits = stored;
+            elseif ~isempty(obj.Host) && isvalid(obj.Host)
+                limits = obj.Host.Axes.(dimension + "Lim");
+            else
+                limits = [0 1];
+            end
+        end
+
+        function mode = displayMode(~,mode)
+        %DISPLAYMODE Convert the style's lowercase mode to a dialog label.
+
+            mode = upper(extractBefore(string(mode),2)) + ...
+                extractAfter(string(mode),1);
+        end
 
         function ensurePlots(obj,axes,count)
         %ENSUREPLOTS Match renderer-owned primitive sets to normalized series count.

@@ -5,7 +5,12 @@ classdef ScatterStyle
 %
 %   style = matlabx.ui.axes.plot.ScatterStyle( ...
 %       Title="Measurements", LegendVisible=true, ...
-%       MarkerSize=36, HullVisible=true, DataTipFormat="%.3g");
+%       MarkerSize=36, HullVisible=true, YLim=[0 10], ...
+%       DataTipFormat="%.3g");
+%
+% XLim and YLim are optional. Empty values select MATLAB automatic limits;
+% assigning a two-element limit makes the corresponding dependent XLimMode
+% or YLimMode report "manual". Setting a mode to "auto" clears its limit.
 %
 % See also matlabx.ui.axes.plot.ScatterData,
 % matlabx.ui.axes.plot.ScatterRenderer
@@ -34,6 +39,10 @@ classdef ScatterStyle
         XLabel (1,1) string = ""
         % Y-axis label text.
         YLabel (1,1) string = ""
+        % Optional manual X limits; empty uses MATLAB automatic limits.
+        XLim (1,:) double {mustBeOptionalIncreasingLimits} = double.empty(1,0)
+        % Optional manual Y limits; empty uses MATLAB automatic limits.
+        YLim (1,:) double {mustBeOptionalIncreasingLimits} = double.empty(1,0)
         % PlotAxes and axes background color.
         BackgroundColor (1,3) double {mustBeFinite,mustBeBetween(BackgroundColor,0,1)} = [1 1 1]
         % Ruler, label, title, and automatic edge color.
@@ -84,6 +93,13 @@ classdef ScatterStyle
         HullEdgeColor (1,3) double {mustBeFinite,mustBeBetween(HullEdgeColor,0,1)} = [0 0 0]
     end
 
+    properties (Dependent)
+        % Automatic when XLim is empty, otherwise manual.
+        XLimMode (1,1) string
+        % Automatic when YLim is empty, otherwise manual.
+        YLimMode (1,1) string
+    end
+
     methods
 
         function obj = ScatterStyle(opts)
@@ -93,16 +109,74 @@ classdef ScatterStyle
                 opts.?matlabx.ui.axes.plot.ScatterStyle
             end
 
-            % Assign only values explicitly supplied by the caller.
+            % Assign modes last so an explicit Mode="auto" clears a limit
+            % supplied in the same constructor call.
             names = string(fieldnames(opts));
-
+            modes = names(ismember(names,["XLimMode","YLimMode"]));
+            names = names(~ismember(names,modes));
             for k = 1:numel(names)
                 obj.(names(k)) = opts.(names(k));
             end
+            for k = 1:numel(modes)
+                obj.(modes(k)) = opts.(modes(k));
+            end
+        end
+
+        function mode = get.XLimMode(obj)
+        %GET.XLIMMODE Return auto for empty limits and manual otherwise.
+            mode = limitMode(obj.XLim);
+        end
+
+        function obj = set.XLimMode(obj,mode)
+        %SET.XLIMMODE Clear limits for auto or validate existing manual limits.
+            obj.XLim = applyLimitMode(obj.XLim,mode,"XLim");
+        end
+
+        function mode = get.YLimMode(obj)
+        %GET.YLIMMODE Return auto for empty limits and manual otherwise.
+            mode = limitMode(obj.YLim);
+        end
+
+        function obj = set.YLimMode(obj,mode)
+        %SET.YLIMMODE Clear limits for auto or validate existing manual limits.
+            obj.YLim = applyLimitMode(obj.YLim,mode,"YLim");
         end
 
     end
 
+end
+
+function mustBeOptionalIncreasingLimits(value)
+%MUSTBEOPTIONALINCREASINGLIMITS Require empty or two increasing finite limits.
+    if isempty(value)
+        return
+    end
+    if ~isvector(value) || numel(value) ~= 2 || any(~isfinite(value)) || ...
+            value(1) >= value(2)
+        error('matlabx:ui:axes:plot:InvalidLimits', ...
+            'Axes limits must be empty or contain two increasing finite values.');
+    end
+end
+
+function mode = limitMode(value)
+%LIMITMODE Derive the public mode from optional stored limits.
+    if isempty(value)
+        mode = "auto";
+    else
+        mode = "manual";
+    end
+end
+
+function value = applyLimitMode(value,mode,propertyName)
+%APPLYLIMITMODE Apply a mode without permitting contradictory style state.
+    mode = string(mode);
+    mustBeMember(mode,["auto","manual"]);
+    if mode == "auto"
+        value = double.empty(1,0);
+    elseif isempty(value)
+        error('matlabx:ui:axes:plot:MissingManualLimits', ...
+            '%s cannot use manual mode until limits have been assigned.',propertyName);
+    end
 end
 
 function mustBeIncreasingLimits(value)

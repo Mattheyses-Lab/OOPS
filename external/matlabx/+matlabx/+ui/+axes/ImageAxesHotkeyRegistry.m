@@ -103,7 +103,7 @@ classdef ImageAxesHotkeyRegistry < handle
         function removeOwner(obj, owner)
         %REMOVEOWNER Remove every binding contributed by a given owner.
         %
-        %   The owner is usually an AxesTool handle. Owner-scoped cleanup prevents
+        %   The owner is usually an ImageAxesTool handle. Owner-scoped cleanup prevents
         %   a tool from leaving behind a callback after it is uninstalled.
             if isempty(obj.Keys)
                 return

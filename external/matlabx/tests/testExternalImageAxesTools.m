@@ -1,5 +1,5 @@
-function tests = testExternalAxesTools
-%TESTEXTERNALAXESTOOLS Test application-owned AxesTool lifecycle behavior.
+function tests = testExternalImageAxesTools
+%TESTEXTERNALIMAGEAXESTOOLS Test application-owned ImageAxesTool lifecycle behavior.
 
 % matlabx - MATLAB utilities for app building, image display, and analysis.
 % Copyright (C) 2026 William Dean
@@ -23,7 +23,7 @@ function setup(t)
     t.applyFixture(matlab.unittest.fixtures.PathFixture(fileparts(mfilename('fullpath'))));
     t.TestData.Figure = uifigure('Visible','off');
     t.TestData.Host = matlabx.ui.axes.ImageAxes(t.TestData.Figure,'CData',zeros(10));
-    t.TestData.Tool = ExternalAxesTool(t.TestData.Host);
+    t.TestData.Tool = ExternalImageAxesTool(t.TestData.Host);
 end
 function teardown(t)
     delete(t.TestData.Figure);
@@ -64,7 +64,7 @@ function testWrongHostAndConflictingName(t)
     other = matlabx.ui.axes.ImageAxes(t.TestData.Figure);
     t.verifyError(@() other.installTool(tool),'matlabx:ui:ToolHostMismatch');
     ax.installTool(tool);
-    duplicate = ExternalAxesTool(ax);
+    duplicate = ExternalImageAxesTool(ax);
     cleanup = onCleanup(@() delete(duplicate)); %#ok<NASGU>
     t.verifyError(@() ax.installTool(duplicate),'matlabx:ui:ToolNameConflict');
     ax.uninstallTool(duplicate);
@@ -92,7 +92,7 @@ function testDeleteHostAndFigure(t)
     t.verifyFalse(tool.Enabled);
     t.verifyTrue(tool.GraphicsAliveAtUninstall);
     other = matlabx.ui.axes.ImageAxes(t.TestData.Figure);
-    second = ExternalAxesTool(other);
+    second = ExternalImageAxesTool(other);
     cleanup = onCleanup(@() delete(second)); %#ok<NASGU>
     other.installTool(second);
     delete(t.TestData.Figure);
@@ -139,7 +139,7 @@ end
 
 function testInvalidInstances(t)
     ax = t.TestData.Host;
-    t.verifyError(@() ax.installTool(matlabx.ui.axes.AxesTool.empty), ...
+    t.verifyError(@() ax.installTool(matlabx.ui.axes.ImageAxesTool.empty), ...
         'matlabx:ui:InvalidTool');
     tool = t.TestData.Tool;
     delete(tool);
@@ -151,7 +151,7 @@ function testIndependentContributionSettings(t)
     configurations = [true true; true false; false true; false false];
 
     for k = 1:size(configurations,1)
-        tool = ExternalAxesTool(ax);
+        tool = ExternalImageAxesTool(ax);
         tool.ContributeToolbar = configurations(k,1);
         tool.ContributeContextMenu = configurations(k,2);
         ax.installTool(tool);

@@ -3,7 +3,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 %
 %   matlabx.ui.axes.ImageAxes displays a selected 2-D plane or RGB
 %   composite from a matlabx.image.Image5D object. It also hosts
-%   AxesTool subclasses and receives figure-level mouse/key events
+%   ImageAxesTool subclasses and receives figure-level mouse/key events
 %   through matlabx.ui.interaction.FigureEventHub.
 %
 %   Create an ImageAxes in a UI figure and assign a MATLAB image array:
@@ -22,7 +22,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 %       ax.T = 1;
 %
 %   Properties can also be supplied during construction. Tools may be named
-%   built-ins or application-owned AxesTool instances installed afterward:
+%   built-ins or application-owned ImageAxesTool instances installed afterward:
 %
 %       ax = matlabx.ui.axes.ImageAxes(fig, ...
 %           "CData", I, ...
@@ -81,7 +81,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 %   property. Setting ContextMenu directly is not recommended because it
 %   bypasses the built-in menu, dynamic state refresh, and tool cleanup.
 %   Choose built-in entries with ContextMenuItems. Application tools can add
-%   entries by overriding AxesTool.contributeContextMenu and using the supplied
+%   entries by overriding ImageAxesTool.contributeContextMenu and using the supplied
 %   ImageAxesContextMenuManager:
 %
 %       function contributeContextMenu(obj, menu)
@@ -93,7 +93,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 %   are then removed automatically when the tool is uninstalled.
 %
 %   See also matlabx.image.Image5D, matlabx.app.quickshow,
-%   matlabx.ui.axes.AxesTool, matlabx.ui.axes.ImageAxesToolManager,
+%   matlabx.ui.axes.ImageAxesTool, matlabx.ui.axes.ImageAxesToolManager,
 %   matlabx.ui.axes.ImageAxesHotkeyRegistry,
 %   matlabx.ui.axes.ImageAxesContextMenuManager,
 %   matlabx.ui.axes.ImageAxesOverlayManager,
@@ -139,8 +139,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         HotkeyRegistry matlabx.ui.axes.ImageAxesHotkeyRegistry
     end
 
-    % Shared tool state accessible to AxesTool and ImageAxesToolManager.
-    properties (Access={?matlabx.ui.axes.AxesTool, ?matlabx.ui.axes.ImageAxesToolManager})
+    % Shared tool state accessible to ImageAxesTool and ImageAxesToolManager.
+    properties (Access={?matlabx.ui.axes.ImageAxesTool, ?matlabx.ui.axes.ImageAxesToolManager})
         % the currently enabled tool with IsExclusive=true (if it exists)
         ActiveExclusiveTool
         % struct() of ToolbarButtons, fieldnames match tool Name
@@ -311,7 +311,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     end
 
     % Primary UIAxes shared with tools and the tool manager.
-    properties (Access={?matlabx.ui.axes.AxesTool, ?matlabx.ui.axes.ImageAxesToolManager})
+    properties (Access={?matlabx.ui.axes.ImageAxesTool, ?matlabx.ui.axes.ImageAxesToolManager})
         % Primary axes containing the image and overlay graphics.
         mainAxes matlab.ui.control.UIAxes
     end
@@ -385,7 +385,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     %% Tool-facing geometry and event-routing state
     % Derived host geometry and cursor information exposed to tools.
-    properties (Access=?matlabx.ui.axes.AxesTool, Dependent)
+    properties (Access=?matlabx.ui.axes.ImageAxesTool, Dependent)
         % Ancestor figure that owns this component.
         ParentFig
         % Spatial size of the current render source.
@@ -407,7 +407,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     end
 
     % Optional tool-provided overrides for restored image limits.
-    properties (Access=?matlabx.ui.axes.AxesTool)
+    properties (Access=?matlabx.ui.axes.ImageAxesTool)
         % control XLim and YLim of axes holding the image (if empty, lims will be set to default)
         XLim = []
         % Optional Y-limit override used when restoring the view.
@@ -2957,6 +2957,127 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             end
         end
 
+        % --- exportView ---
+        function exportView(obj,filename,opts)
+        %EXPORTVIEW Export the currently displayed axes region as an image.
+        %
+        %   AX.exportView(FILENAME) exports the rendered image, native and
+        %   application-mounted overlays, and other visible graphics within
+        %   the current axes limits. Surrounding component UI is excluded.
+        %
+        %   AX.exportView(FILENAME,Name=Value) accepts Units, Width, Height,
+        %   BackgroundColor, PreserveAspectRatio, Resolution, HideToolbar,
+        %   and OverlaySizing. OverlaySizing="physical" compensates native
+        %   overlay sizes so they retain their physical export dimensions.
+            arguments
+                obj (1,1) matlabx.ui.axes.ImageAxes
+                filename (1,1) string {mustBeNonzeroLengthText}
+                opts.Units (1,1) string = "inches"
+                opts.Width (1,1) double {mustBePositive} = 7
+                opts.Height (1,1) double {mustBePositive} = 7
+                opts.BackgroundColor (1,3) double {mustBeBetween(opts.BackgroundColor,0,1)} = [0 0 0]
+                opts.PreserveAspectRatio (1,1) matlab.lang.OnOffSwitchState = "on"
+                opts.Resolution (1,1) double {mustBePositive} = 600
+                opts.HideToolbar (1,1) logical = true
+                opts.OverlaySizing (1,1) string {mustBeMember(opts.OverlaySizing, ...
+                    ["physical","scale"])} = "physical"
+            end
+
+            if opts.OverlaySizing == "physical"
+                styleScale = obj.physicalOverlayExportStyleScale_( ...
+                    opts.Units,opts.Width,opts.Height,opts.Resolution, ...
+                    opts.PreserveAspectRatio);
+                overlayStyleCleanup = ...
+                    obj.OverlayManager.beginExportStyleScale(styleScale); %#ok<NASGU>
+            end
+
+            matlabx.ui.export.axes2image(obj.mainAxes,filename, ...
+                Units=opts.Units, ...
+                Width=opts.Width, ...
+                Height=opts.Height, ...
+                BackgroundColor=opts.BackgroundColor, ...
+                PreserveAspectRatio=opts.PreserveAspectRatio, ...
+                Resolution=opts.Resolution, ...
+                HideToolbar=opts.HideToolbar);
+            clear overlayStyleCleanup
+        end
+
+        % --- chooseExportView ---
+        function filename = chooseExportView(obj)
+        %CHOOSEEXPORTVIEW Choose export options and an output file.
+        %   Returns the selected absolute filename, or an empty string when
+        %   either dialog is cancelled. Interactive exports always omit the
+        %   axes toolbar.
+            filename = "";
+
+            % ParamsDialog is a separate modal figure. Lower an always-on-top
+            % host for the duration of the workflow so neither dialog opens
+            % behind it.
+            fig = obj.ParentFig;
+            previousWindowStyle = fig.WindowStyle;
+            if strcmp(previousWindowStyle,'alwaysontop')
+                fig.WindowStyle = 'normal';
+            end
+            windowStyleCleanup = onCleanup( ...
+                @() restoreFigureWindowStyle_(fig,previousWindowStyle));
+
+            positive = @(value) isnumeric(value) && isscalar(value) && ...
+                isfinite(value) && value > 0;
+            positiveInteger = @(value) positive(value) && value == fix(value);
+            options = matlabx.app.ParamsDialog.prompt( ...
+                'Export Current View', ...
+                {'Units','Units','choice','inches', ...
+                    {'inches','centimeters','pixels','points'}}, ...
+                {'Width','Width','double',7,positive, ...
+                    'Width must be a positive number.'}, ...
+                {'Height','Height','double',7,positive, ...
+                    'Height must be a positive number.'}, ...
+                {'BackgroundColor','Background color','color',[0 0 0]}, ...
+                {'PreserveAspectRatio','Preserve aspect ratio','logical',true}, ...
+                {'OverlaySizing','Overlay sizing','choice', ...
+                    'Preserve physical sizes', ...
+                    {'Preserve physical sizes','Scale with output'}}, ...
+                {'Resolution','Resolution (DPI)','double',600,positiveInteger, ...
+                    'Resolution must be a positive whole number.'});
+
+            if isempty(options), return; end
+
+            [file,path,filterIndex] = uiputfile( ...
+                {'*.png','PNG image (*.png)'; ...
+                 '*.tif;*.tiff','TIFF image (*.tif, *.tiff)'; ...
+                 '*.jpg;*.jpeg','JPEG image (*.jpg, *.jpeg)'}, ...
+                'Export Current View','image-view.png');
+
+            if isequal(file,0)
+                filename = "";
+                return
+            end
+
+            [~,~,extension] = fileparts(file);
+            if isempty(extension)
+                extensions = [".png",".tif",".jpg"];
+                file = char(string(file) + extensions(filterIndex));
+            end
+            filename = string(fullfile(path,file));
+            preserveAspectRatio = "off";
+            if options.PreserveAspectRatio
+                preserveAspectRatio = "on";
+            end
+            overlaySizing = "scale";
+            if strcmp(options.OverlaySizing,'Preserve physical sizes')
+                overlaySizing = "physical";
+            end
+            obj.exportView(filename, ...
+                Units=string(options.Units), ...
+                Width=options.Width, ...
+                Height=options.Height, ...
+                BackgroundColor=options.BackgroundColor, ...
+                PreserveAspectRatio=preserveAspectRatio, ...
+                Resolution=options.Resolution, ...
+                HideToolbar=true, ...
+                OverlaySizing=overlaySizing);
+        end
+
         % --- setComponentColormap ---
         function setComponentColormap(obj, cmap, idx)
         %SETCOMPONENTCOLORMAP Set one colormap on the current component or selected components.
@@ -3003,6 +3124,25 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     %% Private helpers: ImageData/DisplayState/ViewState
     methods (Access=private)
+
+        function styleScale = physicalOverlayExportStyleScale_(obj,units, ...
+                width,height,resolution,preserveAspectRatio)
+        %PHYSICALOVERLAYEXPORTSTYLESCALE_ Compensate exportgraphics scaling.
+            screenSize = obj.getOnScreenSize();
+            screenInches = screenSize.Inches;
+            outputInches = outputSizeInches_( ...
+                [width height],units,resolution);
+            dimensionScale = outputInches ./ screenInches;
+
+            if preserveAspectRatio == "on"
+                renderScale = min(dimensionScale);
+            else
+                % One graphics size cannot follow two independent axis
+                % scales; the geometric mean is a symmetric compromise.
+                renderScale = sqrt(prod(dimensionScale));
+            end
+            styleScale = 1 ./ renderScale;
+        end
     
         function syncViewStateToImageData(obj)
         %SYNCVIEWSTATETOIMAGEDATA Reconcile view and component display state with ImageData.
@@ -3350,7 +3490,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
     end
 
     %% Tool-accessible helpers
-    methods (Access=?matlabx.ui.axes.AxesTool, Hidden=true)
+    methods (Access=?matlabx.ui.axes.ImageAxesTool, Hidden=true)
         
         function updateFromTool(obj)
         %UPDATEFROMTOOL Refresh cursor-dependent host UI after tool interaction.
@@ -3367,6 +3507,30 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     %% Derived getters and setters
     methods
+
+        function S = getOnScreenSize(obj)
+        %GETONSCREENSIZE Return the realized axes size in display units.
+        %
+        %   S = AX.getOnScreenSize() measures the hosted UIAxes inner drawable
+        %   region rather than its outer decoration rectangle or the surrounding
+        %   ImageAxes component. S.Pixels is the realized [width height] in
+        %   logical screen pixels. The physical-unit values use MATLABX's
+        %   calibrated screen pixels-per-inch value and therefore match the
+        %   measurement used by physical overlay export sizing.
+            diagnostics = obj.getSizeDiagnostics();
+            pixels = diagnostics.MainAxesInnerPositionPx(3:4);
+            pixelsPerInch = obj.UICal.PixelsPerInch;
+            if ~isfinite(pixelsPerInch) || pixelsPerInch <= 0
+                pixelsPerInch = get(groot,'ScreenPixelsPerInch');
+            end
+
+            inches = pixels ./ pixelsPerInch;
+            S = struct( ...
+                "Pixels", pixels, ...
+                "Inches", inches, ...
+                "Centimeters", inches .* 2.54, ...
+                "PixelsPerInch", pixelsPerInch);
+        end
 
         function S = getStatusSummary(obj)
         %GETSTATUSSUMMARY Return compact ImageAxes operational status.
@@ -3406,6 +3570,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 "ZoomFactor", viewport.ZoomFactor, ...
                 "ZoomLevel", viewport.ZoomLevel);
             S.Display = struct( ...
+                "AxesSize", obj.getOnScreenSize(), ...
                 "MaskEnabled", string(obj.MaskEnabled), ...
                 "HasMask", ~isempty(obj.Mask), ...
                 "OverlaysVisible", string(obj.OverlaysVisible), ...
@@ -3847,7 +4012,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.ToolManager.unregister(tool);
         end
 
-        % load all tools in matlabx.ui.axes.tools
+        % load all tools in matlabx.ui.axes.tools.image
         function loadAllTools(obj)
         %LOADALLTOOLS Load all tools.
             obj.ToolManager.loadAll();
@@ -3885,7 +4050,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         % install tool specified by name
         function installTool(obj,name)
-        %INSTALLTOOL Install a loaded built-in name or an application AxesTool.
+        %INSTALLTOOL Install a loaded built-in name or an application ImageAxesTool.
         %   Object inputs must belong to this host and remain application-owned.
             obj.ToolManager.install(name);
         end
@@ -4409,8 +4574,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         function names = getToolClassNames()
         %GETTOOLCLASSNAMES Return fully qualified built-in tool class names.
-            % get cell array of char vectors of tool class names in matlabx.ui.axes.tools
-            names = {matlab.metadata.Namespace.fromName("matlabx.ui.axes.tools").ClassList.Name}';
+            % get cell array of char vectors of tool class names in matlabx.ui.axes.tools.image
+            names = {matlab.metadata.Namespace.fromName("matlabx.ui.axes.tools.image").ClassList.Name}';
         end
 
         function names = getToolNames()
@@ -4461,7 +4626,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
         function names = getDefaultTools()
         %GETDEFAULTTOOLS Return default tools.
-            names = {'Zoom','Colorbar','ChooseColormap','DisplayLimits'};
+            names = {'Zoom','Colorbar','ChooseColormap','DisplayLimits','ExportView'};
         end
 
         function props = getLinkableProperties()
@@ -4781,4 +4946,28 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
     end
 
+end
+
+function restoreFigureWindowStyle_(fig,windowStyle)
+%RESTOREFIGUREWINDOWSTYLE_ Restore a valid host figure after modal dialogs.
+    if ~isempty(fig) && isvalid(fig)
+        fig.WindowStyle = windowStyle;
+    end
+end
+
+function inches = outputSizeInches_(value,units,resolution)
+%OUTPUTSIZEINCHES_ Convert export canvas dimensions to physical inches.
+    switch string(units)
+        case "pixels"
+            inches = value ./ resolution;
+        case "inches"
+            inches = value;
+        case "centimeters"
+            inches = value ./ 2.54;
+        case "points"
+            inches = value ./ 72;
+        otherwise
+            error('matlabx:ui:axes:ImageAxes:InvalidExportUnits', ...
+                'Unsupported export units "%s".',string(units));
+    end
 end

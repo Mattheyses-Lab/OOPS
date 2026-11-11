@@ -1,6 +1,6 @@
-classdef ChooseColormap < matlabx.ui.axes.AxesTool
+classdef ChooseColormap < matlabx.ui.axes.ImageAxesTool
 %CHOOSECOLORMAP Axes tool for choosing the current component colormap.
-% matlabx.ui.axes.tools.ChooseColormap
+% matlabx.ui.axes.tools.image.ChooseColormap
 % when button pushed:
 %   Open colormap selector and set colormap for current channel
 
@@ -23,9 +23,8 @@ classdef ChooseColormap < matlabx.ui.axes.AxesTool
     methods
 
         function obj = ChooseColormap(host)
-            obj@matlabx.ui.axes.AxesTool(host, "ChooseColormap", ...
+            obj@matlabx.ui.axes.ImageAxesTool(host, "ChooseColormap", ...
                 'Tooltip','Choose colormap', ...
-                'AxesType',"image", ...
                 'Icon',matlabx.internal.Paths.icons('ChooseColormapWhiteFGTransparentBG.svg'), ...
                 'Style','push', ...
                 'Priority',1);
