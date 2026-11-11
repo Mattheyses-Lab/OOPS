@@ -89,6 +89,38 @@ classdef ImageAxesOverlayManager < handle
             for i=1:numel(collections), collections{i}.Visible=value; end
         end
 
+        function cleanup = beginExportStyleScale(obj,scale)
+        %BEGINEXPORTSTYLESCALE Temporarily scale native overlay primitives.
+        %
+        %   CLEANUP = beginExportStyleScale(SCALE) changes only rendered
+        %   graphics properties. Overlay model/style properties are untouched.
+        %   Deleting CLEANUP restores every surviving primitive.
+            arguments
+                obj (1,1) matlabx.ui.axes.ImageAxesOverlayManager
+                scale (1,1) double {mustBePositive,mustBeFinite}
+            end
+
+            handles = matlab.graphics.Graphics.empty();
+            overlays = obj.all();
+            for i = 1:numel(overlays)
+                overlay = overlays{i};
+                if ~isempty(overlay) && isvalid(overlay)
+                    handles = [handles;overlay.exportGraphics()]; %#ok<AGROW>
+                end
+            end
+            collections = obj.getBoundaryCollections();
+            for i = 1:numel(collections)
+                handles = [handles;collections{i}.exportGraphics()]; %#ok<AGROW>
+            end
+            % Each native overlay owns its primitives, while each shared
+            % collection is visited once. Avoid UNIQUE here because MATLAB
+            % graphics arrays can contain heterogeneous handle classes.
+            handles = handles(isgraphics(handles));
+
+            state = obj.captureScaledGraphics_(handles,scale);
+            cleanup = onCleanup(@() obj.restoreScaledGraphics_(state));
+        end
+
         function overlay = add(obj, typeOrOverlay, varargin)
         %ADD Add an existing overlay or construct one by short type name.
             % Accept either a fully constructed overlay object or a simple type
@@ -505,6 +537,37 @@ classdef ImageAxesOverlayManager < handle
                 visible = obj.Host.OverlaysVisible == "on" && overlay.appliesToView( ...
                     obj.Host.C, obj.Host.Z, obj.Host.T, obj.Host.ShowComposite);
                 overlay.setViewVisible(matlab.lang.OnOffSwitchState(visible));
+            end
+        end
+    end
+
+    methods (Static, Access=private)
+        function state = captureScaledGraphics_(handles,scale)
+        %CAPTURESCALEDGRAPHICS_ Snapshot and scale supported size properties.
+            names = ["LineWidth","MarkerSize","FontSize","SizeData"];
+            powers = [1 1 1 2];
+            state = struct('Handle',{},'Property',{},'Value',{});
+            for i = 1:numel(handles)
+                h = handles(i);
+                for j = 1:numel(names)
+                    name = names(j);
+                    if ~isprop(h,name), continue; end
+                    value = h.(name);
+                    if ~isnumeric(value) || isempty(value), continue; end
+                    state(end+1) = struct( ... %#ok<AGROW>
+                        'Handle',h,'Property',name,'Value',value);
+                    h.(name) = value .* scale.^powers(j);
+                end
+            end
+        end
+
+        function restoreScaledGraphics_(state)
+        %RESTORESCALEDGRAPHICS_ Restore surviving primitives after export.
+            for i = numel(state):-1:1
+                h = state(i).Handle;
+                if isgraphics(h) && isprop(h,state(i).Property)
+                    h.(state(i).Property) = state(i).Value;
+                end
             end
         end
     end

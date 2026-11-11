@@ -312,7 +312,7 @@ classdef Violin < handle
                         point = obj.Parent.CurrentPoint;
                         datatip(obj.violinPoints,point(1,1),point(1,2));
                     elseif summaryMatches
-                        datatip(obj.centralStatLine,DataIndex=2);
+                        obj.toggleSummaryDataTip();
                     else
                         return;
                     end
@@ -348,6 +348,31 @@ classdef Violin < handle
             end
             candidate = datatip(obj.centralStatLine,DataIndex=2);
             obj.replaceHoverDataTip(candidate,obj.centralStatLine);
+        end
+
+        function toggleSummaryDataTip(obj)
+        %TOGGLESUMMARYDATATIP Toggle the retained tip represented by the line.
+        %   The summary line is a larger interaction target for the central
+        %   point at DataIndex 2. MATLAB toggles a tip when its origin is
+        %   clicked directly, but cannot infer that a click elsewhere on this
+        %   line represents the same origin. Remove any matching retained tips
+        %   explicitly before deciding whether to create a new one.
+
+            tips = findall(obj.centralStatLine,'Type','datatip');
+            matching = false(size(tips));
+            for k = 1:numel(tips)
+                try
+                    matching(k) = isequal(tips(k).DataIndex,2);
+                catch
+                    matching(k) = false;
+                end
+            end
+
+            if any(matching)
+                delete(tips(matching));
+            else
+                datatip(obj.centralStatLine,DataIndex=2);
+            end
         end
 
         function replaceHoverDataTip(obj,candidate,target)

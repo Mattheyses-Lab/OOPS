@@ -210,6 +210,13 @@ classdef ImageAxesOverlay < handle & matlab.mixin.SetGetExactNames
         end
     end
 
+    methods (Access=?matlabx.ui.axes.ImageAxesOverlayManager)
+        function h = exportGraphics(obj)
+        %EXPORTGRAPHICS Return valid primitives for scoped export styling.
+            h = obj.Graphics(isgraphics(obj.Graphics));
+        end
+    end
+
     methods
         function updateGeometry(~)
         %UPDATEGEOMETRY Subclasses update geometry in this hook.

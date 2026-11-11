@@ -404,9 +404,10 @@ Line and rectangle creation use a small screen-pixel drag threshold, so an
 accidental click does not leave an invisible zero-length line or zero-size
 rectangle. Interactive overlay geometry is clamped to image bounds.
 
-Tool subclasses inherit from `matlabx.ui.axes.AxesTool`. A custom tool usually:
+Image tool subclasses inherit from `matlabx.ui.axes.ImageAxesTool`. A custom
+tool usually:
 
-- calls the `AxesTool` constructor with a name, style, icon, hotkey, and
+- calls the `ImageAxesTool` constructor with a name, style, icon, hotkey, and
   routing flags
 - overrides lifecycle hooks such as `onInstall`, `onEnabled`, `onDisabled`, or
   `onPush`
@@ -419,12 +420,11 @@ Tool subclasses inherit from `matlabx.ui.axes.AxesTool`. A custom tool usually:
 Minimal custom tool sketch:
 
 ```matlab
-classdef MyTool < matlabx.ui.axes.AxesTool
+classdef MyTool < matlabx.ui.axes.ImageAxesTool
     methods
         function obj = MyTool(host)
-            obj@matlabx.ui.axes.AxesTool(host, "MyTool", ...
+            obj@matlabx.ui.axes.ImageAxesTool(host, "MyTool", ...
                 "Style", "state", ...
-                "AxesType", "image", ...
                 "ToggleHotkey", matlabx.keyboard.hotkey("m"), ...
                 "InterceptsDown", true);
         end
@@ -656,7 +656,8 @@ hit-test ownership and manager lookup.
 ### Application-Owned Axes Tools
 
 Applications can contribute toolbar buttons, hotkeys, context menus, and routed
-interaction through an `AxesTool` subclass outside MATLABX's tool package:
+interaction through an `ImageAxesTool` subclass outside MATLABX's built-in
+`matlabx.ui.axes.tools.image` package:
 
 ```matlab
 tool = myapp.ui.axes.tools.CustomTool(viewer);
@@ -665,8 +666,8 @@ viewer.uninstallTool(tool); % Removes UI/bindings; tool remains alive.
 viewer.installTool(tool);   % Reinstall the same object.
 ```
 
-The tool must be a valid scalar `matlabx.ui.axes.AxesTool` constructed for that
-viewer. Its `Name` must be a MATLAB identifier unique among installed tools.
+The tool must be a valid scalar `matlabx.ui.axes.ImageAxesTool` constructed for
+that viewer. Its `Name` must be a MATLAB identifier unique among installed tools.
 Repeated installation of the same instance is a no-op; a different instance
 with the same installed name is rejected. Tools cannot transfer between hosts.
 `viewer.getInstalledTool("CustomTool")` returns the installed object or empty.
@@ -792,9 +793,21 @@ Before mounting different content, the host explicitly resets axes presentation
 (ticks, labels, scales, limits, aspect ratios, grids, view, legends, and colorbars).
 It never uses `cla reset` or reparents a ComponentContainer. Renderer Style
 supplies background/foreground colors through the host's presentation properties.
-The `routeEvent(kind,event)` / `handleEvent(kind,event)` seam is preserved for
-future integration; this version does not add FigureEventHub routing, tools,
-hotkeys, or polar axes.
+`PlotAxes` has its own `PlotAxesTool` lifecycle, toolbar, hotkey registry, and
+configurable context menu. Built-ins live in `matlabx.ui.axes.tools.plot`, while
+application tools can be installed as objects:
+
+```matlab
+host.Tools = ["Export","CopyGraphics"];
+host.ContextMenuItems = ["Display","ResetView","Status"];
+host.installTool(myapp.ui.axes.CustomPlotTool(host));
+```
+
+`Export` writes PDF/SVG vector graphics or PNG/TIFF raster graphics according
+to the selected filename. `CopyGraphics` places vector graphics on the system
+clipboard. Both contribute toolbar buttons and owner-scoped context-menu
+commands. Hub events pass through installed plot tools before unconsumed events
+reach the mounted renderer.
 
 Low-level `matlabx.ui.axes.plot.Scatter` and `Violin` each own one logical dataset
 and several graphics primitives. `setParent(axes)` moves every owned primitive;

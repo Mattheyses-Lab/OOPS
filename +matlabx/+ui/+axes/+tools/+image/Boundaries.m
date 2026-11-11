@@ -1,4 +1,4 @@
-classdef Boundaries < matlabx.ui.axes.AxesTool
+classdef Boundaries < matlabx.ui.axes.ImageAxesTool
 %BOUNDARIES Interact with batched BoundaryCollection entries.
 %
 %   Boundaries applies standard ImageAxes activation, hover, selection, and
@@ -33,8 +33,8 @@ classdef Boundaries < matlabx.ui.axes.AxesTool
     methods
         function obj=Boundaries(host)
         %BOUNDARIES Create the shared-boundary controller.
-            obj@matlabx.ui.axes.AxesTool(host,"Boundaries", ...
-                Tooltip='Show/Hide Boundaries',AxesType="image",Style='state', ...
+            obj@matlabx.ui.axes.ImageAxesTool(host,"Boundaries", ...
+                Tooltip='Show/Hide Boundaries',Style='state', ...
                 Icon=matlabx.internal.Paths.icons('ObjectsWhiteFGTransparentBG.svg'), ...
                 Priority=10,PassivelyInterceptsDown=true,PassivelyInterceptsMove=true);
         end

@@ -1,4 +1,4 @@
-classdef Overlays < matlabx.ui.axes.AxesTool
+classdef Overlays < matlabx.ui.axes.ImageAxesTool
 %OVERLAYS Toolbar toggle for ImageAxes.OverlaysVisible.
 
 % matlabx - MATLAB utilities for app building, image display, and analysis.
@@ -23,9 +23,8 @@ classdef Overlays < matlabx.ui.axes.AxesTool
 
     methods
         function obj = Overlays(host)
-            obj@matlabx.ui.axes.AxesTool(host, "Overlays", ...
+            obj@matlabx.ui.axes.ImageAxesTool(host, "Overlays", ...
                 'Tooltip', 'Show/Hide Overlays', ...
-                'AxesType', "image", ...
                 'Icon', matlabx.internal.Paths.icons('EyeWhiteFGTransparentBG.svg'));
         end
 

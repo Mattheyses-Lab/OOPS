@@ -118,6 +118,97 @@ function testResetAndEmptyContent(t)
     t.verifyEmpty(findobj(a.Axes,'Type','scatter'));
 end
 
+function testResetViewRestoresRendererDefinedViolinLimits(t)
+    host=t.TestData.A; renderer=t.TestData.Violin;
+    host.mount(renderer);
+    originalXLim=host.Axes.XLim;
+    originalTicks=host.Axes.XTick;
+    originalLabels=string(host.Axes.XTickLabel);
+
+    host.Axes.XLim=[0.75 2.25];
+    host.Axes.XTick=[];
+    host.Axes.XTickLabel={};
+    host.resetView();
+
+    t.verifyEqual(host.Axes.XLim,originalXLim);
+    t.verifyEqual(host.Axes.XLim,[0 3]);
+    t.verifyEqual(host.Axes.XTick,originalTicks);
+    t.verifyEqual(string(host.Axes.XTickLabel),originalLabels);
+end
+
+function testViolinStyleAxesLimitsAndModes(t)
+    host=t.TestData.A; renderer=t.TestData.Violin;
+    style=matlabx.ui.axes.plot.ViolinStyle( ...
+        XLim=[0.5 2.5],YLim=[900 2100]);
+    t.verifyEqual(style.XLimMode,"manual");
+    t.verifyEqual(style.YLimMode,"manual");
+
+    renderer.setStyle(style);
+    host.mount(renderer);
+    t.verifyEqual(host.Axes.XLim,[0.5 2.5]);
+    t.verifyEqual(host.Axes.YLim,[900 2100]);
+
+    style.XLimMode="auto";
+    style.YLimMode="auto";
+    t.verifyEmpty(style.XLim);
+    t.verifyEmpty(style.YLim);
+    renderer.setStyle(style);
+    t.verifyEqual(host.Axes.XLim,[0 3]);
+    t.verifyEqual(string(host.Axes.YLimMode),"auto");
+
+    t.verifyError(@() setManualModeWithoutLimits(style), ...
+        'matlabx:ui:axes:plot:MissingManualLimits');
+    autoWins=matlabx.ui.axes.plot.ViolinStyle( ...
+        XLim=[0.5 2.5],XLimMode="auto");
+    t.verifyEmpty(autoWins.XLim);
+    t.verifyEqual(autoWins.XLimMode,"auto");
+end
+
+function testScatterStyleAxesLimitsAndModes(t)
+    host=t.TestData.A; renderer=t.TestData.Scatter;
+    style=matlabx.ui.axes.plot.ScatterStyle( ...
+        XLim=[0 5],YLim=[1 6]);
+    t.verifyEqual(style.XLimMode,"manual");
+    t.verifyEqual(style.YLimMode,"manual");
+
+    renderer.setStyle(style);
+    host.mount(renderer);
+    t.verifyEqual(host.Axes.XLim,[0 5]);
+    t.verifyEqual(host.Axes.YLim,[1 6]);
+    t.verifyEqual(countMenuItems(host,"Properties..."),1);
+
+    style.XLimMode="auto";
+    style.YLimMode="auto";
+    t.verifyEmpty(style.XLim);
+    t.verifyEmpty(style.YLim);
+    renderer.setStyle(style);
+    t.verifyEqual(string(host.Axes.XLimMode),"auto");
+    t.verifyEqual(string(host.Axes.YLimMode),"auto");
+
+    t.verifyError(@() setManualModeWithoutLimits(style), ...
+        'matlabx:ui:axes:plot:MissingManualLimits');
+    autoWins=matlabx.ui.axes.plot.ScatterStyle( ...
+        XLim=[0 5],XLimMode="auto");
+    t.verifyEmpty(autoWins.XLim);
+    t.verifyEqual(autoWins.XLimMode,"auto");
+end
+
+function testMountedContentOwnsContextMenuContributions(t)
+    a=t.TestData.A; b=t.TestData.B; renderer=t.TestData.Violin;
+
+    a.mount(renderer);
+    t.verifyEqual(countMenuItems(a,"Properties..."),1);
+
+    % Transferring content removes its command from the old host and creates
+    % exactly one contribution in the new host.
+    b.mount(renderer);
+    t.verifyEqual(countMenuItems(a,"Properties..."),0);
+    t.verifyEqual(countMenuItems(b,"Properties..."),1);
+
+    b.clear();
+    t.verifyEqual(countMenuItems(b,"Properties..."),0);
+end
+
 function testClearRestoresHostAxesBaseline(t)
     a=t.TestData.A; v=t.TestData.Violin;
     foreground=[0.2 0.4 0.6];
@@ -224,6 +315,17 @@ function testRoutedDataTips(t)
     summaryTip=findall(marker(1),'Type','datatip');
     t.verifyNumElements(summaryTip,1);
     t.verifyEqual(summaryTip.DataIndex,2);
+
+    % The entire summary line represents DataIndex 2. Repeated clicks should
+    % toggle that retained tip rather than creating identical tips forever.
+    event=matlabx.ui.interaction.HubEvent( ...
+        t.TestData.Figure,marker(1),"Down",[]);
+    host.onDown(event);
+    t.verifyEmpty(findall(marker(1),'Type','datatip'));
+    event=matlabx.ui.interaction.HubEvent( ...
+        t.TestData.Figure,marker(1),"Down",[]);
+    host.onDown(event);
+    t.verifyNumElements(findall(marker(1),'Type','datatip'),1);
 
     % Hub hit testing may return internal opaque data-tip objects. Any target
     % outside the ordinary graphics hierarchy must simply fail to match.
@@ -454,5 +556,18 @@ function testStandaloneScatterParent(t)
     t.verifyEmpty(p.Parent);
     for h=graphics'
         t.verifyEmpty(h.Parent);
+    end
+end
+
+function setManualModeWithoutLimits(style)
+    style.XLimMode="manual";
+end
+
+function count = countMenuItems(host,label)
+    items=findall(host.Axes.ContextMenu,'Type','uimenu');
+    if isempty(items)
+        count=0;
+    else
+        count=sum(string({items.Text}) == string(label));
     end
 end

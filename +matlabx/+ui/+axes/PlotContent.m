@@ -14,6 +14,10 @@ classdef PlotContent < handle
 %   host.clear;
 %   otherHost.mount(content);
 %
+% Subclasses may also override contributeContextMenu to add commands that
+% make sense only while that content is mounted. PlotAxes owns the resulting
+% menu graphics and removes them automatically when the content is detached.
+%
 % See also matlabx.ui.axes.PlotAxes,
 % matlabx.ui.axes.plot.ScatterRenderer,
 % matlabx.ui.axes.plot.ViolinRenderer
@@ -101,6 +105,14 @@ classdef PlotContent < handle
 
         function handleEvent(~,~,~)
         %HANDLEEVENT Future FigureEventHub routing hook; subclasses may override.
+        end
+
+        function contributeContextMenu(~,~)
+        %CONTRIBUTECONTEXTMENU Add optional content-specific menu commands.
+        %
+        % Subclasses receive the host's PlotAxesContextMenuManager after a
+        % successful attachment. Contributions should set Owner to the content
+        % object so PlotAxes can remove them as one lifecycle-owned group.
         end
 
     end
