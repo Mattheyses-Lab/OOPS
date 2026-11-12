@@ -134,6 +134,7 @@ classdef ViolinRenderer < matlabx.ui.axes.PlotContent
                 end
                 plot.ViolinFaceColor = obj.resolveColor( ...
                     style.ViolinFaceColorMode,style.ViolinFaceColor,automatic(k,:));
+                plot.ViolinFaceAlpha = style.ViolinFaceAlpha;
                 plot.ViolinLineWidth = style.ViolinLineWidth;
                 plot.ViolinEdgeColor = obj.resolveColor( ...
                     style.ViolinEdgeColorMode,style.ViolinEdgeColor,automatic(k,:));
