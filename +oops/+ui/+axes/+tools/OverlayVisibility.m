@@ -2,7 +2,7 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-classdef OverlayVisibility < matlabx.ui.axes.AxesTool
+classdef OverlayVisibility < matlabx.ui.axes.ImageAxesTool
 %OVERLAYVISIBILITY Control one passive application-overlay mount.
 % Enabled records the user's preference. Available records whether the
 % active model/view source can currently provide the requested content.
@@ -34,9 +34,8 @@ classdef OverlayVisibility < matlabx.ui.axes.AxesTool
                 opts.Icon = []
             end
 
-            obj@matlabx.ui.axes.AxesTool(host,name, ...
+            obj@matlabx.ui.axes.ImageAxesTool(host,name, ...
                 'Tooltip',char(opts.Tooltip), ...
-                'AxesType',"image", ...
                 'Icon',opts.Icon, ...
                 'Style','state');
 

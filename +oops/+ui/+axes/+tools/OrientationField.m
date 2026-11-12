@@ -2,7 +2,7 @@
 % Copyright (C) 2026 William Dean
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-classdef OrientationField < matlabx.ui.axes.AxesTool
+classdef OrientationField < matlabx.ui.axes.ImageAxesTool
 %ORIENTATIONFIELD Control one passive orientation-field mount in ImageAxes.
 % Enabled records the user's visibility preference. Available records whether
 % the current viewer source and model outputs can supply field data.
@@ -29,9 +29,8 @@ classdef OrientationField < matlabx.ui.axes.AxesTool
                 mount (1,1) matlabx.ui.axes.ImageAxesOverlayMount
             end
 
-            obj@matlabx.ui.axes.AxesTool(host,"OrientationField", ...
+            obj@matlabx.ui.axes.ImageAxesTool(host,"OrientationField", ...
                 'Tooltip','Show/Hide Orientation Field', ...
-                'AxesType',"image", ...
                 'Icon',matlabx.internal.Paths.icons('VectorFieldWhiteFGTransparentBG.svg'), ...
                 'Style','state');
 
