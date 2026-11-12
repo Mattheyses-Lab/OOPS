@@ -168,6 +168,7 @@ classdef ScatterRenderer < matlabx.ui.axes.PlotContent
             axes.XTickLabelMode = 'auto';
             axes.YTickLabelMode = 'auto';
             obj.Host.BackgroundColor = style.BackgroundColor;
+            obj.Host.Color = style.BackgroundColor;
             obj.Host.ForegroundColor = style.ForegroundColor;
             obj.refreshLegend(axes,automatic);
 
