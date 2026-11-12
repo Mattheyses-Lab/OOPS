@@ -265,7 +265,7 @@ function accordion = accordionDemo()
         "ExpandedBorderWidth",1,...
         "TitlePadding",1);
     % set size and spacing of pane grid
-    accordion.Items(4).Pane.RowHeight = {25,25,25};
+    accordion.Items(4).Pane.RowHeight = {'fit','fit','fit'};
     accordion.Items(4).Pane.ColumnWidth = {'fit','1x'};
     accordion.Items(4).Pane.RowSpacing = 5;
     accordion.Items(4).Pane.ColumnSpacing = 5;

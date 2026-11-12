@@ -92,11 +92,13 @@ classdef ParamsDialog < handle
             % flag to track whether the form includes any dropdowns/colorpicker/etc.
             hasDropDown = false;
 
-            rowH = 20;
+            % These values estimate the space required by intrinsic-height
+            % controls; the grid itself uses "fit" rather than fixed rows.
+            estimatedRowH = 22;
             pad = 10;
-            buttonH = 20;
-            rowSpacing = 10;
-            columnSpacing = 10;
+            estimatedButtonH = 22;
+            rowSpacing = 5;
+            columnSpacing = 5;
             controlWidth = 250;
 
             % Size the label column from this dialog's actual labels. The
@@ -113,7 +115,7 @@ classdef ParamsDialog < handle
                 labelWidth = min(280,max(140,ceil(7.5 * max(strlength(labels))) + 12));
             end
             figW = 2*pad + labelWidth + columnSpacing + controlWidth;
-            figH = 2*pad + n*rowH + n*rowSpacing + buttonH;
+            figH = 2*pad + n*estimatedRowH + n*rowSpacing + estimatedButtonH;
 
             self.Figure = uifigure( ...
                 'Visible', 'off', ...
@@ -125,7 +127,7 @@ classdef ParamsDialog < handle
 
             self.Grid = uigridlayout(self.Figure, [n+1 2]);
             self.Grid.Padding = [pad pad pad pad];
-            self.Grid.RowHeight = [repmat({rowH},1,n), {buttonH}];
+            self.Grid.RowHeight = repmat({'fit'},1,n+1);
             self.Grid.ColumnWidth = {labelWidth, '1x'};
             self.Grid.RowSpacing = rowSpacing;
             self.Grid.ColumnSpacing = columnSpacing;
@@ -162,8 +164,8 @@ classdef ParamsDialog < handle
             btnGrid.Layout.Column = [1 2];
             btnGrid.Padding = [0 0 0 0];
             btnGrid.RowSpacing = 0;
-            btnGrid.ColumnSpacing = 10;
-            btnGrid.RowHeight = {'1x'};
+            btnGrid.ColumnSpacing = 5;
+            btnGrid.RowHeight = {'fit'};
             btnGrid.ColumnWidth = {'1x','1x'};
 
             % OK button

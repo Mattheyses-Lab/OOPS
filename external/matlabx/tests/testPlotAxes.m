@@ -118,6 +118,83 @@ function testResetAndEmptyContent(t)
     t.verifyEmpty(findobj(a.Axes,'Type','scatter'));
 end
 
+function testDefaultTypographyUsesPointEquivalentOfLegacyPixels(t)
+    host=t.TestData.A;
+    t.verifyEqual(host.FontUnits,"points");
+    t.verifyEqual(host.FontSize,9);
+    t.verifyEqual(host.LabelFontSizeMultiplier,1);
+    t.verifyEqual(host.TitleFontSizeMultiplier,1);
+    t.verifyEqual(string(host.Axes.FontUnits),"points");
+    t.verifyEqual(host.Axes.FontSize,9);
+    t.verifyEqual(host.Axes.LabelFontSizeMultiplier,1);
+    t.verifyEqual(host.Axes.TitleFontSizeMultiplier,1);
+    t.verifyEqual(string(host.Axes.ToolbarLocation),"inside");
+    t.verifyEqual(string(host.ToolbarExpanded),"on");
+    t.verifyEqual(string(host.Axes.Toolbar.Expanded),"on");
+    host.ToolbarExpanded="off";
+    t.verifyEqual(string(host.ToolbarExpanded),"off");
+    t.verifyEqual(string(host.Axes.Toolbar.Expanded),"off");
+    t.verifyEqual(string(host.TitleVisible),"off");
+    t.verifyEqual(string(host.Axes.Title.Visible),"off");
+end
+
+function testAxesColorAcceptsRgbAndNone(t)
+    host=t.TestData.A;
+    host.Color=[0.1 0.2 0.3];
+    drawnow;
+    t.verifyEqual(host.Axes.Color,[0.1 0.2 0.3]);
+    host.Color="none";
+    drawnow;
+    t.verifyEqual(string(host.Axes.Color),"none");
+end
+
+function testHostTypographyAndScopedExportAppearance(t)
+    host=t.TestData.A;
+    host.mount(t.TestData.Scatter);
+    host.FontName="Helvetica";
+    host.FontUnits="points";
+    host.FontSize=14;
+    host.LabelFontSizeMultiplier=1.2;
+    host.TitleFontSizeMultiplier=1.35;
+    drawnow;
+    t.verifyEqual(string(host.Axes.FontName),"Helvetica");
+    t.verifyEqual(string(host.Axes.FontUnits),"points");
+    t.verifyEqual(string(host.Axes.Title.FontUnits),"points");
+    t.verifyEqual(string(host.Axes.XLabel.FontUnits),"points");
+    t.verifyEqual(host.Axes.FontSize,14);
+    t.verifyEqual(host.Axes.LabelFontSizeMultiplier,1.2);
+    t.verifyEqual(host.Axes.TitleFontSizeMultiplier,1.35);
+
+    filename=string(tempname)+".png";
+    fileCleanup=onCleanup(@() deleteFileIfPresent(filename)); %#ok<NASGU>
+    originalBackground=host.BackgroundColor;
+    originalForeground=host.ForegroundColor;
+    originalColor=host.Color;
+    host.Axes.Title.String="Example title";
+    host.TitleVisible="on";
+    drawnow;
+    host.exportPlot(filename,ContentType="image",Units="inches", ...
+        Width=2,Height=2,Resolution=72, ...
+        BackgroundColor=[0.1 0.2 0.3],ForegroundColor=[0.9 0.8 0.7], ...
+        Color="none", ...
+        FontUnits="pixels",FontSize=20,LabelFontSizeMultiplier=1.4, ...
+        TitleFontSizeMultiplier=1.5,GridVisible="on",BoxVisible="on", ...
+        TitleVisible="off");
+    t.verifyTrue(isfile(filename));
+    t.verifyEqual(host.BackgroundColor,originalBackground);
+    t.verifyEqual(host.ForegroundColor,originalForeground);
+    t.verifyEqual(host.Color,originalColor);
+    t.verifyEqual(host.FontUnits,"points");
+    t.verifyEqual(string(host.Axes.Title.FontUnits),"points");
+    t.verifyEqual(host.FontSize,14);
+    t.verifyEqual(host.LabelFontSizeMultiplier,1.2);
+    t.verifyEqual(host.TitleFontSizeMultiplier,1.35);
+    t.verifyEqual(string(host.GridVisible),"off");
+    t.verifyEqual(string(host.BoxVisible),"off");
+    t.verifyEqual(string(host.Axes.Title.Visible),"on");
+    t.verifyEqual(string(host.TitleVisible),"on");
+end
+
 function testResetViewRestoresRendererDefinedViolinLimits(t)
     host=t.TestData.A; renderer=t.TestData.Violin;
     host.mount(renderer);
@@ -570,4 +647,8 @@ function count = countMenuItems(host,label)
     else
         count=sum(string({items.Text}) == string(label));
     end
+end
+
+function deleteFileIfPresent(filename)
+    if isfile(filename), delete(filename); end
 end

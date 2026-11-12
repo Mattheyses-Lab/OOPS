@@ -31,6 +31,15 @@ function teardown(testCase)
     delete(testCase.TestData.Figure);
 end
 
+function testToolbarPresentation(testCase)
+    ax = testCase.TestData.Axes;
+    nativeAxes = ax.getAxes();
+    verifyEqual(testCase,string(nativeAxes.ToolbarLocation),"inside");
+    verifyEqual(testCase,string(ax.ToolbarExpanded),"on");
+    ax.ToolbarExpanded = "off";
+    verifyEqual(testCase,string(nativeAxes.Toolbar.Expanded),"off");
+end
+
 function testMaskDisplay(testCase)
     ax = testCase.TestData.Axes;
     h = findobj(ax.getAxes(), 'Type','image');

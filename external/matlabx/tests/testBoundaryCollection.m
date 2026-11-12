@@ -159,3 +159,34 @@ function testUniformBaseColorDoesNotReplaceBoundaryColors(testCase)
     verifyEqual(testCase,unique(base.FaceVertexCData(firstVertices,:),'rows'),[1 0 0]);
     verifyEqual(testCase,unique(base.FaceVertexCData(secondVertices,:),'rows'),[0 1 0]);
 end
+
+function testExportStyleScaleWithBoundaryAndMixedOverlayGraphics(testCase)
+    ax=testCase.TestData.Axes;
+    collection=testCase.TestData.Collection;
+    rectangle=ax.Overlays.add('Rectangle','ID','export-rectangle', ...
+        'Position',[2 2 4 3],'LineWidth',1.25,'HandleMarkerSize',4);
+
+    patches=findobj(ax.getAxes(),'Type','patch','-regexp','Tag','^BoundaryCollection');
+    activeBounds=findobj(ax.getAxes(),'Tag','BoundaryCollectionActiveBounds');
+    rectanglePatch=findobj(ax.getAxes(),'Type','patch','Tag','OverlayRectangle');
+    patchWidths=[patches.LineWidth];
+    activeWidth=activeBounds.LineWidth;
+    rectangleWidth=rectangle.LineWidth;
+
+    cleanup=ax.Overlays.beginExportStyleScale(2);
+    verifyEqual(testCase,[patches.LineWidth],2*patchWidths);
+    verifyEqual(testCase,activeBounds.LineWidth,2*activeWidth);
+    verifyEqual(testCase,rectanglePatch(1).LineWidth,2*rectangleWidth);
+    clear cleanup;
+
+    verifyEqual(testCase,[patches.LineWidth],patchWidths);
+    verifyEqual(testCase,activeBounds.LineWidth,activeWidth);
+    verifyEqual(testCase,rectanglePatch(1).LineWidth,rectangleWidth);
+
+    % Empty and hidden collections retain their shared primitives and must
+    % remain valid participants in export-style collection.
+    collection.setData(string.empty(1,0),{},HitMap=[]);
+    collection.Visible='off';
+    cleanup=ax.Overlays.beginExportStyleScale(1.5);
+    clear cleanup;
+end

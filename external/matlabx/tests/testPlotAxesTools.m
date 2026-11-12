@@ -110,15 +110,23 @@ end
 
 function testContextMenuAndDisplayState(testCase)
     host = testCase.TestData.Host;
-    host.ContextMenuItems = ["Toolbar","Grid","Box"];
+    host.ContextMenuItems = ["Toolbar","Grid","Box","Title"];
     host.ToolbarVisible = 'off';
     host.GridVisible = 'on';
     host.BoxVisible = 'on';
+    host.TitleVisible = 'on';
     testCase.verifyEqual(host.Axes.Toolbar.Visible, ...
         matlab.lang.OnOffSwitchState.off);
     testCase.verifyEqual(host.Axes.XGrid,matlab.lang.OnOffSwitchState.on);
     testCase.verifyEqual(host.Axes.YGrid,matlab.lang.OnOffSwitchState.on);
     testCase.verifyEqual(host.Axes.Box,matlab.lang.OnOffSwitchState.on);
+    testCase.verifyEqual(host.Axes.Title.Visible, ...
+        matlab.lang.OnOffSwitchState.on);
+    testCase.verifyNumElements(findall(host.ContextMenu, ...
+        'Text','Show Title'),1);
+    host.toggleTitle();
+    testCase.verifyEqual(host.Axes.Title.Visible, ...
+        matlab.lang.OnOffSwitchState.off);
 end
 
 function testVectorAndRasterExport(testCase)
