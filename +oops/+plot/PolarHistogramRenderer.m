@@ -33,6 +33,7 @@ classdef PolarHistogramRenderer < matlabx.ui.axes.PlotContent
             end
 
             obj.Host.BackgroundColor = obj.Style.BackgroundColor;
+            obj.Host.Color = obj.Style.BackgroundColor;
             obj.Host.ForegroundColor = obj.Style.LabelsColor;
             obj.Plot.render(obj.Data,obj.Style);
         end
