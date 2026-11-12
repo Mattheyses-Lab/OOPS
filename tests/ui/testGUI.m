@@ -438,9 +438,12 @@ t.verifyTrue(all(ismember(["Edit...","Select objects with this label", ...
     "Delete label","New label...","Merge selected labels..."],texts)));
 
 unlabeled = nodes(ids == "unlabeled");
+unlabeledEdit = findall(unlabeled.ContextMenu,'Type','uimenu','Text','Edit...');
+t.verifyEqual(string(unlabeledEdit.Enable),"on");
 ui.LabelsTree.CheckedNodes = [unlabeled;first];
 ui.LabelsTree.CheckedNodesChangedFcn(ui.LabelsTree,[]);
-t.verifyFalse(any(string({ui.LabelsTree.CheckedNodes.NodeData}) == "unlabeled"));
+t.verifyTrue(any(string({ui.LabelsTree.CheckedNodes.NodeData}) == "unlabeled"));
+t.verifyTrue(all(string({mergeItems.Enable}) == "off"));
 
 objectsMenu = findall(ui.Fig,'Type','uimenu','Text','Objects');
 objectsMenu = objectsMenu(arrayfun(@(item) item.Parent == ui.Fig,objectsMenu));

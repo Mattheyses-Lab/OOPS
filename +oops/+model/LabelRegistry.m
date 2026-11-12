@@ -6,7 +6,10 @@ classdef LabelRegistry < handle
 %LABELREGISTRY Own ordered project labels and resolve them by ID or hotkey.
 
     properties (SetAccess=private)
+        % Label highlighted for single-label commands and Current plot scope.
         ActiveLabelID (1,1) string = ""
+        % Labels checked for batch commands and Selected plot scope.
+        SelectedLabelIDs (:,1) string = strings(0,1)
     end
 
     properties (Access=private)
@@ -18,6 +21,7 @@ classdef LabelRegistry < handle
     events
         LabelsChanged
         ActiveChanged
+        SelectionChanged
     end
 
     methods
@@ -159,6 +163,8 @@ classdef LabelRegistry < handle
                 color = double(opts.Color);
             end
 
+            % The fallback label is user-customizable, but its stable identity
+            % remains reserved so object reassignment always has a known target.
             if id == "unlabeled" && newID ~= id
                 error('oops:model:ReservedLabelID', ...
                     'The default unlabeled label must retain the ID "unlabeled".');
@@ -188,7 +194,17 @@ classdef LabelRegistry < handle
                 notify(obj,'ActiveChanged');
             end
 
+            selectionChanged = newID ~= id && any(obj.SelectedLabelIDs == id);
+
+            if selectionChanged
+                obj.SelectedLabelIDs(obj.SelectedLabelIDs == id) = newID;
+            end
+
             notify(obj,'LabelsChanged');
+
+            if selectionChanged
+                notify(obj,'SelectionChanged');
+            end
         end
 
         function remove(obj,id)
@@ -218,7 +234,17 @@ classdef LabelRegistry < handle
                 notify(obj,'ActiveChanged');
             end
 
+            selectionChanged = any(obj.SelectedLabelIDs == id);
+
+            if selectionChanged
+                obj.SelectedLabelIDs(obj.SelectedLabelIDs == id) = [];
+            end
+
             notify(obj,'LabelsChanged');
+
+            if selectionChanged
+                notify(obj,'SelectionChanged');
+            end
         end
 
         function move(obj,id,offset)
@@ -244,6 +270,8 @@ classdef LabelRegistry < handle
             end
 
             obj.Order([index target]) = obj.Order([target index]);
+            obj.SelectedLabelIDs = obj.Order( ...
+                ismember(obj.Order,obj.SelectedLabelIDs)).';
             notify(obj,'LabelsChanged');
         end
 
@@ -264,6 +292,28 @@ classdef LabelRegistry < handle
             notify(obj,'ActiveChanged');
         end
 
+        function setSelectedByID(obj,ids)
+        %SETSELECTEDBYID Store checked labels in persistent registry order.
+
+            ids = string(ids(:));
+            unknown = ids(~ismember(ids,obj.Order));
+
+            if ~isempty(unknown)
+                error('oops:model:UnknownLabel', ...
+                    'Unknown object label ID: %s',unknown(1));
+            end
+
+            % Canonical registry order also removes duplicate request IDs.
+            selected = obj.Order(ismember(obj.Order,ids)).';
+
+            if isequal(obj.SelectedLabelIDs,selected)
+                return;
+            end
+
+            obj.SelectedLabelIDs = selected;
+            notify(obj,'SelectionChanged');
+        end
+
         function S = toStruct(obj)
         %TOSTRUCT Serialize label values without handles or listeners.
 
@@ -281,6 +331,7 @@ classdef LabelRegistry < handle
             end
 
             S = struct('ActiveLabelID',obj.ActiveLabelID, ...
+                'SelectedLabelIDs',obj.SelectedLabelIDs, ...
                 'Order',obj.Order,'Labels',entries);
         end
 
@@ -363,6 +414,10 @@ classdef LabelRegistry < handle
             end
 
             obj.setActiveByID(string(S.ActiveLabelID));
+
+            if isfield(S,'SelectedLabelIDs')
+                obj.setSelectedByID(string(S.SelectedLabelIDs));
+            end
         end
 
     end

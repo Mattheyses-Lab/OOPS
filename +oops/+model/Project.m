@@ -57,6 +57,7 @@ classdef Project < handle
         DataChanged
         LabelsChanged
         ActiveLabelChanged
+        LabelSelectionChanged
         ChannelsChanged
         DirtyStateChanged
     end
@@ -800,6 +801,8 @@ classdef Project < handle
                 @(~,~) notify(obj,'LabelsChanged'));
             obj.LabelListeners(2) = addlistener(obj.Labels,'ActiveChanged', ...
                 @(~,~) notify(obj,'ActiveLabelChanged'));
+            obj.LabelListeners(3) = addlistener(obj.Labels,'SelectionChanged', ...
+                @(~,~) notify(obj,'LabelSelectionChanged'));
             obj.ChannelListener = addlistener(obj.Channels,'ChannelsChanged', ...
                 @(~,~) notify(obj,'ChannelsChanged'));
         end
@@ -809,7 +812,8 @@ classdef Project < handle
 
             for eventName = ["GroupAdded","GroupRemoved","GroupChanged", ...
                     "ImagesAdded","ImagesRemoved","ObjectsChanged", ...
-                    "CalibrationChanged","LabelsChanged","ChannelsChanged"]
+                    "CalibrationChanged","LabelsChanged","LabelSelectionChanged", ...
+                    "ChannelsChanged"]
                 obj.MutationListeners(end+1) = addlistener(obj,char(eventName), ...
                     @(~,~) obj.markDirty()); %#ok<AGROW>
             end

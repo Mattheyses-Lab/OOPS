@@ -9,6 +9,10 @@ classdef SwarmPlot < handle
     properties (Access=private)
         GroupingType_ (1,1) string = "Group"
         ColorMode_ (1,1) string = "Group"
+        % Project groups contributing objects to the violin plot.
+        GroupsIncluded_ (1,1) string {mustBeMember(GroupsIncluded_,["All","Current","Selected"])} = "All"
+        % Project labels contributing objects to the violin plot.
+        LabelsIncluded_ (1,1) string {mustBeMember(LabelsIncluded_,["All","Current","Selected"])} = "All"
         YVariable_ (1,1) string = "OrderMean"
         BackgroundColor_ (1,3) double {mustBeFinite,mustBeInRange(BackgroundColor_,0,1)} = [1.0 1.0 1.0]
         ForegroundColor_ (1,3) double {mustBeFinite,mustBeInRange(ForegroundColor_,0,1)} = [0.0 0.0 0.0]
@@ -42,6 +46,10 @@ classdef SwarmPlot < handle
     properties (Dependent)
         GroupingType
         ColorMode
+        % Public group-inclusion policy persisted with violin settings.
+        GroupsIncluded
+        % Public label-inclusion policy persisted with violin settings.
+        LabelsIncluded
         YVariable
         BackgroundColor
         ForegroundColor
@@ -101,6 +109,30 @@ classdef SwarmPlot < handle
         %SET.COLORMODE Validate, store, and notify a SwarmPlot setting change.
 
             obj.setValue("ColorMode",v);
+        end
+
+        function v = get.GroupsIncluded(obj)
+        %GET.GROUPSINCLUDED Return the group scope used to build plot data.
+
+            v = obj.GroupsIncluded_;
+        end
+
+        function set.GroupsIncluded(obj,v)
+        %SET.GROUPSINCLUDED Store and notify a group-scope change.
+
+            obj.setValue("GroupsIncluded",string(v));
+        end
+
+        function v = get.LabelsIncluded(obj)
+        %GET.LABELSINCLUDED Return the label scope used to build plot data.
+
+            v = obj.LabelsIncluded_;
+        end
+
+        function set.LabelsIncluded(obj,v)
+        %SET.LABELSINCLUDED Store and notify a label-scope change.
+
+            obj.setValue("LabelsIncluded",string(v));
         end
 
         function v = get.YVariable(obj)
@@ -460,6 +492,8 @@ classdef SwarmPlot < handle
             % Plain settings snapshot containing values only, without listeners.
             S = struct('GroupingType',obj.GroupingType, ...
                 'ColorMode',obj.ColorMode, ...
+                'GroupsIncluded',obj.GroupsIncluded, ...
+                'LabelsIncluded',obj.LabelsIncluded, ...
                 'YVariable',obj.YVariable, ...
                 'BackgroundColor',obj.BackgroundColor, ...
                 'ForegroundColor',obj.ForegroundColor, ...

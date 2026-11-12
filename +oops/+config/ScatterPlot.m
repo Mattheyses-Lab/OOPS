@@ -32,6 +32,10 @@ classdef ScatterPlot < handle
         HullEdgeAlpha_ (1,1) double {mustBeFinite,mustBeInRange(HullEdgeAlpha_,0,1)} = 1.0
         HullType_ (1,1) string = "concave"
         GroupingType_ (1,1) string = "Group"
+        % Project groups contributing objects to the scatter plot.
+        GroupsIncluded_ (1,1) string {mustBeMember(GroupsIncluded_,["All","Current","Selected"])} = "All"
+        % Project labels contributing objects to the scatter plot.
+        LabelsIncluded_ (1,1) string {mustBeMember(LabelsIncluded_,["All","Current","Selected"])} = "All"
         MarkerMode_ (1,1) string = "single"
     end
 
@@ -61,6 +65,10 @@ classdef ScatterPlot < handle
         HullEdgeAlpha
         HullType
         GroupingType
+        % Public group-inclusion policy persisted with scatter settings.
+        GroupsIncluded
+        % Public label-inclusion policy persisted with scatter settings.
+        LabelsIncluded
         MarkerMode
     end
 
@@ -385,6 +393,30 @@ classdef ScatterPlot < handle
             obj.setValue("GroupingType",v);
         end
 
+        function v = get.GroupsIncluded(obj)
+        %GET.GROUPSINCLUDED Return the group scope used to build plot data.
+
+            v = obj.GroupsIncluded_;
+        end
+
+        function set.GroupsIncluded(obj,v)
+        %SET.GROUPSINCLUDED Store and notify a group-scope change.
+
+            obj.setValue("GroupsIncluded",string(v));
+        end
+
+        function v = get.LabelsIncluded(obj)
+        %GET.LABELSINCLUDED Return the label scope used to build plot data.
+
+            v = obj.LabelsIncluded_;
+        end
+
+        function set.LabelsIncluded(obj,v)
+        %SET.LABELSINCLUDED Store and notify a label-scope change.
+
+            obj.setValue("LabelsIncluded",string(v));
+        end
+
         function v = get.MarkerMode(obj)
         %GET.MARKERMODE Return the stored MarkerMode setting.
 
@@ -426,6 +458,8 @@ classdef ScatterPlot < handle
                 'HullEdgeAlpha',obj.HullEdgeAlpha, ...
                 'HullType',obj.HullType, ...
                 'GroupingType',obj.GroupingType, ...
+                'GroupsIncluded',obj.GroupsIncluded, ...
+                'LabelsIncluded',obj.LabelsIncluded, ...
                 'MarkerMode',obj.MarkerMode);
         end
 

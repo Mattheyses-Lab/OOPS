@@ -51,6 +51,44 @@ registry.move("second",-1);
 t.verifyEqual(registry.ids(),["unlabeled" "second" "first"]);
 end
 
+function testUnlabeledIsSelectableAndCustomizable(t)
+%TESTUNLABELEDISSELECTABLEANDCUSTOMIZABLE Preserve identity while allowing appearance edits.
+
+registry = oops.model.LabelRegistry.default();
+cleanup = onCleanup(@() delete(registry)); %#ok<NASGU>
+registry.setSelectedByID("unlabeled");
+registry.edit("unlabeled",Name="No label",Hotkey="n",Color=[.2 .3 .4]);
+
+t.verifyEqual(registry.SelectedLabelIDs,"unlabeled");
+t.verifyEqual(registry.getByID("unlabeled").Name,"No label");
+t.verifyEqual(registry.getByID("unlabeled").Hotkey,"n");
+t.verifyEqual(registry.getByID("unlabeled").Color,[.2 .3 .4]);
+t.verifyError(@() registry.edit("unlabeled",ID="other"), ...
+    'oops:model:ReservedLabelID');
+end
+
+function testSelectedLabelsPersistInRegistryOrder(t)
+%TESTSELECTEDLABELSPERSISTINREGISTRYORDER Preserve checked-label plot scope.
+
+registry = oops.model.LabelRegistry.default();
+cleanup = onCleanup(@() delete(registry)); %#ok<NASGU>
+registry.add("First",ID="first",Hotkey="1");
+registry.add("Second",ID="second",Hotkey="2");
+
+registry.setSelectedByID(["second","unlabeled","first"]);
+t.verifyEqual(registry.SelectedLabelIDs,["unlabeled";"first";"second"]);
+
+registry.move("second",-1);
+t.verifyEqual(registry.SelectedLabelIDs,["unlabeled";"second";"first"]);
+
+restored = oops.model.LabelRegistry.fromStruct(registry.toStruct());
+restoredCleanup = onCleanup(@() delete(restored)); %#ok<NASGU>
+t.verifyEqual(restored.SelectedLabelIDs,["unlabeled";"second";"first"]);
+
+restored.remove("second");
+t.verifyEqual(restored.SelectedLabelIDs,["unlabeled";"first"]);
+end
+
 function testImageAppliesOneLabelToSelectedObjectBatch(t)
 %TESTIMAGEAPPLIESONELABELTOSELECTEDOBJECTBATCH Preserve unselected labels.
 

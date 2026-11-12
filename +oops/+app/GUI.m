@@ -1013,6 +1013,10 @@ classdef GUI < handle
             % Data selection and grouping.
             obj.addSetting("Scatterplot","Group points by","ScatterPlot","GroupingType",["Group","Label"]);
             obj.addSetting("Scatterplot","Color points by","ScatterPlot","ColorMode",["Group","Label","Magnitude"]);
+            obj.addSetting("Scatterplot","Groups included", ...
+                "ScatterPlot","GroupsIncluded",["All","Current","Selected"]);
+            obj.addSetting("Scatterplot","Labels included", ...
+                "ScatterPlot","LabelsIncluded",["All","Current","Selected"]);
 
             % Point-marker visibility and appearance.
             obj.addSetting("Scatterplot","Marker mode","ScatterPlot","MarkerMode",["single","multi","auto"]);
@@ -1059,6 +1063,10 @@ classdef GUI < handle
             % Data selection and grouping.
             obj.addSetting("Swarmplot","Group points by","SwarmPlot","GroupingType",["Group","Label","Both"]);
             obj.addSetting("Swarmplot","Color points by","SwarmPlot","ColorMode",["Group","Label","Magnitude"]);
+            obj.addSetting("Swarmplot","Groups included", ...
+                "SwarmPlot","GroupsIncluded",["All","Current","Selected"]);
+            obj.addSetting("Swarmplot","Labels included", ...
+                "SwarmPlot","LabelsIncluded",["All","Current","Selected"]);
 
             % Point visibility followed by all marker-related appearance.
             obj.addSetting("Swarmplot","Show points","SwarmPlot","PointsVisible");
@@ -1222,7 +1230,7 @@ classdef GUI < handle
                 'SelectionChangedFcn',@(~,~) obj.runCallback(@() obj.onLabelSelected()), ...
                 'CheckedNodesChangedFcn',@(~,~) obj.runCallback(@() obj.onLabelChecksChanged()));
             obj.LabelsTree.Tooltip = ...
-                'Highlight to activate a label; check labels for merge operations.';
+                'Highlight to activate a label; check labels for batch operations and plots.';
             obj.LabelsTree.ContextMenu = obj.labelMenu("");
             obj.refreshLabels();
         end
@@ -2539,7 +2547,9 @@ classdef GUI < handle
             obj.Listeners(end+1) = addlistener(obj.Project,'LabelsChanged', ...
                 @(~,~) obj.runCallback(@() obj.onLabelsChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'ActiveLabelChanged', ...
-                @(~,~) obj.runCallback(@() obj.syncActiveLabel()));
+                @(~,~) obj.runCallback(@() obj.onActiveLabelChanged()));
+            obj.Listeners(end+1) = addlistener(obj.Project,'LabelSelectionChanged', ...
+                @(~,~) obj.runCallback(@() obj.onLabelSelectionChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'ChannelsChanged', ...
                 @(~,~) obj.runCallback(@() obj.onChannelsChanged()));
             obj.Listeners(end+1) = addlistener(obj.Project,'DirtyStateChanged', ...
@@ -2657,6 +2667,11 @@ classdef GUI < handle
             end
 
             if nargin > 1 && startsWith(e.Name,"Selected")
+                if e.Domain == "Project" && e.Name == "SelectedGroupIDs" && ...
+                        obj.plotSettingsUse("GroupsIncluded","Selected")
+                    obj.refreshPlots();
+                end
+
                 oops.Log.DEBUG(sprintf( ...
                     'Completed batch-selection navigation response in %.3f s.',toc(started)));
                 return;
@@ -3179,11 +3194,9 @@ classdef GUI < handle
                 return;
             end
 
-            checkedIDs = strings(0,1);
-
-            if ~isempty(obj.LabelsTree.CheckedNodes)
-                checkedIDs = string({obj.LabelsTree.CheckedNodes.NodeData})';
-            end
+            previousRefreshing = obj.Refreshing;
+            obj.Refreshing = true;
+            guard = onCleanup(@() obj.restoreRefreshing(previousRefreshing));
 
             obj.deleteTreeNodes(obj.LabelsTree.Children);
 
@@ -3215,7 +3228,7 @@ classdef GUI < handle
 
             nodes = obj.LabelsTree.Children;
             nodeIDs = string({nodes.NodeData});
-            keep = ismember(nodeIDs,checkedIDs) & nodeIDs ~= "unlabeled";
+            keep = ismember(nodeIDs,obj.Project.Labels.SelectedLabelIDs);
 
             if any(keep)
                 obj.LabelsTree.CheckedNodes = nodes(keep);
@@ -3279,6 +3292,10 @@ classdef GUI < handle
         function onLabelSelected(obj)
         %ONLABELSELECTED Choose the label that subsequent hotkey actions will apply.
 
+            if obj.Refreshing
+                return;
+            end
+
             node = obj.LabelsTree.SelectedNodes;
 
             if ~isempty(node)
@@ -3287,20 +3304,61 @@ classdef GUI < handle
         end
 
         function onLabelChecksChanged(obj)
-        %ONLABELCHECKSCHANGED Exclude Unlabeled and refresh merge availability.
+        %ONLABELCHECKSCHANGED Commit checked labels to the persistent registry selection.
+
+            if obj.Refreshing
+                return;
+            end
 
             nodes = obj.LabelsTree.CheckedNodes;
+            ids = strings(numel(nodes),1);
 
-            if ~isempty(nodes)
+            for k = 1:numel(nodes)
+                ids(k) = string(nodes(k).NodeData);
+            end
+
+            obj.Project.Labels.setSelectedByID(ids);
+            obj.refreshLabelMenus();
+        end
+
+        function onActiveLabelChanged(obj)
+        %ONACTIVELABELCHANGED Synchronize focus and refresh plots using Current labels.
+
+            obj.syncActiveLabel();
+
+            if obj.plotSettingsUse("LabelsIncluded","Current")
+                obj.refreshPlots();
+            end
+        end
+
+        function onLabelSelectionChanged(obj)
+        %ONLABELSELECTIONCHANGED Synchronize checks and refresh Selected-label plots.
+
+            if ~isempty(obj.LabelsTree) && isvalid(obj.LabelsTree)
+                previousRefreshing = obj.Refreshing;
+                obj.Refreshing = true;
+                guard = onCleanup(@() obj.restoreRefreshing(previousRefreshing));
+
+                nodes = obj.LabelsTree.Children;
                 ids = string({nodes.NodeData});
+                checked = nodes(ismember(ids,obj.Project.Labels.SelectedLabelIDs));
 
-                if any(ids == "unlabeled")
-                    obj.LabelsTree.CheckedNodes = nodes(ids ~= "unlabeled");
-                    return;
+                if isempty(checked)
+                    obj.LabelsTree.CheckedNodes = [];
+                else
+                    obj.LabelsTree.CheckedNodes = checked(:)';
                 end
+
+                % Release before downstream menu/plot refreshes; the guard is
+                % only for programmatic tree synchronization above.
+                delete(guard);
             end
 
             obj.refreshLabelMenus();
+
+            if obj.plotSettingsUse("LabelsIncluded","Selected")
+                obj.refreshPlots();
+            end
         end
 
         function onLabelHotkeyPressed(obj,key)
@@ -4374,6 +4432,15 @@ classdef GUI < handle
             end
         end
 
+        function tf = plotSettingsUse(obj,property,value)
+        %PLOTSETTINGSUSE True when either configurable plot depends on one scope.
+        % Visibility is intentionally handled by refreshPlots so navigation
+        % events do not need to duplicate view-source routing rules.
+
+            tf = obj.Settings.ScatterPlot.(property) == value || ...
+                obj.Settings.SwarmPlot.(property) == value;
+        end
+
         function refreshPolarHistogram(obj)
         %REFRESHPOLARHISTOGRAM Build one image- or group-scoped axial histogram.
 
@@ -4426,7 +4493,10 @@ classdef GUI < handle
         %REFRESHSCATTERPLOT Normalize model scalars for the scatter renderer.
 
             settings = obj.Settings.ScatterPlot;
-            [members,groupNames] = obj.plotPartitions(settings.GroupingType);
+            [groups,labels] = obj.plotScope( ...
+                settings.GroupsIncluded,settings.LabelsIncluded);
+            [members,groupNames] = obj.plotPartitions( ...
+                settings.GroupingType,groups,labels);
 
             if isempty(members)
                 members = {oops.model.Object.empty(0,1)};
@@ -4508,6 +4578,15 @@ classdef GUI < handle
                 CData=colorData, ...
                 DataTipCells=dataTipCells);
 
+            % Automatic hull faces and edges describe the partition itself,
+            % independently of how individual points are colored.
+            host = obj.ScatterRenderer.Host;
+
+            if ~isempty(host) && isvalid(host)
+                host.Axes.ColorOrder = obj.scatterGroupingColors( ...
+                    settings.GroupingType,groups,labels,numel(members));
+            end
+
             obj.ScatterRenderer.update(data,style);
         end
 
@@ -4515,7 +4594,10 @@ classdef GUI < handle
         %REFRESHSWARMPLOT Normalize model scalars for the violin renderer.
 
             settings = obj.Settings.SwarmPlot;
-            [members,groupNames] = obj.plotPartitions(settings.GroupingType);
+            [groups,labels] = obj.plotScope( ...
+                settings.GroupsIncluded,settings.LabelsIncluded);
+            [members,groupNames] = obj.plotPartitions( ...
+                settings.GroupingType,groups,labels);
 
             if isempty(members)
                 members = {oops.model.Object.empty(0,1)};
@@ -4554,6 +4636,10 @@ classdef GUI < handle
                     plottedMembers{k},settings.DataTipDetail,yLabel,{data{k}});
             end
 
+            [violinFaceMode,violinFaceColor, ...
+                violinEdgeMode,violinEdgeColor] = ...
+                obj.effectiveSwarmViolinColors(settings);
+
             % Resolve OOPS configuration into an application-independent style.
             style = matlabx.ui.axes.plot.ViolinStyle( ...
                 XLabel="Group", ...
@@ -4576,10 +4662,10 @@ classdef GUI < handle
                 PointsVisible=settings.PointsVisible, ...
                 ViolinOutlinesVisible=settings.ViolinOutlinesVisible, ...
                 ViolinLineWidth=settings.ViolinLineWidth, ...
-                ViolinFaceColorMode=settings.ViolinFaceColorMode, ...
-                ViolinFaceColor=settings.ViolinFaceColor, ...
-                ViolinEdgeColorMode=settings.ViolinEdgeColorMode, ...
-                ViolinEdgeColor=settings.ViolinEdgeColor, ...
+                ViolinFaceColorMode=violinFaceMode, ...
+                ViolinFaceColor=violinFaceColor, ...
+                ViolinEdgeColorMode=violinEdgeMode, ...
+                ViolinEdgeColor=violinEdgeColor, ...
                 ViolinEdgeAlpha=settings.ViolinEdgeAlpha, ...
                 ErrorBarsVisible=settings.ErrorBarsVisible, ...
                 CentralStatistic=settings.CentralStatistic, ...
@@ -4602,29 +4688,91 @@ classdef GUI < handle
 
             if ~isempty(host) && isvalid(host)
                 host.Axes.ColorOrder = obj.swarmGroupingColors( ...
-                    settings.GroupingType,numel(members));
+                    settings.GroupingType,settings.ColorMode, ...
+                    groups,labels,numel(members));
             end
 
             obj.SwarmRenderer.update(plotData,style);
         end
 
-        function colors = swarmGroupingColors(obj,grouping,count)
+        function colors = scatterGroupingColors(~,grouping,groups,labels,count)
+        %SCATTERGROUPINGCOLORS Return one semantic color per hull partition.
+
+            if grouping == "Group" && ~isempty(groups)
+                colors = reshape([groups.Color],3,[])';
+            elseif grouping == "Label" && ~isempty(labels)
+                colors = reshape([labels.Color],3,[])';
+            else
+                colors = zeros(0,3);
+            end
+
+            if isempty(colors)
+                colors = get(groot,'defaultAxesColorOrder');
+            end
+
+            indices = mod(0:max(1,count)-1,size(colors,1))+1;
+            colors = colors(indices,:);
+        end
+
+        function [faceMode,faceColor,edgeMode,edgeColor] = ...
+                effectiveSwarmViolinColors(~,settings)
+        %EFFECTIVESWARMVIOLINCOLORS Resolve auto colors for crossed categories.
+
+            faceMode = settings.ViolinFaceColorMode;
+            faceColor = settings.ViolinFaceColor;
+            edgeMode = settings.ViolinEdgeColorMode;
+            edgeColor = settings.ViolinEdgeColor;
+
+            % A violin grouped by one categorical domain cannot represent the
+            % other domain with one semantic series color. Keep such violins
+            % neutral while allowing their individual points to carry color.
+            crossedCategories = ...
+                (settings.GroupingType == "Group" && settings.ColorMode == "Label") || ...
+                (settings.GroupingType == "Label" && settings.ColorMode == "Group");
+
+            if ~crossedCategories
+                return;
+            end
+
+            if faceMode == "auto"
+                faceMode = "Custom";
+                faceColor = settings.BackgroundColor;
+            end
+
+            if edgeMode == "auto"
+                edgeMode = "Custom";
+                edgeColor = [0 0 0];
+            end
+        end
+
+        function colors = swarmGroupingColors(~,grouping,colorMode,groups,labels,count)
         %SWARMGROUPINGCOLORS Return one automatic color per violin partition.
 
-            if grouping == "Group"
-                colors = reshape([obj.Project.Groups.Color],3,[])';
+            if isempty(groups)
+                groupColors = zeros(0,3);
             else
-                labels = obj.Project.Labels.labels();
-                labelColors = reshape([labels.Color],3,[])';
+                groupColors = reshape([groups.Color],3,[])';
+            end
 
-                if grouping == "Both"
-                    % Partitions are ordered by group, then label. Repeat the
-                    % label palette within every group so adjacent label
-                    % distributions retain their semantic label colors.
-                    colors = repmat(labelColors,numel(obj.Project.Groups),1);
-                else
-                    colors = labelColors;
-                end
+            if isempty(labels)
+                labelColors = zeros(0,3);
+            else
+                labelColors = reshape([labels.Color],3,[])';
+            end
+
+            if grouping == "Group"
+                colors = groupColors;
+            elseif grouping == "Label"
+                colors = labelColors;
+            elseif colorMode == "Group"
+                % "Both" partitions are ordered group-first, then label.
+                % Repeat each group color across all of its label violins.
+                colors = repelem(groupColors,numel(labels),1);
+            else
+                % Label and magnitude coloring retain semantic label colors
+                % for the group/label partition faces. Magnitude remains a
+                % point-level scalar and has no single violin-level color.
+                colors = repmat(labelColors,numel(groups),1);
             end
 
             % Empty projects and placeholder data still require a valid color
@@ -4637,17 +4785,52 @@ classdef GUI < handle
             colors = colors(indices,:);
         end
 
-        function [members,names] = plotPartitions(obj,grouping)
-        %PLOTPARTITIONS Group project objects by group, label, or both.
+        function [groups,labels] = plotScope(obj,groupsIncluded,labelsIncluded)
+        %PLOTSCOPE Resolve ordered group and label collections for one plot.
+
+            groups = obj.Project.Groups;
+
+            switch groupsIncluded
+                case "Current"
+                    groups = obj.Project.ActiveGroup;
+                case "Selected"
+                    ids = oops.model.internal.ids(groups);
+                    groups = groups(ismember(ids,obj.Project.SelectedGroupIDs));
+            end
+
+            labels = obj.Project.Labels.labels();
+
+            switch labelsIncluded
+                case "Current"
+                    labels = obj.Project.Labels.active();
+                case "Selected"
+                    ids = oops.model.internal.ids(labels);
+                    labels = labels(ismember(ids,obj.Project.Labels.SelectedLabelIDs));
+            end
+
+            groups = reshape(groups,[],1);
+            labels = reshape(labels,1,[]);
+        end
+
+        function [members,names] = plotPartitions(obj,grouping,groups,labels)
+        %PLOTPARTITIONS Group scoped project objects by group, label, or both.
 
             members = cell(0,1);
             names = strings(0,1);
-            labels = obj.Project.Labels.labels();
+
+            % Either dimension may intentionally resolve empty for Current or Selected.
+            if isempty(groups) || isempty(labels)
+                return;
+            end
+
+            labelIDs = oops.model.internal.ids(labels);
 
             if grouping == "Group"
 
-                for group = obj.Project.Groups'
-                    members{end+1,1} = obj.groupObjects(group); %#ok<AGROW>
+                for group = groups'
+                    groupMembers = obj.groupObjects(group);
+                    members{end+1,1} = obj.objectsWithLabels( ...
+                        groupMembers,labelIDs); %#ok<AGROW>
                     names(end+1,1) = group.Name; %#ok<AGROW>
                 end
 
@@ -4656,8 +4839,11 @@ classdef GUI < handle
 
             if grouping == "Label"
 
+                scopedMembers = obj.projectObjects(groups);
+
                 for label = labels
-                    members{end+1,1} = obj.objectsWithLabel(obj.projectObjects(),label.ID); %#ok<AGROW>
+                    members{end+1,1} = obj.objectsWithLabel( ...
+                        scopedMembers,label.ID); %#ok<AGROW>
                     names(end+1,1) = label.Name; %#ok<AGROW>
                 end
 
@@ -4665,7 +4851,7 @@ classdef GUI < handle
             end
 
             % "Both" creates one violin for every group/label combination.
-            for group = obj.Project.Groups'
+            for group = groups'
                 groupMembers = obj.groupObjects(group);
 
                 for label = labels
@@ -4676,12 +4862,12 @@ classdef GUI < handle
             end
         end
 
-        function members = projectObjects(obj)
-        %PROJECTOBJECTS Collect all current objects in project hierarchy order.
+        function members = projectObjects(obj,groups)
+        %PROJECTOBJECTS Collect objects from ordered plot-scope groups.
 
             members = oops.model.Object.empty(0,1);
 
-            for group = obj.Project.Groups'
+            for group = groups'
                 members = [members;obj.groupObjects(group)]; %#ok<AGROW>
             end
         end
@@ -4704,6 +4890,16 @@ classdef GUI < handle
             end
 
             members = members([members.LabelID] == labelID);
+        end
+
+        function members = objectsWithLabels(~,members,labelIDs)
+        %OBJECTSWITHLABELS Retain objects belonging to any scoped label.
+
+            if isempty(members)
+                return;
+            end
+
+            members = members(ismember([members.LabelID],labelIDs));
         end
 
         function values = objectValues(~,members,property)
@@ -7699,6 +7895,12 @@ classdef GUI < handle
         %ENDREFRESH Release the navigation guard even after a callback fails.
 
             obj.Refreshing = false;
+        end
+
+        function restoreRefreshing(obj,value)
+        %RESTOREREFRESHING Restore a nested UI-synchronization guard.
+
+            obj.Refreshing = value;
         end
 
         function endResize(obj)
