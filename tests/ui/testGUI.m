@@ -809,15 +809,29 @@ t.verifyEqual(ui.SwarmRenderer.Style.MarkerFaceColorMode,"CData");
 % Automatic violin colors follow the partitioning variable, independently
 % of the separate point-color setting.
 p.Settings.SwarmPlot.ViolinFaceColorMode = "auto";
+p.Settings.SwarmPlot.ViolinFaceAlpha = 0.35;
 p.Settings.SwarmPlot.GroupingType = "Label";
 p.Settings.SwarmPlot.ColorMode = "Group";
 labelColors = reshape([p.Labels.labels().Color],3,[])';
 t.verifyEqual(ui.RightPlotAxes.Axes.ColorOrder,labelColors,'AbsTol',1e-12);
+t.verifyEqual(ui.SwarmRenderer.Style.ViolinFaceAlpha,0.35,'AbsTol',1e-12);
 
 p.Settings.SwarmPlot.GroupingType = "Group";
 p.Settings.SwarmPlot.ColorMode = "Label";
 groupColors = reshape([p.Groups.Color],3,[])';
 t.verifyEqual(ui.RightPlotAxes.Axes.ColorOrder,groupColors,'AbsTol',1e-12);
+
+% Automatic scatter hull colors always describe the grouping domain, even
+% when point colors describe a different categorical domain.
+p.Settings.ScatterPlot.HullFaceColorMode = "auto";
+p.Settings.ScatterPlot.HullEdgeColorMode = "auto";
+p.Settings.ScatterPlot.GroupingType = "Label";
+p.Settings.ScatterPlot.ColorMode = "Group";
+t.verifyEqual(ui.LeftPlotAxes.Axes.ColorOrder,labelColors,'AbsTol',1e-12);
+
+p.Settings.ScatterPlot.GroupingType = "Group";
+p.Settings.ScatterPlot.ColorMode = "Label";
+t.verifyEqual(ui.LeftPlotAxes.Axes.ColorOrder,groupColors,'AbsTol',1e-12);
 
 % Paired color pickers share one row and activate only for Custom mode.
 faceMode = ui.SettingsUI.ScatterPlot.MarkerFaceColorMode;

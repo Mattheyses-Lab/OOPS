@@ -32,6 +32,7 @@ classdef SwarmPlot < handle
         MarkerEdgeColor_ (1,3) double {mustBeFinite,mustBeInRange(MarkerEdgeColor_,0,1)} = [0.0 0.0 0.0]
         ViolinFaceColorMode_ (1,1) string = "auto"
         ViolinFaceColor_ (1,3) double {mustBeFinite,mustBeInRange(ViolinFaceColor_,0,1)} = [1.0 1.0 1.0]
+        ViolinFaceAlpha_ (1,1) double {mustBeFinite,mustBeInRange(ViolinFaceAlpha_,0,1)} = 0.5
         ErrorBarsColor_ (1,3) double {mustBeFinite,mustBeInRange(ErrorBarsColor_,0,1)} = [0.0 0.0 0.0]
         ErrorBarsColorMode_ (1,1) string = "Custom"
         ViolinOutlinesVisible_ (1,1) logical = true
@@ -69,6 +70,7 @@ classdef SwarmPlot < handle
         MarkerEdgeColor
         ViolinFaceColorMode
         ViolinFaceColor
+        ViolinFaceAlpha
         ErrorBarsColor
         ErrorBarsColorMode
         ViolinOutlinesVisible
@@ -377,6 +379,18 @@ classdef SwarmPlot < handle
             obj.setValue("ViolinFaceColor",v);
         end
 
+        function v = get.ViolinFaceAlpha(obj)
+        %GET.VIOLINFACEALPHA Return the violin fill opacity.
+
+            v = obj.ViolinFaceAlpha_;
+        end
+
+        function set.ViolinFaceAlpha(obj,v)
+        %SET.VIOLINFACEALPHA Store and notify a violin fill-opacity change.
+
+            obj.setValue("ViolinFaceAlpha",v);
+        end
+
         function v = get.ErrorBarsColor(obj)
         %GET.ERRORBARSCOLOR Return the stored ErrorBarsColor setting.
 
@@ -513,6 +527,7 @@ classdef SwarmPlot < handle
                 'MarkerEdgeColor',obj.MarkerEdgeColor, ...
                 'ViolinFaceColorMode',obj.ViolinFaceColorMode, ...
                 'ViolinFaceColor',obj.ViolinFaceColor, ...
+                'ViolinFaceAlpha',obj.ViolinFaceAlpha, ...
                 'ErrorBarsColor',obj.ErrorBarsColor, ...
                 'ErrorBarsColorMode',obj.ErrorBarsColorMode, ...
                 'ViolinOutlinesVisible',obj.ViolinOutlinesVisible, ...
