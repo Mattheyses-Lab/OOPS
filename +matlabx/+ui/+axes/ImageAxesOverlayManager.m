@@ -105,12 +105,14 @@ classdef ImageAxesOverlayManager < handle
             for i = 1:numel(overlays)
                 overlay = overlays{i};
                 if ~isempty(overlay) && isvalid(overlay)
-                    handles = [handles;overlay.exportGraphics()]; %#ok<AGROW>
+                    graphics = overlay.exportGraphics();
+                    handles = [handles;graphics(:)]; %#ok<AGROW>
                 end
             end
             collections = obj.getBoundaryCollections();
             for i = 1:numel(collections)
-                handles = [handles;collections{i}.exportGraphics()]; %#ok<AGROW>
+                graphics = collections{i}.exportGraphics();
+                handles = [handles;graphics(:)]; %#ok<AGROW>
             end
             % Each native overlay owns its primitives, while each shared
             % collection is visited once. Avoid UNIQUE here because MATLAB

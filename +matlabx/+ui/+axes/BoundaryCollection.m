@@ -460,8 +460,9 @@ classdef BoundaryCollection < handle
     methods (Access=?matlabx.ui.axes.ImageAxesOverlayManager)
         function h = exportGraphics(obj)
         %EXPORTGRAPHICS Return valid shared primitives for export styling.
-            h = [obj.StatePatches(isgraphics(obj.StatePatches)); ...
-                obj.ActiveBoundsLine(isgraphics(obj.ActiveBoundsLine))];
+            state = obj.StatePatches(isgraphics(obj.StatePatches));
+            active = obj.ActiveBoundsLine(isgraphics(obj.ActiveBoundsLine));
+            h = [state(:);active(:)];
         end
     end
 end

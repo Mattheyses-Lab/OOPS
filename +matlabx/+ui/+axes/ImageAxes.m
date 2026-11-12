@@ -162,6 +162,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         ViewportBoxVisible (1,1) matlab.lang.OnOffSwitchState
         % Whether the axes toolbar is visible.
         ToolbarVisible (1,1) matlab.lang.OnOffSwitchState
+        % Expanded or collapsed state of the axes toolbar.
+        ToolbarExpanded (1,1) matlab.lang.OnOffSwitchState
     end
 
     % Passthrough properties for hosted MATLAB graphics.
@@ -340,6 +342,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         ViewportBoxVisible_ (1,1) matlab.lang.OnOffSwitchState = "off"
         % Requested toolbar visibility, independent of temporary startup hiding.
         ToolbarVisible_ (1,1) matlab.lang.OnOffSwitchState = "on"
+        % Backing expanded or collapsed toolbar state used before setup.
+        ToolbarExpanded_ (1,1) matlab.lang.OnOffSwitchState = "on"
     end
 
 
@@ -504,8 +508,9 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 'NextPlot','add', ...
                 'HitTest','on', ...
                 'PickableParts','all');
+            obj.mainAxes.ToolbarLocation = 'inside';
             obj.mainAxes.Toolbar = axtoolbar(obj.mainAxes,{}, ...
-                "Expanded","on");
+                "Expanded",obj.ToolbarExpanded_);
             obj.mainAxes.Interactions = [];
             disableDefaultInteractivity(obj.mainAxes);
 
@@ -638,6 +643,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             obj.sizingGrid.BackgroundColor = obj.BackgroundColor;
 
             obj.updateOnResize();
+            obj.mainAxes.ToolbarLocation = 'inside';
 
             % Reveal constructor-specified buttons only after the host figure
             % is visible, then immediately move focus away from the toolbar.
@@ -2973,8 +2979,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 obj (1,1) matlabx.ui.axes.ImageAxes
                 filename (1,1) string {mustBeNonzeroLengthText}
                 opts.Units (1,1) string = "inches"
-                opts.Width (1,1) double {mustBePositive} = 7
-                opts.Height (1,1) double {mustBePositive} = 7
+                opts.Width (1,1) double {mustBePositive} = 3
+                opts.Height (1,1) double {mustBePositive} = 3
                 opts.BackgroundColor (1,3) double {mustBeBetween(opts.BackgroundColor,0,1)} = [0 0 0]
                 opts.PreserveAspectRatio (1,1) matlab.lang.OnOffSwitchState = "on"
                 opts.Resolution (1,1) double {mustBePositive} = 600
@@ -3010,7 +3016,7 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
         %   axes toolbar.
             filename = "";
 
-            % ParamsDialog is a separate modal figure. Lower an always-on-top
+            % The options dialog is a separate modal figure. Lower an always-on-top
             % host for the duration of the workflow so neither dialog opens
             % behind it.
             fig = obj.ParentFig;
@@ -3021,32 +3027,15 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
             windowStyleCleanup = onCleanup( ...
                 @() restoreFigureWindowStyle_(fig,previousWindowStyle));
 
-            positive = @(value) isnumeric(value) && isscalar(value) && ...
-                isfinite(value) && value > 0;
-            positiveInteger = @(value) positive(value) && value == fix(value);
-            options = matlabx.app.ParamsDialog.prompt( ...
-                'Export Current View', ...
-                {'Units','Units','choice','inches', ...
-                    {'inches','centimeters','pixels','points'}}, ...
-                {'Width','Width','double',7,positive, ...
-                    'Width must be a positive number.'}, ...
-                {'Height','Height','double',7,positive, ...
-                    'Height must be a positive number.'}, ...
-                {'BackgroundColor','Background color','color',[0 0 0]}, ...
-                {'PreserveAspectRatio','Preserve aspect ratio','logical',true}, ...
-                {'OverlaySizing','Overlay sizing','choice', ...
-                    'Preserve physical sizes', ...
-                    {'Preserve physical sizes','Scale with output'}}, ...
-                {'Resolution','Resolution (DPI)','double',600,positiveInteger, ...
-                    'Resolution must be a positive whole number.'});
+            options = matlabx.ui.axes.ImageAxesExportDialog.prompt();
 
             if isempty(options), return; end
 
-            [file,path,filterIndex] = uiputfile( ...
-                {'*.png','PNG image (*.png)'; ...
-                 '*.tif;*.tiff','TIFF image (*.tif, *.tiff)'; ...
-                 '*.jpg;*.jpeg','JPEG image (*.jpg, *.jpeg)'}, ...
-                'Export Current View','image-view.png');
+            pattern = "*" + options.Extension;
+            description = options.Format + " image (" + pattern + ")";
+            [file,path] = uiputfile( ...
+                {char(pattern),char(description)}, ...
+                'Export Current View',char("image-view" + options.Extension));
 
             if isequal(file,0)
                 filename = "";
@@ -3055,27 +3044,20 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
 
             [~,~,extension] = fileparts(file);
             if isempty(extension)
-                extensions = [".png",".tif",".jpg"];
-                file = char(string(file) + extensions(filterIndex));
+                file = char(string(file) + options.Extension);
+            elseif ~strcmpi(extension,options.Extension)
+                [~,name] = fileparts(file);
+                file = char(string(name) + options.Extension);
             end
             filename = string(fullfile(path,file));
-            preserveAspectRatio = "off";
-            if options.PreserveAspectRatio
-                preserveAspectRatio = "on";
-            end
-            overlaySizing = "scale";
-            if strcmp(options.OverlaySizing,'Preserve physical sizes')
-                overlaySizing = "physical";
-            end
             obj.exportView(filename, ...
-                Units=string(options.Units), ...
+                Units=options.Units, ...
                 Width=options.Width, ...
                 Height=options.Height, ...
-                BackgroundColor=options.BackgroundColor, ...
-                PreserveAspectRatio=preserveAspectRatio, ...
+                PreserveAspectRatio=options.PreserveAspectRatio, ...
                 Resolution=options.Resolution, ...
                 HideToolbar=true, ...
-                OverlaySizing=overlaySizing);
+                OverlaySizing=options.OverlaySizing);
         end
 
         % --- setComponentColormap ---
@@ -3576,6 +3558,8 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 "OverlaysVisible", string(obj.OverlaysVisible), ...
                 "ColorbarVisible", string(obj.ColorbarVisible), ...
                 "ViewportBoxVisible", string(obj.ViewportBoxVisible), ...
+                "ToolbarVisible", string(obj.ToolbarVisible), ...
+                "ToolbarExpanded", string(obj.ToolbarExpanded), ...
                 "MaxRenderedResolution", obj.MaxRenderedResolution, ...
                 "FontSize", obj.FontSize);
             S.Tools = obj.getToolStatusSummary();
@@ -3738,6 +3722,23 @@ classdef ImageAxes < matlab.ui.componentcontainer.ComponentContainer
                 obj.mainAxes.Toolbar.Visible = val;
             end
             obj.refreshContextMenu();
+        end
+        % ToolbarExpanded
+        function val = get.ToolbarExpanded(obj)
+        %GET.TOOLBAREXPANDED Return the native toolbar expansion state.
+            val = obj.ToolbarExpanded_;
+            if ~isempty(obj.mainAxes) && isvalid(obj.mainAxes) && ...
+                    ~isempty(obj.mainAxes.Toolbar) && isvalid(obj.mainAxes.Toolbar)
+                val = obj.mainAxes.Toolbar.Expanded;
+            end
+        end
+        function set.ToolbarExpanded(obj,val)
+        %SET.TOOLBAREXPANDED Expand or collapse the hosted axes toolbar.
+            obj.ToolbarExpanded_ = val;
+            if ~isempty(obj.mainAxes) && isvalid(obj.mainAxes) && ...
+                    ~isempty(obj.mainAxes.Toolbar) && isvalid(obj.mainAxes.Toolbar)
+                obj.mainAxes.Toolbar.Expanded = val;
+            end
         end
 
         % FontSize

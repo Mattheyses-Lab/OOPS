@@ -71,6 +71,8 @@ classdef PlotAxesContextMenuManager < handle
                         S = obj.buildGridMenu(S,obj.Menu);
                     case "Box"
                         S = obj.buildBoxMenu(S,obj.Menu);
+                    case "Title"
+                        S = obj.buildTitleMenu(S,obj.Menu);
                 end
             end
             obj.BuiltinUI = S;
@@ -88,6 +90,9 @@ classdef PlotAxesContextMenuManager < handle
             end
             if isfield(obj.BuiltinUI,"Box")
                 obj.BuiltinUI.Box.Checked = obj.Host.BoxVisible;
+            end
+            if isfield(obj.BuiltinUI,"Title")
+                obj.BuiltinUI.Title.Checked = obj.Host.TitleVisible;
             end
 
             names = fieldnames(obj.Items);
@@ -201,7 +206,7 @@ classdef PlotAxesContextMenuManager < handle
     methods (Static)
         function items = availableBuiltinItems()
         %AVAILABLEBUILTINITEMS Return valid PlotAxes built-in menu tokens.
-            items = ["Display","Toolbar","Grid","Box","ResetView","Status"];
+            items = ["Display","Toolbar","Grid","Box","Title","ResetView","Status"];
         end
 
         function items = validateBuiltinItems(items)
@@ -227,6 +232,7 @@ classdef PlotAxesContextMenuManager < handle
             S = obj.buildToolbarMenu(S,S.Display);
             S = obj.buildGridMenu(S,S.Display);
             S = obj.buildBoxMenu(S,S.Display);
+            S = obj.buildTitleMenu(S,S.Display);
         end
 
         function S = buildToolbarMenu(obj,S,parent)
@@ -248,6 +254,13 @@ classdef PlotAxesContextMenuManager < handle
             S.Box = uimenu(parent,"Text","Show Box", ...
                 "MenuSelectedFcn",@(~,~) obj.Host.toggleBox(), ...
                 "Checked",obj.Host.BoxVisible);
+        end
+
+        function S = buildTitleMenu(obj,S,parent)
+        %BUILDTITLEMENU Add the axes-title visibility command.
+            S.Title = uimenu(parent,"Text","Show Title", ...
+                "MenuSelectedFcn",@(~,~) obj.Host.toggleTitle(), ...
+                "Checked",obj.Host.TitleVisible);
         end
 
         function clearBuiltins(obj)
