@@ -83,6 +83,8 @@ classdef ViolinStyle
         ViolinFaceColorMode (1,1) string {mustBeMember(ViolinFaceColorMode,["Custom","auto"])} = "auto"
         % Custom violin face color.
         ViolinFaceColor (1,3) double {mustBeFinite,mustBeBetween(ViolinFaceColor,0,1)} = [1 1 1]
+        % Violin face opacity.
+        ViolinFaceAlpha (1,1) double {mustBeFinite,mustBeBetween(ViolinFaceAlpha,0,1)} = 0.5
         % Whether violin edges use ViolinEdgeColor or the axes color order.
         ViolinEdgeColorMode (1,1) string {mustBeMember(ViolinEdgeColorMode,["Custom","auto"])} = "auto"
         % Custom violin edge color.
