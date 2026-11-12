@@ -171,6 +171,7 @@ classdef ViolinRenderer < matlabx.ui.axes.PlotContent
             axes.Colormap = style.Colormap;
             axes.CLim = style.CLim;
             obj.Host.BackgroundColor = style.BackgroundColor;
+            obj.Host.Color = style.BackgroundColor;
             obj.Host.ForegroundColor = style.ForegroundColor;
         end
 
